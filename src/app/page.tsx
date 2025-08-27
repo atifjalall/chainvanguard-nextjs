@@ -653,43 +653,37 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200/50 dark:border-gray-700/50 py-16 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl relative">
+      <footer className="border-t border-gray-200/50 dark:border-gray-700/50 py-16 bg-white/50 dark:bg-gray-950/50 backdrop-blur-xl">
         <div className="container mx-auto px-6">
-          <div className="text-center space-y-8">
-            <div className="flex items-center justify-center space-x-3 cursor-pointer group">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-                <Package className="h-6 w-6 text-white" />
+          <div className="text-center space-y-6">
+            <div className="flex items-center justify-center space-x-3 cursor-pointer">
+              <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
               </div>
-              <span className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+              <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 ChainVanguard
               </span>
             </div>
-            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto text-pretty">
-              Pioneering the future of supply chain management through advanced
-              blockchain technology, ensuring transparency, security, and
-              efficiency for global enterprises.
+            <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Revolutionizing supply chain management through blockchain
+              technology, ensuring transparency, security, and efficiency for
+              all stakeholders.
             </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1">
-                Next.js 15
+            <div className="flex justify-center space-x-6">
+              <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                Next.js
               </Badge>
-              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-3 py-1">
+              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                 TypeScript
               </Badge>
-              <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-3 py-1">
+              <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
                 Hyperledger Fabric
               </Badge>
-              <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 px-3 py-1">
-                IPFS
-              </Badge>
             </div>
-            <div className="pt-8 border-t border-gray-200/50 dark:border-gray-700/50">
-              <p className="text-sm text-gray-500 dark:text-gray-500">
-                © {new Date().getFullYear()} ChainVanguard. All rights
-                reserved. | Enterprise-grade blockchain solutions for modern
-                supply chains.
-              </p>
-            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-500">
+              © {new Date().getFullYear()} ChainVanguard. All rights reserved.
+            </p>
+            
           </div>
         </div>
       </footer>
