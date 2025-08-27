@@ -712,7 +712,7 @@ export default function LoginPage() {
                       onClick={() => router.push("/register")}
                     >
                       <Zap className="mr-2 h-4 w-4 text-amber-600" />
-                      Create Demo Wallet
+                      Create Wallet
                     </Button>
                   </div>
                 )}
