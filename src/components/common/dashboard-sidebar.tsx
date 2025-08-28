@@ -22,11 +22,36 @@ import {
   Activity,
   Monitor,
   GitBranch,
+  Menu,
+  X,
+  Wallet,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export function DashboardSidebar() {
   const { user } = useAuth();
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener("resize", checkIsMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkIsMobile);
+    };
+  }, []);
+
+  // Close sidebar when route changes
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
 
   const getNavigationItems = () => {
     switch (user?.role) {
@@ -44,6 +69,7 @@ export function DashboardSidebar() {
           },
           { href: "/supplier/vendors", label: "Vendors", icon: Users },
           { href: "/supplier/insights", label: "Insights", icon: BarChart },
+          { href: "/wallet", label: "Wallet", icon: Wallet },
         ];
 
       // 2. Vendor
@@ -60,6 +86,7 @@ export function DashboardSidebar() {
             label: "Sales History",
             icon: History,
           },
+          { href: "/wallet", label: "Wallet", icon: Wallet },
         ];
 
       // 3. Customer
@@ -70,6 +97,7 @@ export function DashboardSidebar() {
           { href: "/customer/cart", label: "My Cart", icon: ShoppingCart },
           { href: "/customer/orders", label: "My Orders", icon: ClipboardList },
           { href: "/customer/history", label: "Order History", icon: History },
+          { href: "/wallet", label: "Wallet", icon: Wallet },
         ];
 
       // 4. Blockchain Expert
@@ -106,6 +134,7 @@ export function DashboardSidebar() {
             label: "System Health",
             icon: Monitor,
           },
+          { href: "/wallet", label: "Wallet", icon: Wallet },
         ];
 
       default:
@@ -130,38 +159,92 @@ export function DashboardSidebar() {
     }
   };
 
+  // Mobile toggle button
+  const MobileToggle = () => (
+    <div className="md:hidden fixed top-4 left-4 z-50">
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => setIsOpen(!isOpen)}
+        className="h-10 w-10 rounded-full bg-white/90 backdrop-blur-sm border-gray-300 shadow-md"
+      >
+        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </Button>
+    </div>
+  );
+
+  // Overlay for mobile when sidebar is open
+  const Overlay = () => (
+    <div
+      className={cn(
+        "fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300 md:hidden",
+        isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+      )}
+      onClick={() => setIsOpen(false)}
+    />
+  );
+
   return (
-    <div className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50">
-      <div className="h-full py-6 overflow-y-auto">
-        <div className="px-3 py-2">
-          <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100">
-            {getRoleDisplayName(user?.role)}
-          </h2>
-          <div className="space-y-1">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
+    <>
+      <MobileToggle />
+      <Overlay />
+
+      <div
+        className={cn(
+          "fixed left-0 top-0 h-full bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 z-40 transition-all duration-300 ease-in-out",
+          isMobile
+            ? isOpen
+              ? "w-64 translate-x-0"
+              : "-translate-x-full"
+            : "w-64 translate-x-0"
+        )}
+      >
+        <div className="h-full py-6 overflow-y-auto">
+          <div className="px-3 py-2">
+            <div className="flex items-center justify-between mb-4 px-4">
+              <h2 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100">
+                {getRoleDisplayName(user?.role)}
+              </h2>
+              {isMobile && (
                 <Button
-                  key={item.href}
-                  variant={isActive ? "default" : "ghost"}
-                  className={cn(
-                    "w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50",
-                    isActive &&
-                      "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-                  )}
-                  asChild
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsOpen(false)}
+                  className="h-8 w-8 md:hidden"
                 >
-                  <Link href={item.href}>
-                    <Icon className="mr-3 h-4 w-4" />
-                    {item.label}
-                  </Link>
+                  <X className="h-4 w-4" />
                 </Button>
-              );
-            })}
+              )}
+            </div>
+            <div className="space-y-1">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <Button
+                    key={item.href}
+                    variant={isActive ? "default" : "ghost"}
+                    className={cn(
+                      "w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-colors duration-200",
+                      isActive &&
+                        "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                    )}
+                    asChild
+                  >
+                    <Link href={item.href}>
+                      <Icon className="mr-3 h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  </Button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Add padding to main content on mobile when sidebar is hidden */}
+      {isMobile && !isOpen && <div className="h-16 md:h-0" />}
+    </>
   );
 }

@@ -2,21 +2,9 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { WalletData, Transaction } from '@/types/web3'
+import { WalletContextType } from '@/types' 
 import { toast } from 'sonner'
 
-interface WalletContextType {
-  currentWallet: WalletData | null
-  isConnected: boolean
-  balance: number
-  transactions: Transaction[]
-  connectWallet: (walletId: string, password: string) => Promise<boolean>
-  disconnectWallet: () => void
-  createWallet: (name: string, password: string) => Promise<WalletData>
-  getAllWallets: () => WalletData[]
-  generateRecoveryPhrase: () => string
-  recoverWallet: (recoveryPhrase: string, newPassword: string) => Promise<WalletData>
-  isLoading: boolean
-}
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined)
 
@@ -227,6 +215,13 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     }
   }
 
+  const updateBalance = (newBalance: number) => {
+  setBalance(newBalance)
+  if (currentWallet) {
+    localStorage.setItem(`wallet_${currentWallet.id}_balance`, newBalance.toString())
+  }
+}
+
   const value: WalletContextType = {
     currentWallet,
     isConnected,
@@ -238,7 +233,8 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     getAllWallets,
     generateRecoveryPhrase,
     recoverWallet,
-    isLoading
+    isLoading,
+    updateBalance
   }
 
   return (

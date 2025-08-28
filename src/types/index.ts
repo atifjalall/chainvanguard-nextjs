@@ -1,3 +1,5 @@
+import { Transaction, WalletData } from "./web3";
+
 // User and Authentication Types
 export interface User {
   id: string;
@@ -50,18 +52,19 @@ export interface RegisterData {
   registrationNumber?: string;
 }
 
-// Wallet Types
 export interface WalletContextType {
-  account: string | null;
-  isConnected: boolean;
-  balance: string;
-  chainId: number | null;
-  createWallet: (name: string, password: string) => Promise<HyperledgerWallet>;
-  connectWallet: (walletId: string, password: string) => Promise<void>;
-  generateRecoveryPhrase: () => string;
-  connect: () => Promise<void>;
-  disconnect: () => void;
-  switchNetwork: (chainId: number) => Promise<void>;
+  currentWallet: WalletData | null
+  isConnected: boolean
+  balance: number
+  transactions: Transaction[]
+  connectWallet: (walletId: string, password: string) => Promise<boolean>
+  disconnectWallet: () => void
+  createWallet: (name: string, password: string) => Promise<WalletData>
+  getAllWallets: () => WalletData[]
+  generateRecoveryPhrase: () => string
+  recoverWallet: (recoveryPhrase: string, newPassword: string) => Promise<WalletData>
+  isLoading: boolean
+  updateBalance: (newBalance: number) => void
 }
 
 export interface HyperledgerWallet {
