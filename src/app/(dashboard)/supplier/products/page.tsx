@@ -50,6 +50,19 @@ import {
   Globe,
   Shield,
   Truck,
+  DollarSign,
+  Sparkles,
+  RefreshCw,
+  Download,
+  Star,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Award,
+  Crown,
+  Zap,
+  MoreVertical,
+  Users,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Product } from "@/types";
@@ -107,6 +120,7 @@ export default function SupplierProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
 
   // Edit form state with supplier-specific fields
   const [editForm, setEditForm] = useState({
@@ -123,6 +137,7 @@ export default function SupplierProductsPage() {
   });
 
   useEffect(() => {
+    setIsVisible(true);
     loadProducts();
   }, [user?.id]);
 
@@ -193,7 +208,7 @@ export default function SupplierProductsPage() {
       setIsLoading(false);
     }
   };
-
+  //
   const saveProducts = (updatedProducts: Product[]) => {
     setProducts(updatedProducts);
     localStorage.setItem(
@@ -223,7 +238,6 @@ export default function SupplierProductsPage() {
       return matchesSearch && matchesCategory && matchesStatus;
     });
 
-    // Sort products
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "name-asc":
@@ -254,6 +268,12 @@ export default function SupplierProductsPage() {
     return filtered;
   }, [products, searchTerm, selectedCategory, selectedStatus, sortBy]);
 
+  // Product stats
+  const totalProducts = products.length;
+  const activeProducts = products.filter((p) => p.status === "active").length;
+  const lowStockProducts = products.filter((p) => p.quantity <= 50).length;
+  const outOfStockProducts = products.filter((p) => p.quantity === 0).length;
+
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
     setEditForm({
@@ -265,7 +285,9 @@ export default function SupplierProductsPage() {
       status: product.status,
       minimumOrderQuantity: product.minimumOrderQuantity?.toString() || "",
       origin: product.origin || "",
-      certifications: product.certifications || "",
+      certifications: Array.isArray(product.certifications)
+        ? product.certifications.join(", ")
+        : product.certifications || "",
       warranty: product.warranty || "",
     });
     setIsEditOpen(true);
@@ -282,7 +304,9 @@ export default function SupplierProductsPage() {
       price: parseFloat(editForm.price),
       quantity: parseInt(editForm.quantity),
       status: editForm.status,
-      minimumOrderQuantity: parseInt(editForm.minimumOrderQuantity) || 1,
+      minimumOrderQuantity: editForm.minimumOrderQuantity
+        ? parseInt(editForm.minimumOrderQuantity)
+        : undefined,
       origin: editForm.origin,
       certifications: editForm.certifications,
       warranty: editForm.warranty,
@@ -292,11 +316,11 @@ export default function SupplierProductsPage() {
     const updatedProducts = products.map((p) =>
       p.id === editingProduct.id ? updatedProduct : p
     );
-    saveProducts(updatedProducts);
 
+    saveProducts(updatedProducts);
     setIsEditOpen(false);
     setEditingProduct(null);
-    toast.success("Supply product updated successfully!");
+    toast.success("Product updated successfully!");
   };
 
   const handleDelete = (product: Product) => {
@@ -309,727 +333,855 @@ export default function SupplierProductsPage() {
 
     const updatedProducts = products.filter((p) => p.id !== deletingProduct.id);
     saveProducts(updatedProducts);
-
     setIsDeleteOpen(false);
     setDeletingProduct(null);
-    toast.success("Supply product deleted successfully!");
+    toast.success("Product deleted successfully!");
   };
 
-  const handleToggleStatus = (product: Product) => {
-    const newStatus: Product["status"] =
-      product.status === "active" ? "inactive" : "active";
-    const updatedProducts = products.map((p) =>
-      p.id === product.id
-        ? { ...p, status: newStatus, updatedAt: new Date().toISOString() }
-        : p
-    );
-    saveProducts(updatedProducts);
-    toast.success(
-      `Supply product ${newStatus === "active" ? "activated" : "deactivated"}`
-    );
-  };
-
-  const handleDuplicate = (product: Product) => {
-    const duplicatedProduct: Product = {
-      ...product,
-      id: Date.now().toString(),
-      name: `${product.name} (Copy)`,
-      sku: product.sku ? `${product.sku}-COPY` : undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const updatedProducts = [...products, duplicatedProduct];
-    saveProducts(updatedProducts);
-    toast.success("Supply product duplicated successfully!");
-  };
-
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: Product["status"]) => {
     switch (status) {
       case "active":
-        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
+        return (
+          <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Active
+          </Badge>
+        );
       case "inactive":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+        return (
+          <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300">
+            <Clock className="h-3 w-3 mr-1" />
+            Inactive
+          </Badge>
+        );
       case "out-of-stock":
-        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300";
+        return (
+          <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+            <XCircle className="h-3 w-3 mr-1" />
+            Out of Stock
+          </Badge>
+        );
       case "discontinued":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300";
+        return (
+          <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Discontinued
+          </Badge>
+        );
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
-  const getStockStatus = (quantity: number, minOrder: number = 1) => {
-    if (quantity === 0)
-      return { text: "Out of Stock", color: "text-red-600 dark:text-red-400" };
-    if (quantity < minOrder * 2)
-      return {
-        text: "Low Stock",
-        color: "text-orange-600 dark:text-orange-400",
-      };
-    return { text: "In Stock", color: "text-green-600 dark:text-green-400" };
-  };
-
-  const ProductCard = ({ product }: { product: Product }) => {
-    const stockStatus = getStockStatus(
-      product.quantity,
-      product.minimumOrderQuantity
-    );
-
-    return (
-      <Card className="group hover:shadow-md transition-all duration-200 border border-border bg-card">
-        <CardHeader className="p-0">
-          <div className="relative overflow-hidden rounded-t-lg">
-            <div className="w-full h-48 bg-muted flex items-center justify-center">
-              {product.images && product.images.length > 0 ? (
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Factory className="h-16 w-16 text-muted-foreground" />
-              )}
-            </div>
-
-            {/* Actions overlay */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 bg-background/90 hover:bg-background border-border"
-                onClick={() => router.push(`/supplier/products/${product.id}`)}
-              >
-                <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 bg-background/90 hover:bg-background border-border"
-                onClick={() => handleEdit(product)}
-              >
-                <Edit className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 bg-background/90 hover:bg-background border-border"
-                onClick={() => handleDuplicate(product)}
-              >
-                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
-            </div>
-
-            {/* Status badge */}
-            <Badge
-              className={`absolute top-2 right-2 text-xs px-2 py-1 ${getStatusColor(
-                product.status
-              )}`}
-              variant="secondary"
-            >
-              {product.status}
-            </Badge>
-
-            {/* Blockchain indicator */}
-            {product.sku && (
-              <Badge
-                className="absolute top-2 left-2 text-xs px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
-                variant="secondary"
-              >
-                <Globe className="h-3 w-3 mr-1" />
-                Blockchain
-              </Badge>
+  const ProductCard = ({ product }: { product: Product }) => (
+    <Card className="group bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-0 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.02]">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <CardContent className="p-6 relative z-10">
+        <div className="space-y-4">
+          {/* Product Image Placeholder */}
+          <div className="aspect-video rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center overflow-hidden">
+            {product.images && product.images.length > 0 ? (
+              <img
+                src={product.images[0]}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Package className="h-8 w-8 text-gray-400" />
             )}
           </div>
-        </CardHeader>
 
-        <CardContent className="p-4">
+          {/* Product Info */}
           <div className="space-y-3">
-            {/* Category */}
-            <Badge
-              variant="outline"
-              className="text-xs text-muted-foreground border-border"
-            >
-              {product.category}
-            </Badge>
-
-            {/* Product name */}
-            <h3 className="font-medium text-sm text-foreground leading-tight group-hover:text-foreground transition-colors line-clamp-2">
-              {product.name}
-            </h3>
-
-            {/* SKU and Origin */}
-            <div className="space-y-1">
-              {product.sku && (
-                <p className="text-xs text-muted-foreground font-mono">
-                  SKU: {product.sku}
-                </p>
-              )}
-              {product.origin && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Globe className="h-3 w-3" />
-                  {product.origin}
-                </p>
-              )}
-            </div>
-
-            {/* Price and stock */}
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-lg font-bold text-foreground">
-                  ${product.price.toFixed(2)}
-                </span>
-                <p className="text-xs text-muted-foreground">per unit</p>
-              </div>
-              <div className="text-right">
-                <p className={`text-sm font-medium ${stockStatus.color}`}>
-                  {product.quantity} units
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {stockStatus.text}
-                </p>
-              </div>
-            </div>
-
-            {/* Min order quantity */}
-            {product.minimumOrderQuantity && (
-              <p className="text-xs text-muted-foreground">
-                Min order: {product.minimumOrderQuantity} units
-              </p>
-            )}
-
-            {/* Certifications */}
-            {product.certifications && (
+            <div className="flex items-start justify-between">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                {product.name}
+              </h3>
               <div className="flex items-center gap-1">
-                <Shield className="h-3 w-3 text-green-600" />
-                <p className="text-xs text-muted-foreground truncate">
-                  {product.certifications}
-                </p>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs border-border text-muted-foreground hover:text-foreground"
-                onClick={() => handleToggleStatus(product)}
-              >
-                {product.status === "active" ? "Deactivate" : "Activate"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 w-7 p-0 border-border text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                onClick={() => handleDelete(product)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const ProductListItem = ({ product }: { product: Product }) => {
-    const stockStatus = getStockStatus(
-      product.quantity,
-      product.minimumOrderQuantity
-    );
-
-    return (
-      <Card className="hover:shadow-sm transition-shadow border border-border bg-card">
-        <CardContent className="p-4">
-          <div className="flex gap-4">
-            {/* Image */}
-            <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 relative">
-              {product.images && product.images.length > 0 ? (
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover rounded-lg"
-                />
-              ) : (
-                <Factory className="h-8 w-8 text-muted-foreground" />
-              )}
-              {product.sku && (
-                <Badge
-                  className="absolute -top-1 -right-1 text-xs px-1 py-0 bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
-                  variant="secondary"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => handleEdit(product)}
                 >
-                  <Globe className="h-2 w-2" />
+                  <Edit className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-500"
+                  onClick={() => handleDelete(product)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+              {product.description}
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="text-xs">
+                {product.category}
+              </Badge>
+              {product.origin && (
+                <Badge variant="outline" className="text-xs">
+                  <Globe className="h-2 w-2 mr-1" />
+                  {product.origin}
                 </Badge>
               )}
             </div>
 
-            {/* Content */}
-            <div className="flex-1 space-y-2">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <Badge
-                    variant="outline"
-                    className="text-xs text-muted-foreground border-border"
-                  >
-                    {product.category}
-                  </Badge>
-                  <h3 className="font-medium text-foreground">
-                    {product.name}
-                  </h3>
-                  <div className="space-y-0.5">
-                    {product.sku && (
-                      <p className="text-xs text-muted-foreground font-mono">
-                        SKU: {product.sku}
-                      </p>
-                    )}
-                    {product.origin && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Globe className="h-3 w-3" />
-                        Origin: {product.origin}
-                      </p>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {product.description}
-                  </p>
-                </div>
+            {getStatusBadge(product.status)}
 
-                <div className="text-right space-y-1">
-                  <div>
-                    <span className="text-lg font-bold text-foreground">
-                      ${product.price.toFixed(2)}
-                    </span>
-                    <p className="text-xs text-muted-foreground">per unit</p>
-                  </div>
-                  <Badge
-                    className={`text-xs px-2 py-1 ${getStatusColor(product.status)}`}
-                    variant="secondary"
-                  >
-                    {product.status}
-                  </Badge>
-                </div>
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Price
+                </p>
+                <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                  ${product.price}
+                </p>
               </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Stock
+                </p>
+                <p
+                  className={`text-lg font-bold ${
+                    product.quantity === 0
+                      ? "text-red-500"
+                      : product.quantity <= 50
+                        ? "text-orange-500"
+                        : "text-green-500"
+                  }`}
+                >
+                  {product.quantity}
+                </p>
+              </div>
+            </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <p className={`text-sm font-medium ${stockStatus.color}`}>
-                      {product.quantity} units
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {stockStatus.text}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Min order: {product.minimumOrderQuantity || 1} units
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Updated:{" "}
-                      {new Date(product.updatedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  {product.certifications && (
-                    <div className="flex items-center gap-1">
-                      <Shield className="h-3 w-3 text-green-600" />
-                      <p className="text-xs text-muted-foreground max-w-32 truncate">
-                        {product.certifications}
-                      </p>
-                    </div>
-                  )}
-                </div>
+            {product.minimumOrderQuantity && (
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                MOQ: {product.minimumOrderQuantity} units
+              </div>
+            )}
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0 border-border"
-                    onClick={() =>
-                      router.push(`/supplier/products/${product.id}`)
-                    }
-                  >
-                    <Eye className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0 border-border"
-                    onClick={() => handleEdit(product)}
-                  >
-                    <Edit className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0 border-border"
-                    onClick={() => handleDuplicate(product)}
-                  >
-                    <Copy className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={`h-7 text-xs px-2 border-border ${
-                      product.status === "active"
-                        ? "text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
-                    }`}
-                    onClick={() => handleToggleStatus(product)}
-                  >
-                    {product.status === "active" ? "Deactivate" : "Activate"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0 border-border text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    onClick={() => handleDelete(product)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
+            {product.sku && (
+              <div className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                SKU: {product.sku}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const ProductListItem = ({ product }: { product: Product }) => (
+    <Card className="group bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-0 shadow-xl hover:shadow-2xl transition-all duration-300">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-6">
+          {/* Product Image */}
+          <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {product.images && product.images.length > 0 ? (
+              <img
+                src={product.images[0]}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Package className="h-6 w-6 text-gray-400" />
+            )}
+          </div>
+
+          {/* Product Details */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                {product.name}
+              </h3>
+              <div className="flex items-center gap-2">
+                {getStatusBadge(product.status)}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => handleEdit(product)}
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-red-500"
+                  onClick={() => handleDelete(product)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-1">
+              {product.description}
+            </p>
+
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Category
+                </p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {product.category}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Price
+                </p>
+                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                  ${product.price}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Stock
+                </p>
+                <p
+                  className={`text-sm font-bold ${
+                    product.quantity === 0
+                      ? "text-red-500"
+                      : product.quantity <= 50
+                        ? "text-orange-500"
+                        : "text-green-500"
+                  }`}
+                >
+                  {product.quantity}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">MOQ</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {product.minimumOrderQuantity || "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Origin
+                </p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {product.origin || "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">SKU</p>
+                <p className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                  {product.sku || "-"}
+                </p>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    );
-  };
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            Loading supply products...
+          </p>
+        </div>
       </div>
     );
   }
 
-  // Calculate stats
-  const totalProducts = products.length;
-  const activeProducts = products.filter((p) => p.status === "active").length;
-  const lowStockProducts = products.filter(
-    (p) => p.quantity < (p.minimumOrderQuantity || 10) * 2
-  ).length;
-  const outOfStockProducts = products.filter((p) => p.quantity === 0).length;
-  const totalValue = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Supply Products
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your supply catalog and track vendor orders
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex items-center gap-1 border border-border rounded-md p-0.5">
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="sm"
-              className={`h-7 w-7 p-0 ${
-                viewMode === "grid"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={() => setViewMode("grid")}
-            >
-              <Grid3X3 className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              className={`h-7 w-7 p-0 ${
-                viewMode === "list"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={() => setViewMode("list")}
-            >
-              <List className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-
-          <Button onClick={() => router.push("/supplier/add-product")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Supply Product
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="border border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-foreground">
-              Categories
-            </CardTitle>
-            <Filter className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {new Set(products.map((p) => p.category)).size}
-            </div>
-            <p className="text-xs text-muted-foreground">Supply categories</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card className="border border-border bg-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <SlidersHorizontal className="h-4 w-4" />
-            Filters & Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            {/* Search */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div
+          className={`transform transition-all duration-700 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search products, SKU, origin..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-9 text-sm border-border bg-background"
-                />
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                Supply Chain Products
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 text-lg mt-2">
+                Manage your industrial and raw materials catalog
+              </p>
+              <div className="flex items-center gap-2 mt-3">
+                <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                  <Factory className="h-3 w-3 mr-1" />
+                  {totalProducts} Products
+                </Badge>
+                <Badge variant="outline" className="border-gray-300">
+                  <Shield className="h-3 w-3 mr-1" />
+                  Blockchain Verified
+                </Badge>
+                {totalProducts > 10 && (
+                  <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
+                    <Award className="h-3 w-3 mr-1" />
+                    Established Supplier
+                  </Badge>
+                )}
               </div>
             </div>
 
-            {/* Category filter */}
-            <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-            >
-              <SelectTrigger className="h-9 text-sm border-border bg-background">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem
-                    key={category}
-                    value={category}
-                    className="text-sm"
-                  >
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Status filter */}
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="h-9 text-sm border-border bg-background">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((status) => (
-                  <SelectItem key={status} value={status} className="text-sm">
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="h-9 text-sm border-border bg-background">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortOptions.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                    className="text-sm"
-                  >
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Results count and active filters */}
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {filteredAndSortedProducts.length} of {totalProducts} supply
-              products
-            </p>
-
-            <div className="flex gap-2">
-              {searchTerm && (
-                <Badge
-                  variant="secondary"
-                  className="text-xs bg-muted text-muted-foreground"
+            <div className="flex items-center gap-3">
+              {/* View toggle */}
+              <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1 bg-white/50 dark:bg-gray-900/50 backdrop-blur">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "ghost"}
+                  size="sm"
+                  className={`h-8 w-8 p-0 ${
+                    viewMode === "grid"
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                  }`}
+                  onClick={() => setViewMode("grid")}
                 >
-                  &quot;{searchTerm}&quot;
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-              {selectedCategory !== "All Categories" && (
-                <Badge
-                  variant="secondary"
-                  className="text-xs bg-muted text-muted-foreground"
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  size="sm"
+                  className={`h-8 w-8 p-0 ${
+                    viewMode === "list"
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                  }`}
+                  onClick={() => setViewMode("list")}
                 >
-                  {selectedCategory}
-                  <button
-                    onClick={() => setSelectedCategory("All Categories")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-              {selectedStatus !== "All Status" && (
-                <Badge
-                  variant="secondary"
-                  className="text-xs bg-muted text-muted-foreground"
-                >
-                  {selectedStatus}
-                  <button
-                    onClick={() => setSelectedStatus("All Status")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
 
-      {/* Products */}
-      {filteredAndSortedProducts.length > 0 ? (
-        <div
-          className={
-            viewMode === "grid"
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              : "space-y-4"
-          }
-        >
-          {filteredAndSortedProducts.map((product) =>
-            viewMode === "grid" ? (
-              <ProductCard key={product.id} product={product} />
-            ) : (
-              <ProductListItem key={product.id} product={product} />
-            )
-          )}
-        </div>
-      ) : (
-        <Card className="text-center py-12 border border-border bg-card">
-          <CardContent>
-            <Factory className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              {totalProducts === 0
-                ? "No Supply Products Yet"
-                : "No Products Found"}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              {totalProducts === 0
-                ? "Start by adding your first supply product to the blockchain network."
-                : "Try adjusting your search terms or filters."}
-            </p>
-            {totalProducts === 0 ? (
-              <Button onClick={() => router.push("/supplier/add-product")}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Supply Product
-              </Button>
-            ) : (
               <Button
                 variant="outline"
-                onClick={() => {
-                  setSearchTerm("");
-                  setSelectedCategory("All Categories");
-                  setSelectedStatus("All Status");
-                }}
+                onClick={loadProducts}
+                className="shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                Clear All Filters
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
               </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              <Button
+                variant="outline"
+                className="shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+              <Button
+                onClick={() => router.push("/supplier/add-product")}
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </div>
+          </div>
+        </div>
 
-      {/* Edit Product Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">
-              Edit Supply Product
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Update your supply product information
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-name" className="text-foreground">
-                  Product Name
-                </Label>
-                <Input
-                  id="edit-name"
-                  value={editForm.name}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  className="border-border bg-background"
+        {/* Stats Cards */}
+        <div
+          className={`transform transition-all duration-700 delay-200 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                title: "Total Products",
+                value: totalProducts,
+                subtitle: "Supply catalog",
+                icon: Package,
+                gradient: "from-blue-500 to-cyan-500",
+                bgGradient: "from-blue-500/5 via-transparent to-cyan-500/5",
+              },
+              {
+                title: "Active Products",
+                value: activeProducts,
+                subtitle: "Currently available",
+                icon: CheckCircle,
+                gradient: "from-green-500 to-emerald-500",
+                bgGradient: "from-green-500/5 via-transparent to-emerald-500/5",
+              },
+              {
+                title: "Low Stock",
+                value: lowStockProducts,
+                subtitle: "Need restocking",
+                icon: AlertCircle,
+                gradient: "from-orange-500 to-red-500",
+                bgGradient: "from-orange-500/5 via-transparent to-red-500/5",
+              },
+              {
+                title: "Categories",
+                value: new Set(products.map((p) => p.category)).size,
+                subtitle: "Product types",
+                icon: Building2,
+                gradient: "from-purple-500 to-indigo-500",
+                bgGradient: "from-purple-500/5 via-transparent to-indigo-500/5",
+              },
+            ].map((stat, index) => (
+              <Card
+                key={index}
+                className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-0 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] cursor-pointer group"
+              >
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
                 />
+                <CardContent className="p-6 relative z-10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        {stat.title}
+                      </p>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                        {stat.value}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {stat.subtitle}
+                      </p>
+                    </div>
+                    <div
+                      className={`h-12 w-12 rounded-full bg-gradient-to-r ${stat.gradient} flex items-center justify-center shadow-lg`}
+                    >
+                      <stat.icon className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div
+          className={`transform transition-all duration-700 delay-300 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-0 shadow-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <SlidersHorizontal className="h-5 w-5" />
+                Filters & Search
+              </CardTitle>
+              <CardDescription className="text-gray-600 dark:text-gray-400">
+                Find and filter your supply chain products
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Search */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Search Products
+                  </Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search name, SKU, origin..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600"
+                    />
+                  </div>
+                </div>
+
+                {/* Category */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Category
+                  </Label>
+                  <Select
+                    value={selectedCategory}
+                    onValueChange={setSelectedCategory}
+                  >
+                    <SelectTrigger className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Status */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Status
+                  </Label>
+                  <Select
+                    value={selectedStatus}
+                    onValueChange={setSelectedStatus}
+                  >
+                    <SelectTrigger className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Sort */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Sort By
+                  </Label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sortOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="edit-category" className="text-foreground">
-                  Category
-                </Label>
-                <Select
-                  value={editForm.category}
-                  onValueChange={(value) =>
-                    setEditForm((prev) => ({ ...prev, category: value }))
-                  }
+
+              {/* Active Filters & Results */}
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {filteredAndSortedProducts.length} of {totalProducts}{" "}
+                    products
+                  </span>
+                  {(searchTerm ||
+                    selectedCategory !== "All Categories" ||
+                    selectedStatus !== "All Status") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setSelectedCategory("All Categories");
+                        setSelectedStatus("All Status");
+                      }}
+                      className="h-7 text-xs"
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {searchTerm && (
+                    <Badge variant="secondary" className="text-xs">
+                      Search: {searchTerm}
+                    </Badge>
+                  )}
+                  {selectedCategory !== "All Categories" && (
+                    <Badge variant="secondary" className="text-xs">
+                      {selectedCategory}
+                    </Badge>
+                  )}
+                  {selectedStatus !== "All Status" && (
+                    <Badge variant="secondary" className="text-xs">
+                      {selectedStatus}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Products Grid/List */}
+        <div
+          className={`transform transition-all duration-700 delay-400 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          {filteredAndSortedProducts.length > 0 ? (
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                  : "space-y-4"
+              }
+            >
+              {filteredAndSortedProducts.map((product) =>
+                viewMode === "grid" ? (
+                  <ProductCard key={product.id} product={product} />
+                ) : (
+                  <ProductListItem key={product.id} product={product} />
+                )
+              )}
+            </div>
+          ) : (
+            <Card className="text-center py-16 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-0 shadow-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-500/5 via-transparent to-slate-500/5 rounded-lg" />
+              <CardContent className="relative z-10">
+                <div className="h-20 w-20 mx-auto mb-6 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center">
+                  <Package className="h-10 w-10 text-gray-500 dark:text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  {totalProducts === 0
+                    ? "No Products Yet"
+                    : "No Products Found"}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                  {totalProducts === 0
+                    ? "Start building your supply catalog by adding your first product."
+                    : "Try adjusting your search terms or filters to find what you're looking for."}
+                </p>
+                {totalProducts === 0 ? (
+                  <Button
+                    onClick={() => router.push("/supplier/add-product")}
+                    className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Product
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("All Categories");
+                      setSelectedStatus("All Status");
+                    }}
+                    className="shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
+                    Clear All Filters
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Edit Product Dialog */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="max-w-2xl bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-0 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                  <Edit className="h-4 w-4 text-white" />
+                </div>
+                Edit Supply Product
+              </DialogTitle>
+              <DialogDescription className="text-gray-600 dark:text-gray-400">
+                Update your product information for the supply chain network
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name" className="text-sm font-medium">
+                    Product Name *
+                  </Label>
+                  <Input
+                    id="edit-name"
+                    value={editForm.name}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="edit-category"
+                    className="text-sm font-medium"
+                  >
+                    Category *
+                  </Label>
+                  <Select
+                    value={editForm.category}
+                    onValueChange={(value) =>
+                      setEditForm((prev) => ({ ...prev, category: value }))
+                    }
+                  >
+                    <SelectTrigger className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.slice(1).map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="edit-description"
+                  className="text-sm font-medium"
                 >
-                  <SelectTrigger className="border-border bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.slice(1).map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit-origin" className="text-foreground">
-                  Country of Origin
+                  Description *
                 </Label>
-                <Input
-                  id="edit-origin"
-                  value={editForm.origin}
+                <Textarea
+                  id="edit-description"
+                  value={editForm.description}
                   onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, origin: e.target.value }))
+                    setEditForm((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
                   }
-                  className="border-border bg-background"
-                  placeholder="e.g., Made in USA"
+                  rows={3}
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm resize-none"
                 />
               </div>
-              <div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-price" className="text-sm font-medium">
+                    Price (USD) *
+                  </Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="edit-price"
+                      type="number"
+                      step="0.01"
+                      value={editForm.price}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          price: e.target.value,
+                        }))
+                      }
+                      className="pl-10 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="edit-quantity"
+                    className="text-sm font-medium"
+                  >
+                    Quantity *
+                  </Label>
+                  <Input
+                    id="edit-quantity"
+                    type="number"
+                    value={editForm.quantity}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        quantity: e.target.value,
+                      }))
+                    }
+                    className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-moq" className="text-sm font-medium">
+                    Minimum Order Quantity
+                  </Label>
+                  <Input
+                    id="edit-moq"
+                    type="number"
+                    value={editForm.minimumOrderQuantity}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        minimumOrderQuantity: e.target.value,
+                      }))
+                    }
+                    className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-origin" className="text-sm font-medium">
+                    Country of Origin
+                  </Label>
+                  <Input
+                    id="edit-origin"
+                    value={editForm.origin}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        origin: e.target.value,
+                      }))
+                    }
+                    className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status" className="text-sm font-medium">
+                    Status
+                  </Label>
+                  <Select
+                    value={editForm.status}
+                    onValueChange={(value) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        status: value as Product["status"],
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.slice(1).map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="edit-warranty"
+                    className="text-sm font-medium"
+                  >
+                    Warranty Period
+                  </Label>
+                  <Input
+                    id="edit-warranty"
+                    value={editForm.warranty}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        warranty: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g., 2 years"
+                    className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <Label
                   htmlFor="edit-certifications"
-                  className="text-foreground"
+                  className="text-sm font-medium"
                 >
                   Certifications
                 </Label>
@@ -1042,154 +1194,88 @@ export default function SupplierProductsPage() {
                       certifications: e.target.value,
                     }))
                   }
-                  className="border-border bg-background"
-                  placeholder="e.g., ISO 9001, CE, FDA"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-description" className="text-foreground">
-                  Description
-                </Label>
-                <Textarea
-                  id="edit-description"
-                  value={editForm.description}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                  rows={3}
-                  className="border-border bg-background"
+                  placeholder="e.g., ISO 9001, CE Marking"
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
                 />
               </div>
             </div>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-price" className="text-foreground">
-                  Unit Price ($)
-                </Label>
-                <Input
-                  id="edit-price"
-                  type="number"
-                  step="0.01"
-                  value={editForm.price}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, price: e.target.value }))
-                  }
-                  className="border-border bg-background"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-quantity" className="text-foreground">
-                  Available Stock
-                </Label>
-                <Input
-                  id="edit-quantity"
-                  type="number"
-                  value={editForm.quantity}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      quantity: e.target.value,
-                    }))
-                  }
-                  className="border-border bg-background"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-min-order" className="text-foreground">
-                  Min Order Quantity
-                </Label>
-                <Input
-                  id="edit-min-order"
-                  type="number"
-                  value={editForm.minimumOrderQuantity}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      minimumOrderQuantity: e.target.value,
-                    }))
-                  }
-                  className="border-border bg-background"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-warranty" className="text-foreground">
-                  Warranty
-                </Label>
-                <Input
-                  id="edit-warranty"
-                  value={editForm.warranty}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      warranty: e.target.value,
-                    }))
-                  }
-                  className="border-border bg-background"
-                  placeholder="e.g., 2 year warranty"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-status" className="text-foreground">
-                  Status
-                </Label>
-                <Select
-                  value={editForm.status}
-                  onValueChange={(value: Product["status"]) =>
-                    setEditForm((prev) => ({ ...prev, status: value }))
-                  }
-                >
-                  <SelectTrigger className="border-border bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-                    <SelectItem value="discontinued">Discontinued</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveEdit}>
-              <Building2 className="h-4 w-4 mr-2" />
-              Update Supply Product
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditOpen(false)}
+                className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveEdit}
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-foreground">
-              Delete Supply Product
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Are you sure you want to delete &quot;{deletingProduct?.name}
-              &quot;? This will remove it from the blockchain supply chain and
-              cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Supply Product
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <DialogContent className="bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-0 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-red-600 dark:text-red-400 flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center">
+                  <Trash2 className="h-4 w-4 text-white" />
+                </div>
+                Delete Product
+              </DialogTitle>
+              <DialogDescription className="text-gray-600 dark:text-gray-400">
+                Are you sure you want to delete this product? This action cannot
+                be undone.
+              </DialogDescription>
+            </DialogHeader>
+            {deletingProduct && (
+              <div className="py-4">
+                <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                    {deletingProduct.name}
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {deletingProduct.description}
+                  </p>
+                  <div className="flex items-center gap-4 mt-3 text-sm">
+                    <span className="text-gray-500">
+                      SKU: {deletingProduct.sku}
+                    </span>
+                    <span className="text-gray-500">
+                      Price: ${deletingProduct.price}
+                    </span>
+                    <span className="text-gray-500">
+                      Stock: {deletingProduct.quantity}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter className="gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteOpen(false)}
+                className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                className="shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Product
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

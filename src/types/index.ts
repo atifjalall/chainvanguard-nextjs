@@ -13,17 +13,16 @@ export interface User {
   businessType?: string;
   registrationNumber?: string;
   // Hyperledger specific
-  networkType: 'hyperledger-fabric';
+  networkType: "hyperledger-fabric";
   organizationMSP: string;
   isAuthenticated: boolean;
   createdAt: string;
   updatedAt: string;
   loginAt?: string;
   avatar?: string;
-
 }
 
-export type UserRole = 'supplier' | 'vendor' | 'customer' | 'blockchain-expert';
+export type UserRole = "supplier" | "vendor" | "customer" | "blockchain-expert";
 
 export interface AuthContextType {
   user: User | null;
@@ -70,7 +69,7 @@ export interface HyperledgerWallet {
   name: string;
   address: string;
   publicKey: string;
-  networkType: 'hyperledger-fabric';
+  networkType: "hyperledger-fabric";
   organizationMSP: string;
   createdAt: string;
 }
@@ -88,10 +87,9 @@ export interface Product {
   supplierName: string;
   createdAt: string;
   updatedAt: string;
-  status: ProductStatus; 
+  status: ProductStatus;
   sku?: string;
   weight?: string;
-  dimensions?: string;
   manufacturingDate?: string;
   expiryDate?: string;
   tags?: string[];
@@ -103,12 +101,13 @@ export interface Product {
   certifications?: string;
   origin?: string;
   minimumOrderQuantity?: number;
+  dimensions?: string
 }
 
-export type ProductStatus = 
-  | "active" 
-  | "inactive" 
-  | "out-of-stock" 
+export type ProductStatus =
+  | "active"
+  | "inactive"
+  | "out-of-stock"
   | "discontinued"
   | "available"
   | "reserved"
@@ -355,12 +354,12 @@ export interface RolePreservationData {
   role: UserRole;
   userData: User;
   timestamp: string;
-  networkType: 'hyperledger-fabric';
+  networkType: "hyperledger-fabric";
 }
 
 export interface WalletMetadata {
   createdAt: string;
-  networkType: 'hyperledger-fabric';
+  networkType: "hyperledger-fabric";
   organizationMSP: string;
   channelName: string;
 }
@@ -547,9 +546,9 @@ export interface BackupData {
 }
 
 // Business Types for Suppliers/Vendors
-export type BusinessType = 
+export type BusinessType =
   | "manufacturer"
-  | "distributor" 
+  | "distributor"
   | "ministry"
   | "regulatory"
   | "raw-materials"
@@ -572,8 +571,8 @@ export interface BusinessInfo {
 
 // Organization MSP mappings
 export const MSP_MAPPINGS = {
-  supplier: 'SupplierMSP',
-  vendor: 'VendorMSP', 
-  customer: 'CustomerMSP',
-  'blockchain-expert': 'AdminMSP'
+  supplier: "SupplierMSP",
+  vendor: "VendorMSP",
+  customer: "CustomerMSP",
+  "blockchain-expert": "AdminMSP",
 } as const;

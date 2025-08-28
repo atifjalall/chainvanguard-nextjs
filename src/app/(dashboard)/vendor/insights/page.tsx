@@ -291,56 +291,97 @@ export default function VendorAnalyticsPage() {
     "revenue" | "orders" | "customers"
   >("revenue");
   const [isVisible, setIsVisible] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Add a CSS class to ensure all chart text elements are properly styled for dark mode
+  // Check for dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains("dark"));
+    };
+
+    checkDarkMode();
+
+    // Watch for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Get colors based on theme
+  const getAxisColor = () => (isDarkMode ? "#9ca3af" : "#6b7280"); // gray-400 : gray-500
+  const getGridColor = () => (isDarkMode ? "#374151" : "#e5e7eb"); // gray-700 : gray-200
+  const getTextColor = () => (isDarkMode ? "#f9fafb" : "#111827"); // gray-50 : gray-900
+
+  // Enhanced CSS for dark mode
   useEffect(() => {
     const style = document.createElement("style");
+    style.id = "recharts-dark-mode-fix";
     style.textContent = `
       .recharts-text {
-        fill: hsl(var(--muted-foreground)) !important;
+        fill: ${getTextColor()} !important;
       }
       .recharts-cartesian-axis-tick-value {
-        fill: hsl(var(--muted-foreground)) !important;
+        fill: ${getAxisColor()} !important;
       }
       .recharts-legend-item-text {
-        color: hsl(var(--foreground)) !important;
+        color: ${getTextColor()} !important;
+        fill: ${getTextColor()} !important;
       }
       .recharts-default-tooltip {
-        background-color: hsl(var(--background)) !important;
-        border: 1px solid hsl(var(--border)) !important;
-        color: hsl(var(--foreground)) !important;
+        background-color: ${isDarkMode ? "#1f2937" : "#ffffff"} !important;
+        border: 1px solid ${isDarkMode ? "#374151" : "#e5e7eb"} !important;
+        color: ${getTextColor()} !important;
+        border-radius: 8px !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, ${isDarkMode ? "0.3" : "0.1"}), 0 8px 10px -6px rgba(0, 0, 0, ${isDarkMode ? "0.2" : "0.1"}) !important;
       }
       .recharts-cartesian-axis-line {
-        stroke: hsl(var(--muted-foreground)) !important;
+        stroke: ${getAxisColor()} !important;
+        opacity: 0.5 !important;
       }
       .recharts-cartesian-grid-horizontal line,
       .recharts-cartesian-grid-vertical line {
-        stroke: hsl(var(--border)) !important;
+        stroke: ${getGridColor()} !important;
         opacity: 0.3 !important;
       }
       .recharts-tooltip-wrapper .recharts-default-tooltip {
-        background-color: hsl(var(--background)) !important;
-        border: 1px solid hsl(var(--border)) !important;
+        background-color: ${isDarkMode ? "#1f2937" : "#ffffff"} !important;
+        border: 1px solid ${isDarkMode ? "#374151" : "#e5e7eb"} !important;
         border-radius: 8px !important;
-        color: hsl(var(--foreground)) !important;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+        color: ${getTextColor()} !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, ${isDarkMode ? "0.3" : "0.1"}), 0 8px 10px -6px rgba(0, 0, 0, ${isDarkMode ? "0.2" : "0.1"}) !important;
         backdrop-filter: blur(12px) !important;
       }
       .recharts-tooltip-label {
-        color: hsl(var(--foreground)) !important;
+        color: ${getTextColor()} !important;
       }
       .recharts-tooltip-item-name,
       .recharts-tooltip-item-value {
-        color: hsl(var(--foreground)) !important;
+        color: ${getTextColor()} !important;
+      }
+      .recharts-layer .recharts-reference-line-line {
+        stroke: ${getGridColor()} !important;
       }
     `;
+
+    // Remove existing style if it exists
+    const existingStyle = document.getElementById("recharts-dark-mode-fix");
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+
     document.head.appendChild(style);
+
     return () => {
-      if (document.head.contains(style)) {
-        document.head.removeChild(style);
+      const styleToRemove = document.getElementById("recharts-dark-mode-fix");
+      if (styleToRemove && document.head.contains(styleToRemove)) {
+        document.head.removeChild(styleToRemove);
       }
     };
-  }, []);
+  }, [isDarkMode]);
 
   useEffect(() => {
     setIsVisible(true);
@@ -703,36 +744,22 @@ export default function VendorAnalyticsPage() {
                       </defs>
                       <CartesianGrid
                         strokeDasharray="3 3"
-                        stroke="hsl(var(--border))"
+                        stroke={getGridColor()}
                         opacity={0.3}
                       />
                       <XAxis
                         dataKey="date"
                         tickFormatter={formatDate}
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{
-                          fill: "hsl(var(--muted-foreground))",
-                          fontSize: 12,
-                        }}
+                        axisLine={{ stroke: getAxisColor() }}
+                        tickLine={{ stroke: getAxisColor() }}
+                        tick={{ fill: getAxisColor(), fontSize: 12 }}
                       />
                       <YAxis
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{
-                          fill: "hsl(var(--muted-foreground))",
-                          fontSize: 12,
-                        }}
+                        axisLine={{ stroke: getAxisColor() }}
+                        tickLine={{ stroke: getAxisColor() }}
+                        tick={{ fill: getAxisColor(), fontSize: 12 }}
                       />
-                      <Tooltip
-                        content={<CustomTooltip />}
-                        labelStyle={{ color: "hsl(var(--foreground))" }}
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          backdropFilter: "blur(12px)",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                          color: "hsl(var(--foreground))",
-                        }}
-                      />
+                      <Tooltip content={<CustomTooltip />} />
                       <Area
                         type="monotone"
                         dataKey={selectedMetric}
@@ -762,30 +789,31 @@ export default function VendorAnalyticsPage() {
                     <LineChart data={mockSalesData}>
                       <CartesianGrid
                         strokeDasharray="3 3"
-                        stroke="hsl(var(--border))"
+                        stroke={getGridColor()}
                         opacity={0.3}
                       />
                       <XAxis
                         dataKey="date"
                         tickFormatter={formatDate}
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={{ stroke: getAxisColor() }}
+                        tickLine={{ stroke: getAxisColor() }}
+                        tick={{ fill: getAxisColor(), fontSize: 12 }}
                       />
                       <YAxis
                         yAxisId="left"
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={{ stroke: getAxisColor() }}
+                        tickLine={{ stroke: getAxisColor() }}
+                        tick={{ fill: getAxisColor(), fontSize: 12 }}
                       />
                       <YAxis
                         yAxisId="right"
                         orientation="right"
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={{ stroke: getAxisColor() }}
+                        tickLine={{ stroke: getAxisColor() }}
+                        tick={{ fill: getAxisColor(), fontSize: 12 }}
                       />
                       <Tooltip content={<CustomTooltip />} />
-                      <Legend
-                        wrapperStyle={{ color: "hsl(var(--foreground))" }}
-                      />
+                      <Legend />
                       <Line
                         yAxisId="left"
                         type="monotone"
@@ -826,18 +854,20 @@ export default function VendorAnalyticsPage() {
                   <BarChart data={mockSalesData}>
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
+                      stroke={getGridColor()}
                       opacity={0.3}
                     />
                     <XAxis
                       dataKey="date"
                       tickFormatter={formatDate}
-                      stroke="hsl(var(--muted-foreground))"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      axisLine={{ stroke: getAxisColor() }}
+                      tickLine={{ stroke: getAxisColor() }}
+                      tick={{ fill: getAxisColor(), fontSize: 12 }}
                     />
                     <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      axisLine={{ stroke: getAxisColor() }}
+                      tickLine={{ stroke: getAxisColor() }}
+                      tick={{ fill: getAxisColor(), fontSize: 12 }}
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar
@@ -948,33 +978,33 @@ export default function VendorAnalyticsPage() {
                   <BarChart data={mockProductPerformance} layout="horizontal">
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
+                      stroke={getGridColor()}
                       opacity={0.3}
                     />
                     <XAxis
                       type="number"
-                      stroke="hsl(var(--muted-foreground))"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      axisLine={{ stroke: getAxisColor() }}
+                      tickLine={{ stroke: getAxisColor() }}
+                      tick={{ fill: getAxisColor(), fontSize: 12 }}
                     />
                     <YAxis
                       dataKey="name"
                       type="category"
                       width={150}
-                      stroke="hsl(var(--muted-foreground))"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      axisLine={{ stroke: getAxisColor() }}
+                      tickLine={{ stroke: getAxisColor() }}
+                      tick={{ fill: getAxisColor(), fontSize: 12 }}
                     />
                     <Tooltip
                       formatter={(value: any) => [
                         formatCurrency(value),
                         "Revenue",
                       ]}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
                       contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        backdropFilter: "blur(12px)",
-                        border: "1px solid hsl(var(--border))",
+                        backgroundColor: isDarkMode ? "#1f2937" : "#ffffff",
+                        border: `1px solid ${isDarkMode ? "#374151" : "#e5e7eb"}`,
                         borderRadius: "8px",
-                        color: "hsl(var(--foreground))",
+                        color: getTextColor(),
                       }}
                     />
                     <Bar
@@ -1023,16 +1053,13 @@ export default function VendorAnalyticsPage() {
                           "Revenue",
                         ]}
                         contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          backdropFilter: "blur(12px)",
-                          border: "1px solid hsl(var(--border))",
+                          backgroundColor: isDarkMode ? "#1f2937" : "#ffffff",
+                          border: `1px solid ${isDarkMode ? "#374151" : "#e5e7eb"}`,
                           borderRadius: "8px",
-                          color: "hsl(var(--foreground))",
+                          color: getTextColor(),
                         }}
                       />
-                      <Legend
-                        wrapperStyle={{ color: "hsl(var(--foreground))" }}
-                      />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
