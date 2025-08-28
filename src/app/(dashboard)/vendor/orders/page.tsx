@@ -55,6 +55,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Users,
+  Sparkles,
+  Shield,
+  Activity,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Order } from "@/types";
@@ -256,9 +259,10 @@ export default function VendorOrdersPage() {
   const [newStatus, setNewStatus] = useState<Order["status"]>("pending");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [statusNote, setStatusNote] = useState("");
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // In real app, load orders from API/blockchain
+    setIsVisible(true);
     loadOrders();
   }, [user?.id]);
 
@@ -327,37 +331,42 @@ export default function VendorOrdersPage() {
     switch (status) {
       case "pending":
         return {
-          color: "bg-yellow-100 text-yellow-700",
+          color:
+            "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400",
           icon: Clock,
           label: "Pending",
         };
       case "confirmed":
         return {
-          color: "bg-blue-100 text-blue-700",
+          color:
+            "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
           icon: CheckCircle,
           label: "Confirmed",
         };
       case "shipped":
         return {
-          color: "bg-green-100 text-green-700",
+          color:
+            "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
           icon: Truck,
           label: "Shipped",
         };
       case "delivered":
         return {
-          color: "bg-gray-100 text-gray-700",
+          color:
+            "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
           icon: CheckCircle,
           label: "Delivered",
         };
       case "cancelled":
         return {
-          color: "bg-red-100 text-red-700",
+          color: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
           icon: XCircle,
           label: "Cancelled",
         };
       default:
         return {
-          color: "bg-gray-100 text-gray-700",
+          color:
+            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
           icon: Package,
           label: "Unknown",
         };
@@ -436,48 +445,56 @@ export default function VendorOrdersPage() {
     const progress = getOrderProgress(order.status);
 
     return (
-      <Card className="border-border bg-card hover:shadow-sm transition-shadow">
-        <CardContent className="p-4">
+      <Card className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-cyan-500/5 rounded-lg" />
+        <CardContent className="relative z-10 p-6">
           {/* Order Header */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                <StatusIcon className="h-5 w-5 text-muted-foreground" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-lg flex items-center justify-center shadow-lg">
+                <StatusIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
               </div>
               <div>
-                <h3 className="font-medium text-sm text-card-foreground">
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
                   {order.id}
                 </h3>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {formatDate(order.createdAt)}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Badge
-                className={`text-xs px-2 py-1 ${statusConfig.color}`}
+                className={`${statusConfig.color} flex items-center gap-1`}
                 variant="secondary"
               >
-                <StatusIcon className="h-3 w-3 mr-1" />
+                <StatusIcon className="h-3 w-3" />
                 {statusConfig.label}
               </Badge>
             </div>
           </div>
 
           {/* Customer Info */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-card-foreground">
-                {order.customerName}
-              </span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                <User className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {order.customerName}
+                </span>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Customer
+                </p>
+              </div>
             </div>
             <div className="text-right">
-              <span className="text-lg font-bold text-card-foreground">
+              <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 ${order.totalAmount.toFixed(2)}
               </span>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {order.products.length} item
                 {order.products.length > 1 ? "s" : ""}
               </p>
@@ -485,10 +502,12 @@ export default function VendorOrdersPage() {
           </div>
 
           {/* Progress Bar */}
-          <div className="mb-3">
-            <div className="flex justify-between items-center text-xs mb-2">
-              <span className="text-muted-foreground">Order Progress</span>
-              <span className="text-card-foreground font-medium">
+          <div className="mb-4">
+            <div className="flex justify-between items-center text-sm mb-2">
+              <span className="text-gray-600 dark:text-gray-400 font-medium">
+                Order Progress
+              </span>
+              <span className="text-gray-900 dark:text-gray-100 font-bold">
                 {progress}%
               </span>
             </div>
@@ -497,35 +516,40 @@ export default function VendorOrdersPage() {
 
           {/* Order Summary */}
           {!isExpanded ? (
-            <div className="mb-3">
-              <p className="text-xs text-muted-foreground line-clamp-1">
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
                 {order.products
                   .map((item) => `${item.quantity}x ${item.productName}`)
                   .join(", ")}
               </p>
             </div>
           ) : (
-            <div className="space-y-3 mb-3 border-t border-border pt-3">
+            <div className="space-y-4 mb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
               {/* Products */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-card-foreground">
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
                   Products
                 </h4>
                 {order.products.map((item, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
                   >
-                    <div className="flex items-center gap-2">
-                      <Package className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-sm text-card-foreground">
-                        {item.productName}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Qty: {item.quantity}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-center">
+                        <Package className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {item.productName}
+                        </span>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          Qty: {item.quantity} @ ${item.price}
+                        </p>
+                      </div>
                     </div>
-                    <span className="text-sm font-medium text-card-foreground">
+                    <span className="font-bold text-gray-900 dark:text-gray-100">
                       ${item.totalPrice.toFixed(2)}
                     </span>
                   </div>
@@ -533,67 +557,60 @@ export default function VendorOrdersPage() {
               </div>
 
               {/* Shipping Address */}
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium text-card-foreground flex items-center gap-1">
-                  <Home className="h-3 w-3" />
+              <div className="space-y-2">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <Home className="h-4 w-4" />
                   Shipping Address
                 </h4>
-                <p className="text-xs text-muted-foreground">
-                  {formatAddress(order.shippingAddress)}
-                </p>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {formatAddress(order.shippingAddress)}
+                  </p>
+                </div>
               </div>
 
               {/* Tracking Info */}
               {order.trackingId && (
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-card-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    Tracking
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Tracking Information
                   </h4>
-                  <p className="text-xs text-muted-foreground font-mono">
-                    {order.trackingId}
-                  </p>
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <p className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                      {order.trackingId}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-2 border-t border-border">
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="text-xs text-muted-foreground hover:text-card-foreground h-7"
               onClick={() => toggleOrderExpansion(order.id)}
+              className="text-sm"
             >
               {isExpanded ? "Show Less" : "View Details"}
             </Button>
 
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-card-foreground"
-                title="View Order"
-              >
-                <Eye className="h-3 w-3" />
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                <Eye className="h-4 w-4" />
               </Button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-card-foreground"
-                title="Contact Customer"
-              >
-                <MessageCircle className="h-3 w-3" />
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                <MessageCircle className="h-4 w-4" />
               </Button>
 
               {order.status !== "delivered" && order.status !== "cancelled" && (
                 <Button
-                  variant="ghost"
                   size="sm"
-                  className="h-7 text-xs px-2 text-primary hover:text-primary/80 hover:bg-primary/10"
                   onClick={() => handleUpdateStatus(order)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
                 >
                   Update Status
                 </Button>
@@ -608,7 +625,10 @@ export default function VendorOrdersPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/20 to-cyan-400/20 blur-sm"></div>
+        </div>
       </div>
     );
   }
@@ -625,272 +645,340 @@ export default function VendorOrdersPage() {
     .reduce((sum, o) => sum + o.totalAmount, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Order Management</h1>
-          <p className="text-muted-foreground">
-            Manage customer orders and track fulfillment
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={loadOrders}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalOrders}</div>
-            <p className="text-xs text-muted-foreground">All time</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {pendingOrders}
-            </div>
-            <p className="text-xs text-muted-foreground">Need attention</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
-            <Truck className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {activeOrders}
-            </div>
-            <p className="text-xs text-muted-foreground">In progress</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {completedOrders}
-            </div>
-            <p className="text-xs text-muted-foreground">Delivered</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toFixed(0)}</div>
-            <p className="text-xs text-muted-foreground">
-              From completed orders
+      <div
+        className={`transform transition-all duration-700 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+              Order Management
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 text-lg mt-2">
+              Manage customer orders and track fulfillment
             </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-1 border border-border rounded-md p-0.5 w-fit">
-        <Button
-          variant={selectedTab === "all" ? "default" : "ghost"}
-          size="sm"
-          className={`h-7 text-xs ${
-            selectedTab === "all"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-card-foreground"
-          }`}
-          onClick={() => setSelectedTab("all")}
-        >
-          All Orders
-        </Button>
-        <Button
-          variant={selectedTab === "pending" ? "default" : "ghost"}
-          size="sm"
-          className={`h-7 text-xs ${
-            selectedTab === "pending"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-card-foreground"
-          }`}
-          onClick={() => setSelectedTab("pending")}
-        >
-          <Clock className="h-3 w-3 mr-1" />
-          Pending ({pendingOrders})
-        </Button>
-        <Button
-          variant={selectedTab === "active" ? "default" : "ghost"}
-          size="sm"
-          className={`h-7 text-xs ${
-            selectedTab === "active"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-card-foreground"
-          }`}
-          onClick={() => setSelectedTab("active")}
-        >
-          <Truck className="h-3 w-3 mr-1" />
-          Active ({activeOrders})
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <Card className="border-border bg-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-card-foreground">
-            <Filter className="h-4 w-4" />
-            Filters & Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search orders, customers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-9 text-sm"
-              />
-            </div>
-
-            {/* Status filter */}
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((status) => (
-                  <SelectItem key={status} value={status} className="text-sm">
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortOptions.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                    className="text-sm"
-                  >
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Results count */}
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {filteredAndSortedOrders.length} of {totalOrders} orders
-            </p>
-
-            {/* Active filters */}
-            <div className="flex gap-2">
-              {searchTerm && (
-                <Badge variant="secondary" className="text-xs">
-                  &quot;{searchTerm}&quot;
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-              {selectedStatus !== "All Status" && (
-                <Badge variant="secondary" className="text-xs">
-                  {selectedStatus}
-                  <button
-                    onClick={() => setSelectedStatus("All Status")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
+            <div className="flex items-center gap-2 mt-3">
+              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                <Package className="h-3 w-3 mr-1" />
+                {totalOrders} Orders
+              </Badge>
+              <Badge variant="outline" className="border-gray-300">
+                <Shield className="h-3 w-3 mr-1" />
+                Blockchain Secured
+              </Badge>
+              {totalRevenue > 0 && (
+                <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
+                  <DollarSign className="h-3 w-3 mr-1" />$
+                  {totalRevenue.toFixed(0)} Revenue
                 </Badge>
               )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={loadOrders}
+              className="shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              className="shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div
+        className={`transform transition-all duration-700 delay-200 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {[
+            {
+              title: "Total Orders",
+              value: totalOrders,
+              subtitle: "All time",
+              icon: Package,
+              gradient: "from-blue-500 to-cyan-500",
+              bgGradient: "from-blue-500/5 via-transparent to-cyan-500/5",
+            },
+            {
+              title: "Pending",
+              value: pendingOrders,
+              subtitle: "Need attention",
+              icon: Clock,
+              gradient: "from-yellow-500 to-orange-500",
+              bgGradient: "from-yellow-500/5 via-transparent to-orange-500/5",
+            },
+            {
+              title: "Active",
+              value: activeOrders,
+              subtitle: "In progress",
+              icon: Truck,
+              gradient: "from-green-500 to-emerald-500",
+              bgGradient: "from-green-500/5 via-transparent to-emerald-500/5",
+            },
+            {
+              title: "Completed",
+              value: completedOrders,
+              subtitle: "Delivered",
+              icon: CheckCircle,
+              gradient: "from-emerald-500 to-teal-500",
+              bgGradient: "from-emerald-500/5 via-transparent to-teal-500/5",
+            },
+            {
+              title: "Revenue",
+              value: `$${totalRevenue.toFixed(0)}`,
+              subtitle: "From completed",
+              icon: DollarSign,
+              gradient: "from-purple-500 to-indigo-500",
+              bgGradient: "from-purple-500/5 via-transparent to-indigo-500/5",
+            },
+          ].map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card
+                key={index}
+                className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl group"
+              >
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`}
+                />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {stat.title}
+                  </CardTitle>
+                  <div
+                    className={`h-10 w-10 rounded-full bg-gradient-to-r ${stat.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                  >
+                    <Icon className="h-5 w-5 text-white" />
+                  </div>
+                </CardHeader>
+                <CardContent className="relative z-10">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    {stat.value}
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {stat.subtitle}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tab Navigation & Filters */}
+      <div
+        className={`transform transition-all duration-700 delay-400 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-indigo-500/5 rounded-lg" />
+          <CardHeader className="relative z-10">
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center">
+                <Filter className="h-4 w-4 text-white" />
+              </div>
+              Filters & Search
+            </CardTitle>
+            <CardDescription>
+              Filter and search through your orders
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="relative z-10 space-y-6">
+            {/* Tab Navigation */}
+            <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1 w-fit bg-white/50 dark:bg-gray-900/50 backdrop-blur">
+              <Button
+                variant={selectedTab === "all" ? "default" : "ghost"}
+                size="sm"
+                className={`h-9 text-sm ${
+                  selectedTab === "all"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                }`}
+                onClick={() => setSelectedTab("all")}
+              >
+                All Orders
+              </Button>
+              <Button
+                variant={selectedTab === "pending" ? "default" : "ghost"}
+                size="sm"
+                className={`h-9 text-sm ${
+                  selectedTab === "pending"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                }`}
+                onClick={() => setSelectedTab("pending")}
+              >
+                <Clock className="h-4 w-4 mr-1" />
+                Pending ({pendingOrders})
+              </Button>
+              <Button
+                variant={selectedTab === "active" ? "default" : "ghost"}
+                size="sm"
+                className={`h-9 text-sm ${
+                  selectedTab === "active"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                }`}
+                onClick={() => setSelectedTab("active")}
+              >
+                <Truck className="h-4 w-4 mr-1" />
+                Active ({activeOrders})
+              </Button>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search orders, customers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-10"
+                />
+              </div>
+
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Results and Active Filters */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {filteredAndSortedOrders.length} of {totalOrders} orders
+              </p>
+
+              <div className="flex gap-2">
+                {searchTerm && (
+                  <Badge variant="outline" className="text-xs">
+                    &quot;{searchTerm}&quot;
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="ml-1 text-gray-600 hover:text-gray-800"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                {selectedStatus !== "All Status" && (
+                  <Badge variant="outline" className="text-xs">
+                    {selectedStatus}
+                    <button
+                      onClick={() => setSelectedStatus("All Status")}
+                      className="ml-1 text-gray-600 hover:text-gray-800"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Orders List */}
-      {filteredAndSortedOrders.length > 0 ? (
-        <div className="space-y-4">
-          {filteredAndSortedOrders.map((order) => (
-            <OrderCard key={order.id} order={order} />
-          ))}
-        </div>
-      ) : (
-        <Card className="text-center py-12 border-border bg-card">
-          <CardContent>
-            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-card-foreground mb-2">
-              {totalOrders === 0 ? "No Orders Yet" : "No Orders Found"}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              {totalOrders === 0
-                ? "When customers place orders, they will appear here."
-                : "Try adjusting your search terms or filters."}
-            </p>
-            {totalOrders === 0 ? (
-              <Button
-                onClick={() => window.open("/vendor/my-products", "_self")}
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Manage Products
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm("");
-                  setSelectedStatus("All Status");
-                  setSelectedTab("all");
-                }}
-              >
-                Clear All Filters
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <div
+        className={`transform transition-all duration-700 delay-600 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        {filteredAndSortedOrders.length > 0 ? (
+          <div className="space-y-6">
+            {filteredAndSortedOrders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))}
+          </div>
+        ) : (
+          <Card className="text-center py-16 border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-500/5 via-transparent to-slate-500/5 rounded-lg" />
+            <CardContent className="relative z-10">
+              <div className="h-20 w-20 mx-auto mb-6 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center">
+                <Package className="h-10 w-10 text-gray-500 dark:text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                {totalOrders === 0 ? "No Orders Yet" : "No Orders Found"}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                {totalOrders === 0
+                  ? "When customers place orders, they will appear here."
+                  : "Try adjusting your search terms or filters."}
+              </p>
+              {totalOrders === 0 ? (
+                <Button
+                  onClick={() => window.open("/vendor/my-products", "_self")}
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Manage Products
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedStatus("All Status");
+                    setSelectedTab("all");
+                  }}
+                  className="shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  Clear All Filters
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Update Status Dialog */}
       <Dialog open={isUpdateStatusOpen} onOpenChange={setIsUpdateStatusOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Update Order Status</DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                <Activity className="h-4 w-4 text-white" />
+              </div>
+              Update Order Status
+            </DialogTitle>
             <DialogDescription>
               Update the status of order {updatingOrder?.id}
             </DialogDescription>
@@ -902,7 +990,7 @@ export default function VendorOrdersPage() {
                 value={newStatus}
                 onValueChange={(value: Order["status"]) => setNewStatus(value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -923,6 +1011,7 @@ export default function VendorOrdersPage() {
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
                   placeholder="Enter tracking number"
+                  className="mt-1"
                 />
               </div>
             )}
@@ -935,27 +1024,34 @@ export default function VendorOrdersPage() {
                 onChange={(e) => setStatusNote(e.target.value)}
                 placeholder="Add a note about this status update..."
                 rows={3}
+                className="mt-1"
               />
             </div>
 
             {updatingOrder && (
-              <div className="bg-muted p-3 rounded-lg">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Customer:</span>
-                  <span className="font-medium text-card-foreground">
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Customer:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
                     {updatingOrder.customerName}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Order Total:</span>
-                  <span className="font-medium text-card-foreground">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Order Total:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
                     ${updatingOrder.totalAmount.toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Current Status:</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Current Status:
+                  </span>
                   <Badge
-                    className={`text-xs ${getStatusConfig(updatingOrder.status).color}`}
+                    className={`${getStatusConfig(updatingOrder.status).color} text-xs`}
                   >
                     {getStatusConfig(updatingOrder.status).label}
                   </Badge>
@@ -970,7 +1066,12 @@ export default function VendorOrdersPage() {
             >
               Cancel
             </Button>
-            <Button onClick={saveStatusUpdate}>Update Status</Button>
+            <Button
+              onClick={saveStatusUpdate}
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+            >
+              Update Status
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

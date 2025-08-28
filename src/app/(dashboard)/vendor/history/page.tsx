@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -19,12 +20,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
   Search,
   Calendar,
   Package,
   CheckCircle,
   XCircle,
-  RotateCcw,
+  Clock,
   Download,
   Star,
   Filter,
@@ -36,20 +48,68 @@ import {
   Eye,
   FileText,
   RefreshCw,
-  Clock,
   AlertCircle,
   CreditCard,
   Wallet,
+  MapPin,
+  Phone,
+  Mail,
+  Grid3X3,
+  List,
+  SlidersHorizontal,
+  Sparkles,
+  Shield,
+  Crown,
+  Activity,
+  ShoppingCart,
+  ArrowUpRight,
+  ArrowDownRight,
+  MoreHorizontal,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { Order } from "@/types";
+import { toast } from "sonner";
 
-// Mock sales history data - vendor perspective
+// Order interface
+interface Order {
+  id: string;
+  customerId: string;
+  customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  vendorId: string;
+  vendorName: string;
+  products: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+    totalPrice: number;
+  }[];
+  totalAmount: number;
+  status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+  shippingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  paymentMethod: "crypto" | "card";
+  createdAt: string;
+  updatedAt: string;
+  trackingId: string;
+  rating?: number;
+  notes?: string;
+}
+
+// Mock sales history data
 const mockSalesHistory: Order[] = [
   {
     id: "ORD-2025-015",
     customerId: "cust-001",
     customerName: "John Smith",
+    customerEmail: "john.smith@email.com",
+    customerPhone: "+1 (555) 123-4567",
     vendorId: "vendor-001",
     vendorName: "Tech Solutions Inc.",
     products: [
@@ -81,11 +141,15 @@ const mockSalesHistory: Order[] = [
     createdAt: "2025-08-15T10:30:00Z",
     updatedAt: "2025-08-16T14:20:00Z",
     trackingId: "TRK-2025-015",
+    rating: 5,
+    notes: "Fast delivery, excellent quality!",
   },
   {
     id: "ORD-2025-014",
     customerId: "cust-002",
     customerName: "Sarah Johnson",
+    customerEmail: "sarah.j@email.com",
+    customerPhone: "+1 (555) 987-6543",
     vendorId: "vendor-001",
     vendorName: "Tech Solutions Inc.",
     products: [
@@ -115,28 +179,30 @@ const mockSalesHistory: Order[] = [
     id: "ORD-2025-013",
     customerId: "cust-003",
     customerName: "Mike Chen",
+    customerEmail: "mike.chen@email.com",
+    customerPhone: "+1 (555) 456-7890",
     vendorId: "vendor-001",
     vendorName: "Tech Solutions Inc.",
     products: [
       {
         productId: "prod-004",
-        productName: "Smart Watch Pro Series",
+        productName: "4K Webcam Ultra HD",
         quantity: 1,
-        price: 299.99,
-        totalPrice: 299.99,
+        price: 149.99,
+        totalPrice: 149.99,
       },
       {
         productId: "prod-005",
-        productName: "Watch Band Leather Premium",
+        productName: "USB-C Hub",
         quantity: 2,
-        price: 29.99,
-        totalPrice: 59.98,
+        price: 49.99,
+        totalPrice: 99.98,
       },
     ],
-    totalAmount: 359.97,
-    status: "delivered",
+    totalAmount: 249.97,
+    status: "confirmed",
     shippingAddress: {
-      street: "789 Pine Road",
+      street: "789 Tech Boulevard",
       city: "Chicago",
       state: "IL",
       zipCode: "60601",
@@ -144,78 +210,82 @@ const mockSalesHistory: Order[] = [
     },
     paymentMethod: "crypto",
     createdAt: "2025-08-13T16:45:00Z",
-    updatedAt: "2025-08-14T18:20:00Z",
+    updatedAt: "2025-08-14T10:20:00Z",
     trackingId: "TRK-2025-013",
   },
   {
     id: "ORD-2025-012",
     customerId: "cust-004",
     customerName: "Emily Davis",
+    customerEmail: "emily.davis@email.com",
     vendorId: "vendor-001",
     vendorName: "Tech Solutions Inc.",
     products: [
       {
         productId: "prod-006",
-        productName: "Laptop Stand Adjustable Pro",
+        productName: "Smart Watch Pro",
         quantity: 1,
-        price: 79.99,
-        totalPrice: 79.99,
-      },
-      {
-        productId: "prod-007",
-        productName: "USB-C Hub 7-in-1",
-        quantity: 1,
-        price: 49.99,
-        totalPrice: 49.99,
+        price: 299.99,
+        totalPrice: 299.99,
       },
     ],
-    totalAmount: 129.98,
+    totalAmount: 299.99,
     status: "delivered",
     shippingAddress: {
-      street: "321 Elm Street",
+      street: "321 Pine Street",
       city: "Miami",
       state: "FL",
       zipCode: "33101",
       country: "USA",
     },
     paymentMethod: "crypto",
-    createdAt: "2025-08-12T12:30:00Z",
-    updatedAt: "2025-08-13T09:15:00Z",
+    createdAt: "2025-08-12T08:30:00Z",
+    updatedAt: "2025-08-14T17:15:00Z",
     trackingId: "TRK-2025-012",
+    rating: 4,
   },
   {
     id: "ORD-2025-011",
     customerId: "cust-005",
     customerName: "David Wilson",
+    customerEmail: "david.w@email.com",
     vendorId: "vendor-001",
     vendorName: "Tech Solutions Inc.",
     products: [
       {
-        productId: "prod-008",
-        productName: "Mechanical Keyboard RGB",
+        productId: "prod-007",
+        productName: "Wireless Keyboard",
         quantity: 1,
-        price: 159.99,
-        totalPrice: 159.99,
+        price: 79.99,
+        totalPrice: 79.99,
+      },
+      {
+        productId: "prod-008",
+        productName: "Ergonomic Mouse",
+        quantity: 1,
+        price: 59.99,
+        totalPrice: 59.99,
       },
     ],
-    totalAmount: 159.99,
+    totalAmount: 139.98,
     status: "cancelled",
     shippingAddress: {
-      street: "654 Maple Drive",
+      street: "654 Market Street",
       city: "Seattle",
       state: "WA",
       zipCode: "98101",
       country: "USA",
     },
     paymentMethod: "crypto",
-    createdAt: "2025-08-11T08:45:00Z",
-    updatedAt: "2025-08-11T10:30:00Z",
-    trackingId: undefined,
+    createdAt: "2025-08-11T12:00:00Z",
+    updatedAt: "2025-08-12T09:45:00Z",
+    trackingId: "TRK-2025-011",
   },
   {
     id: "ORD-2025-010",
     customerId: "cust-006",
     customerName: "Lisa Anderson",
+    customerEmail: "lisa.anderson@email.com",
     vendorId: "vendor-001",
     vendorName: "Tech Solutions Inc.",
     products: [
@@ -240,46 +310,18 @@ const mockSalesHistory: Order[] = [
     createdAt: "2025-08-10T14:20:00Z",
     updatedAt: "2025-08-12T16:45:00Z",
     trackingId: "TRK-2025-010",
-  },
-  {
-    id: "ORD-2025-009",
-    customerId: "cust-007",
-    customerName: "Robert Taylor",
-    vendorId: "vendor-001",
-    vendorName: "Tech Solutions Inc.",
-    products: [
-      {
-        productId: "prod-010",
-        productName: "Webcam 4K Ultra HD",
-        quantity: 1,
-        price: 129.99,
-        totalPrice: 129.99,
-      },
-      {
-        productId: "prod-011",
-        productName: "Microphone USB Professional",
-        quantity: 1,
-        price: 89.99,
-        totalPrice: 89.99,
-      },
-    ],
-    totalAmount: 219.98,
-    status: "delivered",
-    shippingAddress: {
-      street: "555 Tech Street",
-      city: "Austin",
-      state: "TX",
-      zipCode: "73301",
-      country: "USA",
-    },
-    paymentMethod: "crypto",
-    createdAt: "2025-08-09T11:15:00Z",
-    updatedAt: "2025-08-11T13:30:00Z",
-    trackingId: "TRK-2025-009",
+    rating: 5,
   },
 ];
 
-const statusOptions = ["All Status", "delivered", "shipped", "cancelled", "pending"];
+const statusOptions = [
+  "All Status",
+  "pending",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
 const paymentOptions = ["All Payments", "crypto", "card"];
 const sortOptions = [
   { value: "date-desc", label: "Newest First" },
@@ -300,39 +342,74 @@ const timeRangeOptions = [
 
 export default function VendorSalesHistoryPage() {
   const { user } = useAuth();
+  const [orders, setOrders] = useState<Order[]>(mockSalesHistory);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [paymentFilter, setPaymentFilter] = useState("All Payments");
-  const [timeRange, setTimeRange] = useState("30d");
   const [sortBy, setSortBy] = useState("date-desc");
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState("30d");
+  const [selectedTab, setSelectedTab] = useState<
+    "all" | "delivered" | "shipped" | "pending" | "cancelled"
+  >("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+    loadOrders();
+  }, [user?.id, timeRange]);
+
+  const loadOrders = async () => {
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // In real app: const orders = await fetchVendorOrders(user.id, timeRange);
+      setOrders(mockSalesHistory);
+    } catch (error) {
+      toast.error("Failed to load order history");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Filter and sort orders
   const filteredAndSortedOrders = useMemo(() => {
-    const filtered = mockSalesHistory.filter((order) => {
+    const filtered = orders.filter((order) => {
       const matchesSearch =
         order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.products.some((item) =>
-          item.productName.toLowerCase().includes(searchTerm.toLowerCase())
+        order.products.some((product) =>
+          product.productName.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
-      const matchesStatus = statusFilter === "All Status" || order.status === statusFilter;
-      const matchesPayment = paymentFilter === "All Payments" || order.paymentMethod === paymentFilter;
+      const matchesStatus =
+        statusFilter === "All Status" || order.status === statusFilter;
 
-      // Time range filtering (simplified for demo)
-      const matchesTimeRange = true; // In real app, filter by actual date ranges
+      const matchesPayment =
+        paymentFilter === "All Payments" ||
+        order.paymentMethod === paymentFilter;
 
-      return matchesSearch && matchesStatus && matchesPayment && matchesTimeRange;
+      const matchesTab = selectedTab === "all" || order.status === selectedTab;
+
+      return matchesSearch && matchesStatus && matchesPayment && matchesTab;
     });
 
     // Sort orders
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "date-desc":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
         case "date-asc":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
         case "amount-desc":
           return b.totalAmount - a.totalAmount;
         case "amount-asc":
@@ -347,51 +424,52 @@ export default function VendorSalesHistoryPage() {
     });
 
     return filtered;
-  }, [searchTerm, statusFilter, paymentFilter, timeRange, sortBy]);
+  }, [orders, searchTerm, statusFilter, paymentFilter, sortBy, selectedTab]);
 
   const getStatusConfig = (status: Order["status"]) => {
     switch (status) {
       case "delivered":
         return {
-          color: "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300",
+          color:
+            "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
           icon: CheckCircle,
           label: "Delivered",
         };
       case "shipped":
         return {
-          color: "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300",
+          color:
+            "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
           icon: Truck,
           label: "Shipped",
         };
+      case "confirmed":
+        return {
+          color:
+            "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400",
+          icon: CheckCircle,
+          label: "Confirmed",
+        };
       case "pending":
         return {
-          color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300",
+          color:
+            "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400",
           icon: Clock,
           label: "Pending",
         };
       case "cancelled":
         return {
-          color: "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300",
+          color: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
           icon: XCircle,
           label: "Cancelled",
         };
       default:
         return {
-          color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-          icon: Package,
+          color:
+            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+          icon: Clock,
           label: "Unknown",
         };
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const formatCurrency = (amount: number) => {
@@ -401,189 +479,245 @@ export default function VendorSalesHistoryPage() {
     }).format(amount);
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
   const toggleOrderExpansion = (orderId: string) => {
-    setExpandedOrder(expandedOrder === orderId ? null : orderId);
-  };
-
-  const getPaymentIcon = (paymentMethod: string) => {
-    switch (paymentMethod) {
-      case "crypto":
-        return <Wallet className="h-3 w-3" />;
-      case "card":
-        return <CreditCard className="h-3 w-3" />;
-      default:
-        return <DollarSign className="h-3 w-3" />;
+    const newExpanded = new Set(expandedOrders);
+    if (newExpanded.has(orderId)) {
+      newExpanded.delete(orderId);
+    } else {
+      newExpanded.add(orderId);
     }
+    setExpandedOrders(newExpanded);
   };
 
-  const SalesHistoryCard = ({ order }: { order: Order }) => {
+  const handleViewDetails = (order: Order) => {
+    setSelectedOrder(order);
+    setIsDetailsOpen(true);
+  };
+
+  const OrderCard = ({ order }: { order: Order }) => {
     const statusConfig = getStatusConfig(order.status);
     const StatusIcon = statusConfig.icon;
-    const isExpanded = expandedOrder === order.id;
+    const isExpanded = expandedOrders.has(order.id);
+    const daysSinceOrder = Math.floor(
+      (new Date().getTime() - new Date(order.createdAt).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
 
     return (
-      <Card className="border border-border bg-card hover:shadow-sm transition-shadow">
-        <CardContent className="p-4">
+      <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5 rounded-lg" />
+        <CardContent className="relative z-10 p-6">
           {/* Order Header */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                <StatusIcon className="h-5 w-5 text-muted-foreground" />
+              <div className="relative">
+                <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800 shadow-lg">
+                  <AvatarImage src="" alt={order.customerName} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-bold">
+                    {getInitials(order.customerName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full p-1">
+                  <StatusIcon className="h-3 w-3 text-white" />
+                </div>
               </div>
               <div>
-                <h3 className="font-medium text-sm text-foreground">{order.id}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {formatDate(order.createdAt)}
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                  {order.id}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {order.customerName}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {daysSinceOrder === 0 ? "Today" : `${daysSinceOrder}d ago`}
                 </p>
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Badge className={`text-xs px-2 py-1 ${statusConfig.color}`} variant="secondary">
-                <StatusIcon className="h-3 w-3 mr-1" />
+            <div className="text-right">
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                {formatCurrency(order.totalAmount)}
+              </p>
+              <Badge
+                className={`${statusConfig.color} flex items-center gap-1 w-fit ml-auto`}
+              >
+                <StatusIcon className="h-3 w-3" />
                 {statusConfig.label}
               </Badge>
             </div>
           </div>
 
-          {/* Customer & Amount */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">
-                {order.customerName}
+          {/* Order Summary */}
+          <div className="space-y-3 mb-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Items:</span>
+              <span className="text-gray-900 dark:text-gray-100 font-medium">
+                {order.products.reduce((sum, item) => sum + item.quantity, 0)}
               </span>
             </div>
-            <div className="text-right">
-              <span className="text-lg font-bold text-foreground">
-                {formatCurrency(order.totalAmount)}
-              </span>
-              <div className="flex items-center gap-1 justify-end mt-1">
-                {getPaymentIcon(order.paymentMethod)}
-                <span className="text-xs text-muted-foreground capitalize">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Payment:</span>
+              <div className="flex items-center gap-1">
+                {order.paymentMethod === "crypto" ? (
+                  <Wallet className="h-3 w-3 text-blue-500" />
+                ) : (
+                  <CreditCard className="h-3 w-3 text-gray-500" />
+                )}
+                <span className="text-gray-900 dark:text-gray-100 capitalize">
                   {order.paymentMethod}
                 </span>
               </div>
             </div>
-          </div>
-
-          {/* Order Summary */}
-          <div className="space-y-2 mb-3">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">
-                {order.products.length} item{order.products.length > 1 ? "s" : ""}
-              </span>
-              {order.trackingId && (
-                <span className="text-xs text-muted-foreground font-mono">
-                  {order.trackingId}
+            {order.rating && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">
+                  Rating:
                 </span>
-              )}
-            </div>
-
-            {/* Status specific info */}
-            {order.status === "delivered" && (
-              <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded">
-                ✓ Successfully delivered and payment received
-              </div>
-            )}
-
-            {order.status === "shipped" && (
-              <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
-                📦 Order shipped - tracking: {order.trackingId}
-              </div>
-            )}
-
-            {order.status === "cancelled" && (
-              <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                ❌ Order cancelled - payment refunded
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <span className="text-gray-900 dark:text-gray-100 font-medium">
+                    {order.rating}/5
+                  </span>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Items Preview/Details */}
-          {!isExpanded ? (
-            <div className="mb-3">
-              <p className="text-xs text-muted-foreground line-clamp-1">
-                {order.products
-                  .map((item) => `${item.quantity}x ${item.productName}`)
-                  .join(", ")}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3 mb-3 border-t border-border pt-3">
-              {/* Products */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-foreground">Products Sold</h4>
-                {order.products.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-sm text-foreground">{item.productName}</span>
-                      <span className="text-xs text-muted-foreground">Qty: {item.quantity}</span>
-                    </div>
-                    <span className="text-sm font-medium text-foreground">
-                      {formatCurrency(item.totalPrice)}
+          {/* Products Preview */}
+          <div className="mb-4">
+            <p className="text-xs text-gray-500 dark:text-gray-500 mb-2 font-medium">
+              Products ({order.products.length})
+            </p>
+            <div className="space-y-1">
+              {order.products
+                .slice(0, isExpanded ? order.products.length : 2)
+                .map((product, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <span className="text-gray-600 dark:text-gray-400 truncate flex-1 mr-2">
+                      {product.quantity}x {product.productName}
+                    </span>
+                    <span className="text-gray-900 dark:text-gray-100 font-medium">
+                      {formatCurrency(product.totalPrice)}
                     </span>
                   </div>
                 ))}
-              </div>
-
-              {/* Customer Info */}
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium text-foreground">Customer Details</h4>
-                <p className="text-xs text-muted-foreground">
-                  {order.shippingAddress.street}, {order.shippingAddress.city},{" "}
-                  {order.shippingAddress.state} {order.shippingAddress.zipCode}
+              {order.products.length > 2 && !isExpanded && (
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  +{order.products.length - 2} more items
                 </p>
-              </div>
+              )}
+            </div>
+          </div>
 
-              {/* Order Timeline */}
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium text-foreground">Timeline</h4>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div>Order placed: {formatDate(order.createdAt)}</div>
-                  <div>Last updated: {formatDate(order.updatedAt)}</div>
+          {/* Expanded Details */}
+          {isExpanded && (
+            <div className="space-y-4 mb-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mb-2 font-medium">
+                  Customer Contact
+                </p>
+                <div className="space-y-1">
+                  {order.customerEmail && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-3 w-3 text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {order.customerEmail}
+                      </span>
+                    </div>
+                  )}
+                  {order.customerPhone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-3 w-3 text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {order.customerPhone}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mb-2 font-medium">
+                  Shipping Address
+                </p>
+                <div className="flex items-start gap-2 text-sm">
+                  <MapPin className="h-3 w-3 text-gray-500 mt-0.5" />
+                  <span className="text-gray-600 dark:text-gray-400">
+                    {order.shippingAddress.street}, {order.shippingAddress.city}
+                    ,{order.shippingAddress.state}{" "}
+                    {order.shippingAddress.zipCode},
+                    {order.shippingAddress.country}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mb-2 font-medium">
+                  Order Timeline
+                </p>
+                <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                  <div>Created: {formatDate(order.createdAt)}</div>
+                  <div>Updated: {formatDate(order.updatedAt)}</div>
+                  <div>Tracking: {order.trackingId}</div>
+                </div>
+              </div>
+
+              {order.notes && (
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mb-2 font-medium">
+                    Customer Notes
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                    &quot;{order.notes}&quot;
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-2 border-t border-border">
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs text-muted-foreground hover:text-foreground h-7"
               onClick={() => toggleOrderExpansion(order.id)}
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
             >
               {isExpanded ? "Show Less" : "View Details"}
             </Button>
-
-            <div className="flex gap-1">
+            <div className="flex gap-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                title="View Order"
+                className="h-8 w-8 p-0"
+                onClick={() => handleViewDetails(order)}
               >
                 <Eye className="h-3 w-3" />
               </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                title="Download Invoice"
-              >
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
                 <Download className="h-3 w-3" />
               </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                title="Export Details"
-              >
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
                 <FileText className="h-3 w-3" />
               </Button>
             </div>
@@ -593,430 +727,894 @@ export default function VendorSalesHistoryPage() {
     );
   };
 
-  // Calculate stats
-  const totalSales = filteredAndSortedOrders.length;
-  const totalRevenue = filteredAndSortedOrders
-    .filter((o) => o.status !== "cancelled")
-    .reduce((sum, o) => sum + o.totalAmount, 0);
-  const deliveredOrders = filteredAndSortedOrders.filter((o) => o.status === "delivered").length;
-  const uniqueCustomers = new Set(filteredAndSortedOrders.map((o) => o.customerId)).size;
+  const OrderListItem = ({ order }: { order: Order }) => {
+    const statusConfig = getStatusConfig(order.status);
+    const StatusIcon = statusConfig.icon;
+    const daysSinceOrder = Math.floor(
+      (new Date().getTime() - new Date(order.createdAt).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Sales History</h1>
-          <p className="text-muted-foreground">
-            Track all your sales transactions and revenue
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-40 border-border bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {timeRangeOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
-      </div>
-
-      {/* Sales Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Total Sales", value: totalSales, icon: Package, color: "text-foreground" },
-          {
-            label: "Total Revenue",
-            value: formatCurrency(totalRevenue),
-            icon: DollarSign,
-            color: "text-green-600 dark:text-green-400",
-          },
-          {
-            label: "Delivered",
-            value: deliveredOrders,
-            icon: CheckCircle,
-            color: "text-blue-600 dark:text-blue-400",
-          },
-          {
-            label: "Customers",
-            value: uniqueCustomers,
-            icon: Users,
-            color: "text-purple-600 dark:text-purple-400",
-          },
-        ].map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={index} className="border border-border bg-card">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className={`text-lg font-medium ${stat.color}`}>{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Filters */}
-      <Card className="border border-border bg-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <Filter className="h-4 w-4" />
-            Filters & Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search orders, customers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-9 text-sm border-border bg-background"
-              />
+    return (
+      <Card className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-cyan-500/5 rounded-lg" />
+        <CardContent className="relative z-10 p-6">
+          <div className="flex items-center gap-6">
+            {/* Avatar */}
+            <div className="relative flex-shrink-0">
+              <Avatar className="h-14 w-14 border-2 border-white dark:border-gray-800 shadow-lg">
+                <AvatarImage src="" alt={order.customerName} />
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-bold">
+                  {getInitials(order.customerName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full p-1">
+                <StatusIcon className="h-3 w-3 text-white" />
+              </div>
             </div>
 
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 text-sm border-border bg-background">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((status) => (
-                  <SelectItem key={status} value={status} className="text-sm">
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Order Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
+                  {order.id}
+                </h3>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      {formatCurrency(order.totalAmount)}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      {order.products.reduce(
+                        (sum, item) => sum + item.quantity,
+                        0
+                      )}{" "}
+                      items
+                    </p>
+                  </div>
+                  <Badge
+                    className={`${statusConfig.color} flex items-center gap-1`}
+                  >
+                    <StatusIcon className="h-3 w-3" />
+                    {statusConfig.label}
+                  </Badge>
+                </div>
+              </div>
 
-            {/* Payment Filter */}
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger className="h-9 text-sm border-border bg-background">
-                <SelectValue placeholder="Payment method" />
-              </SelectTrigger>
-              <SelectContent>
-                {paymentOptions.map((payment) => (
-                  <SelectItem key={payment} value={payment} className="text-sm">
-                    {payment}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-900 dark:text-gray-100 font-medium">
+                    {order.customerName}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    {order.shippingAddress.city}, {order.shippingAddress.state}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400 truncate">
+                    {order.products[0].productName}
+                    {order.products.length > 1 &&
+                      ` +${order.products.length - 1} more`}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    {order.trackingId}
+                  </p>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1">
+                    {order.paymentMethod === "crypto" ? (
+                      <Wallet className="h-3 w-3 text-blue-500" />
+                    ) : (
+                      <CreditCard className="h-3 w-3 text-gray-500" />
+                    )}
+                    <span className="text-gray-600 dark:text-gray-400 capitalize">
+                      {order.paymentMethod}
+                    </span>
+                  </div>
+                  {order.rating && (
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-xs text-gray-500 dark:text-gray-500">
+                        {order.rating}/5
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {daysSinceOrder === 0 ? "Today" : `${daysSinceOrder}d ago`}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    {formatDate(order.createdAt).split(",")[0]}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="h-9 text-sm border-border bg-background">
-                <SelectValue placeholder="Sort by" />
+            {/* Actions */}
+            <div className="flex gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => handleViewDetails(order)}
+              >
+                <Eye className="h-3 w-3" />
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                <Download className="h-3 w-3" />
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/20 to-cyan-400/20 blur-sm"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate stats
+  const totalSales = orders.length;
+  const totalRevenue = orders
+    .filter((o) => o.status !== "cancelled")
+    .reduce((sum, o) => sum + o.totalAmount, 0);
+  const deliveredOrders = orders.filter((o) => o.status === "delivered").length;
+  const pendingOrders = orders.filter((o) => o.status === "pending").length;
+  const uniqueCustomers = new Set(orders.map((o) => o.customerId)).size;
+  const averageOrderValue = totalRevenue / (totalSales > 0 ? totalSales : 1);
+
+  return (
+    <div className="space-y-8 p-6">
+      {/* Header */}
+      <div
+        className={`transform transition-all duration-700 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+              Sales History
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 text-lg mt-2">
+              Track all your sales transactions and revenue
+            </p>
+            <div className="flex items-center gap-2 mt-3">
+              <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                <DollarSign className="h-3 w-3 mr-1" />
+                {formatCurrency(totalRevenue)}
+              </Badge>
+              <Badge variant="outline" className="border-gray-300">
+                <Shield className="h-3 w-3 mr-1" />
+                Blockchain Secured
+              </Badge>
+              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                <ShoppingCart className="h-3 w-3 mr-1" />
+                {totalSales} Orders
+              </Badge>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* View toggle */}
+            <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1 bg-white/50 dark:bg-gray-900/50 backdrop-blur">
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                className={`h-8 w-8 p-0 ${
+                  viewMode === "grid"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                }`}
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                className={`h-8 w-8 p-0 ${
+                  viewMode === "list"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                }`}
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-40 border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 backdrop-blur">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {sortOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="text-sm">
+                {timeRangeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              onClick={loadOrders}
+              className="shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              className="shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
           </div>
-
-          {/* Results Summary */}
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {filteredAndSortedOrders.length} of {mockSalesHistory.length} sales
-            </p>
-
-            {/* Active Filters */}
-            <div className="flex gap-2">
-              {searchTerm && (
-                <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
-                  &quot;{searchTerm}&quot;
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-              {statusFilter !== "All Status" && (
-                <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
-                  {statusFilter}
-                  <button
-                    onClick={() => setStatusFilter("All Status")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-              {paymentFilter !== "All Payments" && (
-                <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
-                  {paymentFilter}
-                  <button
-                    onClick={() => setPaymentFilter("All Payments")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Sales List */}
-      {filteredAndSortedOrders.length > 0 ? (
-        <div className="space-y-4">
-          {filteredAndSortedOrders.map((order) => (
-            <SalesHistoryCard key={order.id} order={order} />
-          ))}
         </div>
-      ) : (
-        <Card className="text-center py-12 border border-border bg-card">
-          <CardContent>
-            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              {totalSales === 0 ? "No Sales Yet" : "No Sales Found"}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              {totalSales === 0
-                ? "When customers purchase your products, sales will appear here."
-                : "Try adjusting your search terms or filters."}
-            </p>
-            {totalSales === 0 ? (
-              <Button onClick={() => window.open("/vendor/my-products", "_self")}>
-                <Package className="h-4 w-4 mr-2" />
-                Add Products to Start Selling
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("All Status");
-                  setPaymentFilter("All Payments");
-                }}
+      </div>
+
+      {/* Stats Cards */}
+      <div
+        className={`transform transition-all duration-700 delay-200 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {[
+            {
+              title: "Total Sales",
+              value: totalSales,
+              subtitle: "All time orders",
+              icon: ShoppingCart,
+              gradient: "from-blue-500 to-cyan-500",
+              bgGradient: "from-blue-500/5 via-transparent to-cyan-500/5",
+            },
+            {
+              title: "Total Revenue",
+              value: formatCurrency(totalRevenue),
+              subtitle: "Gross earnings",
+              icon: DollarSign,
+              gradient: "from-green-500 to-emerald-500",
+              bgGradient: "from-green-500/5 via-transparent to-emerald-500/5",
+            },
+            {
+              title: "Delivered",
+              value: deliveredOrders,
+              subtitle: "Completed orders",
+              icon: CheckCircle,
+              gradient: "from-purple-500 to-indigo-500",
+              bgGradient: "from-purple-500/5 via-transparent to-indigo-500/5",
+            },
+            {
+              title: "Pending",
+              value: pendingOrders,
+              subtitle: "Awaiting processing",
+              icon: Clock,
+              gradient: "from-orange-500 to-amber-500",
+              bgGradient: "from-orange-500/5 via-transparent to-amber-500/5",
+            },
+            {
+              title: "Unique Customers",
+              value: uniqueCustomers,
+              subtitle: "Different buyers",
+              icon: Users,
+              gradient: "from-pink-500 to-rose-500",
+              bgGradient: "from-pink-500/5 via-transparent to-rose-500/5",
+            },
+          ].map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card
+                key={index}
+                className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl group"
               >
-                Clear All Filters
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`}
+                />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {stat.title}
+                  </CardTitle>
+                  <div
+                    className={`h-10 w-10 rounded-full bg-gradient-to-r ${stat.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                  >
+                    <Icon className="h-5 w-5 text-white" />
+                  </div>
+                </CardHeader>
+                <CardContent className="relative z-10">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    {stat.value}
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {stat.subtitle}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Filters and Controls */}
+      <div
+        className={`transform transition-all duration-700 delay-400 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-indigo-500/5 rounded-lg" />
+          <CardHeader className="relative z-10">
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center">
+                <SlidersHorizontal className="h-4 w-4 text-white" />
+              </div>
+              Filters & Search
+            </CardTitle>
+            <CardDescription>
+              Filter and search through your order history
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="relative z-10 space-y-6">
+            {/* Tab Navigation */}
+            <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1 w-fit bg-white/50 dark:bg-gray-900/50 backdrop-blur">
+              <Button
+                variant={selectedTab === "all" ? "default" : "ghost"}
+                size="sm"
+                className={`h-9 text-sm ${
+                  selectedTab === "all"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                }`}
+                onClick={() => setSelectedTab("all")}
+              >
+                All Orders
               </Button>
-            )}
+              <Button
+                variant={selectedTab === "delivered" ? "default" : "ghost"}
+                size="sm"
+                className={`h-9 text-sm ${
+                  selectedTab === "delivered"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                }`}
+                onClick={() => setSelectedTab("delivered")}
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Delivered ({deliveredOrders})
+              </Button>
+              <Button
+                variant={selectedTab === "shipped" ? "default" : "ghost"}
+                size="sm"
+                className={`h-9 text-sm ${
+                  selectedTab === "shipped"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                }`}
+                onClick={() => setSelectedTab("shipped")}
+              >
+                <Truck className="h-4 w-4 mr-1" />
+                Shipped
+              </Button>
+              <Button
+                variant={selectedTab === "pending" ? "default" : "ghost"}
+                size="sm"
+                className={`h-9 text-sm ${
+                  selectedTab === "pending"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                }`}
+                onClick={() => setSelectedTab("pending")}
+              >
+                <Clock className="h-4 w-4 mr-1" />
+                Pending ({pendingOrders})
+              </Button>
+              <Button
+                variant={selectedTab === "cancelled" ? "default" : "ghost"}
+                size="sm"
+                className={`h-9 text-sm ${
+                  selectedTab === "cancelled"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                }`}
+                onClick={() => setSelectedTab("cancelled")}
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                Cancelled
+              </Button>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search orders, customers, products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-10"
+                />
+              </div>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Payment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentOptions.map((payment) => (
+                    <SelectItem key={payment} value={payment}>
+                      {payment}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Results and Active Filters */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {filteredAndSortedOrders.length} of {totalSales} orders
+              </p>
+
+              <div className="flex gap-2">
+                {searchTerm && (
+                  <Badge variant="outline" className="text-xs">
+                    &quot;{searchTerm}&quot;
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="ml-1 text-gray-600 hover:text-gray-800"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                {statusFilter !== "All Status" && (
+                  <Badge variant="outline" className="text-xs">
+                    {statusFilter}
+                    <button
+                      onClick={() => setStatusFilter("All Status")}
+                      className="ml-1 text-gray-600 hover:text-gray-800"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                {paymentFilter !== "All Payments" && (
+                  <Badge variant="outline" className="text-xs">
+                    {paymentFilter}
+                    <button
+                      onClick={() => setPaymentFilter("All Payments")}
+                      className="ml-1 text-gray-600 hover:text-gray-800"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
-      )}
+      </div>
 
-      {/* Summary Cards */}
-      {filteredAndSortedOrders.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Revenue Breakdown */}
-          <Card className="border border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-foreground">Revenue Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Completed Sales</span>
-                  <span className="font-medium text-foreground">
-                    {formatCurrency(
-                      filteredAndSortedOrders
-                        .filter((o) => o.status === "delivered")
-                        .reduce((sum, o) => sum + o.totalAmount, 0)
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Pending Revenue</span>
-                  <span className="font-medium text-foreground">
-                    {formatCurrency(
-                      filteredAndSortedOrders
-                        .filter((o) => o.status === "shipped")
-                        .reduce((sum, o) => sum + o.totalAmount, 0)
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Cancelled Orders</span>
-                  <span className="font-medium text-red-600 dark:text-red-400">
-                    {formatCurrency(
-                      filteredAndSortedOrders
-                        .filter((o) => o.status === "cancelled")
-                        .reduce((sum, o) => sum + o.totalAmount, 0)
-                    )}
-                  </span>
-                </div>
-                <div className="pt-2 border-t border-border">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-foreground">Total Revenue</span>
-                    <span className="font-bold text-lg text-foreground">
-                      {formatCurrency(totalRevenue)}
-                    </span>
+      {/* Orders List */}
+      <div
+        className={`transform transition-all duration-700 delay-600 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        {filteredAndSortedOrders.length > 0 ? (
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+                : "space-y-6"
+            }
+          >
+            {filteredAndSortedOrders.map((order) =>
+              viewMode === "grid" ? (
+                <OrderCard key={order.id} order={order} />
+              ) : (
+                <OrderListItem key={order.id} order={order} />
+              )
+            )}
+          </div>
+        ) : (
+          <Card className="text-center py-16 border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-500/5 via-transparent to-slate-500/5 rounded-lg" />
+            <CardContent className="relative z-10">
+              <div className="h-20 w-20 mx-auto mb-6 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center">
+                <ShoppingCart className="h-10 w-10 text-gray-500 dark:text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                {totalSales === 0 ? "No Orders Yet" : "No Orders Found"}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                {totalSales === 0
+                  ? "When customers place orders, they will appear here."
+                  : "Try adjusting your search terms or filters."}
+              </p>
+              {totalSales === 0 ? (
+                <Button
+                  onClick={() => window.open("/vendor/my-products", "_self")}
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Add Products
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("All Status");
+                    setPaymentFilter("All Payments");
+                    setSelectedTab("all");
+                  }}
+                  className="shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  Clear All Filters
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Order Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                <Eye className="h-4 w-4 text-white" />
+              </div>
+              Order Details
+            </DialogTitle>
+            <DialogDescription>
+              Complete order information and transaction history
+            </DialogDescription>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-6">
+              {/* Order Header */}
+              <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <Avatar className="h-16 w-16 border-2 border-white shadow-lg">
+                  <AvatarImage src="" alt={selectedOrder.customerName} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-lg font-bold">
+                    {getInitials(selectedOrder.customerName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    {selectedOrder.id}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {selectedOrder.customerName}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge
+                      className={`text-xs ${getStatusConfig(selectedOrder.status).color}`}
+                    >
+                      {getStatusConfig(selectedOrder.status).label}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedOrder.trackingId}
+                    </Badge>
                   </div>
                 </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {formatCurrency(selectedOrder.totalAmount)}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedOrder.products.reduce(
+                      (sum, item) => sum + item.quantity,
+                      0
+                    )}{" "}
+                    items
+                  </p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Top Products */}
-          <Card className="border border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-foreground">Top Selling Products</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {Array.from(
-                  filteredAndSortedOrders
-                    .flatMap((order) => order.products)
-                    .reduce((acc, product) => {
-                      const key = product.productName;
-                      if (!acc.has(key)) {
-                        acc.set(key, { name: key, quantity: 0, revenue: 0 });
-                      }
-                      const existing = acc.get(key)!;
-                      existing.quantity += product.quantity;
-                      existing.revenue += product.totalPrice;
-                      return acc;
-                    }, new Map())
-                    .values()
-                )
-                  .sort((a, b) => b.revenue - a.revenue)
-                  .slice(0, 3)
-                  .map((product, index) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm font-medium text-foreground line-clamp-1">
-                          {product.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {product.quantity} sold
+              <Tabs defaultValue="products" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="products">Products</TabsTrigger>
+                  <TabsTrigger value="customer">Customer</TabsTrigger>
+                  <TabsTrigger value="shipping">Shipping</TabsTrigger>
+                  <TabsTrigger value="payment">Payment</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="products" className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Ordered Items
+                    </Label>
+                    <div className="mt-2 space-y-3">
+                      {selectedOrder.products.map((product, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                              <Package className="h-6 w-6 text-gray-500" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-gray-100">
+                                {product.productName}
+                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Qty: {product.quantity} ×{" "}
+                                {formatCurrency(product.price)}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="font-bold text-gray-900 dark:text-gray-100">
+                            {formatCurrency(product.totalPrice)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="customer" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Contact Information
+                      </Label>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {selectedOrder.customerEmail || "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {selectedOrder.customerPhone || "N/A"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Order History
+                      </Label>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Orders:
+                          </span>
+                          <span className="text-gray-900 dark:text-gray-100">
+                            {
+                              orders.filter(
+                                (o) => o.customerId === selectedOrder.customerId
+                              ).length
+                            }
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Total Spent:
+                          </span>
+                          <span className="text-gray-900 dark:text-gray-100">
+                            {formatCurrency(
+                              orders
+                                .filter(
+                                  (o) =>
+                                    o.customerId === selectedOrder.customerId
+                                )
+                                .reduce((sum, o) => sum + o.totalAmount, 0)
+                            )}
+                          </span>
+                        </div>
+                        {selectedOrder.rating && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              Rating:
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                              <span className="text-gray-900 dark:text-gray-100">
+                                {selectedOrder.rating}/5
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedOrder.notes && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Customer Notes
+                      </Label>
+                      <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                          &quot;{selectedOrder.notes}&quot;
                         </p>
                       </div>
-                      <span className="font-medium text-foreground">
-                        {formatCurrency(product.revenue)}
-                      </span>
                     </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
+                  )}
+                </TabsContent>
 
-          {/* Performance Metrics */}
-          <Card className="border border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-foreground">Performance Metrics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Average Order Value</span>
-                  <span className="font-medium text-foreground">
-                    {formatCurrency(
-                      totalRevenue / Math.max(filteredAndSortedOrders.length, 1)
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Success Rate</span>
-                  <span className="font-medium text-green-600 dark:text-green-400">
-                    {(
-                      (deliveredOrders / Math.max(filteredAndSortedOrders.length, 1)) *
-                      100
-                    ).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Cancellation Rate</span>
-                  <span className="font-medium text-red-600 dark:text-red-400">
-                    {(
-                      (filteredAndSortedOrders.filter((o) => o.status === "cancelled").length /
-                        Math.max(filteredAndSortedOrders.length, 1)) *
-                      100
-                    ).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Return Customers</span>
-                  <span className="font-medium text-foreground">
-                    {Math.round(
-                      ((filteredAndSortedOrders.length - uniqueCustomers) /
-                        Math.max(uniqueCustomers, 1)) *
-                        100
-                    )}%
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                <TabsContent value="shipping" className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Shipping Address
+                    </Label>
+                    <div className="mt-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">
+                            {selectedOrder.customerName}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {selectedOrder.shippingAddress.street}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {selectedOrder.shippingAddress.city},{" "}
+                            {selectedOrder.shippingAddress.state}{" "}
+                            {selectedOrder.shippingAddress.zipCode}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {selectedOrder.shippingAddress.country}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-      {/* Quick Actions */}
-      <Card className="border border-border bg-card">
-        <CardHeader>
-          <CardTitle className="text-foreground">Quick Actions</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Common actions related to your sales
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button variant="outline" className="justify-start h-auto p-4 flex-col gap-2">
-              <Download className="h-5 w-5" />
-              <div className="text-center">
-                <div className="font-medium">Export Sales Report</div>
-                <div className="text-xs text-muted-foreground">Download detailed report</div>
-              </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Tracking Information
+                    </Label>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Tracking ID:
+                        </span>
+                        <span className="text-gray-900 dark:text-gray-100 font-mono">
+                          {selectedOrder.trackingId}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Status:
+                        </span>
+                        <Badge
+                          className={`${getStatusConfig(selectedOrder.status).color}`}
+                        >
+                          {getStatusConfig(selectedOrder.status).label}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="payment" className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Payment Details
+                    </Label>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Payment Method:
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {selectedOrder.paymentMethod === "crypto" ? (
+                            <Wallet className="h-4 w-4 text-blue-500" />
+                          ) : (
+                            <CreditCard className="h-4 w-4 text-gray-500" />
+                          )}
+                          <span className="text-gray-900 dark:text-gray-100 capitalize">
+                            {selectedOrder.paymentMethod}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Subtotal:
+                        </span>
+                        <span className="text-gray-900 dark:text-gray-100">
+                          {formatCurrency(selectedOrder.totalAmount)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm font-bold">
+                        <span className="text-gray-900 dark:text-gray-100">
+                          Total:
+                        </span>
+                        <span className="text-gray-900 dark:text-gray-100">
+                          {formatCurrency(selectedOrder.totalAmount)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Transaction Timeline
+                    </Label>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Order Created:
+                        </span>
+                        <span className="text-gray-900 dark:text-gray-100">
+                          {formatDate(selectedOrder.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Last Updated:
+                        </span>
+                        <span className="text-gray-900 dark:text-gray-100">
+                          {formatDate(selectedOrder.updatedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
+              Close
             </Button>
-
-            <Button variant="outline" className="justify-start h-auto p-4 flex-col gap-2">
-              <Users className="h-5 w-5" />
-              <div className="text-center">
-                <div className="font-medium">View Customers</div>
-                <div className="text-xs text-muted-foreground">Manage relationships</div>
-              </div>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+              <Download className="h-4 w-4 mr-2" />
+              Download Invoice
             </Button>
-
-            <Button variant="outline" className="justify-start h-auto p-4 flex-col gap-2">
-              <Package className="h-5 w-5" />
-              <div className="text-center">
-                <div className="font-medium">Product Performance</div>
-                <div className="text-xs text-muted-foreground">Analyze top sellers</div>
-              </div>
-            </Button>
-
-            <Button variant="outline" className="justify-start h-auto p-4 flex-col gap-2">
-              <TrendingUp className="h-5 w-5" />
-              <div className="text-center">
-                <div className="font-medium">View Analytics</div>
-                <div className="text-xs text-muted-foreground">Detailed insights</div>
-              </div>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

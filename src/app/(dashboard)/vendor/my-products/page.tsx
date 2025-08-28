@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -44,14 +45,19 @@ import {
   Grid3X3,
   List,
   SlidersHorizontal,
-  Star,
   Copy,
-  ExternalLink,
-  MoreHorizontal,
+  MoreVertical,
+  DollarSign,
+  Sparkles,
+  Shield,
+  CheckCircle,
+  XCircle,
+  Clock,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { Product } from "@/types";
+import { Product, ProductStatus } from "@/types";
 import { toast } from "sonner";
+import Link from "next/link";
 
 const categories = [
   "All Categories",
@@ -62,33 +68,21 @@ const categories = [
   "Home & Garden",
   "Books",
   "Sports & Recreation",
-  "Health & Beauty",
-  "Automotive",
-  "Tools & Hardware",
-  "Toys & Games",
-  "Office Supplies",
 ];
 
-const statusOptions = [
-  "All Status",
-  "active",
-  "inactive", 
-  "out-of-stock",
-  "discontinued"
-];
-
+const statusOptions = ["All Status", "active", "inactive"];
 const sortOptions = [
+  { value: "newest", label: "Newest First" },
+  { value: "oldest", label: "Oldest First" },
   { value: "name-asc", label: "Name: A to Z" },
   { value: "name-desc", label: "Name: Z to A" },
   { value: "price-asc", label: "Price: Low to High" },
   { value: "price-desc", label: "Price: High to Low" },
   { value: "quantity-asc", label: "Stock: Low to High" },
   { value: "quantity-desc", label: "Stock: High to Low" },
-  { value: "newest", label: "Newest First" },
-  { value: "oldest", label: "Oldest First" },
 ];
 
-export default function MyProductsPage() {
+export default function VendorMyProductsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
@@ -102,6 +96,7 @@ export default function MyProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -114,6 +109,7 @@ export default function MyProductsPage() {
   });
 
   useEffect(() => {
+    setIsVisible(true);
     loadProducts();
   }, [user?.id]);
 
@@ -160,7 +156,7 @@ export default function MyProductsPage() {
     });
 
     // Sort products
-    filtered.sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case "name-asc":
           return a.name.localeCompare(b.name);
@@ -174,16 +170,19 @@ export default function MyProductsPage() {
           return a.quantity - b.quantity;
         case "quantity-desc":
           return b.quantity - a.quantity;
-        case "newest":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         case "oldest":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        case "newest":
         default:
-          return 0;
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
       }
     });
 
-    return filtered;
+    return sorted;
   }, [products, searchTerm, selectedCategory, selectedStatus, sortBy]);
 
   const handleEdit = (product: Product) => {
@@ -194,7 +193,7 @@ export default function MyProductsPage() {
       category: product.category,
       price: product.price.toString(),
       quantity: product.quantity.toString(),
-      status: product.status,
+      status: product.status || "active",
     });
     setIsEditOpen(true);
   };
@@ -217,10 +216,9 @@ export default function MyProductsPage() {
       p.id === editingProduct.id ? updatedProduct : p
     );
     saveProducts(updatedProducts);
-
     setIsEditOpen(false);
     setEditingProduct(null);
-    toast.success("Product updated successfully!");
+    toast.success("Product updated successfully");
   };
 
   const handleDelete = (product: Product) => {
@@ -233,21 +231,25 @@ export default function MyProductsPage() {
 
     const updatedProducts = products.filter((p) => p.id !== deletingProduct.id);
     saveProducts(updatedProducts);
-
     setIsDeleteOpen(false);
     setDeletingProduct(null);
-    toast.success("Product deleted successfully!");
+    toast.success("Product deleted successfully");
   };
 
   const handleToggleStatus = (product: Product) => {
-    const newStatus: Product["status"] = product.status === "active" ? "inactive" : "active";
-    const updatedProducts = products.map((p) =>
+    const newStatus =
+      product.status === "active" ? "inactive" : ("active" as ProductStatus);
+
+    const updatedProducts: Product[] = products.map((p) =>
       p.id === product.id
         ? { ...p, status: newStatus, updatedAt: new Date().toISOString() }
         : p
     );
+
     saveProducts(updatedProducts);
-    toast.success(`Product ${newStatus === "active" ? "activated" : "deactivated"}`);
+    toast.success(
+      `Product ${newStatus === "active" ? "activated" : "deactivated"}`
+    );
   };
 
   const handleDuplicate = (product: Product) => {
@@ -261,272 +263,30 @@ export default function MyProductsPage() {
 
     const updatedProducts = [...products, duplicatedProduct];
     saveProducts(updatedProducts);
-    toast.success("Product duplicated successfully!");
+    toast.success("Product duplicated successfully");
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
+        return "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-400";
       case "inactive":
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
-      case "out-of-stock":
-        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300";
-      case "discontinued":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
     }
   };
 
-  const getStockStatus = (quantity: number) => {
-    if (quantity === 0) return { text: "Out of Stock", color: "text-red-600 dark:text-red-400" };
-    if (quantity < 10) return { text: "Low Stock", color: "text-orange-600 dark:text-orange-400" };
-    return { text: "In Stock", color: "text-green-600 dark:text-green-400" };
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "active":
+        return <CheckCircle className="h-3 w-3" />;
+      case "inactive":
+        return <XCircle className="h-3 w-3" />;
+      default:
+        return <Clock className="h-3 w-3" />;
+    }
   };
-
-  const ProductCard = ({ product }: { product: Product }) => {
-    const stockStatus = getStockStatus(product.quantity);
-
-    return (
-      <Card className="group hover:shadow-md transition-all duration-200 border border-border bg-card">
-        <CardHeader className="p-0">
-          <div className="relative overflow-hidden rounded-t-lg">
-            <div className="w-full h-48 bg-muted flex items-center justify-center">
-              {product.images && product.images.length > 0 ? (
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Package className="h-16 w-16 text-muted-foreground" />
-              )}
-            </div>
-
-            {/* Actions overlay */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 bg-background/90 hover:bg-background border-border"
-                onClick={() => router.push(`/vendor/products/${product.id}`)}
-              >
-                <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 bg-background/90 hover:bg-background border-border"
-                onClick={() => handleEdit(product)}
-              >
-                <Edit className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 bg-background/90 hover:bg-background border-border"
-                onClick={() => handleDuplicate(product)}
-              >
-                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
-            </div>
-
-            {/* Status badge */}
-            <Badge
-              className={`absolute top-2 right-2 text-xs px-2 py-1 ${getStatusColor(
-                product.status
-              )}`}
-              variant="secondary"
-            >
-              {product.status}
-            </Badge>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-4">
-          <div className="space-y-3">
-            {/* Category */}
-            <Badge variant="outline" className="text-xs text-muted-foreground border-border">
-              {product.category}
-            </Badge>
-
-            {/* Product name */}
-            <h3 className="font-medium text-sm text-foreground leading-tight group-hover:text-foreground transition-colors line-clamp-2">
-              {product.name}
-            </h3>
-
-            {/* SKU */}
-            {product.sku && (
-              <p className="text-xs text-muted-foreground font-mono">SKU: {product.sku}</p>
-            )}
-
-            {/* Price and stock */}
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-foreground">
-                ${product.price.toFixed(2)}
-              </span>
-              <div className="text-right">
-                <p className={`text-sm font-medium ${stockStatus.color}`}>
-                  {product.quantity} units
-                </p>
-                <p className="text-xs text-muted-foreground">{stockStatus.text}</p>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs border-border text-muted-foreground hover:text-foreground"
-                onClick={() => handleToggleStatus(product)}
-              >
-                {product.status === "active" ? "Deactivate" : "Activate"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 w-7 p-0 border-border text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                onClick={() => handleDelete(product)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const ProductListItem = ({ product }: { product: Product }) => {
-    const stockStatus = getStockStatus(product.quantity);
-
-    return (
-      <Card className="hover:shadow-sm transition-shadow border border-border bg-card">
-        <CardContent className="p-4">
-          <div className="flex gap-4">
-            {/* Image */}
-            <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-              {product.images && product.images.length > 0 ? (
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover rounded-lg"
-                />
-              ) : (
-                <Package className="h-8 w-8 text-muted-foreground" />
-              )}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 space-y-2">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <Badge variant="outline" className="text-xs text-muted-foreground border-border">
-                    {product.category}
-                  </Badge>
-                  <h3 className="font-medium text-foreground">{product.name}</h3>
-                  {product.sku && (
-                    <p className="text-xs text-muted-foreground font-mono">SKU: {product.sku}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {product.description}
-                  </p>
-                </div>
-
-                <div className="text-right space-y-1">
-                  <span className="text-lg font-bold text-foreground">
-                    ${product.price.toFixed(2)}
-                  </span>
-                  <Badge
-                    className={`text-xs px-2 py-1 ${getStatusColor(product.status)}`}
-                    variant="secondary"
-                  >
-                    {product.status}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <p className={`text-sm font-medium ${stockStatus.color}`}>
-                      {product.quantity} units
-                    </p>
-                    <p className="text-xs text-muted-foreground">{stockStatus.text}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Created: {new Date(product.createdAt).toLocaleDateString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Updated: {new Date(product.updatedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0 border-border"
-                    onClick={() => router.push(`/vendor/products/${product.id}`)}
-                  >
-                    <Eye className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0 border-border"
-                    onClick={() => handleEdit(product)}
-                  >
-                    <Edit className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0 border-border"
-                    onClick={() => handleDuplicate(product)}
-                  >
-                    <Copy className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={`h-7 text-xs px-2 border-border ${
-                      product.status === "active"
-                        ? "text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
-                    }`}
-                    onClick={() => handleToggleStatus(product)}
-                  >
-                    {product.status === "active" ? "Deactivate" : "Activate"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0 border-border text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    onClick={() => handleDelete(product)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   // Calculate stats
   const totalProducts = products.length;
@@ -535,412 +295,668 @@ export default function MyProductsPage() {
   const outOfStockProducts = products.filter((p) => p.quantity === 0).length;
   const totalValue = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">My Products</h1>
-          <p className="text-muted-foreground">
-            Manage your product inventory and track performance
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex items-center gap-1 border border-border rounded-md p-0.5">
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="sm"
-              className={`h-7 w-7 p-0 ${
-                viewMode === "grid"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={() => setViewMode("grid")}
-            >
-              <Grid3X3 className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              className={`h-7 w-7 p-0 ${
-                viewMode === "list"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={() => setViewMode("list")}
-            >
-              <List className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-
-          <Button onClick={() => router.push("/vendor/add-product")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="border border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-foreground">Total Products</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{totalProducts}</div>
-            <p className="text-xs text-muted-foreground">
-              {activeProducts} active
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-foreground">Total Value</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">${totalValue.toFixed(0)}</div>
-            <p className="text-xs text-muted-foreground">Inventory value</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-foreground">Low Stock</CardTitle>
-            <AlertCircle className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-              {lowStockProducts}
-            </div>
-            <p className="text-xs text-muted-foreground">Products &lt; 10 units</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-foreground">Out of Stock</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-              {outOfStockProducts}
-            </div>
-            <p className="text-xs text-muted-foreground">Products at 0 units</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-foreground">Categories</CardTitle>
-            <Filter className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {new Set(products.map((p) => p.category)).size}
-            </div>
-            <p className="text-xs text-muted-foreground">Product categories</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card className="border border-border bg-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <SlidersHorizontal className="h-4 w-4" />
-            Filters & Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            {/* Search */}
-            <div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search products, SKU..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-9 text-sm border-border bg-background"
+  const ProductCard = ({ product }: { product: Product }) => (
+    <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
+      <CardContent className="relative z-10 p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+              {product.images && product.images.length > 0 ? (
+                <img
+                  src={product.images[0]}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
                 />
+              ) : (
+                <Package className="h-16 w-16 text-gray-400 dark:text-gray-500" />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 line-clamp-1">
+                {product.name}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                {product.description || "No description available"}
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {product.category && (
+                  <Badge variant="outline" className="text-xs">
+                    {product.category}
+                  </Badge>
+                )}
+                <Badge
+                  className={`${getStatusColor(product.status)} text-xs flex items-center gap-1`}
+                >
+                  {getStatusIcon(product.status)}
+                  {product.status}
+                </Badge>
+                {product.quantity < 10 && product.quantity > 0 && (
+                  <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-400 text-xs">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Low Stock
+                  </Badge>
+                )}
+                {product.quantity === 0 && (
+                  <Badge className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-400 text-xs">
+                    Out of Stock
+                  </Badge>
+                )}
               </div>
             </div>
-
-            {/* Category filter */}
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="h-9 text-sm border-border bg-background">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category} className="text-sm">
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Status filter */}
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="h-9 text-sm border-border bg-background">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((status) => (
-                  <SelectItem key={status} value={status} className="text-sm">
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="h-9 text-sm border-border bg-background">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="text-sm">
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-
-          {/* Results count and active filters */}
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {filteredAndSortedProducts.length} of {totalProducts} products
-            </p>
-
-            <div className="flex gap-2">
-              {searchTerm && (
-                <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
-                  &quot;{searchTerm}&quot;
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-              {selectedCategory !== "All Categories" && (
-                <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
-                  {selectedCategory}
-                  <button
-                    onClick={() => setSelectedCategory("All Categories")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-              {selectedStatus !== "All Status" && (
-                <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
-                  {selectedStatus}
-                  <button
-                    onClick={() => setSelectedStatus("All Status")}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Products */}
-      {filteredAndSortedProducts.length > 0 ? (
-        <div
-          className={
-            viewMode === "grid"
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              : "space-y-4"
-          }
-        >
-          {filteredAndSortedProducts.map((product) =>
-            viewMode === "grid" ? (
-              <ProductCard key={product.id} product={product} />
-            ) : (
-              <ProductListItem key={product.id} product={product} />
-            )
-          )}
         </div>
-      ) : (
-        <Card className="text-center py-12 border border-border bg-card">
-          <CardContent>
-            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              {totalProducts === 0 ? "No Products Yet" : "No Products Found"}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              {totalProducts === 0
-                ? "Start by adding your first product to get started."
-                : "Try adjusting your search terms or filters."}
-            </p>
-            {totalProducts === 0 ? (
-              <Button onClick={() => router.push("/vendor/add-product")}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Product
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                ${product.price}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Stock: {product.quantity} units
+              </p>
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                <Eye className="h-4 w-4" />
               </Button>
-            ) : (
               <Button
                 variant="outline"
-                onClick={() => {
-                  setSearchTerm("");
-                  setSelectedCategory("All Categories");
-                  setSelectedStatus("All Status");
-                }}
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => handleEdit(product)}
               >
-                Clear All Filters
+                <Edit className="h-4 w-4" />
               </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => handleDuplicate(product)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                onClick={() => handleDelete(product)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-      {/* Edit Product Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Edit Product</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Update your product information
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-name" className="text-foreground">Product Name</Label>
-                <Input
-                  id="edit-name"
-                  value={editForm.name}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  className="border-border bg-background"
-                />
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500 dark:text-gray-500">
+                {product.sku && `SKU: ${product.sku}`}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className={`h-7 text-xs px-2 ${
+                  product.status === "active"
+                    ? "text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                }`}
+                onClick={() => handleToggleStatus(product)}
+              >
+                {product.status === "active" ? "Deactivate" : "Activate"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const ProductListItem = ({ product }: { product: Product }) => (
+    <Card className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-cyan-500/5" />
+      <CardContent className="relative z-10 p-6">
+        <div className="flex items-center gap-6">
+          <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {product.images && product.images.length > 0 ? (
+              <img
+                src={product.images[0]}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Package className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-2">
+                  {product.name}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                  {product.description || "No description available"}
+                </p>
+
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                  {product.category && (
+                    <Badge variant="outline" className="text-xs">
+                      {product.category}
+                    </Badge>
+                  )}
+                  <Badge
+                    className={`${getStatusColor(product.status)} text-xs flex items-center gap-1`}
+                  >
+                    {getStatusIcon(product.status)}
+                    {product.status}
+                  </Badge>
+                  {product.quantity < 10 && product.quantity > 0 && (
+                    <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-400 text-xs">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Low Stock
+                    </Badge>
+                  )}
+                  {product.quantity === 0 && (
+                    <Badge className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-400 text-xs">
+                      Out of Stock
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <div>
-                <Label htmlFor="edit-category" className="text-foreground">Category</Label>
-                <Select
-                  value={editForm.category}
-                  onValueChange={(value) =>
-                    setEditForm((prev) => ({ ...prev, category: value }))
-                  }
+
+              <div className="text-right ml-4">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                  ${product.price}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  Stock: {product.quantity}
+                </p>
+                {product.sku && (
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    SKU: {product.sku}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-500">
+                Created: {new Date(product.createdAt).toLocaleDateString()}
+              </p>
+
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                  <Eye className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => handleEdit(product)}
                 >
-                  <SelectTrigger className="border-border bg-background">
+                  <Edit className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => handleDuplicate(product)}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`h-7 text-xs px-2 ${
+                    product.status === "active"
+                      ? "text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  }`}
+                  onClick={() => handleToggleStatus(product)}
+                >
+                  {product.status === "active" ? "Deactivate" : "Activate"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                  onClick={() => handleDelete(product)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/20 to-cyan-400/20 blur-sm"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 p-6">
+      {/* Header */}
+      <div
+        className={`transform transition-all duration-700 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+              My Products
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 text-lg mt-2">
+              Manage your product inventory and track performance
+            </p>
+            <div className="flex items-center gap-2 mt-3">
+              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                <Package className="h-3 w-3 mr-1" />
+                {totalProducts} Products
+              </Badge>
+              <Badge variant="outline" className="border-gray-300">
+                <Shield className="h-3 w-3 mr-1" />
+                Blockchain Listed
+              </Badge>
+              {totalProducts > 0 && (
+                <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
+                  <DollarSign className="h-3 w-3 mr-1" />$
+                  {totalValue.toFixed(2)} Value
+                </Badge>
+              )}
+            </div>
+          </div>
+          <Link href="/vendor/add-product">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+              <Plus className="h-5 w-5 mr-2" />
+              Add New Product
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div
+        className={`transform transition-all duration-700 delay-200 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              title: "Total Products",
+              value: totalProducts,
+              subtitle: `${activeProducts} active`,
+              icon: Package,
+              gradient: "from-blue-500 to-cyan-500",
+              bgGradient: "from-blue-500/5 via-transparent to-cyan-500/5",
+            },
+            {
+              title: "Inventory Value",
+              value: `$${totalValue.toFixed(2)}`,
+              subtitle: "Total stock value",
+              icon: DollarSign,
+              gradient: "from-green-500 to-emerald-500",
+              bgGradient: "from-green-500/5 via-transparent to-emerald-500/5",
+            },
+            {
+              title: "Low Stock Alert",
+              value: lowStockProducts,
+              subtitle: "Products below 10 units",
+              icon: AlertCircle,
+              gradient: "from-orange-500 to-red-500",
+              bgGradient: "from-orange-500/5 via-transparent to-red-500/5",
+            },
+            {
+              title: "Out of Stock",
+              value: outOfStockProducts,
+              subtitle: "Need restocking",
+              icon: XCircle,
+              gradient: "from-red-500 to-pink-500",
+              bgGradient: "from-red-500/5 via-transparent to-pink-500/5",
+            },
+          ].map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card
+                key={index}
+                className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl group"
+              >
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`}
+                />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {stat.title}
+                  </CardTitle>
+                  <div
+                    className={`h-10 w-10 rounded-full bg-gradient-to-r ${stat.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                  >
+                    <Icon className="h-5 w-5 text-white" />
+                  </div>
+                </CardHeader>
+                <CardContent className="relative z-10">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    {stat.value}
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {stat.subtitle}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Filters and Controls */}
+      <div
+        className={`transform transition-all duration-700 delay-400 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-indigo-500/5 rounded-lg" />
+          <CardContent className="relative z-10 p-6">
+            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+              <div className="flex flex-col sm:flex-row gap-4 items-center w-full lg:w-auto">
+                <div className="relative flex-1 sm:flex-none sm:w-80">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 h-10"
+                  />
+                </div>
+
+                <Select
+                  value={selectedCategory}
+                  onValueChange={setSelectedCategory}
+                >
+                  <SelectTrigger className="w-full sm:w-[180px] h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.slice(1).map((category) => (
+                    {categories.map((category) => (
                       <SelectItem key={category} value={category}>
                         {category}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit-description" className="text-foreground">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  value={editForm.description}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                  rows={3}
-                  className="border-border bg-background"
-                />
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-price" className="text-foreground">Price ($)</Label>
-                <Input
-                  id="edit-price"
-                  type="number"
-                  step="0.01"
-                  value={editForm.price}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, price: e.target.value }))
-                  }
-                  className="border-border bg-background"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-quantity" className="text-foreground">Quantity</Label>
-                <Input
-                  id="edit-quantity"
-                  type="number"
-                  value={editForm.quantity}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      quantity: e.target.value,
-                    }))
-                  }
-                  className="border-border bg-background"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-status" className="text-foreground">Status</Label>
+
                 <Select
-                  value={editForm.status}
-                  onValueChange={(value: Product["status"]) =>
-                    setEditForm((prev) => ({ ...prev, status: value }))
-                  }
+                  value={selectedStatus}
+                  onValueChange={setSelectedStatus}
                 >
-                  <SelectTrigger className="border-border bg-background">
+                  <SelectTrigger className="w-full sm:w-[140px] h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-                    <SelectItem value="discontinued">Discontinued</SelectItem>
+                    {statusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-full sm:w-[160px] h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-md p-0.5 bg-white/50 dark:bg-gray-900/50 backdrop-blur">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    className={`h-8 w-8 p-0 ${
+                      viewMode === "grid"
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                    }`}
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "ghost"}
+                    size="sm"
+                    className={`h-8 w-8 p-0 ${
+                      viewMode === "list"
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                    }`}
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <Badge variant="outline" className="text-sm">
+                  {filteredAndSortedProducts.length} products
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Products Grid/List */}
+      <div
+        className={`transform transition-all duration-700 delay-600 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        {filteredAndSortedProducts.length > 0 ? (
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                : "space-y-6"
+            }
+          >
+            {filteredAndSortedProducts.map((product) =>
+              viewMode === "grid" ? (
+                <ProductCard key={product.id} product={product} />
+              ) : (
+                <ProductListItem key={product.id} product={product} />
+              )
+            )}
+          </div>
+        ) : (
+          <Card className="text-center py-16 border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-500/5 via-transparent to-slate-500/5 rounded-lg" />
+            <CardContent className="relative z-10">
+              <div className="h-20 w-20 mx-auto mb-6 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center">
+                <Package className="h-10 w-10 text-gray-500 dark:text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                {totalProducts === 0 ? "No products yet" : "No products found"}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                {totalProducts === 0
+                  ? "Start building your blockchain marketplace by adding your first product!"
+                  : "We couldn't find any products matching your filters. Try adjusting your search criteria."}
+              </p>
+              {totalProducts === 0 && (
+                <Link href="/vendor/add-product">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Product
+                  </Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                <Edit className="h-4 w-4 text-white" />
+              </div>
+              Edit Product
+            </DialogTitle>
+            <DialogDescription>
+              Make changes to your product details
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="edit-name">Product Name</Label>
+              <Input
+                id="edit-name"
+                value={editForm.name}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, name: e.target.value }))
+                }
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-category">Category</Label>
+              <Select
+                value={editForm.category}
+                onValueChange={(value) =>
+                  setEditForm((prev) => ({ ...prev, category: value }))
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.slice(1).map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-price">Price ($)</Label>
+              <Input
+                id="edit-price"
+                type="number"
+                step="0.01"
+                value={editForm.price}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, price: e.target.value }))
+                }
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-quantity">Quantity</Label>
+              <Input
+                id="edit-quantity"
+                type="number"
+                value={editForm.quantity}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, quantity: e.target.value }))
+                }
+                className="mt-1"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editForm.description}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-status">Status</Label>
+              <Select
+                value={editForm.status}
+                onValueChange={(value: any) =>
+                  setEditForm((prev) => ({ ...prev, status: value }))
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit}>Save Changes</Button>
+            <Button
+              onClick={handleSaveEdit}
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+            >
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Delete Product</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Are you sure you want to delete &quot;{deletingProduct?.name}&quot;? This
-              action cannot be undone.
+            <DialogTitle className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center">
+                <Trash2 className="h-4 w-4 text-white" />
+              </div>
+              Delete Product
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{deletingProduct?.name}
+              &quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <Button
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
               Delete Product
             </Button>
           </DialogFooter>

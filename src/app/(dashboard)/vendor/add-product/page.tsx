@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -39,10 +39,18 @@ import {
   Check,
   AlertCircle,
   Camera,
-  ArrowLeft,
   Save,
   Eye,
   Loader2,
+  DollarSign,
+  Sparkles,
+  Shield,
+  Zap,
+  CheckCircle,
+  Calendar,
+  Tag,
+  Ruler,
+  Weight,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Product } from "@/types";
@@ -54,8 +62,12 @@ export default function AddProductPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [previewMode, setPreviewMode] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -70,34 +82,26 @@ export default function AddProductPage() {
     manufacturingDate: "",
     expiryDate: "",
     images: [] as string[],
-    tags: [] as string[],
     brand: "",
     model: "",
     color: "",
     material: "",
     warranty: "",
-    certifications: "",
-    origin: "",
-    minimumOrderQuantity: "1",
   });
 
-  const [newTag, setNewTag] = useState("");
+  // Error state
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const categories = [
-    "Electronics",
-    "Clothing",
-    "Food & Beverages",
-    "Accessories",
-    "Home & Garden",
-    "Books",
-    "Sports & Recreation",
-    "Health & Beauty",
-    "Automotive",
-    "Tools & Hardware",
-    "Toys & Games",
-    "Office Supplies",
-  ];
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -105,32 +109,25 @@ export default function AddProductPage() {
     if (!formData.name.trim()) {
       newErrors.name = "Product name is required";
     }
-
     if (!formData.category) {
       newErrors.category = "Category is required";
     }
-
     if (!formData.price || parseFloat(formData.price) <= 0) {
       newErrors.price = "Valid price is required";
     }
-
-    if (!formData.quantity || parseInt(formData.quantity) < 0) {
+    if (!formData.quantity || parseInt(formData.quantity) <= 0) {
       newErrors.quantity = "Valid quantity is required";
-    }
-
-    if (formData.images.length === 0) {
-      newErrors.images = "At least one product image is required";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
+  const isFormValid = () => {
+    return formData.name.trim() && 
+           formData.category && 
+           formData.price && parseFloat(formData.price) > 0 &&
+           formData.quantity && parseInt(formData.quantity) > 0;
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,36 +138,23 @@ export default function AddProductPage() {
     setUploadProgress(0);
 
     try {
-      // Simulate IPFS upload progress
-      const imageUrls: string[] = [];
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        // Simulate upload progress
-        for (let progress = 0; progress <= 100; progress += 10) {
-          await new Promise(resolve => setTimeout(resolve, 50));
-          setUploadProgress(progress);
-        }
-
-        // In a real application, you would upload to IPFS here
-        // For now, create a temporary URL for preview
-        const imageUrl = URL.createObjectURL(file);
-        imageUrls.push(imageUrl);
-        
-        // Simulate IPFS hash (in real app, this would be returned from IPFS)
-        console.log(`File ${file.name} would be uploaded to IPFS`);
+      // Simulate upload progress
+      for (let i = 0; i <= 100; i += 10) {
+        setUploadProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      setFormData((prev) => ({
+      // In real app, upload to IPFS or cloud storage
+      const imageUrls = Array.from(files).map(file => URL.createObjectURL(file));
+      
+      setFormData(prev => ({
         ...prev,
-        images: [...prev.images, ...imageUrls],
+        images: [...prev.images, ...imageUrls]
       }));
 
       toast.success(`${files.length} image(s) uploaded successfully`);
     } catch (error) {
       toast.error("Failed to upload images");
-      console.error("Upload error:", error);
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -178,38 +162,13 @@ export default function AddProductPage() {
   };
 
   const removeImage = (index: number) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index),
+      images: prev.images.filter((_, i) => i !== index)
     }));
-  };
-
-  const addTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...prev.tags, newTag.trim()],
-      }));
-      setNewTag("");
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((tag) => tag !== tagToRemove),
-    }));
-  };
-
-  const generateSKU = () => {
-    const category = formData.category.substring(0, 3).toUpperCase();
-    const timestamp = Date.now().toString().slice(-6);
-    const sku = `${category}-${timestamp}`;
-    setFormData((prev) => ({ ...prev, sku }));
   };
 
   const saveAsDraft = () => {
-    // Save to localStorage as draft
     const drafts = JSON.parse(localStorage.getItem("product_drafts") || "[]");
     const draft = {
       id: `draft_${Date.now()}`,
@@ -238,7 +197,7 @@ export default function AddProductPage() {
         category: formData.category,
         price: parseFloat(formData.price),
         quantity: parseInt(formData.quantity),
-        images: formData.images,
+        images: formData.images.length > 0 ? formData.images : ["/placeholder-product.jpg"],
         supplierId: user?.id || "vendor1",
         supplierName: user?.name || "Vendor",
         createdAt: new Date().toISOString(),
@@ -262,670 +221,515 @@ export default function AddProductPage() {
       );
 
       // Simulate blockchain transaction
-      console.log("Product would be added to blockchain:", product);
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      toast.success("Product added successfully!");
+      toast.success("Product added successfully to blockchain!");
       router.push("/vendor/my-products");
     } catch (error) {
       toast.error("Failed to add product");
       console.error("Error adding product:", error);
     } finally {
       setIsLoading(false);
+      setIsConfirmOpen(false);
     }
   };
 
-  if (previewMode) {
-    return (
-      <div className="space-y-6">
-        {/* Preview Header */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              onClick={() => setPreviewMode(false)}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Edit
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Product Preview</h1>
-              <p className="text-muted-foreground">
-                Preview how your product will appear to customers
-              </p>
-            </div>
-          </div>
-          <Button onClick={handleSubmit} disabled={isLoading} className="flex items-center gap-2">
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            {isLoading ? "Adding Product..." : "Publish Product"}
-          </Button>
-        </div>
-
-        {/* Product Preview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Product Images */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {formData.images.length > 0 ? (
-                  <>
-                    <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-                      <img
-                        src={formData.images[0]}
-                        alt={formData.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    {formData.images.length > 1 && (
-                      <div className="grid grid-cols-4 gap-2">
-                        {formData.images.slice(1).map((image, index) => (
-                          <div
-                            key={index}
-                            className="aspect-square rounded-md overflow-hidden bg-muted"
-                          >
-                            <img
-                              src={image}
-                              alt={`${formData.name} ${index + 2}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
-                    <ImageIcon className="h-16 w-16 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Product Info */}
-          <div className="space-y-6">
-            <div>
-              <Badge className="mb-2">{formData.category}</Badge>
-              <h1 className="text-3xl font-bold">{formData.name || "Product Name"}</h1>
-              <p className="text-2xl font-bold text-primary mt-2">
-                ${formData.price || "0.00"}
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-2">Description</h3>
-              <p className="text-muted-foreground">
-                {formData.description || "No description provided"}
-              </p>
-            </div>
-
-            {formData.tags.length > 0 && (
-              <div>
-                <h3 className="font-semibold mb-2">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {formData.tags.map((tag, index) => (
-                    <Badge key={index} variant="outline">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              {formData.sku && (
-                <div>
-                  <span className="font-medium">SKU:</span> {formData.sku}
-                </div>
-              )}
-              {formData.brand && (
-                <div>
-                  <span className="font-medium">Brand:</span> {formData.brand}
-                </div>
-              )}
-              {formData.weight && (
-                <div>
-                  <span className="font-medium">Weight:</span> {formData.weight}
-                </div>
-              )}
-              {formData.dimensions && (
-                <div>
-                  <span className="font-medium">Dimensions:</span> {formData.dimensions}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <span className="font-medium">In Stock:</span> {formData.quantity || 0} units
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const getCompletionPercentage = () => {
+    const requiredFields = ['name', 'category', 'price', 'quantity'];
+    const optionalFields = ['description', 'sku', 'weight', 'dimensions', 'brand'];
+    
+    const requiredCompleted = requiredFields.filter(field => 
+      formData[field as keyof typeof formData]?.toString().trim()
+    ).length;
+    
+    const optionalCompleted = optionalFields.filter(field => 
+      formData[field as keyof typeof formData]?.toString().trim()
+    ).length;
+    
+    const imageBonus = formData.images.length > 0 ? 1 : 0;
+    
+    return Math.round(((requiredCompleted * 20) + (optionalCompleted * 10) + (imageBonus * 10)) / 1.1);
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
+      <div
+        className={`transform transition-all duration-700 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div>
-            <h1 className="text-3xl font-bold">Add New Product</h1>
-            <p className="text-muted-foreground">
-              Create a new product listing for your store
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+              Add New Product
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 text-lg mt-2">
+              Create a new product for your blockchain marketplace
             </p>
+            <div className="flex items-center gap-2 mt-3">
+              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                <Package className="h-3 w-3 mr-1" />
+                Product Creation
+              </Badge>
+              <Badge variant="outline" className="border-gray-300">
+                <Shield className="h-3 w-3 mr-1" />
+                Blockchain Secure
+              </Badge>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={saveAsDraft}>
-            <Save className="h-4 w-4 mr-2" />
-            Save Draft
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setPreviewMode(true)}
-            className="flex items-center gap-2"
-          >
-            <Eye className="h-4 w-4" />
-            Preview
-          </Button>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={saveAsDraft}
+              className="shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Draft
+            </Button>
+            <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                  disabled={!isFormValid()}
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Add Product
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                      <CheckCircle className="h-4 w-4 text-white" />
+                    </div>
+                    Confirm Product Creation
+                  </DialogTitle>
+                  <DialogDescription>
+                    Are you ready to add this product to the blockchain marketplace?
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Product:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{formData.name || "Unnamed Product"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Price:</span>
+                      <span className="text-gray-600 dark:text-gray-400">${formData.price || "0.00"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Quantity:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{formData.quantity || "0"} units</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Category:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{formData.category || "None"}</span>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsConfirmOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleSubmit} 
+                    disabled={isLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Adding to Blockchain...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Confirm & Add
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Basic Information
-              </CardTitle>
-              <CardDescription>
-                Enter the basic details of your product
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <Label htmlFor="name">Product Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    placeholder="Enter product name"
-                    className={errors.name ? "border-red-500" : ""}
-                  />
-                  {errors.name && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.name}
-                    </p>
-                  )}
+      {/* Progress Card */}
+      <div
+        className={`transform transition-all duration-700 delay-200 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-cyan-500/5 rounded-lg" />
+          <CardContent className="relative z-10 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-white" />
                 </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => handleInputChange("description", e.target.value)}
-                    placeholder="Describe your product..."
-                    rows={4}
-                  />
-                </div>
-
                 <div>
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => handleInputChange("category", value)}
-                  >
-                    <SelectTrigger className={errors.category ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.category && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.category}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="brand">Brand</Label>
-                  <Input
-                    id="brand"
-                    value={formData.brand}
-                    onChange={(e) => handleInputChange("brand", e.target.value)}
-                    placeholder="Product brand"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="model">Model</Label>
-                  <Input
-                    id="model"
-                    value={formData.model}
-                    onChange={(e) => handleInputChange("model", e.target.value)}
-                    placeholder="Model number/name"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="color">Color</Label>
-                  <Input
-                    id="color"
-                    value={formData.color}
-                    onChange={(e) => handleInputChange("color", e.target.value)}
-                    placeholder="Product color"
-                  />
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    Product Completion Progress
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {getCompletionPercentage()}% complete
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Pricing & Inventory */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing & Inventory</CardTitle>
-              <CardDescription>
-                Set your product pricing and inventory details
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="price">Price ($) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => handleInputChange("price", e.target.value)}
-                    placeholder="0.00"
-                    className={errors.price ? "border-red-500" : ""}
-                  />
-                  {errors.price && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.price}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="quantity">Quantity *</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    value={formData.quantity}
-                    onChange={(e) => handleInputChange("quantity", e.target.value)}
-                    placeholder="0"
-                    className={errors.quantity ? "border-red-500" : ""}
-                  />
-                  {errors.quantity && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.quantity}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="minOrder">Min. Order Quantity</Label>
-                  <Input
-                    id="minOrder"
-                    type="number"
-                    value={formData.minimumOrderQuantity}
-                    onChange={(e) => handleInputChange("minimumOrderQuantity", e.target.value)}
-                    placeholder="1"
-                  />
+              <div className="text-right">
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {getCompletionPercentage()}%
                 </div>
               </div>
+            </div>
+            <Progress value={getCompletionPercentage()} className="h-3" />
+          </CardContent>
+        </Card>
+      </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="sku">SKU</Label>
-                  <div className="flex gap-2">
+      {/* Main Form */}
+      <div
+        className={`transform transition-all duration-700 delay-400 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Left Column - Main Form */}
+          <div className="xl:col-span-2 space-y-8">
+            {/* Basic Information */}
+            <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5 rounded-lg" />
+              <CardHeader className="relative z-10">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                    <Package className="h-4 w-4 text-white" />
+                  </div>
+                  Basic Information
+                </CardTitle>
+                <CardDescription>
+                  Enter the essential details of your product
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="relative z-10 space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="lg:col-span-2">
+                    <Label htmlFor="name" className="text-sm font-medium mb-3 block">
+                      Product Name *
+                    </Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                      placeholder="Enter product name"
+                      className={`h-12 text-base ${errors.name ? "border-red-500" : ""}`}
+                    />
+                    {errors.name && (
+                      <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="lg:col-span-2">
+                    <Label htmlFor="description" className="text-sm font-medium mb-3 block">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => handleInputChange("description", e.target.value)}
+                      placeholder="Describe your product in detail..."
+                      rows={4}
+                      className="text-base resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="category" className="text-sm font-medium mb-3 block">
+                      Category *
+                    </Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) => handleInputChange("category", value)}
+                    >
+                      <SelectTrigger className={`h-12 text-base ${errors.category ? "border-red-500" : ""}`}>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="electronics">Electronics</SelectItem>
+                        <SelectItem value="clothing">Clothing</SelectItem>
+                        <SelectItem value="food">Food & Beverages</SelectItem>
+                        <SelectItem value="accessories">Accessories</SelectItem>
+                        <SelectItem value="home">Home & Garden</SelectItem>
+                        <SelectItem value="books">Books</SelectItem>
+                        <SelectItem value="sports">Sports & Recreation</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.category && (
+                      <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.category}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="brand" className="text-sm font-medium mb-3 block">
+                      Brand
+                    </Label>
+                    <Input
+                      id="brand"
+                      value={formData.brand}
+                      onChange={(e) => handleInputChange("brand", e.target.value)}
+                      placeholder="Enter brand name"
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="price" className="text-sm font-medium mb-3 block">
+                      Price ($) *
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) => handleInputChange("price", e.target.value)}
+                      placeholder="0.00"
+                      className={`h-12 text-base ${errors.price ? "border-red-500" : ""}`}
+                    />
+                    {errors.price && (
+                      <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.price}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="quantity" className="text-sm font-medium mb-3 block">
+                      Quantity *
+                    </Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      value={formData.quantity}
+                      onChange={(e) => handleInputChange("quantity", e.target.value)}
+                      placeholder="0"
+                      className={`h-12 text-base ${errors.quantity ? "border-red-500" : ""}`}
+                    />
+                    {errors.quantity && (
+                      <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.quantity}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Product Details */}
+            <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-indigo-500/5 rounded-lg" />
+              <CardHeader className="relative z-10">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center">
+                    <Ruler className="h-4 w-4 text-white" />
+                  </div>
+                  Product Details
+                </CardTitle>
+                <CardDescription>
+                  Additional specifications and attributes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="relative z-10 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="sku" className="text-sm font-medium mb-3 block">
+                      SKU
+                    </Label>
                     <Input
                       id="sku"
                       value={formData.sku}
                       onChange={(e) => handleInputChange("sku", e.target.value)}
                       placeholder="Auto-generated if empty"
+                      className="h-12 text-base"
                     />
-                    <Button type="button" variant="outline" onClick={generateSKU}>
-                      Generate
+                  </div>
+
+                  <div>
+                    <Label htmlFor="weight" className="text-sm font-medium mb-3 block">
+                      Weight
+                    </Label>
+                    <Input
+                      id="weight"
+                      value={formData.weight}
+                      onChange={(e) => handleInputChange("weight", e.target.value)}
+                      placeholder="e.g., 1.5 kg"
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="dimensions" className="text-sm font-medium mb-3 block">
+                      Dimensions
+                    </Label>
+                    <Input
+                      id="dimensions"
+                      value={formData.dimensions}
+                      onChange={(e) => handleInputChange("dimensions", e.target.value)}
+                      placeholder="e.g., 10 x 15 x 5 cm"
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="model" className="text-sm font-medium mb-3 block">
+                      Model
+                    </Label>
+                    <Input
+                      id="model"
+                      value={formData.model}
+                      onChange={(e) => handleInputChange("model", e.target.value)}
+                      placeholder="Enter model number"
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="manufacturingDate" className="text-sm font-medium mb-3 block">
+                      Manufacturing Date
+                    </Label>
+                    <Input
+                      id="manufacturingDate"
+                      type="date"
+                      value={formData.manufacturingDate}
+                      onChange={(e) => handleInputChange("manufacturingDate", e.target.value)}
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="expiryDate" className="text-sm font-medium mb-3 block">
+                      Expiry Date
+                    </Label>
+                    <Input
+                      id="expiryDate"
+                      type="date"
+                      value={formData.expiryDate}
+                      onChange={(e) => handleInputChange("expiryDate", e.target.value)}
+                      className="h-12 text-base"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Images */}
+          <div className="space-y-8">
+            {/* Product Images */}
+            <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-red-500/5 rounded-lg" />
+              <CardHeader className="relative z-10">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+                    <ImageIcon className="h-4 w-4 text-white" />
+                  </div>
+                  Product Images
+                </CardTitle>
+                <CardDescription>
+                  Upload high-quality images of your product
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="relative z-10 space-y-6">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                  <div className="mx-auto w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mb-4">
+                    <Upload className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Upload Images
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Drag and drop or click to select files
+                  </p>
+                  <Input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                    disabled={isUploading}
+                  />
+                  <label htmlFor="image-upload">
+                    <Button 
+                      variant="outline" 
+                      className="cursor-pointer"
+                      disabled={isUploading}
+                      asChild
+                    >
+                      <span>
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="h-4 w-4 mr-2" />
+                            Choose Files
+                          </>
+                        )}
+                      </span>
                     </Button>
-                  </div>
+                  </label>
                 </div>
 
-                <div>
-                  <Label htmlFor="origin">Country of Origin</Label>
-                  <Input
-                    id="origin"
-                    value={formData.origin}
-                    onChange={(e) => handleInputChange("origin", e.target.value)}
-                    placeholder="e.g., Made in USA"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Physical Properties */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Physical Properties</CardTitle>
-              <CardDescription>
-                Specify the physical characteristics of your product
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="weight">Weight</Label>
-                  <Input
-                    id="weight"
-                    value={formData.weight}
-                    onChange={(e) => handleInputChange("weight", e.target.value)}
-                    placeholder="e.g., 1.5 kg"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="dimensions">Dimensions</Label>
-                  <Input
-                    id="dimensions"
-                    value={formData.dimensions}
-                    onChange={(e) => handleInputChange("dimensions", e.target.value)}
-                    placeholder="L x W x H (cm)"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="material">Material</Label>
-                  <Input
-                    id="material"
-                    value={formData.material}
-                    onChange={(e) => handleInputChange("material", e.target.value)}
-                    placeholder="e.g., Cotton, Plastic"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="warranty">Warranty</Label>
-                  <Input
-                    id="warranty"
-                    value={formData.warranty}
-                    onChange={(e) => handleInputChange("warranty", e.target.value)}
-                    placeholder="e.g., 1 year warranty"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="certifications">Certifications</Label>
-                  <Input
-                    id="certifications"
-                    value={formData.certifications}
-                    onChange={(e) => handleInputChange("certifications", e.target.value)}
-                    placeholder="e.g., CE, FCC, ISO"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="mfgDate">Manufacturing Date</Label>
-                  <Input
-                    id="mfgDate"
-                    type="date"
-                    value={formData.manufacturingDate}
-                    onChange={(e) => handleInputChange("manufacturingDate", e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="expDate">Expiry Date (if applicable)</Label>
-                  <Input
-                    id="expDate"
-                    type="date"
-                    value={formData.expiryDate}
-                    onChange={(e) => handleInputChange("expiryDate", e.target.value)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tags */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tags & Keywords</CardTitle>
-              <CardDescription>
-                Add tags to help customers find your product
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Add a tag..."
-                  onKeyPress={(e) => e.key === "Enter" && addTag()}
-                />
-                <Button type="button" onClick={addTag}>
-                  Add Tag
-                </Button>
-              </div>
-
-              {formData.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {formData.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                      {tag}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => removeTag(tag)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Image Upload */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Camera className="h-5 w-5" />
-                Product Images *
-              </CardTitle>
-              <CardDescription>
-                Upload high-quality images of your product
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  id="image-upload"
-                  disabled={isUploading}
-                />
-                <label
-                  htmlFor="image-upload"
-                  className="cursor-pointer flex flex-col items-center gap-2"
-                >
-                  {isUploading ? (
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  ) : (
-                    <Upload className="h-8 w-8 text-muted-foreground" />
-                  )}
-                  <div className="text-sm">
-                    <span className="font-medium">Click to upload</span> or drag and drop
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    PNG, JPG, GIF up to 10MB each
-                  </div>
-                </label>
-              </div>
-
-              {isUploading && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Uploading to IPFS...</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <Progress value={uploadProgress} className="w-full" />
-                </div>
-              )}
-
-              {errors.images && (
-                <p className="text-red-500 text-sm flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.images}
-                </p>
-              )}
-
-              {formData.images.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {formData.images.map((image, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={image}
-                        alt={`Product ${index + 1}`}
-                        className="w-full aspect-square object-cover rounded-lg border"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeImage(index)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
+                {isUploading && (
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>Uploading...</span>
+                      <span>{uploadProgress}%</span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <Progress value={uploadProgress} className="h-2" />
+                  </div>
+                )}
 
-          {/* Action Buttons */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Publish Product</CardTitle>
-              <CardDescription>
-                Review your product details before publishing
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-                <DialogTrigger asChild>
-                  <Button className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Adding Product...
-                      </>
-                    ) : (
-                      <>
-                        <Package className="h-4 w-4 mr-2" />
-                        Add Product
-                      </>
-                    )}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Confirm Product Addition</DialogTitle>
-                    <DialogDescription>
-                      Are you sure you want to add this product to your store? This action will:
-                      <ul className="mt-2 space-y-1 text-sm">
-                        <li>• Create a blockchain record for the product</li>
-                        <li>• Upload images to IPFS</li>
-                        <li>• Make the product available for purchase</li>
-                      </ul>
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsConfirmOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleSubmit}>
-                      Confirm & Add Product
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>• Images will be stored on IPFS</p>
-                <p>• Product data recorded on blockchain</p>
-                <p>• Immutable supply chain tracking</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Help & Tips */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tips for Better Listings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <div className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <p>Use high-quality, well-lit product images</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <p>Write detailed, accurate descriptions</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <p>Include relevant tags and keywords</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <p>Set competitive but fair pricing</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <p>Keep inventory quantities accurate</p>
-              </div>
-            </CardContent>
-          </Card>
+                {formData.images.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                      Uploaded Images ({formData.images.length})
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {formData.images.map((image, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={image}
+                            alt={`Product ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 group-hover:border-blue-400 transition-colors"
+                          />
+                          <button
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
