@@ -1,0 +1,16 @@
+{
+  "name": "textile-scm",
+  "version": "1.0.0",
+  "description": "Textile Supply Chain Chaincode",
+  "main": "index.js",
+  "scripts": {
+    "start": "fabric-chaincode-node start"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "fabric-contract-api": "^2.5.0",
+    "fabric-shim": "^2.5.0"
+  }
+}

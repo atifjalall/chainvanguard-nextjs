@@ -318,7 +318,7 @@ export default function LoginPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-2xl">
           {/* Login Card */}
           <Card className="relative overflow-hidden border-0 shadow-2xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
@@ -438,7 +438,6 @@ export default function LoginPage() {
                       </>
                     ) : (
                       <>
-                        
                         Connect Wallet
                         <LogIn className="mr-2 h-5 w-5" />
                       </>
@@ -448,225 +447,18 @@ export default function LoginPage() {
 
                 {/* Action Buttons */}
                 <div className="mt-6 space-y-3">
-                  {/* Forgot Password Dialog */}
+                  {/* Forgot Password Redirect */}
                   {availableWallets.length > 0 && (
-                    <Dialog
-                      open={showForgotDialog}
-                      onOpenChange={setShowForgotDialog}
+                    <Button
+                      variant="outline"
+                      className="w-full h-11 border-2 border-gray-200 dark:border-gray-700 hover:bg-orange-50 hover:border-orange-200 dark:hover:bg-orange-950/20 dark:hover:border-orange-800 transition-all duration-200 cursor-pointer bg-white/50 dark:bg-gray-800/50"
+                      size="sm"
+                      onClick={() => router.push("/forgot-password")}
                     >
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full h-11 border-2 border-gray-200 dark:border-gray-700 hover:bg-orange-50 hover:border-orange-200 dark:hover:bg-orange-950/20 dark:hover:border-orange-800 transition-all duration-200 cursor-pointer bg-white/50 dark:bg-gray-800/50"
-                          size="sm"
-                        >
-                          <Key className="mr-2 h-4 w-4 text-orange-600" />
-                          Forgot Password?
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2">
-                            <Key className="h-5 w-5 text-orange-500" />
-                            Reset Password
-                          </DialogTitle>
-                          <DialogDescription>
-                            Use your recovery phrase to reset your wallet
-                            password
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <form
-                          onSubmit={handlePasswordReset}
-                          className="space-y-4"
-                        >
-                          <div className="space-y-2">
-                            <Label htmlFor="reset-wallet">Select Wallet</Label>
-                            <Select
-                              value={resetWalletId}
-                              onValueChange={setResetWalletId}
-                            >
-                              <SelectTrigger className="cursor-pointer">
-                                <SelectValue placeholder="Choose wallet to reset" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableWallets.map((wallet) => (
-                                  <SelectItem
-                                    key={wallet.id}
-                                    value={wallet.id}
-                                    className="cursor-pointer"
-                                  >
-                                    {wallet.name} -{" "}
-                                    {formatAddress(wallet.address)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="reset-recovery-phrase">
-                              Recovery Phrase
-                            </Label>
-                            <textarea
-                              id="reset-recovery-phrase"
-                              className="w-full p-3 border-2 rounded-lg resize-none h-24 hover:border-blue-300 focus:border-blue-500 transition-colors cursor-text"
-                              placeholder="Enter your 12-word recovery phrase"
-                              value={resetRecoveryPhrase}
-                              onChange={(e) =>
-                                setResetRecoveryPhrase(e.target.value)
-                              }
-                              required
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="reset-new-password">
-                                New Password
-                              </Label>
-                              <Input
-                                id="reset-new-password"
-                                type="password"
-                                placeholder="Create new password"
-                                value={resetNewPassword}
-                                onChange={(e) =>
-                                  setResetNewPassword(e.target.value)
-                                }
-                                required
-                                minLength={8}
-                                className="border-2 hover:border-blue-300 focus:border-blue-500 cursor-text"
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="reset-confirm-password">
-                                Confirm Password
-                              </Label>
-                              <Input
-                                id="reset-confirm-password"
-                                type="password"
-                                placeholder="Confirm password"
-                                value={resetConfirmPassword}
-                                onChange={(e) =>
-                                  setResetConfirmPassword(e.target.value)
-                                }
-                                required
-                                className="border-2 hover:border-blue-300 focus:border-blue-500 cursor-text"
-                              />
-                            </div>
-                          </div>
-
-                          <Button
-                            type="submit"
-                            className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white cursor-pointer"
-                          >
-                            <Key className="mr-2 h-4 w-4" />
-                            Reset Password
-                          </Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
+                      <Key className="mr-2 h-4 w-4 text-orange-600" />
+                      Forgot Password?
+                    </Button>
                   )}
-
-                  {/* Recover Wallet Dialog */}
-                  <Dialog
-                    open={showRecoveryDialog}
-                    onOpenChange={setShowRecoveryDialog}
-                  >
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full h-11 border-2 border-gray-200 dark:border-gray-700 hover:bg-green-50 hover:border-green-200 dark:hover:bg-green-950/20 dark:hover:border-green-800 transition-all duration-200 cursor-pointer bg-white/50 dark:bg-gray-800/50"
-                        size="sm"
-                      >
-                        <Shield className="mr-2 h-4 w-4 text-green-600" />
-                        Recover Wallet with Seed Phrase
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50">
-                      <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                          <Shield className="h-5 w-5 text-green-500" />
-                          Recover Wallet
-                        </DialogTitle>
-                        <DialogDescription>
-                          Enter your 12-word recovery phrase to restore your
-                          wallet
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <form
-                        onSubmit={handleRecoveryRestore}
-                        className="space-y-4"
-                      >
-                        <div className="space-y-2">
-                          <Label htmlFor="recovery-phrase">
-                            Recovery Phrase
-                          </Label>
-                          <textarea
-                            id="recovery-phrase"
-                            className="w-full p-3 border-2 rounded-lg resize-none h-24 hover:border-blue-300 focus:border-blue-500 transition-colors cursor-text"
-                            placeholder="Enter your 12-word recovery phrase separated by spaces"
-                            value={recoveryPhrase}
-                            onChange={(e) => setRecoveryPhrase(e.target.value)}
-                            required
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="new-password">New Password</Label>
-                            <Input
-                              id="new-password"
-                              type="password"
-                              placeholder="Create password"
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              required
-                              minLength={8}
-                              className="border-2 hover:border-blue-300 focus:border-blue-500 cursor-text"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="confirm-password">
-                              Confirm Password
-                            </Label>
-                            <Input
-                              id="confirm-password"
-                              type="password"
-                              placeholder="Confirm password"
-                              value={confirmPassword}
-                              onChange={(e) =>
-                                setConfirmPassword(e.target.value)
-                              }
-                              required
-                              className="border-2 hover:border-blue-300 focus:border-blue-500 cursor-text"
-                            />
-                          </div>
-                        </div>
-
-                        <Button
-                          type="submit"
-                          className="w-full h-11 bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                          disabled={isRecovering}
-                        >
-                          {isRecovering ? (
-                            <>
-                              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                              Recovering...
-                            </>
-                          ) : (
-                            <>
-                              <Shield className="mr-2 h-4 w-4" />
-                              Recover Wallet
-                            </>
-                          )}
-                        </Button>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
                 </div>
 
                 {/* Create Account Link */}

@@ -1,0 +1,37 @@
+# Node modules
+node_modules/
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+
+# Package lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+users.json
+user-chaincode-v3.tar.gz
+
+# Hyperledger Fabric
+network/organizations/fabric-ca/
+network/organizations/peerOrganizations/
+network/organizations/ordererOrganizations/
+network/channel-artifacts/
+network/system-genesis-block/
+organizations/
+
+# Wallet
+wallet/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
