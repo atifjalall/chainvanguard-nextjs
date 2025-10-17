@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 "use strict";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const UserContract = require("./lib/userContract");
+const ProductContract = require("./lib/productContract");
 
 module.exports.UserContract = UserContract;
-module.exports.contracts = [UserContract];
+module.exports.ProductContract = ProductContract;
+
+module.exports.contracts = [UserContract, ProductContract];

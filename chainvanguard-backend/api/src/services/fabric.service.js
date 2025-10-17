@@ -106,10 +106,10 @@ class FabricService {
       this.network = this.gateway.getNetwork(channelName);
       this.contract = this.network.getContract(chaincodeName);
 
-      // Get user contract (same chaincode, different functions)
-      this.userContract = this.network.getContract(
-        chaincodeName,
-        "UserContract"
+      this.userContract = this.network.getContract("user-chaincode");
+      this.productContract = this.network.getContract(
+        "product-chaincode",
+        "ProductContract"
       );
 
       console.log("✅ Successfully connected to Fabric network");
@@ -124,18 +124,29 @@ class FabricService {
   }
 
   async disconnect() {
-    if (this.gateway) {
-      this.gateway.close();
+    try {
+      if (this.gateway) {
+        this.gateway.close();
+        console.log("✅ Gateway disconnected");
+      }
+
+      // ❌ REMOVE THIS - it's closing MongoDB too!
+      // if (this.client) {
+      //   this.client.close();
+      // }
+
+      // ✅ Only close the gRPC client, not all clients
+      if (this.client) {
+        // Just set to null, gRPC will handle cleanup
+        this.client = null;
+      }
+
       console.log("✅ Disconnected from Fabric");
-    }
-    if (this.client) {
-      this.client.close();
+    } catch (error) {
+      console.error("❌ Error disconnecting from Fabric:", error);
     }
   }
 
-  /**
-   * Helper to retry operations with exponential backoff
-   */
   async retryOperation(operation, maxRetries = 3, delayMs = 1000) {
     for (let i = 0; i < maxRetries; i++) {
       try {
@@ -150,9 +161,8 @@ class FabricService {
     }
   }
 
-  /**
-   * Register a new user on the blockchain
-   */
+  // In your fabric.service.js, update the registerUser method
+
   async registerUser(userData) {
     try {
       console.log(`📝 Registering user on blockchain: ${userData.name}`);
@@ -161,19 +171,47 @@ class FabricService {
         throw new Error("Not connected to Fabric network");
       }
 
+      // ✅ FIX: Ensure ALL values are strings, never undefined/null
+      const walletAddress = String(userData.walletAddress || "");
+      const name = String(userData.name || "");
+      const email = String(userData.email || "");
+      const role = String(userData.role || "");
+      const organizationMSP = String(userData.organizationMSP || "Org1MSP");
+      const companyName = String(userData.companyName || "");
+      const businessAddress = String(userData.businessAddress || "");
+      const businessType = String(userData.businessType || "");
+
+      // Validate required fields
+      if (!walletAddress || !name || !email || !role) {
+        throw new Error(
+          "Missing required user fields for blockchain registration"
+        );
+      }
+
+      console.log("📦 Blockchain registration data:", {
+        walletAddress,
+        name,
+        email,
+        role,
+        organizationMSP,
+        companyName,
+        businessAddress,
+        businessType,
+      });
+
       const result = await this.retryOperation(
         async () => {
           return await this.userContract.submitTransaction(
             "registerUser",
-            userData.walletAddress,
-            userData.name,
-            userData.email,
-            userData.role,
-            userData.organizationMSP,
-            userData.walletAddress,
-            userData.companyName || "",
-            userData.businessAddress || "",
-            userData.businessType || ""
+            walletAddress, // userId
+            name,
+            email,
+            role,
+            organizationMSP,
+            walletAddress, // Duplicate for signature verification
+            companyName,
+            businessAddress,
+            businessType
           );
         },
         3,
@@ -190,12 +228,12 @@ class FabricService {
         resultStr = result.toString();
       }
 
-      console.log("📦 Parsed result:", resultStr);
+      console.log("📦 Blockchain response:", resultStr);
 
       // Handle empty or malformed response
       if (!resultStr || resultStr.trim() === "") {
         console.log("⚠️ Empty response from chaincode, user likely created");
-        return { success: true, userId: userData.walletAddress };
+        return { success: true, userId: walletAddress };
       }
 
       return JSON.parse(resultStr);
@@ -331,9 +369,6 @@ class FabricService {
     }
   }
 
-  /**
-   * Record user login on blockchain
-   */
   async recordLogin(userId) {
     try {
       if (!this.userContract) {
@@ -348,9 +383,6 @@ class FabricService {
     }
   }
 
-  /**
-   * Increment user transaction count
-   */
   async incrementUserTransactionCount(userId) {
     try {
       if (!this.userContract) {
@@ -380,6 +412,84 @@ class FabricService {
     const privateKeyPem = readFileSync(keyPath);
     const privateKey = crypto.createPrivateKey(privateKeyPem);
     return signers.newPrivateKeySigner(privateKey);
+  }
+
+  // Product methods
+  async createProduct(productData) {
+    try {
+      const result = await this.contract.submitTransaction(
+        "createProduct",
+        JSON.stringify(productData)
+      );
+      return JSON.parse(result.toString());
+    } catch (error) {
+      console.error("Fabric createProduct error:", error);
+      throw error;
+    }
+  }
+
+  async getProduct(productId) {
+    try {
+      const result = await this.contract.evaluateTransaction(
+        "readProduct",
+        productId
+      );
+      return JSON.parse(result.toString());
+    } catch (error) {
+      console.error("Fabric getProduct error:", error);
+      throw error;
+    }
+  }
+
+  async getAllProducts() {
+    try {
+      const result = await this.contract.evaluateTransaction("getAllProducts");
+      return JSON.parse(result.toString());
+    } catch (error) {
+      console.error("Fabric getAllProducts error:", error);
+      throw error;
+    }
+  }
+
+  async updateProduct(productId, quantity, status) {
+    try {
+      const result = await this.contract.submitTransaction(
+        "updateProduct",
+        productId,
+        quantity !== undefined ? quantity.toString() : "",
+        status || ""
+      );
+      return JSON.parse(result.toString());
+    } catch (error) {
+      console.error("Fabric updateProduct error:", error);
+      throw error;
+    }
+  }
+
+  async getProductHistory(productId) {
+    try {
+      const result = await this.contract.evaluateTransaction(
+        "getProductHistory",
+        productId
+      );
+      return JSON.parse(result.toString());
+    } catch (error) {
+      console.error("Fabric getProductHistory error:", error);
+      throw error;
+    }
+  }
+
+  async queryProductsBySeller(sellerId) {
+    try {
+      const result = await this.contract.evaluateTransaction(
+        "queryProductsBySeller",
+        sellerId
+      );
+      return JSON.parse(result.toString());
+    } catch (error) {
+      console.error("Fabric queryProductsBySeller error:", error);
+      throw error;
+    }
   }
 }
 

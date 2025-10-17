@@ -5,13 +5,16 @@
   "main": "src/app.js",
   "type": "module",
   "scripts": {
+    "dev": "nodemon src/app.js",
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "test": "node scripts/test-services.js"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
     "@hyperledger/fabric-gateway": "^1.9.0",
     "@pinata/sdk": "^2.1.0",
+    "axios": "^1.12.2",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "bip39": "^3.1.0",
     "cloudinary": "^1.41.3",
@@ -21,6 +24,7 @@
     "express": "^4.18.2",
     "express-rate-limit": "^8.1.0",
     "file-type": "^21.0.0",
+    "form-data": "^4.0.4",
     "helmet": "^7.0.0",
     "ioredis": "^5.8.1",
     "jsonwebtoken": "^9.0.2",
@@ -28,6 +32,7 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
+    "streamifier": "^0.1.1",
     "winston": "^3.18.3"
   },
   "devDependencies": {

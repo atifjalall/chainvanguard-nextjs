@@ -31,20 +31,23 @@ class WalletService {
       // Generate 12-word mnemonic (industry standard)
       const mnemonic = bip39.generateMnemonic();
 
-      // Generate Fabric-compatible address
-      const address = this.generateFabricAddress();
-
-      // Generate private key from mnemonic
+      // Generate address deterministically from mnemonic (same as recovery)
       const privateKey = crypto
         .createHash("sha256")
         .update(mnemonic)
         .digest("hex");
 
+      const address = crypto
+        .createHash("sha256")
+        .update(privateKey)
+        .digest("hex")
+        .substring(0, 40);
+
       console.log("✅ New Fabric wallet generated");
 
       return {
         mnemonic: mnemonic,
-        address: `0x${address}`, // Keep 0x format for compatibility
+        address: `0x${address}`,
         privateKey: privateKey,
       };
     } catch (error) {
@@ -56,7 +59,7 @@ class WalletService {
   /**
    * Recover wallet from mnemonic phrase
    * @param {string} mnemonic - 12 or 24 word mnemonic phrase
-   * @returns {Object} - { address, privateKey }
+   * @returns {Object} - { address, privateKey, mnemonic }
    */
   recoverFromMnemonic(mnemonic) {
     try {
@@ -86,6 +89,22 @@ class WalletService {
       };
     } catch (error) {
       console.error("❌ Wallet recovery failed:", error);
+      throw new Error("Invalid mnemonic phrase. Please check and try again.");
+    }
+  }
+
+  /**
+   * Generate wallet from mnemonic phrase (alias for recoverFromMnemonic)
+   * This method is used by auth routes for wallet recovery
+   * @param {string} mnemonic - 12 or 24 word mnemonic phrase
+   * @returns {Object} - { address, privateKey, mnemonic }
+   */
+  generateWalletFromMnemonic(mnemonic) {
+    try {
+      // Use the existing recoverFromMnemonic method
+      return this.recoverFromMnemonic(mnemonic);
+    } catch (error) {
+      console.error("❌ Generate wallet from mnemonic failed:", error);
       throw new Error("Invalid mnemonic phrase. Please check and try again.");
     }
   }

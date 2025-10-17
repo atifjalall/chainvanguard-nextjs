@@ -1,183 +1,302 @@
 import express from "express";
-import FabricService from "../services/fabric.service.js";
+import productService from "../services/product.service.js";
+import {
+  verifyToken,
+  checkRole,
+  requireVerification,
+} from "../middleware/auth.middleware.js";
+import {
+  uploadProductFiles,
+  handleUploadError,
+} from "../middleware/upload.middleware.js";
 
 const router = express.Router();
 
-// GET all products
+/**
+ * PUBLIC ROUTES (No authentication required)
+ */
+
+// GET /api/products - Get all products (with filters)
 router.get("/", async (req, res) => {
-  const fabricService = new FabricService();
   try {
-    await fabricService.connect();
-    const products = await fabricService.getAllProducts();
-    res.json({ success: true, count: products.length, products });
+    const filters = {
+      page: req.query.page,
+      limit: req.query.limit,
+      search: req.query.search,
+      category: req.query.category,
+      minPrice: req.query.minPrice,
+      maxPrice: req.query.maxPrice,
+      status: req.query.status || "active",
+      isFeatured: req.query.isFeatured,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+    };
+
+    const result = await productService.getAllProducts(filters);
+
+    res.json({
+      success: true,
+      ...result,
+    });
   } catch (error) {
     console.error("GET /products error:", error);
-    res.status(500).json({ success: false, error: error.message });
-  } finally {
-    fabricService.disconnect();
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
-// GET single product by ID
-router.get("/:id", async (req, res) => {
-  const fabricService = new FabricService();
+// GET /api/products/featured - Get featured products
+router.get("/featured", async (req, res) => {
   try {
-    await fabricService.connect();
-    const product = await fabricService.getProduct(req.params.id);
-    res.json({ success: true, product });
+    const limit = parseInt(req.query.limit) || 10;
+    const products = await productService.getFeaturedProducts(limit);
+
+    res.json({
+      success: true,
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    console.error("GET /products/featured error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+// GET /api/products/search - Search products
+router.get("/search", async (req, res) => {
+  try {
+    const { q, ...filters } = req.query;
+
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query is required",
+      });
+    }
+
+    const result = await productService.searchProducts(q, filters);
+
+    res.json({
+      success: true,
+      query: q,
+      ...result,
+    });
+  } catch (error) {
+    console.error("GET /products/search error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+// GET /api/products/:id - Get single product
+router.get("/:id", async (req, res) => {
+  try {
+    const product = await productService.getProductById(req.params.id);
+
+    res.json({
+      success: true,
+      product,
+    });
   } catch (error) {
     console.error("GET /products/:id error:", error);
 
-    // Check if product doesn't exist
-    if (error.message.includes("does not exist")) {
+    if (error.message === "Product not found") {
       return res.status(404).json({
         success: false,
-        error: `Product ${req.params.id} not found`,
+        message: "Product not found",
       });
     }
 
-    res.status(500).json({ success: false, error: error.message });
-  } finally {
-    fabricService.disconnect();
-  }
-});
-
-// POST create new product
-router.post("/", async (req, res) => {
-  const fabricService = new FabricService();
-  try {
-    await fabricService.connect();
-    const product = await fabricService.createProduct(req.body);
-    res.status(201).json({
-      success: true,
-      message: "Product created successfully",
-      product,
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
-  } catch (error) {
-    console.error("POST /products error:", error);
-
-    // Check if product already exists
-    if (error.message.includes("already exists")) {
-      return res.status(409).json({
-        success: false,
-        error: `Product ${req.body.id} already exists`,
-      });
-    }
-
-    res.status(500).json({ success: false, error: error.message });
-  } finally {
-    fabricService.disconnect();
   }
 });
 
-// PUT update product
-router.put("/:id", async (req, res) => {
-  const fabricService = new FabricService();
-  try {
-    await fabricService.connect();
-
-    const { quantity, status } = req.body;
-
-    // Validate input
-    if (quantity === undefined && status === undefined) {
-      return res.status(400).json({
-        success: false,
-        error: "Please provide quantity or status to update",
-      });
-    }
-
-    const product = await fabricService.updateProduct(
-      req.params.id,
-      quantity,
-      status
-    );
-
-    res.json({
-      success: true,
-      message: "Product updated successfully",
-      product,
-    });
-  } catch (error) {
-    console.error("PUT /products/:id error:", error);
-
-    // Check if product doesn't exist
-    if (error.message.includes("does not exist")) {
-      return res.status(404).json({
-        success: false,
-        error: `Product ${req.params.id} not found`,
-      });
-    }
-
-    res.status(500).json({ success: false, error: error.message });
-  } finally {
-    fabricService.disconnect();
-  }
-});
-
-// DELETE product (soft delete by setting status to inactive)
-router.delete("/:id", async (req, res) => {
-  const fabricService = new FabricService();
-  try {
-    await fabricService.connect();
-
-    // Get current product to get its quantity
-    const currentProduct = await fabricService.getProduct(req.params.id);
-
-    // Soft delete by setting status to inactive
-    const product = await fabricService.updateProduct(
-      req.params.id,
-      currentProduct.quantity,
-      "inactive"
-    );
-
-    res.json({
-      success: true,
-      message: "Product deleted successfully",
-      product,
-    });
-  } catch (error) {
-    console.error("DELETE /products/:id error:", error);
-
-    // Check if product doesn't exist
-    if (error.message.includes("does not exist")) {
-      return res.status(404).json({
-        success: false,
-        error: `Product ${req.params.id} not found`,
-      });
-    }
-
-    res.status(500).json({ success: false, error: error.message });
-  } finally {
-    fabricService.disconnect();
-  }
-});
-
-// GET product history (blockchain audit trail)
+// GET /api/products/:id/history - Get product blockchain history
 router.get("/:id/history", async (req, res) => {
-  const fabricService = new FabricService();
   try {
-    await fabricService.connect();
-    const history = await fabricService.getProductHistory(req.params.id);
+    const history = await productService.getProductHistory(req.params.id);
 
-    res.json({
-      success: true,
-      productId: req.params.id,
-      history,
-    });
+    res.json(history);
   } catch (error) {
     console.error("GET /products/:id/history error:", error);
 
-    // Check if product doesn't exist
-    if (error.message.includes("does not exist")) {
+    if (error.message === "Product not found") {
       return res.status(404).json({
         success: false,
-        error: `Product ${req.params.id} not found`,
+        message: "Product not found",
       });
     }
 
-    res.status(500).json({ success: false, error: error.message });
-  } finally {
-    fabricService.disconnect();
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * PROTECTED ROUTES (Authentication required)
+ */
+
+// POST /api/products - Create new product (Vendors & Suppliers only)
+router.post(
+  "/",
+  verifyToken,
+  requireVerification,
+  checkRole("vendor", "supplier"),
+  uploadProductFiles,
+  handleUploadError,
+  async (req, res) => {
+    try {
+      // Validate required fields
+      const { name, description, category, price, quantity } = req.body;
+
+      if (!name || !description || !category || !price || !quantity) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Missing required fields: name, description, category, price, quantity",
+        });
+      }
+
+      // Create product
+      const result = await productService.createProduct(
+        req.body,
+        req.files,
+        req.userId
+      );
+
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("POST /products error:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+// PUT /api/products/:id - Update product
+router.put(
+  "/:id",
+  verifyToken,
+  requireVerification,
+  checkRole("vendor", "supplier"),
+  uploadProductFiles,
+  handleUploadError,
+  async (req, res) => {
+    try {
+      const product = await productService.updateProduct(
+        req.params.id,
+        req.body,
+        req.files,
+        req.userId
+      );
+
+      res.json({
+        success: true,
+        message: "Product updated successfully",
+        product,
+      });
+    } catch (error) {
+      console.error("PUT /products/:id error:", error);
+
+      if (error.message === "Product not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      if (error.message.includes("Unauthorized")) {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+// DELETE /api/products/:id - Delete product (soft delete)
+router.delete(
+  "/:id",
+  verifyToken,
+  requireVerification,
+  checkRole("vendor", "supplier", "expert"),
+  async (req, res) => {
+    try {
+      const result = await productService.deleteProduct(
+        req.params.id,
+        req.userId,
+        req.userRole
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("DELETE /products/:id error:", error);
+
+      if (error.message === "Product not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      if (error.message.includes("Unauthorized")) {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+// GET /api/products/seller/:sellerId - Get seller's products
+router.get("/seller/:sellerId", async (req, res) => {
+  try {
+    const filters = {
+      ...req.query,
+      sellerId: req.params.sellerId,
+    };
+
+    const result = await productService.getSellerProducts(
+      req.params.sellerId,
+      filters
+    );
+
+    res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    console.error("GET /products/seller/:sellerId error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 

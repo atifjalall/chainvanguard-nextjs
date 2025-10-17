@@ -1,7 +1,7 @@
 {
-  "name": "user-chaincode",
+  "name": "chainvanguard-chaincode",
   "version": "1.0.0",
-  "description": "User management chaincode for supply chain",
+  "description": "ChainVanguard Supply Chain Smart Contracts",
   "main": "index.js",
   "engines": {
     "node": ">=18",

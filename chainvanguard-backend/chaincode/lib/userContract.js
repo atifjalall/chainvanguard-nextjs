@@ -3,6 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { Contract } = require("fabric-contract-api");
+
 class UserContract extends Contract {
   /**
    * Initialize the ledger with default data
@@ -21,7 +22,7 @@ class UserContract extends Contract {
         userId: "admin@org1",
         name: "Admin User",
         email: "admin@org1.example.com",
-        role: "bdlt-expert",
+        role: "expert",
         organizationMSP: "Org1MSP",
         walletAddress: "0x0000000000000000000000000000000000000000",
         isActive: true,
@@ -48,7 +49,7 @@ class UserContract extends Contract {
    * @param {string} userId - Unique user identifier (wallet address)
    * @param {string} name - User's full name
    * @param {string} email - User's email
-   * @param {string} role - User role (supplier, vendor, customer, bdlt-expert)
+   * @param {string} role - User role (supplier, vendor, customer, expert)
    * @param {string} organizationMSP - Organization MSP ID
    * @param {string} walletAddress - User's wallet address
    * @param {string} companyName - Company name (optional)
@@ -75,10 +76,12 @@ class UserContract extends Contract {
       throw new Error(`User ${userId} already exists on the blockchain`);
     }
 
-    // Validate role
-    const validRoles = ["supplier", "vendor", "customer", "bdlt-expert"];
+    // Validate role - UPDATED TO INCLUDE 'expert'
+    const validRoles = ["supplier", "vendor", "customer", "expert"];
     if (!validRoles.includes(role)) {
-      throw new Error(`Invalid role: ${role}`);
+      throw new Error(
+        `Invalid role: ${role}. Valid roles are: ${validRoles.join(", ")}`
+      );
     }
 
     // Get deterministic timestamp from transaction
@@ -116,12 +119,15 @@ class UserContract extends Contract {
         JSON.stringify({
           userId: userId,
           name: name,
+          email: email,
           role: role,
+          walletAddress: walletAddress,
           timestamp: timestamp,
         })
       )
     );
 
+    console.info(`✅ User registered successfully: ${userId} (${role})`);
     console.info("============= END : Register User ===========");
     return JSON.stringify(user);
   }
@@ -221,8 +227,21 @@ class UserContract extends Contract {
 
     user.lastLoginAt = timestamp;
     user.updatedAt = timestamp;
+    user.transactionCount = (user.transactionCount || 0) + 1;
 
     await ctx.stub.putState(userId, Buffer.from(JSON.stringify(user)));
+
+    // Emit event
+    ctx.stub.setEvent(
+      "UserLogin",
+      Buffer.from(
+        JSON.stringify({
+          userId: userId,
+          timestamp: timestamp,
+        })
+      )
+    );
+
     return JSON.stringify(user);
   }
 
@@ -240,12 +259,71 @@ class UserContract extends Contract {
     }
 
     const user = JSON.parse(userAsBytes.toString());
+
+    // Get deterministic timestamp
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(
+      txTimestamp.seconds.toInt() * 1000
+    ).toISOString();
+
     user.isActive = false;
-    user.updatedAt = new Date().toISOString();
+    user.updatedAt = timestamp;
 
     await ctx.stub.putState(userId, Buffer.from(JSON.stringify(user)));
 
+    // Emit event
+    ctx.stub.setEvent(
+      "UserDeactivated",
+      Buffer.from(
+        JSON.stringify({
+          userId: userId,
+          timestamp: timestamp,
+        })
+      )
+    );
+
     console.info("============= END : Deactivate User ===========");
+    return JSON.stringify(user);
+  }
+
+  /**
+   * Activate user
+   * @param {Context} ctx
+   * @param {string} userId
+   */
+  async activateUser(ctx, userId) {
+    console.info("============= START : Activate User ===========");
+
+    const userAsBytes = await ctx.stub.getState(userId);
+    if (!userAsBytes || userAsBytes.length === 0) {
+      throw new Error(`User ${userId} does not exist`);
+    }
+
+    const user = JSON.parse(userAsBytes.toString());
+
+    // Get deterministic timestamp
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(
+      txTimestamp.seconds.toInt() * 1000
+    ).toISOString();
+
+    user.isActive = true;
+    user.updatedAt = timestamp;
+
+    await ctx.stub.putState(userId, Buffer.from(JSON.stringify(user)));
+
+    // Emit event
+    ctx.stub.setEvent(
+      "UserActivated",
+      Buffer.from(
+        JSON.stringify({
+          userId: userId,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info("============= END : Activate User ===========");
     return JSON.stringify(user);
   }
 
@@ -287,6 +365,14 @@ class UserContract extends Contract {
    * @param {string} role
    */
   async getUsersByRole(ctx, role) {
+    // Validate role
+    const validRoles = ["supplier", "vendor", "customer", "expert"];
+    if (!validRoles.includes(role)) {
+      throw new Error(
+        `Invalid role: ${role}. Valid roles are: ${validRoles.join(", ")}`
+      );
+    }
+
     const queryString = {
       selector: {
         docType: "user",
@@ -323,14 +409,21 @@ class UserContract extends Contract {
   async getUserStats(ctx) {
     const allUsers = JSON.parse(await this.getAllUsers(ctx));
 
+    // Get deterministic timestamp
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(
+      txTimestamp.seconds.toInt() * 1000
+    ).toISOString();
+
     const stats = {
       totalUsers: allUsers.length,
       activeUsers: allUsers.filter((u) => u.isActive).length,
+      inactiveUsers: allUsers.filter((u) => !u.isActive).length,
       suppliers: allUsers.filter((u) => u.role === "supplier").length,
       vendors: allUsers.filter((u) => u.role === "vendor").length,
       customers: allUsers.filter((u) => u.role === "customer").length,
-      experts: allUsers.filter((u) => u.role === "bdlt-expert").length,
-      timestamp: new Date().toISOString(),
+      experts: allUsers.filter((u) => u.role === "expert").length,
+      timestamp: timestamp,
     };
 
     return JSON.stringify(stats);
@@ -348,8 +441,15 @@ class UserContract extends Contract {
     }
 
     const user = JSON.parse(userAsBytes.toString());
+
+    // Get deterministic timestamp
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(
+      txTimestamp.seconds.toInt() * 1000
+    ).toISOString();
+
     user.transactionCount = (user.transactionCount || 0) + 1;
-    user.updatedAt = new Date().toISOString();
+    user.updatedAt = timestamp;
 
     await ctx.stub.putState(userId, Buffer.from(JSON.stringify(user)));
     return JSON.stringify(user);
@@ -384,6 +484,74 @@ class UserContract extends Contract {
     await iterator.close();
     console.info("============= END : Get User History ===========");
     return JSON.stringify(allResults);
+  }
+
+  /**
+   * Get active users count
+   * @param {Context} ctx
+   */
+  async getActiveUsersCount(ctx) {
+    const allUsers = JSON.parse(await this.getAllUsers(ctx));
+    const activeCount = allUsers.filter((u) => u.isActive).length;
+    return JSON.stringify({ activeUsers: activeCount, total: allUsers.length });
+  }
+
+  /**
+   * Search users by name or email
+   * @param {Context} ctx
+   * @param {string} searchTerm
+   */
+  async searchUsers(ctx, searchTerm) {
+    const allUsers = JSON.parse(await this.getAllUsers(ctx));
+    const searchLower = searchTerm.toLowerCase();
+
+    const results = allUsers.filter(
+      (user) =>
+        user.name.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower) ||
+        (user.companyName &&
+          user.companyName.toLowerCase().includes(searchLower))
+    );
+
+    return JSON.stringify(results);
+  }
+
+  /**
+   * Get users registered in a date range
+   * @param {Context} ctx
+   * @param {string} startDate - ISO date string
+   * @param {string} endDate - ISO date string
+   */
+  async getUsersByDateRange(ctx, startDate, endDate) {
+    const allUsers = JSON.parse(await this.getAllUsers(ctx));
+
+    const results = allUsers.filter((user) => {
+      const createdAt = new Date(user.createdAt);
+      return createdAt >= new Date(startDate) && createdAt <= new Date(endDate);
+    });
+
+    return JSON.stringify(results);
+  }
+
+  /**
+   * Verify user by wallet address
+   * @param {Context} ctx
+   * @param {string} walletAddress
+   */
+  async verifyUserByWallet(ctx, walletAddress) {
+    const allUsers = JSON.parse(await this.getAllUsers(ctx));
+
+    const user = allUsers.find(
+      (u) => u.walletAddress.toLowerCase() === walletAddress.toLowerCase()
+    );
+
+    if (!user) {
+      throw new Error(
+        `User with wallet address ${walletAddress} does not exist`
+      );
+    }
+
+    return JSON.stringify(user);
   }
 }
 
