@@ -19,9 +19,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
+  SelectTrigger,
   SelectContent,
   SelectItem,
-  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import {
@@ -357,25 +357,27 @@ export default function LoginPage() {
                       value={selectedWallet}
                       onValueChange={setSelectedWallet}
                     >
-                      <SelectTrigger className="h-12 border-2 border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-colors cursor-pointer bg-white/50 dark:bg-gray-800/50">
+                      <SelectTrigger className="mt-1 h-12 w-full flex items-center gap-2 px-3 py-0 text-sm leading-none border-2 border-gray-200 dark:border-gray-700 rounded-md hover:border-blue-300 focus:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50">
                         <SelectValue
                           placeholder="Choose your wallet"
-                          className="cursor-pointer"
+                          className="w-full flex items-center h-12 text-sm"
                         />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="w-full">
                         {availableWallets.map((wallet) => (
                           <SelectItem
                             key={wallet.id}
                             value={wallet.id}
-                            className="cursor-pointer"
+                            className="cursor-pointer h-12 flex items-center px-3 text-sm"
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 w-full">
                               <div className="p-1.5 bg-blue-100 dark:bg-blue-900 rounded">
                                 <Wallet className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                               </div>
-                              <div>
-                                <div className="font-medium">{wallet.name}</div>
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">
+                                  {wallet.name}
+                                </div>
                                 <div className="text-xs text-gray-500">
                                   {formatAddress(wallet.address)}
                                 </div>
@@ -384,7 +386,11 @@ export default function LoginPage() {
                           </SelectItem>
                         ))}
                         {availableWallets.length === 0 && (
-                          <SelectItem value="no-wallet" disabled>
+                          <SelectItem
+                            value="no-wallet"
+                            disabled
+                            className="h-12 flex items-center px-3 text-sm opacity-60"
+                          >
                             No wallets found - Create one first
                           </SelectItem>
                         )}
