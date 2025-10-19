@@ -57,17 +57,32 @@ echo "✅ Fabric network and channel started."
 #--------------------------------------------------
 # Step 4: Deploy Chaincode
 #--------------------------------------------------
-CHAINCODE_PATH=~/Desktop/chainvanguard-nextjs/chainvanguard-backend/chaincode/textile-scm
-CHAINCODE_NAME=textile-scm
-CHAINCODE_LANG=javascript
+CHAINCODE_PATH=~/Desktop/chainvanguard-nextjs/chainvanguard-backend/chaincode
 CHANNEL_NAME=supply-chain-channel
 
-echo "⚙️  Deploying chaincode: ${CHAINCODE_NAME}..."
+echo "⚙️ Deploying USER chaincode..."
 ./network.sh deployCC \
-  -ccn $CHAINCODE_NAME \
+  -ccn user \
   -ccp $CHAINCODE_PATH \
-  -ccl $CHAINCODE_LANG \
-  -c $CHANNEL_NAME
+  -ccl javascript \
+  -c $CHANNEL_NAME \
+  -ccv 1.2
+
+echo "⚙️ Deploying PRODUCT chaincode..."
+./network.sh deployCC \
+  -ccn product \
+  -ccp $CHAINCODE_PATH \
+  -ccl javascript \
+  -c $CHANNEL_NAME \
+  -ccv 1.0
+
+echo "⚙️ Deploying ORDER chaincode..."
+./network.sh deployCC \
+  -ccn order \
+  -ccp $CHAINCODE_PATH \
+  -ccl javascript \
+  -c $CHANNEL_NAME \
+  -ccv 1.0
 echo "✅ Chaincode deployed successfully."
 
 #--------------------------------------------------
@@ -98,9 +113,15 @@ peer chaincode invoke \
 
 sleep 5
 
-# Query Ledger
-peer chaincode query -C $CHANNEL_NAME -n $CHAINCODE_NAME -c '{"function":"GetAllProducts","Args":[]}'
-echo "✅ Chaincode test complete."
+# Test queries
+echo "🧪 Testing chaincode queries..."
+
+peer chaincode query -C $CHANNEL_NAME -n user -c '{"function":"getAllUsers","Args":[]}'
+peer chaincode query -C $CHANNEL_NAME -n product -c '{"function":"ProductContract:getAllProducts","Args":[]}'
+peer chaincode query -C $CHANNEL_NAME -n order -c '{"function":"OrderContract:getAllOrders","Args":[]}'
+
+echo "✅ All chaincodes deployed and tested successfully."
+
 
 #--------------------------------------------------
 # Step 6: Copy Orgs to API

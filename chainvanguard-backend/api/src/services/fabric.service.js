@@ -11,6 +11,8 @@ class FabricService {
     this.network = null;
     this.contract = null;
     this.userContract = null; // For user management
+    this.productContract = null; // For product management
+    this.orderContract = null; // For order management
     this.client = null;
   }
 
@@ -106,9 +108,9 @@ class FabricService {
       // Get network and contracts
       this.network = this.gateway.getNetwork(channelName);
 
-      // ✅ FIXED: Get contracts from separate chaincodes
       this.userContract = this.network.getContract(userChaincodeName);
       this.productContract = this.network.getContract(productChaincodeName);
+      this.orderContract = this.network.getContract("order"); // ← ADD THIS LINE
 
       // Backward compatibility
       this.contract = this.userContract;
@@ -117,6 +119,7 @@ class FabricService {
       console.log(`   Channel: ${channelName}`);
       console.log(`   User Chaincode: ${userChaincodeName}`);
       console.log(`   Product Chaincode: ${productChaincodeName}`);
+      console.log(`   Order Chaincode: order`); // ← ADD THIS LINE
 
       return true;
     } catch (error) {
@@ -837,6 +840,321 @@ class FabricService {
     } catch (error) {
       console.error("❌ Blockchain productExists error:", error);
       return false;
+    }
+  }
+
+  // ========================================
+  // ORDER METHODS
+  // ========================================
+
+  /**
+   * Initialize order contract
+   */
+  async initOrderContract() {
+    if (!this.network) {
+      await this.connect();
+    }
+    this.orderContract = this.network.getContract("order");
+    console.log("✅ Order contract initialized");
+  }
+
+  /**
+   * Create order on blockchain
+   * @param {Object} orderData - Order data
+   * @returns {Object} Created order
+   */
+  async createOrder(orderData) {
+    try {
+      console.log("📝 Creating order on blockchain...");
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const result = await this.orderContract.submitTransaction(
+        "OrderContract:createOrder",
+        JSON.stringify(orderData)
+      );
+
+      console.log("✅ Order created on blockchain");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain createOrder error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get order by ID
+   * @param {string} orderId - Order ID
+   * @returns {Object} Order data
+   */
+  async getOrder(orderId) {
+    try {
+      console.log(`📝 Getting order from blockchain: ${orderId}`);
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const result = await this.orderContract.evaluateTransaction(
+        "OrderContract:readOrder",
+        orderId
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain getOrder error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update order status
+   * @param {string} orderId - Order ID
+   * @param {Object} updateData - Update data
+   * @returns {Object} Updated order
+   */
+  async updateOrderStatus(orderId, updateData) {
+    try {
+      console.log(`📝 Updating order status: ${orderId}`);
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const result = await this.orderContract.submitTransaction(
+        "OrderContract:updateOrderStatus",
+        orderId,
+        JSON.stringify(updateData)
+      );
+
+      console.log("✅ Order status updated on blockchain");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain updateOrderStatus error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get order history
+   * @param {string} orderId - Order ID
+   * @returns {Array} Transaction history
+   */
+  async getOrderHistory(orderId) {
+    try {
+      console.log(`📝 Getting order history: ${orderId}`);
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const result = await this.orderContract.evaluateTransaction(
+        "OrderContract:getOrderHistory",
+        orderId
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain getOrderHistory error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all orders
+   * @returns {Array} All orders
+   */
+  async getAllOrders() {
+    try {
+      console.log("📝 Getting all orders from blockchain...");
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const result = await this.orderContract.evaluateTransaction(
+        "OrderContract:getAllOrders"
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain getAllOrders error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Query orders by customer
+   * @param {string} customerId - Customer ID
+   * @returns {Array} Customer orders
+   */
+  async queryOrdersByCustomer(customerId) {
+    try {
+      console.log(`📝 Querying orders by customer: ${customerId}`);
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const result = await this.orderContract.evaluateTransaction(
+        "OrderContract:queryOrdersByCustomer",
+        customerId
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain queryOrdersByCustomer error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Query orders by seller
+   * @param {string} sellerId - Seller ID
+   * @returns {Array} Seller orders
+   */
+  async queryOrdersBySeller(sellerId) {
+    try {
+      console.log(`📝 Querying orders by seller: ${sellerId}`);
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const result = await this.orderContract.evaluateTransaction(
+        "OrderContract:queryOrdersBySeller",
+        sellerId
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain queryOrdersBySeller error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Record product ownership transfer
+   * @param {string} orderId - Order ID
+   * @param {Object} transferData - Transfer details
+   * @returns {Object} Result
+   */
+  async recordOwnershipTransfer(orderId, transferData) {
+    try {
+      console.log(`📝 Recording ownership transfer for order: ${orderId}`);
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const result = await this.orderContract.submitTransaction(
+        "OrderContract:recordOwnershipTransfer",
+        orderId,
+        JSON.stringify(transferData)
+      );
+
+      console.log("✅ Ownership transfer recorded on blockchain");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain recordOwnershipTransfer error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel order
+   * @param {string} orderId - Order ID
+   * @param {Object} cancellationData - Cancellation details
+   * @returns {Object} Updated order
+   */
+  async cancelOrder(orderId, cancellationData) {
+    try {
+      console.log(`📝 Cancelling order: ${orderId}`);
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const result = await this.orderContract.submitTransaction(
+        "OrderContract:cancelOrder",
+        orderId,
+        JSON.stringify(cancellationData)
+      );
+
+      console.log("✅ Order cancelled on blockchain");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain cancelOrder error:", error);
+      throw error;
     }
   }
 }
