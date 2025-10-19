@@ -45,7 +45,7 @@ import {
   Edit3,
 } from "lucide-react";
 import { WalletData } from "@/types/web3";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, easeOut, easeInOut } from "framer-motion";
 
 type RecoveryMode = "known-wallet" | "forgot-wallet" | null;
 type WalletInputMode = "select" | "manual";
@@ -189,13 +189,8 @@ export default function ForgotPasswordPage() {
         throw new Error("No wallet found with this recovery phrase");
       }
 
-      setRecoveredWallet({
-        id: matchingWallet.id,
-        name: matchingWallet.name,
-        address: matchingWallet.address,
-        balance: matchingWallet.balance || "0",
-        network: matchingWallet.network || "Ethereum",
-      });
+      // Use the full matchingWallet as WalletData (cast) so the state gets all required properties
+      setRecoveredWallet(matchingWallet as WalletData);
 
       setSelectedWallet(matchingWallet.id);
       toast.success("Wallet found successfully!");
@@ -449,7 +444,7 @@ export default function ForgotPasswordPage() {
       y: 0,
       transition: {
         duration: 0.4,
-        ease: [0.25, 0.1, 0.25, 1],
+        ease: easeOut,
       },
     },
     exit: {
@@ -457,7 +452,7 @@ export default function ForgotPasswordPage() {
       y: -20,
       transition: {
         duration: 0.3,
-        ease: [0.25, 0.1, 0.25, 1],
+        ease: easeOut,
       },
     },
   };
@@ -936,14 +931,6 @@ export default function ForgotPasswordPage() {
                                     {formatAddress(recoveredWallet.address)}
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between p-2.5 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                                  <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                                    Network
-                                  </span>
-                                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                    {recoveredWallet.network}
-                                  </span>
-                                </div>
                               </div>
                             </div>
                           </div>
@@ -1388,7 +1375,7 @@ export default function ForgotPasswordPage() {
           transition={{
             duration: 8,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: easeInOut,
           }}
           className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"
         />
@@ -1400,7 +1387,7 @@ export default function ForgotPasswordPage() {
           transition={{
             duration: 10,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: easeInOut,
             delay: 1,
           }}
           className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl"
@@ -1413,7 +1400,7 @@ export default function ForgotPasswordPage() {
           transition={{
             duration: 12,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: easeInOut,
             delay: 2,
           }}
           className="absolute top-3/4 left-3/4 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl"
