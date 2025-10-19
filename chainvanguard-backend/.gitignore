@@ -11,7 +11,9 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 users.json
-user-chaincode-v3.tar.gz
+*.tar.gz
+*.rdb
+data.txt
 
 # Hyperledger Fabric
 network/organizations/fabric-ca/
