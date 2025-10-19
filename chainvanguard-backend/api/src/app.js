@@ -9,6 +9,8 @@ import ipfsService from "./config/ipfs.js";
 import authRoutes from "./routes/auth.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
+import orderRoutes from "./routes/order.routes.js";
+import cartRoutes from "./routes/cart.routes.js";
 
 dotenv.config();
 
@@ -135,6 +137,8 @@ app.get("/health", async (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/cart", cartRoutes);
 
 // ========================================
 // API INFO ENDPOINT
@@ -220,6 +224,100 @@ app.get("/api", (req, res) => {
           method: "GET",
           path: "/api/products/:id/history",
           description: "Get product blockchain history",
+        },
+      },
+      orders: {
+        create: {
+          method: "POST",
+          path: "/api/orders",
+          description: "Create new order (Customer only)",
+        },
+        list: {
+          method: "GET",
+          path: "/api/orders",
+          description: "Get customer's orders",
+        },
+        getById: {
+          method: "GET",
+          path: "/api/orders/:id",
+          description: "Get order details",
+        },
+        cancel: {
+          method: "POST",
+          path: "/api/orders/:id/cancel",
+          description: "Cancel order (Customer)",
+        },
+        track: {
+          method: "GET",
+          path: "/api/orders/:id/track",
+          description: "Track order",
+        },
+        sellerOrders: {
+          method: "GET",
+          path: "/api/orders/seller",
+          description: "Get seller's orders",
+        },
+        updateStatus: {
+          method: "PATCH",
+          path: "/api/orders/:id/status",
+          description: "Update order status (Seller/Vendor)",
+        },
+        allOrders: {
+          method: "GET",
+          path: "/api/orders/all",
+          description: "Get all orders (Expert only)",
+        },
+        blockchain: {
+          method: "GET",
+          path: "/api/orders/:id/blockchain",
+          description: "Get order blockchain history",
+        },
+      },
+      cart: {
+        get: {
+          method: "GET",
+          path: "/api/cart",
+          description: "Get cart (Guest or Authenticated)",
+        },
+        add: {
+          method: "POST",
+          path: "/api/cart/add",
+          description: "Add item to cart",
+        },
+        updateQuantity: {
+          method: "PUT",
+          path: "/api/cart/item/:itemId",
+          description: "Update item quantity",
+        },
+        remove: {
+          method: "DELETE",
+          path: "/api/cart/item/:itemId",
+          description: "Remove item from cart",
+        },
+        clear: {
+          method: "DELETE",
+          path: "/api/cart/clear",
+          description: "Clear cart",
+        },
+        saveForLater: {
+          method: "POST",
+          path: "/api/cart/save-for-later/:itemId",
+          description: "Save item for later",
+        },
+        applyCoupon: {
+          method: "POST",
+          path: "/api/cart/apply-coupon",
+          description: "Apply coupon code",
+        },
+        merge: {
+          method: "POST",
+          path: "/api/cart/merge",
+          description: "Merge guest cart (after login)",
+        },
+        count: {
+          method: "GET",
+          path: "/api/cart/count",
+          description: "Get cart item count",
         },
       },
       categories: {
@@ -336,6 +434,8 @@ const server = app.listen(PORT, () => {
   console.log(`   🏥 Health Check: http://localhost:${PORT}/health`);
   console.log(`   🔐 Auth:         http://localhost:${PORT}/api/auth`);
   console.log(`   📦 Products:     http://localhost:${PORT}/api/products`);
+  console.log(`   📋 Orders:       http://localhost:${PORT}/api/orders`);
+  console.log(`   🛒 Cart:         http://localhost:${PORT}/api/cart`);
   console.log(`   🏷️  Categories:   http://localhost:${PORT}/api/categories`);
   console.log(`\n🛠️  Services:`);
   console.log(`   📊 MongoDB:      Connected`);
