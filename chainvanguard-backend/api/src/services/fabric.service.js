@@ -20,7 +20,8 @@ class FabricService {
 
       // Configuration
       const channelName = "supply-chain-channel";
-      const chaincodeName = "user-chaincode";
+      const userChaincodeName = "user"; // ✅ Matches deployed chaincode
+      const productChaincodeName = "product"; // ✅ Matches deployed chaincode
       const mspId = "Org1MSP";
 
       // Use ABSOLUTE paths to fabric-samples
@@ -79,7 +80,7 @@ class FabricService {
       const signer = await this.newSigner(keyDirectoryPath);
       console.log("✅ Signer created");
 
-      // Connect to gateway with BOTH peers in endorsement
+      // Connect to gateway
       this.gateway = connect({
         client: this.client,
         identity,
@@ -104,17 +105,18 @@ class FabricService {
 
       // Get network and contracts
       this.network = this.gateway.getNetwork(channelName);
-      this.contract = this.network.getContract(chaincodeName);
 
-      this.userContract = this.network.getContract("user-chaincode");
-      this.productContract = this.network.getContract(
-        "product-chaincode",
-        "ProductContract"
-      );
+      // ✅ FIXED: Get contracts from separate chaincodes
+      this.userContract = this.network.getContract(userChaincodeName);
+      this.productContract = this.network.getContract(productChaincodeName);
+
+      // Backward compatibility
+      this.contract = this.userContract;
 
       console.log("✅ Successfully connected to Fabric network");
       console.log(`   Channel: ${channelName}`);
-      console.log(`   Chaincode: ${chaincodeName}`);
+      console.log(`   User Chaincode: ${userChaincodeName}`);
+      console.log(`   Product Chaincode: ${productChaincodeName}`);
 
       return true;
     } catch (error) {
@@ -160,8 +162,6 @@ class FabricService {
       }
     }
   }
-
-  // In your fabric.service.js, update the registerUser method
 
   async registerUser(userData) {
     try {
@@ -414,81 +414,429 @@ class FabricService {
     return signers.newPrivateKeySigner(privateKey);
   }
 
-  // Product methods
+  // ========================================
+  // PRODUCT METHODS
+  // ========================================
+
+  /**
+   * Create a new product on the blockchain
+   * @param {Object} productData - Product data to store
+   * @returns {Object} Created product from blockchain
+   */
   async createProduct(productData) {
     try {
-      const result = await this.contract.submitTransaction(
-        "createProduct",
+      console.log("📝 Creating product on blockchain...");
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      // Validate product data
+      if (!productData || !productData.productId) {
+        throw new Error("Product data missing productId");
+      }
+
+      console.log("📦 Sending to blockchain:", {
+        productId: productData.productId,
+        name: productData.name,
+        category: productData.category,
+      });
+
+      // Call ProductContract with namespace
+      const result = await this.productContract.submitTransaction(
+        "ProductContract:createProduct",
         JSON.stringify(productData)
       );
-      return JSON.parse(result.toString());
+
+      console.log("✅ Product created on blockchain");
+
+      // Parse response
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
     } catch (error) {
-      console.error("Fabric createProduct error:", error);
+      console.error("❌ Blockchain createProduct error:", error);
+      console.error("Error details:", {
+        message: error.message,
+        details: error.details,
+      });
       throw error;
     }
   }
 
+  /**
+   * Get a product by ID from the blockchain
+   * @param {string} productId - Product ID
+   * @returns {Object} Product data
+   */
   async getProduct(productId) {
     try {
-      const result = await this.contract.evaluateTransaction(
-        "readProduct",
+      console.log(`📝 Getting product from blockchain: ${productId}`);
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const result = await this.productContract.evaluateTransaction(
+        "ProductContract:readProduct",
         productId
       );
-      return JSON.parse(result.toString());
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
     } catch (error) {
-      console.error("Fabric getProduct error:", error);
+      console.error("❌ Blockchain getProduct error:", error);
       throw error;
     }
   }
 
+  /**
+   * Get all products from the blockchain
+   * @returns {Array} Array of all products
+   */
   async getAllProducts() {
     try {
-      const result = await this.contract.evaluateTransaction("getAllProducts");
-      return JSON.parse(result.toString());
-    } catch (error) {
-      console.error("Fabric getAllProducts error:", error);
-      throw error;
-    }
-  }
+      console.log("📝 Getting all products from blockchain...");
 
-  async updateProduct(productId, quantity, status) {
-    try {
-      const result = await this.contract.submitTransaction(
-        "updateProduct",
-        productId,
-        quantity !== undefined ? quantity.toString() : "",
-        status || ""
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const result = await this.productContract.evaluateTransaction(
+        "ProductContract:getAllProducts"
       );
-      return JSON.parse(result.toString());
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
     } catch (error) {
-      console.error("Fabric updateProduct error:", error);
+      console.error("❌ Blockchain getAllProducts error:", error);
       throw error;
     }
   }
 
+  /**
+   * Update a product on the blockchain
+   * @param {string} productId - Product ID
+   * @param {Object} updateData - Update data
+   * @returns {Object} Updated product
+   */
+  async updateProduct(productId, updateData) {
+    try {
+      console.log(`📝 Updating product on blockchain: ${productId}`);
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      // Ensure updateData is properly formatted
+      const data =
+        typeof updateData === "string"
+          ? updateData
+          : JSON.stringify(updateData);
+
+      const result = await this.productContract.submitTransaction(
+        "ProductContract:updateProduct",
+        productId,
+        data
+      );
+
+      console.log("✅ Product updated on blockchain");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain updateProduct error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get product history from the blockchain
+   * @param {string} productId - Product ID
+   * @returns {Array} Transaction history
+   */
   async getProductHistory(productId) {
     try {
-      const result = await this.contract.evaluateTransaction(
-        "getProductHistory",
+      console.log(`📝 Getting product history: ${productId}`);
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const result = await this.productContract.evaluateTransaction(
+        "ProductContract:getProductHistory",
         productId
       );
-      return JSON.parse(result.toString());
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
     } catch (error) {
-      console.error("Fabric getProductHistory error:", error);
+      console.error("❌ Blockchain getProductHistory error:", error);
       throw error;
     }
   }
 
+  /**
+   * Query products by seller
+   * @param {string} sellerId - Seller ID
+   * @returns {Array} Array of products
+   */
   async queryProductsBySeller(sellerId) {
     try {
-      const result = await this.contract.evaluateTransaction(
-        "queryProductsBySeller",
+      console.log(`📝 Querying products by seller: ${sellerId}`);
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const result = await this.productContract.evaluateTransaction(
+        "ProductContract:queryProductsBySeller",
         sellerId
       );
-      return JSON.parse(result.toString());
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
     } catch (error) {
-      console.error("Fabric queryProductsBySeller error:", error);
+      console.error("❌ Blockchain queryProductsBySeller error:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Query products by category
+   * @param {string} category - Product category
+   * @returns {Array} Array of products
+   */
+  async queryProductsByCategory(category) {
+    try {
+      console.log(`📝 Querying products by category: ${category}`);
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const result = await this.productContract.evaluateTransaction(
+        "ProductContract:queryProductsByCategory",
+        category
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain queryProductsByCategory error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Query verified products
+   * @returns {Array} Array of verified products
+   */
+  async queryVerifiedProducts() {
+    try {
+      console.log("📝 Querying verified products...");
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const result = await this.productContract.evaluateTransaction(
+        "ProductContract:queryVerifiedProducts"
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain queryVerifiedProducts error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify a product (Expert only)
+   * @param {string} productId - Product ID
+   * @param {Object} verificationData - Verification details
+   * @returns {Object} Verified product
+   */
+  async verifyProduct(productId, verificationData) {
+    try {
+      console.log(`📝 Verifying product: ${productId}`);
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const result = await this.productContract.submitTransaction(
+        "ProductContract:verifyProduct",
+        productId,
+        JSON.stringify(verificationData)
+      );
+
+      console.log("✅ Product verified on blockchain");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain verifyProduct error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Transfer product ownership
+   * @param {string} productId - Product ID
+   * @param {Object} transferData - Transfer details
+   * @returns {Object} Updated product
+   */
+  async transferProduct(productId, transferData) {
+    try {
+      console.log(`📝 Transferring product: ${productId}`);
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const result = await this.productContract.submitTransaction(
+        "ProductContract:transferProduct",
+        productId,
+        JSON.stringify(transferData)
+      );
+
+      console.log("✅ Product transferred on blockchain");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain transferProduct error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Archive a product
+   * @param {string} productId - Product ID
+   * @param {string} deletedBy - User who archived the product
+   * @returns {Object} Archived product
+   */
+  async archiveProduct(productId, deletedBy) {
+    try {
+      console.log(`📝 Archiving product: ${productId}`);
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const result = await this.productContract.submitTransaction(
+        "ProductContract:archiveProduct",
+        productId,
+        deletedBy
+      );
+
+      console.log("✅ Product archived on blockchain");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain archiveProduct error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if a product exists on the blockchain
+   * @param {string} productId - Product ID
+   * @returns {boolean} True if product exists
+   */
+  async productExists(productId) {
+    try {
+      console.log(`📝 Checking if product exists: ${productId}`);
+
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const result = await this.productContract.evaluateTransaction(
+        "ProductContract:productExists",
+        productId
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      // Parse boolean result
+      return resultStr === "true" || resultStr === true;
+    } catch (error) {
+      console.error("❌ Blockchain productExists error:", error);
+      return false;
     }
   }
 }

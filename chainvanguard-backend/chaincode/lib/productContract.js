@@ -8,57 +8,242 @@ class ProductContract extends Contract {
     super("ProductContract");
   }
 
-  // Initialize ledger
+  // ========================================
+  // INITIALIZATION
+  // ========================================
+
+  /**
+   * Initialize ledger with sample data (optional)
+   */
   async initLedger(ctx) {
     console.info("============= START : Initialize Ledger ===========");
-    const products = [];
+    console.info("Product ledger initialized");
     console.info("============= END : Initialize Ledger ===========");
-    return JSON.stringify(products);
+    return JSON.stringify({
+      message: "Product ledger initialized successfully",
+    });
   }
 
-  // Create a new product
+  // ========================================
+  // CREATE PRODUCT
+  // ========================================
+
+  /**
+   * Create a new product on the blockchain
+   * @param {Context} ctx - Transaction context
+   * @param {string} productData - JSON string of product data
+   * @returns {string} Created product
+   */
   async createProduct(ctx, productData) {
     console.info("============= START : Create Product ===========");
 
+    // Parse product data
     const product = JSON.parse(productData);
 
-    // Check if product already exists
-    const exists = await this.productExists(ctx, product.id);
-    if (exists) {
-      throw new Error(`Product ${product.id} already exists`);
+    // Validate required fields
+    if (!product.productId) {
+      throw new Error("Product ID is required");
+    }
+    if (!product.name) {
+      throw new Error("Product name is required");
+    }
+    if (!product.sellerId) {
+      throw new Error("Seller ID is required");
+    }
+    if (!product.category) {
+      throw new Error("Category is required");
     }
 
-    // Add metadata
-    product.docType = "product";
+    // Check if product already exists
+    const exists = await this.productExists(ctx, product.productId);
+    if (exists) {
+      throw new Error(
+        `Product ${product.productId} already exists on blockchain`
+      );
+    }
 
-    // Get transaction timestamp (deterministic - same for all peers)
+    // Get transaction metadata
     const txTimestamp = ctx.stub.getTxTimestamp();
     const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
 
-    product.createdAt = timestamp;
-    product.updatedAt = timestamp;
-    product.txId = ctx.stub.getTxID();
+    // Build blockchain product record
+    const blockchainProduct = {
+      docType: "product",
+
+      // Identity
+      productId: product.productId,
+      sku: product.sku || "",
+      qrCode: product.qrCode || "",
+
+      // Basic Info
+      name: product.name,
+      description: product.description || "",
+      category: product.category,
+      subcategory: product.subcategory || "",
+      brand: product.brand || "",
+
+      // Seller Info
+      sellerId: product.sellerId,
+      sellerName: product.sellerName || "",
+      sellerWalletAddress: product.sellerWalletAddress || "",
+      sellerRole: product.sellerRole || "supplier",
+
+      // Ownership (for tracking transfers)
+      currentOwnerId: product.sellerId,
+      currentOwnerRole: product.sellerRole || "supplier",
+      originalCreator: product.sellerId,
+
+      // Apparel Details (essential info only)
+      apparelDetails: {
+        size: product.apparelDetails?.size || "",
+        color: product.apparelDetails?.color || "",
+        material: product.apparelDetails?.material || "",
+        fit: product.apparelDetails?.fit || "",
+        pattern: product.apparelDetails?.pattern || "",
+      },
+
+      // Manufacturing
+      manufacturingDetails: {
+        manufacturerName: product.manufacturingDetails?.manufacturerName || "",
+        manufactureDate: product.manufacturingDetails?.manufactureDate || null,
+        batchNumber: product.manufacturingDetails?.batchNumber || "",
+        productionCountry:
+          product.manufacturingDetails?.productionCountry || "",
+        productionFacility:
+          product.manufacturingDetails?.productionFacility || "",
+      },
+
+      // Certifications (IPFS hashes only)
+      certificates: (product.certificates || []).map((cert) => ({
+        name: cert.name,
+        type: cert.type,
+        certificateNumber: cert.certificateNumber || "",
+        ipfsHash: cert.ipfsHash,
+        issueDate: cert.issueDate || null,
+        expiryDate: cert.expiryDate || null,
+      })),
+
+      // Sustainability flags
+      sustainability: {
+        isOrganic: product.sustainability?.isOrganic || false,
+        isFairTrade: product.sustainability?.isFairTrade || false,
+        isRecycled: product.sustainability?.isRecycled || false,
+        isCarbonNeutral: product.sustainability?.isCarbonNeutral || false,
+      },
+
+      // Status
+      status: product.status || "active",
+      isVerified: product.isVerified || false,
+      blockchainVerified: true,
+
+      // Supply Chain History
+      supplyChainHistory: [
+        {
+          stage: "created",
+          action: "Product created on blockchain",
+          performedBy: product.sellerId,
+          performedByRole: product.sellerRole || "supplier",
+          location: product.currentLocation?.facility || "",
+          country: product.currentLocation?.country || "",
+          timestamp: timestamp,
+          transactionId: txId,
+          blockNumber: ctx.stub.getTxID(),
+          verified: true,
+        },
+      ],
+
+      // Transaction history (for ownership transfers)
+      transferHistory: [],
+
+      // Verification history
+      verificationHistory: [],
+
+      // IPFS hash (for full product data backup)
+      ipfsHash: product.ipfsHash || "",
+
+      // Blockchain metadata
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      createdBy: product.sellerId,
+      lastModifiedBy: product.sellerId,
+      txId: txId,
+      totalTransactions: 1,
+    };
 
     // Save to ledger
-    await ctx.stub.putState(product.id, Buffer.from(JSON.stringify(product)));
+    await ctx.stub.putState(
+      product.productId,
+      Buffer.from(JSON.stringify(blockchainProduct))
+    );
 
+    // Emit event
+    await ctx.stub.setEvent(
+      "ProductCreated",
+      Buffer.from(
+        JSON.stringify({
+          productId: product.productId,
+          name: product.name,
+          sellerId: product.sellerId,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Product ${product.productId} created successfully`);
     console.info("============= END : Create Product ===========");
-    return JSON.stringify(product);
+
+    return JSON.stringify(blockchainProduct);
   }
 
-  // Read a product
+  // ========================================
+  // READ PRODUCT
+  // ========================================
+
+  /**
+   * Read a product from the blockchain
+   * @param {Context} ctx - Transaction context
+   * @param {string} productId - Product ID
+   * @returns {string} Product data
+   */
   async readProduct(ctx, productId) {
+    console.info(`Reading product: ${productId}`);
+
     const productBytes = await ctx.stub.getState(productId);
+
     if (!productBytes || productBytes.length === 0) {
-      throw new Error(`Product ${productId} does not exist`);
+      throw new Error(`Product ${productId} does not exist on blockchain`);
     }
+
     return productBytes.toString();
   }
 
-  // Update product
-  async updateProduct(ctx, productId, quantity, status) {
+  /**
+   * Check if product exists
+   * @param {Context} ctx - Transaction context
+   * @param {string} productId - Product ID
+   * @returns {boolean} True if exists
+   */
+  async productExists(ctx, productId) {
+    const productBytes = await ctx.stub.getState(productId);
+    return productBytes && productBytes.length > 0;
+  }
+
+  // ========================================
+  // UPDATE PRODUCT
+  // ========================================
+
+  /**
+   * Update product information
+   * @param {Context} ctx - Transaction context
+   * @param {string} productId - Product ID
+   * @param {string} updateData - JSON string of updates
+   * @returns {string} Updated product
+   */
+  async updateProduct(ctx, productId, updateData) {
     console.info("============= START : Update Product ===========");
 
+    // Check if product exists
     const exists = await this.productExists(ctx, productId);
     if (!exists) {
       throw new Error(`Product ${productId} does not exist`);
@@ -68,71 +253,343 @@ class ProductContract extends Contract {
     const productBytes = await ctx.stub.getState(productId);
     const product = JSON.parse(productBytes.toString());
 
-    // Update fields
-    if (quantity !== undefined && quantity !== "") {
-      product.quantity = parseInt(quantity);
-    }
-    if (status !== undefined && status !== "") {
-      product.status = status;
+    // Parse update data
+    const updates = JSON.parse(updateData);
+
+    // Get transaction metadata
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Track what changed
+    const changes = [];
+
+    // Update allowed fields
+    if (updates.status && updates.status !== product.status) {
+      changes.push(`Status: ${product.status} → ${updates.status}`);
+      product.status = updates.status;
     }
 
-    // Use transaction timestamp (deterministic)
-    const txTimestamp = ctx.stub.getTxTimestamp();
-    product.updatedAt = new Date(txTimestamp.seconds.low * 1000).toISOString();
-    product.lastTxId = ctx.stub.getTxID();
+    if (
+      updates.isVerified !== undefined &&
+      updates.isVerified !== product.isVerified
+    ) {
+      changes.push(`Verified: ${product.isVerified} → ${updates.isVerified}`);
+      product.isVerified = updates.isVerified;
+
+      // Add to verification history
+      if (updates.isVerified) {
+        product.verificationHistory.push({
+          verifiedBy: updates.verifiedBy || "unknown",
+          timestamp: timestamp,
+          transactionId: txId,
+        });
+      }
+    }
+
+    if (updates.currentLocation) {
+      changes.push(`Location updated`);
+      product.supplyChainHistory.push({
+        stage: "location_updated",
+        action: "Product location updated",
+        performedBy: updates.updatedBy || product.currentOwnerId,
+        performedByRole: updates.updatedByRole || product.currentOwnerRole,
+        location: updates.currentLocation.facility || "",
+        country: updates.currentLocation.country || "",
+        timestamp: timestamp,
+        transactionId: txId,
+        verified: true,
+      });
+    }
+
+    // Add supply chain event if provided
+    if (updates.supplyChainEvent) {
+      const event = updates.supplyChainEvent;
+      product.supplyChainHistory.push({
+        stage: event.stage || "updated",
+        action: event.action || "Product updated",
+        performedBy: event.performedBy || product.currentOwnerId,
+        performedByRole: event.performedByRole || product.currentOwnerRole,
+        location: event.location || "",
+        country: event.country || "",
+        details: event.details || "",
+        timestamp: timestamp,
+        transactionId: txId,
+        verified: true,
+      });
+      changes.push(`Supply chain event: ${event.stage}`);
+    }
+
+    // Update metadata
+    product.updatedAt = timestamp;
+    product.lastModifiedBy = updates.updatedBy || product.currentOwnerId;
+    product.totalTransactions += 1;
 
     // Save updated product
     await ctx.stub.putState(productId, Buffer.from(JSON.stringify(product)));
 
+    // Emit event
+    await ctx.stub.setEvent(
+      "ProductUpdated",
+      Buffer.from(
+        JSON.stringify({
+          productId: productId,
+          changes: changes,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Product ${productId} updated: ${changes.join(", ")}`);
     console.info("============= END : Update Product ===========");
+
     return JSON.stringify(product);
   }
 
-  // Delete product (mark as inactive)
-  async deleteProduct(ctx, productId) {
+  // ========================================
+  // TRANSFER OWNERSHIP
+  // ========================================
+
+  /**
+   * Transfer product ownership (Supplier → Vendor → Customer)
+   * @param {Context} ctx - Transaction context
+   * @param {string} productId - Product ID
+   * @param {string} transferData - JSON string of transfer data
+   * @returns {string} Updated product
+   */
+  async transferProduct(ctx, productId, transferData) {
+    console.info("============= START : Transfer Product ===========");
+
+    // Check if product exists
     const exists = await this.productExists(ctx, productId);
     if (!exists) {
       throw new Error(`Product ${productId} does not exist`);
     }
 
-    // Get product and mark as inactive
+    // Get existing product
     const productBytes = await ctx.stub.getState(productId);
     const product = JSON.parse(productBytes.toString());
-    product.status = "inactive";
 
-    // Use transaction timestamp (deterministic)
+    // Parse transfer data
+    const transfer = JSON.parse(transferData);
+
+    // Validate transfer data
+    if (!transfer.newOwnerId) {
+      throw new Error("New owner ID is required");
+    }
+    if (!transfer.newOwnerRole) {
+      throw new Error("New owner role is required");
+    }
+
+    // Get transaction metadata
     const txTimestamp = ctx.stub.getTxTimestamp();
-    product.deletedAt = new Date(txTimestamp.seconds.low * 1000).toISOString();
-    product.lastTxId = ctx.stub.getTxID();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
 
+    // Record transfer in history
+    const transferRecord = {
+      fromOwnerId: product.currentOwnerId,
+      fromOwnerRole: product.currentOwnerRole,
+      toOwnerId: transfer.newOwnerId,
+      toOwnerRole: transfer.newOwnerRole,
+      transferType: transfer.transferType || "sale",
+      price: transfer.price || 0,
+      currency: transfer.currency || "USD",
+      location: transfer.location || "",
+      timestamp: timestamp,
+      transactionId: txId,
+    };
+
+    product.transferHistory.push(transferRecord);
+
+    // Update current owner
+    product.currentOwnerId = transfer.newOwnerId;
+    product.currentOwnerRole = transfer.newOwnerRole;
+
+    // Add to supply chain history
+    product.supplyChainHistory.push({
+      stage: "ownership_transferred",
+      action: `Ownership transferred from ${product.currentOwnerRole} to ${transfer.newOwnerRole}`,
+      performedBy: transfer.transferredBy || transfer.newOwnerId,
+      performedByRole: transfer.newOwnerRole,
+      location: transfer.location || "",
+      details: `Transfer type: ${transfer.transferType || "sale"}`,
+      timestamp: timestamp,
+      transactionId: txId,
+      verified: true,
+    });
+
+    // Update status if sold to customer
+    if (transfer.newOwnerRole === "customer") {
+      product.status = "sold";
+    }
+
+    // Update metadata
+    product.updatedAt = timestamp;
+    product.lastModifiedBy = transfer.transferredBy || transfer.newOwnerId;
+    product.totalTransactions += 1;
+
+    // Save updated product
     await ctx.stub.putState(productId, Buffer.from(JSON.stringify(product)));
+
+    // Emit event
+    await ctx.stub.setEvent(
+      "ProductTransferred",
+      Buffer.from(
+        JSON.stringify({
+          productId: productId,
+          from: product.transferHistory[product.transferHistory.length - 1]
+            .fromOwnerId,
+          to: transfer.newOwnerId,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(
+      `✅ Product ${productId} transferred to ${transfer.newOwnerId}`
+    );
+    console.info("============= END : Transfer Product ===========");
+
     return JSON.stringify(product);
   }
 
-  // Check if product exists
-  async productExists(ctx, productId) {
+  // ========================================
+  // VERIFY PRODUCT
+  // ========================================
+
+  /**
+   * Verify product authenticity (Expert only)
+   * @param {Context} ctx - Transaction context
+   * @param {string} productId - Product ID
+   * @param {string} verificationData - JSON string of verification data
+   * @returns {string} Updated product
+   */
+  async verifyProduct(ctx, productId, verificationData) {
+    console.info("============= START : Verify Product ===========");
+
+    const exists = await this.productExists(ctx, productId);
+    if (!exists) {
+      throw new Error(`Product ${productId} does not exist`);
+    }
+
     const productBytes = await ctx.stub.getState(productId);
-    return productBytes && productBytes.length > 0;
+    const product = JSON.parse(productBytes.toString());
+
+    const verification = JSON.parse(verificationData);
+
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Update verification status
+    product.isVerified = true;
+    product.blockchainVerified = true;
+
+    // Add to verification history
+    product.verificationHistory.push({
+      verifiedBy: verification.verifiedBy,
+      verifiedByName: verification.verifiedByName || "",
+      verificationNotes: verification.notes || "",
+      timestamp: timestamp,
+      transactionId: txId,
+    });
+
+    // Add to supply chain history
+    product.supplyChainHistory.push({
+      stage: "verified",
+      action: "Product verified by blockchain expert",
+      performedBy: verification.verifiedBy,
+      performedByRole: "expert",
+      details: verification.notes || "",
+      timestamp: timestamp,
+      transactionId: txId,
+      verified: true,
+    });
+
+    product.updatedAt = timestamp;
+    product.totalTransactions += 1;
+
+    await ctx.stub.putState(productId, Buffer.from(JSON.stringify(product)));
+
+    await ctx.stub.setEvent(
+      "ProductVerified",
+      Buffer.from(
+        JSON.stringify({
+          productId: productId,
+          verifiedBy: verification.verifiedBy,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Product ${productId} verified`);
+    console.info("============= END : Verify Product ===========");
+
+    return JSON.stringify(product);
   }
 
-  // Get all products
+  // ========================================
+  // DELETE/ARCHIVE PRODUCT
+  // ========================================
+
+  /**
+   * Archive product (soft delete)
+   * @param {Context} ctx - Transaction context
+   * @param {string} productId - Product ID
+   * @param {string} deletedBy - User ID who deleted
+   * @returns {string} Updated product
+   */
+  async archiveProduct(ctx, productId, deletedBy) {
+    console.info("============= START : Archive Product ===========");
+
+    const exists = await this.productExists(ctx, productId);
+    if (!exists) {
+      throw new Error(`Product ${productId} does not exist`);
+    }
+
+    const productBytes = await ctx.stub.getState(productId);
+    const product = JSON.parse(productBytes.toString());
+
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+
+    product.status = "archived";
+    product.archivedAt = timestamp;
+    product.archivedBy = deletedBy;
+    product.updatedAt = timestamp;
+
+    await ctx.stub.putState(productId, Buffer.from(JSON.stringify(product)));
+
+    console.info(`✅ Product ${productId} archived`);
+    console.info("============= END : Archive Product ===========");
+
+    return JSON.stringify(product);
+  }
+
+  // ========================================
+  // QUERY FUNCTIONS
+  // ========================================
+
+  /**
+   * Get all products
+   */
   async getAllProducts(ctx) {
     const allResults = [];
     const iterator = await ctx.stub.getStateByRange("", "");
-    let result = await iterator.next();
 
+    let result = await iterator.next();
     while (!result.done) {
       const strValue = Buffer.from(result.value.value.toString()).toString(
         "utf8"
       );
-      let record;
       try {
-        record = JSON.parse(strValue);
+        const record = JSON.parse(strValue);
         if (record.docType === "product") {
           allResults.push(record);
         }
       } catch (err) {
-        console.log(err);
+        console.error("Error parsing record:", err);
       }
       result = await iterator.next();
     }
@@ -141,7 +598,9 @@ class ProductContract extends Contract {
     return JSON.stringify(allResults);
   }
 
-  // Get product history
+  /**
+   * Get product history (all transactions)
+   */
   async getProductHistory(ctx, productId) {
     console.info("============= START : Get Product History ===========");
 
@@ -152,7 +611,9 @@ class ProductContract extends Contract {
     while (!result.done) {
       const jsonRes = {
         txId: result.value.txId,
-        timestamp: result.value.timestamp,
+        timestamp: new Date(
+          result.value.timestamp.seconds.low * 1000
+        ).toISOString(),
         isDelete: result.value.isDelete,
       };
 
@@ -166,15 +627,19 @@ class ProductContract extends Contract {
 
     await iterator.close();
     console.info("============= END : Get Product History ===========");
+
     return JSON.stringify(allResults);
   }
 
-  // Query products by seller
+  /**
+   * Query products by seller
+   */
   async queryProductsBySeller(ctx, sellerId) {
     const queryString = {
       selector: {
         docType: "product",
-        sellerId: sellerId,
+        currentOwnerId: sellerId,
+        status: { $ne: "archived" },
       },
     };
 
@@ -184,7 +649,9 @@ class ProductContract extends Contract {
     );
   }
 
-  // Query products by category
+  /**
+   * Query products by category
+   */
   async queryProductsByCategory(ctx, category) {
     const queryString = {
       selector: {
@@ -200,7 +667,27 @@ class ProductContract extends Contract {
     );
   }
 
-  // Helper function for queries
+  /**
+   * Query verified products
+   */
+  async queryVerifiedProducts(ctx) {
+    const queryString = {
+      selector: {
+        docType: "product",
+        isVerified: true,
+        blockchainVerified: true,
+      },
+    };
+
+    return await this.getQueryResultForQueryString(
+      ctx,
+      JSON.stringify(queryString)
+    );
+  }
+
+  /**
+   * Helper function for CouchDB queries
+   */
   async getQueryResultForQueryString(ctx, queryString) {
     const iterator = await ctx.stub.getQueryResult(queryString);
     const allResults = [];

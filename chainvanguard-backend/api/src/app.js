@@ -6,15 +6,18 @@ import dotenv from "dotenv";
 import { connectMongoDB, redisClient } from "./config/database.js";
 import { testCloudinaryConnection } from "./config/cloudinary.js";
 import ipfsService from "./config/ipfs.js";
-import productRoutes from "./routes/product.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import productRoutes from "./routes/product.routes.js";
+import categoryRoutes from "./routes/category.routes.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
+// ========================================
+// MIDDLEWARE
+// ========================================
 app.use(helmet());
 app.use(
   cors({
@@ -32,19 +35,27 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize all services
+// ========================================
+// SERVICE INITIALIZATION
+// ========================================
 const initializeServices = async () => {
   try {
     console.log("\n🔧 Initializing services...\n");
 
     // MongoDB
+    console.log("📊 Connecting to MongoDB...");
     await connectMongoDB();
+    console.log("✅ MongoDB connected successfully");
 
     // Cloudinary
+    console.log("☁️  Testing Cloudinary connection...");
     await testCloudinaryConnection();
+    console.log("✅ Cloudinary connected successfully");
 
     // IPFS/Pinata
+    console.log("📦 Testing IPFS/Pinata connection...");
     await ipfsService.testConnection();
+    console.log("✅ IPFS/Pinata connected successfully");
 
     console.log("\n🎉 All services initialized successfully!\n");
   } catch (error) {
@@ -53,15 +64,18 @@ const initializeServices = async () => {
   }
 };
 
-// Initialize services
+// Initialize services on startup
 initializeServices();
 
-// Health check with full system status
+// ========================================
+// HEALTH CHECK ENDPOINT
+// ========================================
 app.get("/health", async (req, res) => {
   const health = {
     status: "OK",
     message: "ChainVanguard API is running",
     timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
     services: {
       api: "running",
       mongodb: "unknown",
@@ -106,44 +120,167 @@ app.get("/health", async (req, res) => {
     health.services.ipfs = "error";
   }
 
-  res.status(200).json(health);
+  // Determine overall status
+  const allServicesHealthy = Object.values(health.services).every(
+    (status) => status === "running" || status === "connected"
+  );
+  health.status = allServicesHealthy ? "OK" : "DEGRADED";
+
+  res.status(allServicesHealthy ? 200 : 503).json(health);
 });
 
-// Routes
-app.use("/api/products", productRoutes);
+// ========================================
+// API ROUTES
+// ========================================
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/categories", categoryRoutes);
 
-// API info endpoint
+// ========================================
+// API INFO ENDPOINT
+// ========================================
 app.get("/api", (req, res) => {
   res.json({
-    message: "Welcome to ChainVanguard API",
+    name: "ChainVanguard API",
     version: "1.0.0",
+    description: "Blockchain-based Supply Chain Management System",
+    message: "Welcome to ChainVanguard API",
     services: {
       mongodb: "Primary Database",
       redis: "Cache & Sessions",
-      cloudinary: "Image Storage",
-      ipfs: "Document Storage",
-      hyperledger: "Blockchain",
+      cloudinary: "Image Storage (CDN)",
+      ipfs: "Decentralized Document Storage (Pinata)",
+      hyperledger: "Blockchain Network",
     },
     endpoints: {
-      health: "GET /health",
-      // Auth endpoints
-      register: "POST /api/auth/register",
-      login: "POST /api/auth/login/password",
-      verifyEmail: "POST /api/auth/verify-email",
-      createWallet: "POST /api/auth/wallet/create",
-      recoverWallet: "POST /api/auth/wallet/recover",
-      profile: "GET /api/auth/profile",
-      // Product endpoints
-      products: "GET /api/products",
-      productById: "GET /api/products/:id",
-      createProduct: "POST /api/products",
-      updateProduct: "PUT /api/products/:id",
-      deleteProduct: "DELETE /api/products/:id",
-      productHistory: "GET /api/products/:id/history",
+      health: {
+        method: "GET",
+        path: "/health",
+        description: "System health check",
+      },
+      auth: {
+        register: {
+          method: "POST",
+          path: "/api/auth/register",
+          description: "Register new user",
+        },
+        login: {
+          method: "POST",
+          path: "/api/auth/login",
+          description: "User login",
+        },
+        verifyEmail: {
+          method: "POST",
+          path: "/api/auth/verify-email",
+          description: "Verify email address",
+        },
+        profile: {
+          method: "GET",
+          path: "/api/auth/profile",
+          description: "Get user profile",
+        },
+        recoverWallet: {
+          method: "POST",
+          path: "/api/auth/wallet/recover",
+          description: "Recover wallet with mnemonic",
+        },
+      },
+      products: {
+        list: {
+          method: "GET",
+          path: "/api/products",
+          description: "Get all products with filters",
+        },
+        getById: {
+          method: "GET",
+          path: "/api/products/:id",
+          description: "Get product by ID",
+        },
+        create: {
+          method: "POST",
+          path: "/api/products",
+          description: "Create new product (Supplier/Vendor only)",
+        },
+        update: {
+          method: "PUT",
+          path: "/api/products/:id",
+          description: "Update product (Owner only)",
+        },
+        delete: {
+          method: "DELETE",
+          path: "/api/products/:id",
+          description: "Delete product (Owner only)",
+        },
+        uploadImages: {
+          method: "POST",
+          path: "/api/products/:id/images",
+          description: "Upload product images",
+        },
+        history: {
+          method: "GET",
+          path: "/api/products/:id/history",
+          description: "Get product blockchain history",
+        },
+      },
+      categories: {
+        all: {
+          method: "GET",
+          path: "/api/categories",
+          description: "Get all categories with metadata",
+        },
+        list: {
+          method: "GET",
+          path: "/api/categories/list",
+          description: "Get simple category list",
+        },
+        subcategories: {
+          method: "GET",
+          path: "/api/categories/:category/subcategories",
+          description: "Get subcategories by category",
+        },
+        sizes: {
+          method: "GET",
+          path: "/api/categories/:category/sizes",
+          description: "Get sizes by category",
+        },
+        allSizes: {
+          method: "GET",
+          path: "/api/categories/sizes/all",
+          description: "Get all sizes",
+        },
+        materials: {
+          method: "GET",
+          path: "/api/categories/options/materials",
+          description: "Get common materials",
+        },
+        colors: {
+          method: "GET",
+          path: "/api/categories/options/colors",
+          description: "Get common colors",
+        },
+      },
+    },
+    documentation: {
+      swagger: "/api/docs",
+      postman: "https://documenter.getpostman.com/view/chainvanguard",
     },
   });
 });
+
+// Root endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "🚀 ChainVanguard API is running",
+    version: "1.0.0",
+    status: "active",
+    documentation: "/api",
+    health: "/health",
+  });
+});
+
+// ========================================
+// ERROR HANDLERS
+// ========================================
 
 // 404 handler
 app.use((req, res) => {
@@ -151,31 +288,93 @@ app.use((req, res) => {
     success: false,
     error: "Route not found",
     path: req.path,
+    method: req.method,
+    message: `The endpoint ${req.method} ${req.path} does not exist`,
+    availableEndpoints: "/api",
   });
 });
 
-// Error handling middleware
+// Global error handling middleware
 app.use((err, req, res, next) => {
-  console.error("Server error:", err);
-  res.status(err.status || 500).json({
+  console.error("❌ Server error:", err);
+
+  // Default error status
+  const statusCode = err.status || err.statusCode || 500;
+
+  // Error response
+  const errorResponse = {
     success: false,
+    error: err.name || "ServerError",
     message: err.message || "Internal server error",
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+  };
+
+  // Include stack trace in development
+  if (process.env.NODE_ENV === "development") {
+    errorResponse.stack = err.stack;
+    errorResponse.details = err.details || null;
+  }
+
+  res.status(statusCode).json(errorResponse);
+});
+
+// ========================================
+// START SERVER
+// ========================================
+const server = app.listen(PORT, () => {
+  console.log("\n" + "=".repeat(70));
+  console.log("🚀 ChainVanguard API Server Started Successfully");
+  console.log("=".repeat(70));
+  console.log(`\n📋 Server Information:`);
+  console.log(`   🌍 Environment:  ${process.env.NODE_ENV || "development"}`);
+  console.log(`   📡 Port:         ${PORT}`);
+  console.log(`   🏠 Host:         http://localhost:${PORT}`);
+  console.log(`\n🔗 API Endpoints:`);
+  console.log(`   📚 API Info:     http://localhost:${PORT}/api`);
+  console.log(`   🏥 Health Check: http://localhost:${PORT}/health`);
+  console.log(`   🔐 Auth:         http://localhost:${PORT}/api/auth`);
+  console.log(`   📦 Products:     http://localhost:${PORT}/api/products`);
+  console.log(`   🏷️  Categories:   http://localhost:${PORT}/api/categories`);
+  console.log(`\n🛠️  Services:`);
+  console.log(`   📊 MongoDB:      Connected`);
+  console.log(`   🔴 Redis:        Connected`);
+  console.log(`   ☁️  Cloudinary:   Connected`);
+  console.log(`   📦 IPFS/Pinata:  Connected`);
+  console.log("\n" + "=".repeat(70) + "\n");
+  console.log("✅ Ready to accept requests!\n");
+});
+
+// ========================================
+// GRACEFUL SHUTDOWN
+// ========================================
+process.on("SIGTERM", () => {
+  console.log("\n⚠️  SIGTERM signal received: closing HTTP server");
+  server.close(() => {
+    console.log("✅ HTTP server closed");
+    process.exit(0);
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`\n${"=".repeat(60)}`);
-  console.log(`🚀 ChainVanguard API Server Started`);
-  console.log(`${"=".repeat(60)}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`🏥 Health: http://localhost:${PORT}/health`);
-  console.log(`📦 Products: http://localhost:${PORT}/api/products`);
-  console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
-  console.log(`📚 API Info: http://localhost:${PORT}/api`);
-  console.log(`${"=".repeat(60)}\n`);
+process.on("SIGINT", () => {
+  console.log("\n⚠️  SIGINT signal received: closing HTTP server");
+  server.close(() => {
+    console.log("✅ HTTP server closed");
+    process.exit(0);
+  });
+});
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (error) => {
+  console.error("❌ Uncaught Exception:", error);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+  process.exit(1);
 });
 
 export default app;
