@@ -1,10 +1,12 @@
-// api/src/services/order.service.js
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import Cart from "../models/Cart.js"; // ✅ ADDED
+import mongoose from "mongoose"; // ✅ ADDED
 import redisService from "./redis.service.js";
 import FabricService from "./fabric.service.js";
 import { buildPaginationResponse } from "../utils/helpers.js";
+import walletBalanceService from "./wallet-balance.service.js";
 
 class OrderService {
   constructor() {
@@ -20,21 +22,23 @@ class OrderService {
    * Flow: Validate → Calculate → Save MongoDB → Transfer Ownership on Blockchain → Notify
    */
   async createOrder(orderData, customerId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
       console.log("🚀 Starting order creation...");
 
       // 1. Get customer details
-      const customer = await User.findById(customerId);
-      if (!customer) {
-        throw new Error("Customer not found");
-      }
-
-      if (customer.role !== "customer") {
+      const customer = await User.findById(customerId).session(session);
+      if (!customer) throw new Error("Customer not found");
+      if (customer.role !== "customer")
         throw new Error("Only customers can create orders");
-      }
 
-      // 2. Validate and fetch products
-      const validatedItems = await this.validateOrderItems(orderData.items);
+      // 2. Validate and fetch products - ✅ FIXED: pass session
+      const validatedItems = await this.validateOrderItems(
+        orderData.items,
+        session
+      );
 
       // 3. Calculate pricing
       const pricing = this.calculateOrderPricing(
@@ -43,31 +47,50 @@ class OrderService {
         orderData.discountCode
       );
 
-      // 4. Get primary seller (first item's seller)
-      const primarySeller = await User.findById(validatedItems[0].sellerId);
-      if (!primarySeller) {
-        throw new Error("Seller not found");
+      // 4. Get primary seller
+      const primarySeller = await User.findById(
+        validatedItems[0].sellerId
+      ).session(session);
+      if (!primarySeller) throw new Error("Seller not found");
+
+      // 5. **PROCESS WALLET PAYMENT BEFORE CREATING ORDER**
+      const paymentMethod = orderData.paymentMethod || "wallet";
+      let paymentStatus = "pending";
+      let paidAt = null;
+
+      if (paymentMethod === "wallet") {
+        try {
+          // Deduct from wallet
+          await walletBalanceService.processPayment(
+            customerId,
+            null, // orderId - will update after order creation
+            pricing.total,
+            `Payment for order with ${validatedItems.length} items`,
+            session
+          );
+
+          paymentStatus = "paid";
+          paidAt = new Date();
+        } catch (paymentError) {
+          throw new Error(`Payment failed: ${paymentError.message}`);
+        }
       }
 
-      // 5. Create order object
+      // 6. Create order object
       const order = new Order({
-        // Customer info
         customerId: customer._id,
         customerName: customer.name,
         customerEmail: customer.email,
         customerPhone: customer.phone || "",
         customerWalletAddress: customer.walletAddress,
 
-        // Primary seller info
         sellerId: primarySeller._id,
         sellerName: primarySeller.companyName || primarySeller.name,
         sellerWalletAddress: primarySeller.walletAddress,
         sellerRole: primarySeller.role,
 
-        // Order items
         items: validatedItems,
 
-        // Pricing
         subtotal: pricing.subtotal,
         shippingCost: pricing.shippingCost,
         tax: pricing.tax,
@@ -76,72 +99,60 @@ class OrderService {
         total: pricing.total,
         currency: "USD",
 
-        // Addresses
         shippingAddress: orderData.shippingAddress,
         billingAddress: orderData.billingAddress || orderData.shippingAddress,
 
-        // Payment
-        paymentMethod: orderData.paymentMethod || "wallet",
-        paymentStatus: "pending",
+        paymentMethod: paymentMethod,
+        paymentStatus: paymentStatus,
+        paidAt: paidAt,
 
-        // Status
         status: "pending",
 
-        // Additional data
         customerNotes: orderData.customerNotes || "",
         specialInstructions: orderData.specialInstructions || "",
         isGift: orderData.isGift || false,
         giftMessage: orderData.giftMessage || "",
         urgentOrder: orderData.urgentOrder || false,
-
-        // Analytics
-        deviceType: orderData.deviceType || "",
-        ipAddress: orderData.ipAddress || "",
-        userAgent: orderData.userAgent || "",
       });
 
-      // 6. Add initial status history
-      order.addStatusHistory("pending", customerId, "customer", "Order placed");
-
-      // 7. Add initial supply chain event
-      order.addSupplyChainEvent({
-        stage: "order_placed",
-        location: orderData.shippingAddress.city,
-        description: "Order successfully placed by customer",
-        performedBy: customerId,
-        coordinates: {
-          lat: orderData.shippingAddress.latitude,
-          lng: orderData.shippingAddress.longitude,
-        },
+      // 7. Add status history
+      order.statusHistory.push({
+        status: "pending",
+        timestamp: new Date(),
+        updatedBy: customerId,
+        userRole: "customer",
+        comment: "Order placed",
       });
 
-      // 8. Reserve product stock
-      await this.reserveProductStock(validatedItems);
+      // 8. Reserve product stock - ✅ FIXED: pass session
+      await this.reserveProductStock(validatedItems, session);
 
-      // 9. Save order to MongoDB
-      await order.save();
-      console.log(`✅ Order saved to MongoDB: ${order.orderNumber}`);
+      // 9. Save order
+      await order.save({ session });
+      console.log(`✅ Order saved: ${order.orderNumber}`);
 
-      // 10. Record order on blockchain and transfer product ownership
-      this.recordOrderOnBlockchain(order)
-        .then(() => {
-          console.log(`✅ Order recorded on blockchain: ${order.orderNumber}`);
-          return this.transferProductsOwnership(order);
-        })
-        .catch((err) => {
-          console.error("❌ Blockchain recording failed:", err);
-        });
+      // 10. Update wallet transaction with orderId
+      if (paymentMethod === "wallet") {
+        await walletBalanceService.updateTransactionOrderId(
+          customerId,
+          order._id,
+          session
+        );
+      }
 
-      // 11. Update user statistics
-      await this.updateUserStats(customerId, primarySeller._id, pricing.total);
-
-      // 12. Send notifications (async - don't wait)
-      this.sendOrderNotifications(order).catch((err) =>
-        console.error("⚠️ Notification error:", err)
+      // 11. Clear customer cart
+      await Cart.findOneAndUpdate(
+        { userId: customerId },
+        { $set: { items: [] } },
+        { session }
       );
 
-      // 13. Clear cart (if applicable)
-      // await cartService.clearCart(customerId);
+      await session.commitTransaction();
+
+      // 12. Record on blockchain (async - don't wait)
+      this.recordOrderOnBlockchain(order, validatedItems, customer).catch(
+        (err) => console.error("⚠️ Blockchain recording failed:", err)
+      );
 
       return {
         success: true,
@@ -150,6 +161,7 @@ class OrderService {
           id: order._id,
           orderNumber: order.orderNumber,
           status: order.status,
+          paymentStatus: order.paymentStatus,
           total: order.total,
           currency: order.currency,
           items: order.items.length,
@@ -157,20 +169,24 @@ class OrderService {
         },
       };
     } catch (error) {
+      await session.abortTransaction();
       console.error("❌ Create order error:", error);
       throw error;
+    } finally {
+      session.endSession();
     }
   }
 
   /**
    * Validate order items and check stock availability
+   * ✅ FIXED: Added session parameter
    */
-  async validateOrderItems(items) {
+  async validateOrderItems(items, session) {
     const validatedItems = [];
 
     for (const item of items) {
-      // Fetch product
-      const product = await Product.findById(item.productId);
+      // Fetch product with session
+      const product = await Product.findById(item.productId).session(session);
       if (!product) {
         throw new Error(`Product not found: ${item.productId}`);
       }
@@ -190,8 +206,8 @@ class OrderService {
         );
       }
 
-      // Get seller details
-      const seller = await User.findById(product.sellerId);
+      // Get seller details with session
+      const seller = await User.findById(product.sellerId).session(session);
       if (!seller) {
         throw new Error(`Seller not found for product: ${product.name}`);
       }
@@ -273,24 +289,30 @@ class OrderService {
 
   /**
    * Reserve product stock (increase reservedQuantity)
+   * ✅ FIXED: Added session parameter
    */
-  async reserveProductStock(items) {
+  async reserveProductStock(items, session) {
     for (const item of items) {
-      await Product.findByIdAndUpdate(item.productId, {
-        $inc: { reservedQuantity: item.quantity },
-      });
+      await Product.findByIdAndUpdate(
+        item.productId,
+        { $inc: { reservedQuantity: item.quantity } },
+        { session }
+      );
     }
     console.log(`✅ Stock reserved for ${items.length} products`);
   }
 
   /**
    * Release product stock (decrease reservedQuantity)
+   * ✅ FIXED: Added session parameter
    */
-  async releaseProductStock(items) {
+  async releaseProductStock(items, session) {
     for (const item of items) {
-      await Product.findByIdAndUpdate(item.productId, {
-        $inc: { reservedQuantity: -item.quantity },
-      });
+      await Product.findByIdAndUpdate(
+        item.productId,
+        { $inc: { reservedQuantity: -item.quantity } },
+        { session }
+      );
     }
     console.log(`✅ Stock released for ${items.length} products`);
   }
