@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source /Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env
+
 # ============================================
 # ChainVanguard - Simple Product Test Script
 # ============================================
@@ -11,14 +13,14 @@
 # ========================================
 
 # User Addresses & Passwords
-SUPPLIER_ADDRESS="0xd4b21f9b271baf7e002baf5704ac95101b1deaaf"
-SUPPLIER_PASSWORD="NewSupplier2024!Recovered"
+SUPPLIER_ADDRESS="$SUPPLIER_ADDRESS"
+SUPPLIER_PASSWORD="$SUPPLIER_PASSWORD"
 
-VENDOR_ADDRESS="0xfca6306455374958f7e5de975785c16e893e9e9b"
-VENDOR_PASSWORD="NewVendor2024!Changed"
+VENDOR_ADDRESS="$VENDOR_ADDRESS"
+VENDOR_PASSWORD="$VENDOR_PASSWORD"
 
 # Existing Product ID (for update tests)
-EXISTING_PRODUCT_ID="68f617c53af9a08edf5707a9"
+EXISTING_PRODUCT_ID="$PRODUCT_ID_1"
 
 # API Base URL
 BASE_URL="http://localhost:3001"
@@ -45,10 +47,10 @@ PASSED_TESTS=0
 FAILED_TESTS=0
 
 # Storage
-SUPPLIER_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGY2MTY4OTNhZjlhMDhlZGY1NzA3NjciLCJ3YWxsZXRBZGRyZXNzIjoiMHhkNGIyMWY5YjI3MWJhZjdlMDAyYmFmNTcwNGFjOTUxMDFiMWRlYWFmIiwicm9sZSI6InN1cHBsaWVyIiwiaWF0IjoxNzYwOTU4MjI5LCJleHAiOjE3NjE1NjMwMjl9.Q-Mnkbv-z9yXRwKl4phz_CLY0radKS0mBOij8XmN8ts"
-VENDOR_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGY2MTY4YTNhZjlhMDhlZGY1NzA3NjkiLCJ3YWxsZXRBZGRyZXNzIjoiMHhmY2E2MzA2NDU1Mzc0OTU4ZjdlNWRlOTc1Nzg1YzE2ZTg5M2U5ZTliIiwicm9sZSI6InZlbmRvciIsImlhdCI6MTc2MDk1ODIzOCwiZXhwIjoxNzYxNTYzMDM4fQ.VxpL4NajknNsmKNLmBtKxv5Ex539P6JQPol_gkadPEg"
-NEW_PRODUCT_ID="68f617c53af9a08edf5707a9"
-NEW_PRODUCT_ID_2="68f617c53af9a08edf5707a9"
+SUPPLIER_TOKEN="$SUPPLIER_TOKEN"
+VENDOR_TOKEN="$VENDOR_TOKEN"
+NEW_PRODUCT_ID="$PRODUCT_ID_1"
+NEW_PRODUCT_ID_2="$PRODUCT_ID_2"
 
 # Functions
 print_result() {

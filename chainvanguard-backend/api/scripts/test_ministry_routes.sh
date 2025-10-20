@@ -1,7 +1,9 @@
 #!/bin/bash
 
+source /Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env
+
 API_URL="http://localhost:3001/api"
-SUPPLIER_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGY2MTY4OTNhZjlhMDhlZGY1NzA3NjciLCJ3YWxsZXRBZGRyZXNzIjoiMHhkNGIyMWY5YjI3MWJhZjdlMDAyYmFmNTcwNGFjOTUxMDFiMWRlYWFmIiwicm9sZSI6InN1cHBsaWVyIiwiaWF0IjoxNzYwOTU4MjI5LCJleHAiOjE3NjE1NjMwMjl9.Q-Mnkbv-z9yXRwKl4phz_CLY0radKS0mBOij8XmN8ts"
+SUPPLIER_TOKEN="$SUPPLIER_TOKEN"
 
 echo "🧪 Testing Ministry Routes..."
 echo "=============================="

@@ -1,5 +1,6 @@
 import express from "express";
 import expertService from "../services/expert.service.js";
+import logger from "../utils/logger.js";
 import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -146,8 +147,7 @@ router.get("/fault-tolerance/stats", async (req, res) => {
 
 /**
  * GET /api/expert/logs
- * Get blockchain activity logs
- * Query params: page, limit, type, status, startDate, endDate
+ * Get all blockchain activity logs
  */
 router.get("/logs", async (req, res) => {
   try {
@@ -156,17 +156,55 @@ router.get("/logs", async (req, res) => {
       limit: parseInt(req.query.limit) || 100,
       type: req.query.type,
       status: req.query.status,
+      entityType: req.query.entityType,
+      performedBy: req.query.performedBy,
       startDate: req.query.startDate,
       endDate: req.query.endDate,
     };
 
-    const result = await expertService.getBlockchainLogs(filters);
-    res.status(200).json(result);
+    const result = await logger.getLogs(filters);
+
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
   } catch (error) {
-    console.error("❌ Get blockchain logs failed:", error);
+    console.error("❌ Get logs failed:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to get blockchain logs",
+      message: error.message || "Failed to get logs",
+    });
+  }
+});
+
+/**
+ * GET /api/expert/logs/entity/:entityId
+ * Get logs for a specific entity
+ */
+router.get("/logs/entity/:entityId", async (req, res) => {
+  try {
+    const { entityId } = req.params;
+    const { entityType } = req.query;
+
+    if (!entityType) {
+      return res.status(400).json({
+        success: false,
+        message: "Entity type is required",
+      });
+    }
+
+    const logs = await logger.getEntityLogs(entityId, entityType);
+
+    res.status(200).json({
+      success: true,
+      count: logs.length,
+      logs,
+    });
+  } catch (error) {
+    console.error("❌ Get entity logs failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to get entity logs",
     });
   }
 });

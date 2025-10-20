@@ -3,6 +3,7 @@ import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
 import redisService from "./redis.service.js";
+import logger from "../utils/logger.js";
 
 class CartService {
   // ========================================
@@ -171,6 +172,21 @@ class CartService {
 
       console.log(`✅ Item added to cart: ${product.name}`);
 
+      // 🆕 LOG CART ACTION
+      await logger.logCart({
+        type: "cart_item_added",
+        action: `Item added to cart: ${product.name}`,
+        cartId: cart._id,
+        userId,
+        status: "success",
+        data: {
+          productId: product._id,
+          productName: product.name,
+          quantity: itemData.quantity,
+          price: product.price,
+        },
+      });
+
       return {
         success: true,
         message: "Item added to cart successfully",
@@ -243,6 +259,21 @@ class CartService {
 
       console.log(`✅ Item quantity updated`);
 
+      // 🆕 LOG CART ACTION
+      await logger.logCart({
+        type: "cart_item_updated",
+        action: `Cart item quantity updated: ${item.productName}`,
+        cartId: cart._id,
+        userId,
+        status: "success",
+        data: {
+          itemId,
+          productId: item.productId,
+          productName: item.productName,
+          quantity,
+        },
+      });
+
       return {
         success: true,
         message: "Item quantity updated successfully",
@@ -278,6 +309,7 @@ class CartService {
       }
 
       // 2. Remove item
+      const item = cart.items.id(itemId);
       await cart.removeItem(itemId);
 
       // 3. Populate and return
@@ -290,6 +322,20 @@ class CartService {
       await redisService.del(cacheKey);
 
       console.log(`✅ Item removed from cart`);
+
+      // 🆕 LOG CART ACTION
+      await logger.logCart({
+        type: "cart_item_removed",
+        action: `Item removed from cart: ${item ? item.productName : itemId}`,
+        cartId: cart._id,
+        userId,
+        status: "success",
+        data: {
+          itemId,
+          productId: item ? item.productId : undefined,
+          productName: item ? item.productName : undefined,
+        },
+      });
 
       return {
         success: true,
@@ -335,6 +381,15 @@ class CartService {
       await redisService.del(cacheKey);
 
       console.log("✅ Cart cleared");
+
+      // 🆕 LOG CART ACTION
+      await logger.logCart({
+        type: "cart_cleared",
+        action: "Cart cleared",
+        cartId: cart._id,
+        userId,
+        status: "success",
+      });
 
       return {
         success: true,

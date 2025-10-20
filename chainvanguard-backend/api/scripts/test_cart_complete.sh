@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source /Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env
+
 # ============================================
 # ChainVanguard - Complete Cart Test Suite
 # ============================================
@@ -27,19 +29,19 @@ FAILED_TESTS=0
 # ========================================
 # PRE-FILLED CREDENTIALS
 # ========================================
-CUSTOMER_ADDRESS="0x04f8ff8860d9640f10045bd62d3acf3c514f7fae"
-CUSTOMER_PASSWORD="Customer2024!Shop"
-CUSTOMER_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGY2MTY4YjNhZjlhMDhlZGY1NzA3NmQiLCJ3YWxsZXRBZGRyZXNzIjoiMHgwNGY4ZmY4ODYwZDk2NDBmMTAwNDViZDYyZDNhY2YzYzUxNGY3ZmFlIiwicm9sZSI6ImN1c3RvbWVyIiwiaWF0IjoxNzYwOTU4MjQwLCJleHAiOjE3NjE1NjMwNDB9.lXgYu2pUzr6XbK01XgtcSwflPJ266b0Cu6Pts6o2Phs"
+CUSTOMER_PASSWORD="$CUSTOMER_PASSWORD"
+CUSTOMER_ADDRESS="$CUSTOMER_ADDRESS"
+CUSTOMER_TOKEN="$CUSTOMER_TOKEN"
 
 # Product IDs (update after creating products)
-PRODUCT_ID_1="68f617c53af9a08edf5707a9"
-PRODUCT_ID_2="68f617c53af9a08edf5707a9"
+PRODUCT_ID_1="$PRODUCT_ID_1"
+PRODUCT_ID_2="$PRODUCT_ID_2"
 
 # Storage for cart items
 CART_ITEM_ID_1=""
 CART_ITEM_ID_2=""
 SAVED_ITEM_ID=""
-GUEST_SESSION_ID="test-session-$(date +%s)"
+GUEST_SESSION_ID="$GUEST_SESSION_ID"
 
 # Functions
 print_result() {

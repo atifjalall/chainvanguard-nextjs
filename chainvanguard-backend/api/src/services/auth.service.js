@@ -6,6 +6,7 @@ import sessionService from "./session.service.js";
 import pkg from "jsonwebtoken";
 const { sign } = pkg;
 import crypto from "crypto";
+import logger from "../utils/logger.js";
 
 class AuthService {
   constructor() {
@@ -70,6 +71,24 @@ class AuthService {
       await newUser.save();
       console.log(`✅ User saved to MongoDB: ${newUser._id}`);
 
+      // 🆕 LOG REGISTRATION
+      await logger.logAuth({
+        type: "user_registered",
+        action: "User registered successfully",
+        userId: newUser._id,
+        userDetails: {
+          walletAddress: wallet.address,
+          role: userData.role,
+          name: userData.name,
+          email: userData.email,
+        },
+        status: "success",
+        data: {
+          role: userData.role,
+          walletName: userData.walletName,
+        },
+      });
+
       // 5. Register on blockchain (async)
       this.registerOnBlockchain(newUser).catch((err) => {
         console.error("⚠️ Blockchain registration failed (will retry):", err);
@@ -101,7 +120,6 @@ class AuthService {
 
   async registerOnBlockchain(user) {
     try {
-      // ✅ FIX #1: Changed from connectToNetwork() to connect()
       await this.fabricService.connect();
 
       const fabricUserData = {
@@ -180,6 +198,24 @@ class AuthService {
 
       await sessionService.resetRateLimit(`login:${ipAddress}`);
 
+      // 🆕 LOG LOGIN
+      await logger.logAuth({
+        type: "user_login",
+        action: "User logged in successfully",
+        userId: user._id,
+        userDetails: {
+          walletAddress: user.walletAddress,
+          role: user.role,
+          name: user.name,
+          email: user.email,
+        },
+        status: "success",
+        data: {
+          ipAddress,
+          loginTime: new Date(),
+        },
+      });
+
       return {
         token,
         user: this.sanitizeUser(user),
@@ -213,6 +249,25 @@ class AuthService {
       await sessionService.deleteSession(userId);
       await sessionService.blacklistToken(token);
       console.log(`✅ User logged out: ${userId}`);
+
+      // 🆕 LOG LOGOUT
+      const user = await User.findById(userId);
+      if (user) {
+        await logger.logAuth({
+          type: "user_logout",
+          action: "User logged out",
+          userId: user._id,
+          userDetails: {
+            walletAddress: user.walletAddress,
+            role: user.role,
+            name: user.name,
+            email: user.email,
+          },
+          status: "success",
+        });
+      }
+
+      return { success: true };
     } catch (error) {
       console.error("❌ Logout failed:", error);
       throw error;
@@ -235,6 +290,20 @@ class AuthService {
       );
 
       if (!user) throw new Error("User not found");
+
+      // 🆕 LOG EMAIL VERIFICATION
+      await logger.logAuth({
+        type: "email_verified",
+        action: "User email verified",
+        userId: user._id,
+        userDetails: {
+          walletAddress: user.walletAddress,
+          role: user.role,
+          name: user.name,
+          email: user.email,
+        },
+        status: "success",
+      });
 
       console.log(`✅ Email verified for: ${email}`);
       return this.sanitizeUser(user);
