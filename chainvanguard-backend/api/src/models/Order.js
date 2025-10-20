@@ -39,6 +39,11 @@ const orderItemSchema = new Schema({
     blockchainProductId: { type: String, default: "" },
   },
 
+  trackingQRCode: {
+    type: String,
+    index: true,
+  },
+
   // Seller info for this item
   sellerId: {
     type: Schema.Types.ObjectId,
@@ -471,12 +476,19 @@ orderSchema.virtual("daysSinceOrder").get(function () {
 // Generate order number before saving
 orderSchema.pre("save", async function (next) {
   if (!this.orderNumber) {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substr(2, 6).toUpperCase();
-    this.orderNumber = `ORD-${timestamp}-${random}`;
+    let unique = false;
+    while (!unique) {
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substr(2, 6).toUpperCase();
+      const potential = `ORD-${timestamp}-${random}`;
+      const exists = await this.constructor.findOne({ orderNumber: potential });
+      if (!exists) {
+        this.orderNumber = potential;
+        unique = true;
+      }
+    }
   }
 
-  // Set return deadline (30 days after delivery)
   if (this.deliveredAt && !this.returnDeadline && this.isReturnable) {
     const deadline = new Date(this.deliveredAt);
     deadline.setDate(deadline.getDate() + 30);

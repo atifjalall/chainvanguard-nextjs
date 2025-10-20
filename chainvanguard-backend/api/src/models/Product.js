@@ -69,6 +69,14 @@ const productSchema = new Schema(
       index: true,
     },
 
+    qrCode: {
+      type: String,
+      index: true,
+    },
+    qrCodeImageUrl: {
+      type: String,
+    },
+
     productType: {
       type: String,
       enum: ["Casual", "Formal", "Sports", "Party", "Traditional", "Workwear"],

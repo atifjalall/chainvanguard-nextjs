@@ -4,6 +4,7 @@ import { connect, signers, hash } from "@hyperledger/fabric-gateway";
 import { readFileSync, readdirSync } from "fs";
 import { resolve } from "path";
 import * as crypto from "crypto";
+import BlockchainLog from "../models/BlockchainLog.js";
 
 class FabricService {
   constructor() {
@@ -1156,6 +1157,67 @@ class FabricService {
       console.error("❌ Blockchain cancelOrder error:", error);
       throw error;
     }
+  }
+
+  async submitTransaction(contractName, functionName, ...args) {
+    const startTime = Date.now();
+    let logData = {
+      transactionId: `${contractName}-${functionName}-${Date.now()}`,
+      chaincodeName: contractName,
+      functionName: functionName,
+      type: this._determineTransactionType(contractName, functionName),
+      action: functionName,
+      status: "pending",
+      requestData: args,
+    };
+
+    try {
+      await this.connect();
+      const contract = this.network.getContract(contractName);
+      const result = await contract.submitTransaction(functionName, ...args);
+      const parsedResult = JSON.parse(result.toString());
+
+      const executionTime = Date.now() - startTime;
+
+      // Log successful transaction
+      logData.status = "success";
+      logData.executionTime = executionTime;
+      logData.responseData = parsedResult;
+      logData.transactionId = parsedResult.txId || logData.transactionId;
+      logData.blockHash = parsedResult.blockHash;
+
+      await BlockchainLog.logTransaction(logData);
+
+      return parsedResult;
+    } catch (error) {
+      const executionTime = Date.now() - startTime;
+
+      // Log failed transaction
+      logData.status = "failed";
+      logData.executionTime = executionTime;
+      logData.errorMessage = error.message;
+      logData.errorStack = error.stack;
+
+      await BlockchainLog.logTransaction(logData);
+
+      console.error(`❌ Submit transaction failed:`, error);
+      throw error;
+    }
+  }
+
+  // Helper method to determine transaction type
+  _determineTransactionType(contractName, functionName) {
+    const typeMap = {
+      ProductContract: "product-creation",
+      OrderContract: "order-creation",
+      UserContract: "user-registration",
+    };
+
+    if (functionName.includes("transfer")) return "product-transfer";
+    if (functionName.includes("update"))
+      return `${contractName.replace("Contract", "").toLowerCase()}-update`;
+
+    return typeMap[contractName] || "system-event";
   }
 }
 

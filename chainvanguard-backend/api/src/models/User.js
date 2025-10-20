@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 import { genSalt, hash, compare } from "bcrypt";
 
 const userSchema = new Schema(
@@ -67,6 +67,17 @@ const userSchema = new Schema(
     // Timestamps
     emailVerifiedAt: { type: Date, default: null },
     lastLoginAt: { type: Date, default: null },
+
+    deactivatedAt: {
+      type: Date,
+    },
+    deactivatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    deactivationReason: {
+      type: String,
+    },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt

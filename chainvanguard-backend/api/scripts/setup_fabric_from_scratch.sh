@@ -18,10 +18,19 @@ if [ -d "fabric-samples/test-network" ]; then
   cd ~/Desktop
 fi
 
+echo "🧹 Removing old ledgers and artifacts..."
+if [ -d "~/Desktop/fabric-samples/test-network" ]; then
+  cd ~/Desktop/fabric-samples/test-network
+  ./network.sh down || true
+  rm -rf organizations channel-artifacts system-genesis-block ledger-data
+  cd ~/Desktop
+fi
+
+echo "🧽 Cleaning Docker containers, networks, and volumes..."
 docker stop $(docker ps -aq) >/dev/null 2>&1 || true
 docker rm $(docker ps -aq) >/dev/null 2>&1 || true
-docker volume prune -f
 docker network prune -f
+docker volume prune -f
 docker system prune -a --volumes -f
 
 rm -rf ~/Desktop/fabric-samples
