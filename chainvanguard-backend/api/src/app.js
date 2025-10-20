@@ -13,6 +13,9 @@ import orderRoutes from "./routes/order.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
 import qrRoutes from "./routes/qr.routes.js";
 import expertRoutes from "./routes/expert.routes.js";
+import blockchainRoutes from "./routes/blockchain.routes.js";
+import ministryRoutes from "./routes/ministry.routes.js";
+import walletRoutes from "./routes/wallet.routes.js";
 
 dotenv.config();
 
@@ -143,6 +146,9 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/qr", qrRoutes);
 app.use("/api/expert", expertRoutes);
+app.use("/api/blockchain", blockchainRoutes);
+app.use("/api/ministry", ministryRoutes);
+app.use("/api/wallet", walletRoutes);
 
 // ========================================
 // API INFO ENDPOINT
