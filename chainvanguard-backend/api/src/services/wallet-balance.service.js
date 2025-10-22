@@ -2,6 +2,7 @@ import Wallet from "../models/Wallet.js";
 import User from "../models/User.js";
 import BlockchainLog from "../models/BlockchainLog.js";
 import mongoose from "mongoose";
+import logger from "../utils/logger.js";
 
 class WalletBalanceService {
   /**
@@ -111,17 +112,26 @@ class WalletBalanceService {
 
       await wallet.save({ session });
 
-      // Log to blockchain
-      await BlockchainLog.logTransaction({
-        transactionId: `deposit-${Date.now()}-${userId}`,
-        type: "wallet_transaction",
-        entityId: wallet._id.toString(),
-        entityType: "wallet",
-        metadata: {
+      // 🆕 LOG FUNDS ADDED
+      const user = await User.findById(userId);
+      await logger.logWallet({
+        type: "wallet_funds_added",
+        action: `Funds added to wallet: $${amount}`,
+        walletId: wallet._id,
+        userId,
+        userDetails: user
+          ? {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+            }
+          : {},
+        status: "success",
+        data: {
           amount,
           paymentMethod,
-          balanceBefore,
-          balanceAfter,
+          newBalance: wallet.balance,
+          ...metadata,
         },
       });
 
@@ -237,16 +247,34 @@ class WalletBalanceService {
         receiverWallet.save({ session }),
       ]);
 
-      // Log to blockchain
-      await BlockchainLog.logTransaction({
-        transactionId: `transfer-${Date.now()}-${fromUserId}-${toUserId}`,
-        type: "wallet_transaction",
-        entityId: senderWallet._id.toString(),
-        entityType: "wallet",
-        metadata: {
+      // 🆕 LOG WALLET TRANSFER
+      await logger.logWallet({
+        type: "wallet_transfer",
+        action: `Wallet transfer: $${amount} from ${sender.name} to ${receiver.name}`,
+        walletId: senderWallet._id,
+        userId: fromUserId,
+        userDetails: {
+          walletAddress: sender.walletAddress,
+          name: sender.name,
+          email: sender.email,
+        },
+        status: "success",
+        data: {
           amount,
-          from: sender.name,
-          to: receiver.name,
+          from: {
+            userId: fromUserId,
+            name: sender.name,
+            walletAddress: sender.walletAddress,
+            newBalance: senderWallet.balance,
+            transactionId: senderTransaction._id,
+          },
+          to: {
+            userId: toUserId,
+            name: receiver.name,
+            walletAddress: receiver.walletAddress,
+            newBalance: receiverWallet.balance,
+            transactionId: receiverTransaction._id,
+          },
           description,
         },
       });
@@ -488,10 +516,12 @@ class WalletBalanceService {
   /**
    * 💰 Process Payment (for orders)
    */
-  async processPayment(userId, orderId, amount, description) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
+  async processPayment(userId, orderId, amount, description, session) {
+    let localSession = session;
+    if (!localSession) {
+      localSession = await mongoose.startSession();
+      localSession.startTransaction();
+    }
     try {
       const wallet = await this.getOrCreateWallet(userId);
 
@@ -521,9 +551,32 @@ class WalletBalanceService {
         status: "completed",
       });
 
-      await wallet.save({ session });
+      await wallet.save({ session: localSession });
 
-      await session.commitTransaction();
+      // 🆕 LOG PAYMENT
+      const user = await User.findById(userId);
+      await logger.logWallet({
+        type: "payment_processed",
+        action: `Payment processed: $${amount}`,
+        walletId: wallet._id,
+        userId,
+        userDetails: user
+          ? {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+            }
+          : {},
+        status: "success",
+        data: {
+          amount,
+          orderId,
+          description,
+          newBalance: wallet.balance,
+        },
+      });
+
+      if (!session) await localSession.commitTransaction();
 
       return {
         success: true,
@@ -531,10 +584,19 @@ class WalletBalanceService {
         message: "Payment processed successfully",
       };
     } catch (error) {
-      await session.abortTransaction();
+      if (!session) await localSession.abortTransaction();
+      // 🆕 LOG FAILED PAYMENT
+      await logger.logWallet({
+        type: "payment_failed",
+        action: `Payment failed: ${error.message}`,
+        userId,
+        status: "failed",
+        data: { amount, orderId, description },
+        error: error.message,
+      });
       throw error;
     } finally {
-      session.endSession();
+      if (!session) localSession.endSession();
     }
   }
 

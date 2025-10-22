@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source /Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env
+
 API_URL="http://localhost:3001/api"
 
 echo "🧪 Testing Blockchain Verification Routes..."
@@ -12,10 +14,10 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Use actual IDs from your database
-PRODUCT_ID="68f617c53af9a08edf5707a9"
-ORDER_ID="68f618cbde739232fb0dfc72"
-TX_ID="cd685668a094c1d921e75aaa1b31272cf01ec9188f30b38132eabd8d67f4061b"
-AUTH_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGY2MTY4YzNhZjlhMDhlZGY1NzA3NmYiLCJ3YWxsZXRBZGRyZXNzIjoiMHg0ZWVjMzkxY2JhM2UwZjM4MWZkOTYwNTJkNDRjYjJhZTAzOGE2YjU5Iiwicm9sZSI6ImV4cGVydCIsImlhdCI6MTc2MDk1ODI0MiwiZXhwIjoxNzYxNTYzMDQyfQ.CX3qPnxI_WT4b6rGNSD4UbpFlAdwm_t8s6UABg7iE9o"
+PRODUCT_ID="$PRODUCT_ID_1"
+ORDER_ID="$ORDER_ID_1"
+TX_ID="$TX_ID"
+AUTH_TOKEN="$EXPERT_TOKEN"
 
 
 echo -e "${BLUE}1️⃣ Testing Product Blockchain History...${NC}"

@@ -9,6 +9,7 @@ import {
   validateCategorySubcategory,
   validateCategorySize,
 } from "../config/categories.js";
+import logger from "../utils/logger.js";
 
 class ProductService {
   constructor() {
@@ -279,6 +280,27 @@ class ProductService {
 
       await product.save();
       console.log(`✅ Product saved to MongoDB: ${product._id}`);
+
+      // 🆕 LOG PRODUCT CREATION
+      await logger.logProduct({
+        type: "product_created",
+        action: `Product created: ${product.name}`,
+        productId: product._id,
+        userId: sellerId,
+        userDetails: {
+          walletAddress: seller.walletAddress,
+          role: seller.role,
+          name: seller.name,
+        },
+        status: "success",
+        data: {
+          name: product.name,
+          category: product.category,
+          price: product.price,
+          sku: product.sku,
+        },
+        newState: product.toObject(),
+      });
 
       // 8. Record on blockchain (async - don't block response)
       this.recordProductOnBlockchain(product).catch((err) => {
@@ -610,6 +632,9 @@ class ProductService {
         "shippingDetails",
       ];
 
+      // Store previous state for logging
+      const previousState = product.toObject();
+
       allowedUpdates.forEach((field) => {
         if (updateData[field] !== undefined) {
           product[field] = updateData[field];
@@ -618,6 +643,26 @@ class ProductService {
 
       await product.save();
       console.log(`✅ Product updated: ${productId}`);
+
+      // 🆕 LOG PRODUCT UPDATE
+      const user = await User.findById(userId);
+      await logger.logProduct({
+        type: "product_updated",
+        action: `Product updated: ${product.name}`,
+        productId: product._id,
+        userId,
+        userDetails: user
+          ? {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+            }
+          : {},
+        status: "success",
+        data: { updates: updateData },
+        previousState,
+        newState: product.toObject(),
+      });
 
       // Update blockchain (async)
       this.updateProductOnBlockchain(product).catch((err) =>
@@ -685,10 +730,32 @@ class ProductService {
         throw new Error("Unauthorized");
       }
 
+      const previousState = product.toObject();
+
       product.status = status;
       await product.save();
 
       console.log(`✅ Status updated for product: ${productId} → ${status}`);
+
+      // 🆕 LOG PRODUCT STATUS CHANGE
+      const user = await User.findById(userId);
+      await logger.logProduct({
+        type: "product_status_changed",
+        action: `Product status changed: ${product.name} → ${status}`,
+        productId: product._id,
+        userId,
+        userDetails: user
+          ? {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+            }
+          : {},
+        status: "success",
+        data: { newStatus: status },
+        previousState,
+        newState: product.toObject(),
+      });
 
       await redisService.invalidateProduct(productId);
       await redisService.delPattern("products:*");
@@ -740,6 +807,29 @@ class ProductService {
           ipfsHash: ipfsResult.success ? ipfsResult.ipfsHash : "",
           isMain: product.images.length === 0 && i === 0,
           viewType: this._getViewType(file.originalname, i),
+        });
+
+        // 🆕 LOG PRODUCT IMAGE UPLOAD
+        const user = await User.findById(userId);
+        await logger.logProduct({
+          type: "product_image_uploaded",
+          action: `Image uploaded for product: ${product.name}`,
+          productId: product._id,
+          userId,
+          userDetails: user
+            ? {
+                walletAddress: user.walletAddress,
+                role: user.role,
+                name: user.name,
+              }
+            : {},
+          status: "success",
+          data: {
+            imageUrl: cloudinaryResult.url,
+            ipfsHash: ipfsResult.success ? ipfsResult.ipfsHash : "",
+            fileName: file.originalname,
+          },
+          newState: product.toObject(),
         });
 
         if (!Array.isArray(images)) break;
@@ -817,6 +907,8 @@ class ProductService {
         throw new Error("Unauthorized: You can only delete your own products");
       }
 
+      const previousState = product.toObject();
+
       if (hardDelete && userRole === "expert") {
         // Hard delete (permanent removal)
         await Product.findByIdAndDelete(productId);
@@ -827,6 +919,26 @@ class ProductService {
         await product.save();
         console.log(`✅ Product archived: ${productId}`);
       }
+
+      // 🆕 LOG PRODUCT DELETION
+      const user = await User.findById(userId);
+      await logger.logProduct({
+        type: "product_deleted",
+        action: `Product deleted: ${product.name}`,
+        productId: product._id,
+        userId,
+        userDetails: user
+          ? {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+            }
+          : {},
+        status: "success",
+        data: { hardDelete },
+        previousState,
+        newState: hardDelete ? null : product.toObject(),
+      });
 
       // Invalidate cache
       await redisService.invalidateProduct(productId);

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source /Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env
+
 API_URL="http://localhost:3001/api"
 
 echo "🧪 Testing Expert Dashboard Routes..."
@@ -13,7 +15,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 # You need an expert token - get this from login
-EXPERT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGY2MTY4YzNhZjlhMDhlZGY1NzA3NmYiLCJ3YWxsZXRBZGRyZXNzIjoiMHg0ZWVjMzkxY2JhM2UwZjM4MWZkOTYwNTJkNDRjYjJhZTAzOGE2YjU5Iiwicm9sZSI6ImV4cGVydCIsImlhdCI6MTc2MDk1ODI0MiwiZXhwIjoxNzYxNTYzMDQyfQ.CX3qPnxI_WT4b6rGNSD4UbpFlAdwm_t8s6UABg7iE9o"
+EXPERT_TOKEN="$EXPERT_TOKEN"
 
 echo -e "${BLUE}1️⃣ Testing Expert Dashboard...${NC}"
 curl -s -X GET "${API_URL}/expert/dashboard" \

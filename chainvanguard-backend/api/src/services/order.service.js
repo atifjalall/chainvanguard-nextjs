@@ -7,6 +7,7 @@ import redisService from "./redis.service.js";
 import FabricService from "./fabric.service.js";
 import { buildPaginationResponse } from "../utils/helpers.js";
 import walletBalanceService from "./wallet-balance.service.js";
+import logger from "../utils/logger.js";
 
 class OrderService {
   constructor() {
@@ -129,7 +130,28 @@ class OrderService {
 
       // 9. Save order
       await order.save({ session });
-      console.log(`✅ Order saved: ${order.orderNumber}`);
+
+      // 🆕 LOG ORDER CREATION
+      await logger.logOrder({
+        type: "order_created",
+        action: `Order created: ${order.orderNumber}`,
+        orderId: order._id,
+        userId: customerId,
+        userDetails: {
+          walletAddress: customer.walletAddress,
+          role: customer.role,
+          name: customer.name,
+          email: customer.email,
+        },
+        status: "success",
+        data: {
+          orderNumber: order.orderNumber,
+          total: order.total,
+          itemCount: order.items.length,
+          paymentMethod: order.paymentMethod,
+        },
+        newState: order.toObject(),
+      });
 
       // 10. Update wallet transaction with orderId
       if (paymentMethod === "wallet") {
@@ -779,14 +801,31 @@ class OrderService {
 
       await order.save();
 
-      // Send notification
-      order.addNotification(`order_${newStatus}`, "email");
-      await order.save();
+      // 🆕 LOG STATUS UPDATE
+      const user = await User.findById(userId);
+      await logger.logOrder({
+        type: "order_status_changed",
+        action: `Order status changed to: ${newStatus}`,
+        orderId: order._id,
+        userId,
+        userDetails: user
+          ? {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+            }
+          : {},
+        status: "success",
+        data: {
+          previousStatus: oldStatus,
+          newStatus,
+          comment: notes,
+        },
+        previousState: order.toObject(),
+        newState: order.toObject(),
+      });
 
-      console.log(
-        `✅ Order ${order.orderNumber} status updated: ${oldStatus} → ${newStatus}`
-      );
-
+      // ...existing code...
       return {
         success: true,
         message: `Order status updated to ${newStatus}`,
@@ -1027,6 +1066,9 @@ class OrderService {
         );
       }
 
+      // Store previous state for logging
+      const previousState = order.toObject();
+
       order.status = "cancelled";
       order.cancelledAt = new Date();
       order.cancellationReason = reason;
@@ -1044,6 +1086,28 @@ class OrderService {
       await this.releaseProductStock(order.items);
 
       await order.save();
+
+      // 🆕 LOG ORDER CANCELLATION
+      const user = await User.findById(userId);
+      await logger.logOrder({
+        type: "order_cancelled",
+        action: `Order cancelled: ${order.orderNumber}`,
+        orderId: order._id,
+        userId,
+        userDetails: user
+          ? {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+            }
+          : {},
+        status: "success",
+        data: {
+          reason,
+        },
+        previousState,
+        newState: order.toObject(),
+      });
 
       return {
         success: true,

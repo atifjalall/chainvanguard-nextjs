@@ -3,23 +3,59 @@ import { Schema, model } from "mongoose";
 
 const blockchainLogSchema = new Schema(
   {
-    // Transaction Type
+    // Action Type - EXPANDED
     type: {
       type: String,
       enum: [
+        // Product Actions
         "product_created",
         "product_updated",
+        "product_deleted",
         "product_transferred",
+        "product_status_changed",
+        "product_image_uploaded",
+
+        // Order Actions
         "order_created",
         "order_updated",
-        "payment",
-        "refund",
-        "user_registered",
+        "order_cancelled",
+        "order_status_changed",
+        "order_delivered",
+
+        // Payment & Wallet Actions
+        "payment_processed",
+        "payment_failed",
+        "refund_issued",
         "wallet_created",
         "wallet_transaction",
-        "transfer",
-        "consensus",
-        "audit",
+        "wallet_funds_added",
+        "wallet_transfer",
+
+        // User & Auth Actions
+        "user_registered",
+        "user_login",
+        "user_logout",
+        "password_changed",
+        "password_reset",
+        "email_verified",
+        "profile_updated",
+
+        // Cart Actions
+        "cart_item_added",
+        "cart_item_removed",
+        "cart_item_updated",
+        "cart_cleared",
+
+        // Blockchain Actions
+        "blockchain_transaction",
+        "consensus_update",
+        "smart_contract_invoked",
+        "audit_log",
+
+        // System Actions
+        "system_health_check",
+        "fault_detected",
+        "security_alert",
       ],
       required: true,
       index: true,
@@ -28,34 +64,43 @@ const blockchainLogSchema = new Schema(
     // Entity Type
     entityType: {
       type: String,
-      enum: ["product", "order", "user", "wallet", "payment", "transfer"],
+      enum: [
+        "product",
+        "order",
+        "user",
+        "wallet",
+        "payment",
+        "transfer",
+        "cart",
+        "auth",
+        "system",
+      ],
       required: true,
     },
 
-    // Entity ID
+    // Entity ID (can be null for system-wide actions)
     entityId: {
       type: Schema.Types.ObjectId,
-      required: true,
       index: true,
     },
 
-    // Transaction Hash
+    // Transaction Hash (for blockchain transactions)
     txHash: {
       type: String,
       default: "",
     },
 
-    // Block Number
+    // Block Number (for blockchain transactions)
     blockNumber: {
       type: Number,
       default: 0,
     },
 
-    // Transaction Status
+    // Action Status
     status: {
       type: String,
-      enum: ["pending", "confirmed", "failed"],
-      default: "pending",
+      enum: ["pending", "success", "failed"],
+      default: "success",
     },
 
     // User who performed the action
@@ -64,10 +109,34 @@ const blockchainLogSchema = new Schema(
       ref: "User",
     },
 
-    // Transaction Data
+    // User details (denormalized for quick access)
+    userDetails: {
+      walletAddress: String,
+      role: String,
+      name: String,
+      email: String,
+    },
+
+    // Action description
+    action: {
+      type: String,
+      required: true,
+    },
+
+    // Detailed data about the action
     data: {
       type: Schema.Types.Mixed,
       default: {},
+    },
+
+    // Previous state (for updates)
+    previousState: {
+      type: Schema.Types.Mixed,
+    },
+
+    // New state (for updates)
+    newState: {
+      type: Schema.Types.Mixed,
     },
 
     // Error information if failed
@@ -76,10 +145,25 @@ const blockchainLogSchema = new Schema(
       default: "",
     },
 
+    // IP Address
+    ipAddress: {
+      type: String,
+    },
+
+    // User Agent
+    userAgent: {
+      type: String,
+    },
+
     // Additional metadata
     metadata: {
       type: Schema.Types.Mixed,
       default: {},
+    },
+
+    // Execution time (in ms)
+    executionTime: {
+      type: Number,
     },
   },
   {
@@ -87,22 +171,85 @@ const blockchainLogSchema = new Schema(
   }
 );
 
-// Indexes
+// Indexes for efficient querying
 blockchainLogSchema.index({ type: 1, createdAt: -1 });
 blockchainLogSchema.index({ entityId: 1, entityType: 1 });
 blockchainLogSchema.index({ performedBy: 1, createdAt: -1 });
-blockchainLogSchema.index({ status: 1 });
+blockchainLogSchema.index({ status: 1, createdAt: -1 });
+blockchainLogSchema.index({ "userDetails.walletAddress": 1 });
+blockchainLogSchema.index({ createdAt: -1 });
 
-// Static method to log transaction
-blockchainLogSchema.statics.logTransaction = async function (logData) {
+// Static method to create log
+blockchainLogSchema.statics.createLog = async function (logData) {
   try {
     const log = new this(logData);
     await log.save();
     return log;
   } catch (error) {
-    console.error("Failed to create blockchain log:", error);
-    throw error;
+    console.error("❌ Failed to create log:", error);
+    // Don't throw error - logging should never break the main flow
+    return null;
   }
+};
+
+// Static method to get logs with filters
+blockchainLogSchema.statics.getLogs = async function (filters = {}) {
+  const {
+    page = 1,
+    limit = 100,
+    type,
+    status,
+    entityType,
+    performedBy,
+    startDate,
+    endDate,
+  } = filters;
+
+  const query = {};
+
+  if (type) query.type = type;
+  if (status) query.status = status;
+  if (entityType) query.entityType = entityType;
+  if (performedBy) query.performedBy = performedBy;
+
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) query.createdAt.$gte = new Date(startDate);
+    if (endDate) query.createdAt.$lte = new Date(endDate);
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [logs, total] = await Promise.all([
+    this.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("performedBy", "name email walletAddress role")
+      .lean(),
+    this.countDocuments(query),
+  ]);
+
+  return {
+    logs,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  };
+};
+
+// Static method to get logs for specific entity
+blockchainLogSchema.statics.getEntityLogs = async function (
+  entityId,
+  entityType
+) {
+  return this.find({ entityId, entityType })
+    .sort({ createdAt: -1 })
+    .populate("performedBy", "name email walletAddress role")
+    .lean();
 };
 
 const BlockchainLog = model("BlockchainLog", blockchainLogSchema);

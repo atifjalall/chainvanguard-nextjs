@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source /Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env
+
 API_URL="http://localhost:3001/api"
 
 echo "🧪 Testing QR Code System..."
@@ -13,8 +15,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # You need to replace these with actual tokens/IDs from your system
-VENDOR_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGY2MTY4YTNhZjlhMDhlZGY1NzA3NjkiLCJ3YWxsZXRBZGRyZXNzIjoiMHhmY2E2MzA2NDU1Mzc0OTU4ZjdlNWRlOTc1Nzg1YzE2ZTg5M2U5ZTliIiwicm9sZSI6InZlbmRvciIsImlhdCI6MTc2MDk1ODIzOCwiZXhwIjoxNzYxNTYzMDM4fQ.VxpL4NajknNsmKNLmBtKxv5Ex539P6JQPol_gkadPEg"
-PRODUCT_ID="68f617c53af9a08edf5707a9"
+VENDOR_TOKEN="$VENDOR_TOKEN"
+PRODUCT_ID="$PRODUCT_ID_1"
 
 echo -e "${BLUE}1️⃣ Generating QR code for product...${NC}"
 GENERATE_RESPONSE=$(curl -s -X POST "${API_URL}/qr/product/${PRODUCT_ID}/generate" \

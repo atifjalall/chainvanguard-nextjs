@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source /Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env
+
 API_URL="http://localhost:3001/api"
 
 echo "🧪 Testing Complete Wallet System..."
@@ -13,12 +15,12 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 # ✅ FIX: Use real tokens from your actual login
-CUSTOMER_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGY2MTY4YjNhZjlhMDhlZGY1NzA3NmQiLCJ3YWxsZXRBZGRyZXNzIjoiMHgwNGY4ZmY4ODYwZDk2NDBmMTAwNDViZDYyZDNhY2YzYzUxNGY3ZmFlIiwicm9sZSI6ImN1c3RvbWVyIiwiaWF0IjoxNzYwOTU4MjQwLCJleHAiOjE3NjE1NjMwNDB9.lXgYu2pUzr6XbK01XgtcSwflPJ266b0Cu6Pts6o2Phs"
-EXPERT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGY2MTY4YzNhZjlhMDhlZGY1NzA3NmYiLCJ3YWxsZXRBZGRyZXNzIjoiMHg0ZWVjMzkxY2JhM2UwZjM4MWZkOTYwNTJkNDRjYjJhZTAzOGE2YjU5Iiwicm9sZSI6ImV4cGVydCIsImlhdCI6MTc2MDk1ODI0MiwiZXhwIjoxNzYxNTYzMDQyfQ.CX3qPnxI_WT4b6rGNSD4UbpFlAdwm_t8s6UABg7iE9o"
+CUSTOMER_TOKEN="$CUSTOMER_TOKEN"
+EXPERT_TOKEN="$EXPERT_TOKEN"
 
 # ✅ FIX: Get real user IDs from the tokens
-CUSTOMER_ID="68f6168b3af9a08edf57076d"  # From your JWT token
-VENDOR_ID="68f6168a3af9a08edf570769"    # Get from another user if needed
+CUSTOMER_ID="$CUSTOMER_ID"
+VENDOR_ID="$VENDOR_ID"
 
 echo -e "${BLUE}1️⃣ Testing Get Balance (Customer)...${NC}"
 curl -s -X GET "${API_URL}/wallet/balance" \
