@@ -1,4 +1,7 @@
 import BlockchainLog from "../models/BlockchainLog.js";
+import FabricService from "../services/fabric.service.js";
+
+const fabricService = new FabricService();
 
 class Logger {
   /**
@@ -26,6 +29,7 @@ class Logger {
     executionTime = null,
   }) {
     try {
+      // 1. Save to MongoDB first
       const logEntry = await BlockchainLog.createLog({
         type,
         entityType,
@@ -47,7 +51,13 @@ class Logger {
       });
 
       if (logEntry) {
-        console.log(`📝 Log created: ${type} - ${action}`);
+        console.log(`📝 Log created in MongoDB: ${type} - ${action}`);
+
+        // 2. Save to blockchain asynchronously (fire and forget)
+        // Don't await - let it happen in background
+        this._saveToBlockchain(logEntry).catch((err) => {
+          console.warn("⚠️ Blockchain log save failed:", err.message);
+        });
       }
 
       return logEntry;
@@ -55,6 +65,29 @@ class Logger {
       console.error("❌ Logger error:", error);
       // Never throw - logging failures should not break main operations
       return null;
+    }
+  }
+
+  /**
+   * Save log to blockchain (async, non-blocking)
+   * @param {Object} logEntry - MongoDB log entry
+   */
+  async _saveToBlockchain(logEntry) {
+    try {
+      await fabricService.createBlockchainLog(logEntry._id.toString(), {
+        type: logEntry.type,
+        entityType: logEntry.entityType,
+        entityId: logEntry.entityId,
+        action: logEntry.action,
+        performedBy: logEntry.performedBy,
+        status: logEntry.status,
+        data: logEntry.data,
+        timestamp: logEntry.timestamp,
+      });
+      console.log(`⛓️ Log saved to blockchain: ${logEntry._id}`);
+    } catch (error) {
+      // Already logged in fabricService, just rethrow for catch above
+      throw error;
     }
   }
 

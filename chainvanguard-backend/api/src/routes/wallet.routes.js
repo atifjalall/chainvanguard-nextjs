@@ -218,4 +218,83 @@ router.post("/unfreeze/:userId", authorizeRoles("expert"), async (req, res) => {
   }
 });
 
+/**
+ * POST /api/wallet/deposit
+ * Deposit funds to wallet (test/development helper)
+ */
+router.post("/deposit", async (req, res) => {
+  try {
+    const { amount, description = "Test deposit" } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid amount is required",
+      });
+    }
+
+    // Call addFunds service
+    const result = await walletBalanceService.addFunds(
+      req.userId,
+      parseFloat(amount),
+      "test_deposit",
+      { description }
+    );
+
+    // Return with correct structure
+    res.json({
+      success: true,
+      message: result.message,
+      balance: result.data.newBalance, // ✅ Correct path
+      wallet: {
+        balance: result.data.newBalance,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Deposit failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to deposit funds",
+    });
+  }
+});
+
+/**
+ * POST /api/wallet/reset (DEV ONLY)
+ * Reset wallet balance to zero
+ */
+router.post("/reset", authenticate, async (req, res) => {
+  try {
+    if (process.env.NODE_ENV === "production") {
+      return res.status(403).json({
+        success: false,
+        message: "Not available in production",
+      });
+    }
+
+    const wallet = await Wallet.findOne({ userId: req.userId });
+    if (wallet) {
+      wallet.balance = 0;
+      wallet.transactions = [];
+      wallet.totalDeposited = 0;
+      wallet.totalWithdrawn = 0;
+      wallet.totalSpent = 0;
+      wallet.totalReceived = 0;
+      await wallet.save();
+    }
+
+    res.json({
+      success: true,
+      message: "Wallet reset successfully",
+      balance: 0,
+    });
+  } catch (error) {
+    console.error("❌ Wallet reset failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
 export default router;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Link from "next/link";
@@ -32,6 +33,36 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import PixelBlast from "@/components/PixelBlast";
+import { motion } from "framer-motion";
+import { useState } from "react";
+
+// Custom motion component wrapper for focus animations
+const FocusMotionDiv = ({ children, className = "", ...props }: any) => {
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <motion.div
+      className={className}
+      tabIndex={0}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      animate={{
+        scale: isFocused ? 1.05 : 1,
+        boxShadow: isFocused
+          ? "0 0 0 4px rgba(59, 130, 246, 0.5)"
+          : "0 0 0 0px rgba(59, 130, 246, 0)",
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 20,
+      }}
+      {...props}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 export default function LandingPage() {
   return (
@@ -58,9 +89,9 @@ export default function LandingPage() {
           transparent
         />
       </div>
+
       {/* Main content overlays the animation */}
       <div className="relative z-10">
-        {/* ...existing code... */}
         <div className="min-h-screen bg-gradient-to-br from-slate-50/80 via-blue-50/80 to-cyan-50/80 dark:from-slate-950/80 dark:via-blue-950/80 dark:to-cyan-950/80 relative overflow-hidden">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {/* Floating geometric shapes */}
@@ -305,31 +336,51 @@ export default function LandingPage() {
             }
           `}</style>
 
-          {/* Header */}
-          <header className="bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50 shadow-lg">
+          {/* Header - Glassmorphism */}
+          <header className="bg-white/60 dark:bg-gray-950/60 backdrop-blur-2xl border-b border-white/20 dark:border-gray-700/30 sticky top-0 z-50 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)]">
             <div className="container mx-auto px-6 flex h-16 items-center justify-between">
-              <div className="flex items-center space-x-3 cursor-pointer group">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
+              <FocusMotionDiv className="flex items-center space-x-3 cursor-pointer rounded-lg outline-none">
+                <motion.div
+                  className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg"
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <Package className="h-5 w-5 text-white" />
-                </div>
+                </motion.div>
                 <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
                   ChainVanguard
                 </span>
-              </div>
+              </FocusMotionDiv>
               <nav className="flex items-center space-x-4">
-                <ThemeToggle />
+                <FocusMotionDiv className="rounded-lg outline-none">
+                  <ThemeToggle />
+                </FocusMotionDiv>
                 <Link href="/login">
-                  <Button
-                    variant="ghost"
-                    className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50 cursor-pointer transition-all duration-300 backdrop-blur-md"
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    Login
-                  </Button>
+                    <FocusMotionDiv className="outline-none rounded-lg">
+                      <Button
+                        variant="ghost"
+                        className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50 cursor-pointer transition-all duration-300 backdrop-blur-md"
+                      >
+                        Login
+                      </Button>
+                    </FocusMotionDiv>
+                  </motion.div>
                 </Link>
                 <Link href="/register">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
-                    Get Started
-                  </Button>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FocusMotionDiv className="outline-none rounded-lg">
+                      <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+                        Get Started
+                      </Button>
+                    </FocusMotionDiv>
+                  </motion.div>
                 </Link>
               </nav>
             </div>
@@ -338,65 +389,106 @@ export default function LandingPage() {
           {/* Hero Section */}
           <section className="py-24 text-center relative">
             <div className="container mx-auto px-6">
-              <div className="transform transition-all duration-700 animate-fadeIn">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+              >
                 <div className="mt-40" />
-                <Badge
-                  variant="secondary"
-                  className="mb-6 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 dark:from-blue-900/30 dark:to-cyan-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-700 shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  <Zap className="h-3 w-3 mr-1" />
-                  Powered by Hyperledger Fabric & IPFS
-                </Badge>
+                <FocusMotionDiv className="inline-block mb-6 outline-none rounded-full">
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-50/50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-300/50 dark:border-blue-700 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                  >
+                    <Zap className="h-3 w-3 mr-1" />
+                    Powered by Hyperledger Fabric & IPFS
+                  </Badge>
+                </FocusMotionDiv>
 
-                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent mb-6">
+                <motion.h1
+                  className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent mb-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                >
                   Blockchain Supply Chain{" "}
                   <span className="text-blue-600 dark:text-blue-400">
                     Management
                   </span>
-                </h1>
+                </motion.h1>
 
-                <p className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed mb-10">
+                <motion.p
+                  className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed mb-10"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.4 }}
+                >
                   Transparent, secure, and efficient supply chain management
                   powered by cutting-edge blockchain technology. Track products
                   from origin to consumer with complete transparency and
                   immutable records.
-                </p>
+                </motion.p>
 
-                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <motion.div
+                  className="flex flex-col sm:flex-row justify-center gap-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.6 }}
+                >
                   <Link href="/register">
-                    <Button
-                      size="lg"
-                      className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-8 font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer"
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      Start Your Journey
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
+                      <FocusMotionDiv className="outline-none rounded-lg">
+                        <Button
+                          size="lg"
+                          className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-8 font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer"
+                        >
+                          Start Your Journey
+                          <ArrowRight className="ml-2 h-5 w-5" />
+                        </Button>
+                      </FocusMotionDiv>
+                    </motion.div>
                   </Link>
                   <Link href="/login">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="h-12 px-8 font-semibold border-gray-200 dark:border-gray-700 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all duration-300 transform hover:scale-105 cursor-pointer"
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      Sign In
-                    </Button>
+                      <FocusMotionDiv className="outline-none rounded-lg">
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          className="h-12 px-8 font-semibold border-gray-200 dark:border-gray-700 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all duration-300 cursor-pointer"
+                        >
+                          Sign In
+                        </Button>
+                      </FocusMotionDiv>
+                    </motion.div>
                   </Link>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             </div>
           </section>
 
-          {/* Features Section */}
+          {/* Features Section - Glassmorphism Cards */}
           <section className="py-24 relative">
             <div className="container mx-auto px-6">
-              <div className="text-center mb-16">
+              <motion.div
+                className="text-center mb-16"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
                   Powerful Features
                 </h2>
                 <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
                   Everything you need for modern, secure supply chain management
                 </p>
-              </div>
+              </motion.div>
 
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {[
@@ -455,44 +547,54 @@ export default function LandingPage() {
                     badge: "Business Intelligence",
                   },
                 ].map((feature, idx) => (
-                  <Card
+                  <motion.div
                     key={idx}
-                    className="group border border-white/30 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02] bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl cursor-pointer relative overflow-hidden"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: idx * 0.1 }}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <FocusMotionDiv className="h-full outline-none rounded-xl">
+                      <motion.div whileHover={{ y: -5 }}>
+                        <Card className="h-full group border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] hover:shadow-[0_8px_32px_0_rgba(31,38,135,0.25)] transition-all duration-500 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl cursor-pointer relative overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-                    <CardHeader className="pb-4 relative z-10">
-                      <div className="flex items-center justify-between mb-4">
-                        <div
-                          className={`h-16 w-16 rounded-2xl ${feature.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg`}
-                        >
-                          <feature.icon className="h-8 w-8" />
-                        </div>
-                        <Badge
-                          variant="secondary"
-                          className="text-xs font-medium bg-gray-100 dark:bg-gray-800"
-                        >
-                          {feature.badge}
-                        </Badge>
-                      </div>
-                      <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                        {feature.title}
-                      </CardTitle>
-                      <CardDescription className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm mb-4">
-                        {feature.desc}
-                      </CardDescription>
-                      <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                        <TrendingUp className="h-3 w-3" />
-                        {feature.metrics}
-                      </div>
-                    </CardHeader>
-                  </Card>
+                          <CardHeader className="pb-4 relative z-10">
+                            <div className="flex items-center justify-between mb-4">
+                              <motion.div
+                                className={`h-16 w-16 rounded-2xl ${feature.color} flex items-center justify-center shadow-lg`}
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                              >
+                                <feature.icon className="h-8 w-8" />
+                              </motion.div>
+                              <Badge
+                                variant="secondary"
+                                className="text-xs font-medium bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                              >
+                                {feature.badge}
+                              </Badge>
+                            </div>
+                            <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
+                              {feature.title}
+                            </CardTitle>
+                            <CardDescription className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm mb-4">
+                              {feature.desc}
+                            </CardDescription>
+                            <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                              <TrendingUp className="h-3 w-3" />
+                              {feature.metrics}
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      </motion.div>
+                    </FocusMotionDiv>
+                  </motion.div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Statistics Section */}
+          {/* Statistics Section - Glassmorphism Cards */}
           <section className="py-24 relative">
             <div className="container mx-auto px-6">
               <div className="grid md:grid-cols-4 gap-8">
@@ -522,34 +624,52 @@ export default function LandingPage() {
                     desc: "Global support coverage",
                   },
                 ].map((stat, idx) => (
-                  <Card
+                  <motion.div
                     key={idx}
-                    className="text-center border border-white/30 dark:border-gray-700/40 shadow-xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl transform transition-all duration-500 hover:scale-[1.02] group cursor-pointer"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: idx * 0.1 }}
                   >
-                    <CardContent className="p-8">
-                      <div className="h-16 w-16 bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                        <stat.icon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent mb-2">
-                        {stat.number}
-                      </div>
-                      <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                        {stat.label}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {stat.desc}
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <FocusMotionDiv className="outline-none rounded-xl">
+                      <motion.div whileHover={{ y: -5 }}>
+                        <Card className="text-center border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl group cursor-pointer">
+                          <CardContent className="p-8">
+                            <motion.div
+                              className="h-16 w-16 bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                              whileHover={{ scale: 1.1, rotate: 5 }}
+                            >
+                              <stat.icon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                            </motion.div>
+                            <div className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent mb-2">
+                              {stat.number}
+                            </div>
+                            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                              {stat.label}
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                              {stat.desc}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    </FocusMotionDiv>
+                  </motion.div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* User Roles Section */}
+          {/* User Roles Section - Glassmorphism Cards */}
           <section className="py-24">
             <div className="container mx-auto px-6">
-              <div className="text-center mb-16">
+              <motion.div
+                className="text-center mb-16"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
                   Choose Your Role
                 </h2>
@@ -557,7 +677,7 @@ export default function LandingPage() {
                   Tailored interfaces for different stakeholders in the supply
                   chain ecosystem
                 </p>
-              </div>
+              </motion.div>
 
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
@@ -598,120 +718,178 @@ export default function LandingPage() {
                       "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
                   },
                 ].map((role, idx) => (
-                  <Card
+                  <motion.div
                     key={idx}
-                    className="group text-center border border-white/30 dark:border-gray-700/40 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02] bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl cursor-pointer"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: idx * 0.1 }}
                   >
-                    <CardHeader className="pb-4">
-                      <div
-                        className={`h-16 w-16 ${role.color} rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`}
-                      >
-                        <role.icon className="h-8 w-8 text-white" />
-                      </div>
-                      <CardTitle className="text-lg text-gray-900 dark:text-gray-100 mb-2">
-                        {role.title}
-                      </CardTitle>
-                      <CardDescription className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                        {role.desc}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge className={`${role.badgeColor} font-medium`}>
-                        {role.badge}
-                      </Badge>
-                    </CardContent>
-                  </Card>
+                    <FocusMotionDiv className="h-full outline-none rounded-xl">
+                      <motion.div whileHover={{ y: -5 }}>
+                        <Card className="h-full group text-center border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] hover:shadow-[0_8px_32px_0_rgba(31,38,135,0.25)] transition-all duration-500 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl cursor-pointer">
+                          <CardHeader className="pb-4">
+                            <motion.div
+                              className={`h-16 w-16 ${role.color} rounded-xl flex items-center justify-center mx-auto mb-4`}
+                              whileHover={{ scale: 1.1, rotate: 5 }}
+                            >
+                              <role.icon className="h-8 w-8 text-white" />
+                            </motion.div>
+                            <CardTitle className="text-lg text-gray-900 dark:text-gray-100 mb-2">
+                              {role.title}
+                            </CardTitle>
+                            <CardDescription className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                              {role.desc}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <Badge className={`${role.badgeColor} font-medium`}>
+                              {role.badge}
+                            </Badge>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    </FocusMotionDiv>
+                  </motion.div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Call to Action Section */}
+          {/* Call to Action Section - Glassmorphism Card */}
           <section className="py-24 relative">
             <div className="container mx-auto px-6">
-              <Card className="border border-white/30 dark:border-gray-700/40 shadow-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl relative overflow-hidden transition-all duration-500 transform hover:scale-[1.02]">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 animate-pulse"></div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                <FocusMotionDiv className="outline-none rounded-xl">
+                  <Card className="border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.2)] bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 animate-pulse"></div>
 
-                <CardContent className="p-16 text-center relative z-10">
-                  <div className="h-20 w-20 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-                    <Star className="h-10 w-10 text-white" />
-                  </div>
-                  <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-                    <p className="text-balance">
-                      Ready to{" "}
-                      <Highlighter action="underline" color="#FF9800">
-                        Transform
-                      </Highlighter>{" "}
-                      Your{" "}
-                      <Highlighter action="highlight" color="#87CEFA">
-                        Supply Chain
-                      </Highlighter>{" "}
-                      ?
-                    </p>
-                  </h2>
-                  <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
-                    Join thousands of businesses already using ChainVanguard to
-                    create transparent, secure, and efficient supply chain
-                    operations.
-                  </p>
-                  <div className="flex flex-col sm:flex-row justify-center gap-4">
-                    <Link href="/register">
-                      <Button
-                        size="lg"
-                        className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-8 font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer"
+                    <CardContent className="p-16 text-center relative z-10">
+                      <motion.div
+                        className="h-20 w-20 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl"
+                        whileHover={{ scale: 1.1, rotate: 5 }}
                       >
-                        Get Started Now
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                      </Button>
-                    </Link>
-                    <Link href="/login">
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        className="h-12 px-8 font-semibold border-gray-200 dark:border-gray-700 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all duration-300 transform hover:scale-105 cursor-pointer"
-                      >
-                        View Demo
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+                        <Star className="h-10 w-10 text-white" />
+                      </motion.div>
+                      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+                        <p className="text-balance">
+                          Ready to{" "}
+                          <Highlighter action="underline" color="#FF9800">
+                            Transform
+                          </Highlighter>{" "}
+                          Your{" "}
+                          <Highlighter action="highlight" color="#87CEFA">
+                            Supply Chain
+                          </Highlighter>{" "}
+                          ?
+                        </p>
+                      </h2>
+                      <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
+                        Join thousands of businesses already using ChainVanguard
+                        to create transparent, secure, and efficient supply
+                        chain operations.
+                      </p>
+                      <div className="flex flex-col sm:flex-row justify-center gap-4">
+                        <Link href="/register">
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <FocusMotionDiv className="outline-none rounded-lg">
+                              <Button
+                                size="lg"
+                                className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-8 font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer"
+                              >
+                                Get Started Now
+                                <ArrowRight className="ml-2 h-5 w-5" />
+                              </Button>
+                            </FocusMotionDiv>
+                          </motion.div>
+                        </Link>
+                        <Link href="/login">
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <FocusMotionDiv className="outline-none rounded-lg">
+                              <Button
+                                variant="outline"
+                                size="lg"
+                                className="h-12 px-8 font-semibold border-white/30 dark:border-gray-700/30 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all duration-300 cursor-pointer backdrop-blur-sm"
+                              >
+                                View Demo
+                              </Button>
+                            </FocusMotionDiv>
+                          </motion.div>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </FocusMotionDiv>
+              </motion.div>
             </div>
           </section>
 
-          {/* Footer */}
-          <footer className="border-t border-gray-200/50 dark:border-gray-700/50 py-16 bg-white/50 dark:bg-gray-950/50 backdrop-blur-xl">
+          {/* Footer - Glassmorphism */}
+          <footer className="border-t border-white/20 dark:border-gray-700/30 py-16 bg-white/50 dark:bg-gray-950/50 backdrop-blur-xl">
             <div className="container mx-auto px-6">
-              <div className="text-center space-y-6">
-                <div className="flex items-center justify-center space-x-3 cursor-pointer">
-                  <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
+              <motion.div
+                className="text-center space-y-6"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                <FocusMotionDiv className="inline-flex items-center justify-center space-x-3 cursor-pointer outline-none rounded-lg p-2">
+                  <motion.div
+                    className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
                     <Package className="h-5 w-5 text-white" />
-                  </div>
+                  </motion.div>
                   <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     ChainVanguard
                   </span>
-                </div>
+                </FocusMotionDiv>
                 <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
                   Revolutionizing supply chain management through blockchain
                   technology, ensuring transparency, security, and efficiency
                   for all stakeholders.
                 </p>
                 <div className="flex justify-center space-x-6">
-                  <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                    Next.js
-                  </Badge>
-                  <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    TypeScript
-                  </Badge>
-                  <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                    Hyperledger Fabric
-                  </Badge>
+                  {[
+                    { text: "Next.js", color: "blue" },
+                    { text: "TypeScript", color: "green" },
+                    { text: "Hyperledger Fabric", color: "purple" },
+                  ].map((tech, idx) => (
+                    <FocusMotionDiv
+                      key={idx}
+                      className="outline-none rounded-full"
+                    >
+                      <Badge
+                        className={`${
+                          tech.color === "blue"
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            : tech.color === "green"
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                        } cursor-pointer`}
+                      >
+                        {tech.text}
+                      </Badge>
+                    </FocusMotionDiv>
+                  ))}
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-500">
                   © {new Date().getFullYear()} ChainVanguard. All rights
                   reserved.
                 </p>
-              </div>
+              </motion.div>
             </div>
           </footer>
         </div>

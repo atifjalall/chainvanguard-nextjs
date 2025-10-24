@@ -46,6 +46,14 @@ class WalletBalanceService {
 
       return {
         success: true,
+        balance: wallet.balance,
+        wallet: {
+          balance: wallet.balance,
+          currency: wallet.currency,
+          isActive: wallet.isActive,
+          isFrozen: wallet.isFrozen,
+          lastActivity: wallet.lastActivity,
+        },
         data: {
           balance: wallet.balance,
           currency: wallet.currency,
@@ -381,16 +389,35 @@ class WalletBalanceService {
       await wallet.save({ session });
 
       // Log to blockchain
-      await BlockchainLog.logTransaction({
-        transactionId: `withdrawal-${Date.now()}-${userId}`,
+      // Log withdrawal to database
+      const user = await User.findById(userId).select(
+        "name email walletAddress role"
+      );
+      await logger.logWallet({
         type: "wallet_transaction",
-        entityId: wallet._id.toString(),
-        entityType: "wallet",
-        metadata: {
+        action: `Withdrawal: $${amount} via ${withdrawalMethod}`,
+        walletId: wallet._id,
+        userId,
+        userDetails: user
+          ? {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+              email: user.email,
+            }
+          : {},
+        status: "success",
+        data: {
           amount,
           withdrawalMethod,
           balanceBefore,
           balanceAfter,
+          accountDetails: {
+            // Masked for security
+            accountNumber: accountDetails.accountNumber
+              ? `****${accountDetails.accountNumber.slice(-4)}`
+              : undefined,
+          },
         },
       });
 
@@ -678,6 +705,155 @@ class WalletBalanceService {
     } catch (error) {
       console.error("❌ Unfreeze wallet failed:", error);
       throw error;
+    }
+  }
+
+  /**
+   * 🔄 Update Transaction with Order ID
+   * Used after order creation to link the payment transaction
+   */
+  async updateTransactionOrderId(userId, orderId, session) {
+    try {
+      // Use findOneAndUpdate with atomic operation to avoid version conflicts
+      const result = await Wallet.findOneAndUpdate(
+        {
+          userId,
+          "transactions.type": "payment",
+          "transactions.relatedOrderId": { $exists: false },
+        },
+        {
+          $set: {
+            "transactions.$[elem].relatedOrderId": orderId,
+          },
+        },
+        {
+          arrayFilters: [
+            {
+              "elem.type": "payment",
+              "elem.relatedOrderId": { $exists: false },
+            },
+          ],
+          sort: { "transactions.timestamp": -1 },
+          session: session,
+          new: true,
+        }
+      );
+
+      if (result) {
+        console.log(`✅ Updated transaction with orderId: ${orderId}`);
+      } else {
+        console.warn(
+          `⚠️ No pending payment transaction found for user: ${userId}`
+        );
+      }
+    } catch (error) {
+      console.error("⚠️ Failed to update transaction orderId:", error);
+      // Don't throw - this is not critical
+    }
+  }
+
+  /**
+   * 💵 Process Refund
+   */
+  async processRefund(userId, orderId, amount, description, session) {
+    let localSession = session;
+    let shouldCommit = false;
+
+    if (!localSession) {
+      localSession = await mongoose.startSession();
+      localSession.startTransaction();
+      shouldCommit = true;
+    }
+
+    try {
+      const wallet = await this.getOrCreateWallet(userId);
+
+      if (!wallet.isActive) {
+        throw new Error("Wallet is not active");
+      }
+
+      if (wallet.isFrozen) {
+        throw new Error(
+          `Wallet is frozen. Reason: ${wallet.frozenReason || "N/A"}`
+        );
+      }
+
+      // Add refund amount
+      const { balanceBefore, balanceAfter } = wallet.updateBalance(
+        amount,
+        "refund"
+      );
+
+      wallet.addTransaction({
+        type: "refund",
+        amount,
+        balanceBefore,
+        balanceAfter,
+        relatedOrderId: orderId,
+        description: description || `Refund for order`,
+        status: "completed",
+      });
+
+      await wallet.save({ session: localSession });
+
+      // 🆕 LOG REFUND
+      const user = await User.findById(userId);
+      await logger.logWallet({
+        type: "refund_processed",
+        action: `Refund processed: $${amount}`,
+        walletId: wallet._id,
+        userId,
+        userDetails: user
+          ? {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+            }
+          : {},
+        status: "success",
+        data: {
+          amount,
+          orderId,
+          description,
+          newBalance: wallet.balance,
+        },
+      });
+
+      if (shouldCommit) {
+        await localSession.commitTransaction();
+      }
+
+      console.log(
+        `✅ Refunded $${amount} to wallet. New balance: $${wallet.balance}`
+      );
+
+      return {
+        success: true,
+        newBalance: wallet.balance,
+        refundAmount: amount,
+        message: "Refund processed successfully",
+      };
+    } catch (error) {
+      if (shouldCommit) {
+        await localSession.abortTransaction();
+      }
+
+      // 🆕 LOG FAILED REFUND
+      await logger.logWallet({
+        type: "refund_failed",
+        action: `Refund failed: ${error.message}`,
+        userId,
+        status: "failed",
+        data: { amount, orderId, description },
+        error: error.message,
+      });
+
+      console.error("❌ Refund failed:", error);
+      throw error;
+    } finally {
+      if (shouldCommit) {
+        localSession.endSession();
+      }
     }
   }
 }

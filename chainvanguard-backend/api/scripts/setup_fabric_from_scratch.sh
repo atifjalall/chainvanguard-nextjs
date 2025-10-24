@@ -75,7 +75,7 @@ echo "⚙️ Deploying USER chaincode..."
   -ccp $CHAINCODE_PATH \
   -ccl javascript \
   -c $CHANNEL_NAME \
-  -ccv 1.2
+  -ccv 1.3
 
 echo "⚙️ Deploying PRODUCT chaincode..."
 ./network.sh deployCC \
@@ -83,7 +83,7 @@ echo "⚙️ Deploying PRODUCT chaincode..."
   -ccp $CHAINCODE_PATH \
   -ccl javascript \
   -c $CHANNEL_NAME \
-  -ccv 1.0
+  -ccv 1.1
 
 echo "⚙️ Deploying ORDER chaincode..."
 ./network.sh deployCC \
@@ -91,8 +91,7 @@ echo "⚙️ Deploying ORDER chaincode..."
   -ccp $CHAINCODE_PATH \
   -ccl javascript \
   -c $CHANNEL_NAME \
-  -ccv 1.0
-echo "✅ Chaincode deployed successfully."
+  -ccv 1.1
 
 #--------------------------------------------------
 # Step 5: Test Chaincode

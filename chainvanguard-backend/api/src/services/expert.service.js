@@ -64,7 +64,7 @@ class ExpertService {
       const recentLogs = await BlockchainLog.find()
         .sort({ timestamp: -1 })
         .limit(10)
-        .populate("userId", "name email role")
+        .populate("performedBy", "name email role")
         .lean();
 
       // System health metrics
@@ -177,8 +177,7 @@ class ExpertService {
 
       if (type) query.type = type;
       if (status) query.status = status;
-      if (userId) query.userId = userId;
-
+      if (userId) query.performedBy = userId;
       if (startDate || endDate) {
         query.timestamp = {};
         if (startDate) query.timestamp.$gte = new Date(startDate);
@@ -193,7 +192,7 @@ class ExpertService {
           .sort(sort)
           .skip(skip)
           .limit(limit)
-          .populate("userId", "name email role walletAddress")
+          .populate("performedBy", "name email role walletAddress")
           .lean(),
         BlockchainLog.countDocuments(query),
       ]);
@@ -206,15 +205,16 @@ class ExpertService {
           type: tx.type,
           action: tx.action,
           status: tx.status,
-          user: tx.userId
-            ? {
-                id: tx.userId._id,
-                name: tx.userId.name,
-                email: tx.userId.email,
-                role: tx.userId.role,
-                walletAddress: tx.userId.walletAddress,
-              }
-            : null,
+          user:
+            tx.performedBy && tx.performedBy._id
+              ? {
+                  id: tx.performedBy._id,
+                  name: tx.performedBy.name,
+                  email: tx.performedBy.email,
+                  role: tx.performedBy.role,
+                  walletAddress: tx.performedBy.walletAddress,
+                }
+              : null,
           entityId: tx.entityId,
           entityType: tx.entityType,
           chaincodeName: tx.chaincodeName,

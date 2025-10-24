@@ -30,6 +30,8 @@ const blockchainLogSchema = new Schema(
         "wallet_transaction",
         "wallet_funds_added",
         "wallet_transfer",
+        "refund_processed",
+        "refund_failed",
 
         // User & Auth Actions
         "user_registered",
