@@ -715,6 +715,51 @@ class OrderContract extends Contract {
     await iterator.close();
     return allResults;
   }
+
+  // ========================================
+  // BLOCKCHAIN LOGGING
+  // ========================================
+
+  /**
+   * Create a log entry on blockchain
+   * @param {Context} ctx
+   * @param {string} logId - Unique log ID
+   * @param {string} logData - JSON string of log data
+   */
+  async createLog(ctx, logId, logData) {
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(
+      txTimestamp.seconds.toInt() * 1000
+    ).toISOString();
+
+    const parsedData = JSON.parse(logData);
+
+    const log = {
+      docType: "log",
+      logId: logId,
+      ...parsedData,
+      blockchainTimestamp: timestamp,
+    };
+
+    await ctx.stub.putState(logId, Buffer.from(JSON.stringify(log)));
+
+    return JSON.stringify(log);
+  }
+
+  /**
+   * Get a log entry
+   * @param {Context} ctx
+   * @param {string} logId
+   */
+  async getLog(ctx, logId) {
+    const logAsBytes = await ctx.stub.getState(logId);
+
+    if (!logAsBytes || logAsBytes.length === 0) {
+      throw new Error(`Log ${logId} does not exist`);
+    }
+
+    return logAsBytes.toString();
+  }
 }
 
 module.exports = OrderContract;

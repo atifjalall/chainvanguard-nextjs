@@ -968,25 +968,28 @@ class FabricService {
    */
   async getOrderHistory(orderId) {
     try {
+      await this.ensureContract("order"); // ✅ Now this exists
+
       console.log(`📝 Getting order history: ${orderId}`);
 
-      if (!this.orderContract) {
-        await this.initOrderContract();
-      }
-
       const result = await this.orderContract.evaluateTransaction(
-        "OrderContract:getOrderHistory",
+        "GetOrderHistory",
         orderId
       );
 
-      let resultStr;
-      if (result instanceof Uint8Array) {
-        resultStr = Buffer.from(result).toString("utf8");
-      } else {
-        resultStr = result.toString();
+      const history = JSON.parse(result.toString());
+
+      // Format dates properly
+      if (Array.isArray(history)) {
+        return history.map((entry) => ({
+          ...entry,
+          timestamp: entry.timestamp
+            ? new Date(entry.timestamp).toISOString()
+            : new Date().toISOString(),
+        }));
       }
 
-      return JSON.parse(resultStr);
+      return history;
     } catch (error) {
       console.error("❌ Blockchain getOrderHistory error:", error);
       throw error;
@@ -1219,6 +1222,80 @@ class FabricService {
 
     return typeMap[contractName] || "system-event";
   }
+
+  // ========================================
+  // BLOCKCHAIN LOGGING
+  // ========================================
+
+  /**
+   * Create a log entry on blockchain
+   * @param {string} logId - MongoDB log ID
+   * @param {Object} logData - Log data object
+   */
+  async createBlockchainLog(logId, logData) {
+    try {
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const result = await this.orderContract.submitTransaction(
+        "OrderContract:createLog",
+        logId,
+        JSON.stringify(logData)
+      );
+
+      // Convert result to string properly
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      // Try to parse as JSON
+      try {
+        return JSON.parse(resultStr);
+      } catch (parseError) {
+        // If JSON parse fails, log is still saved, just return success
+        console.warn("⚠️ Blockchain log saved but response parse failed");
+        return { success: true, logId };
+      }
+    } catch (error) {
+      // Don't throw - logging should never break the app
+      console.warn("⚠️ Failed to create blockchain log:", error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Ensure contract is initialized
+   */
+  async ensureContract(contractType = "order") {
+    if (!this.gateway || !this.network) {
+      await this.connect();
+    }
+
+    switch (contractType) {
+      case "user":
+        if (!this.userContract) {
+          this.userContract = this.network.getContract("user");
+        }
+        break;
+      case "product":
+        if (!this.productContract) {
+          this.productContract = this.network.getContract("product");
+        }
+        break;
+      case "order":
+        if (!this.orderContract) {
+          this.orderContract = this.network.getContract("order");
+        }
+        break;
+      default:
+        throw new Error(`Unknown contract type: ${contractType}`);
+    }
+  }
+  
 }
 
 export default FabricService;

@@ -54,17 +54,18 @@ class OrderService {
       ).session(session);
       if (!primarySeller) throw new Error("Seller not found");
 
-      // 5. **PROCESS WALLET PAYMENT BEFORE CREATING ORDER**
+      // 5. **PROCESS WALLET PAYMENT**
       const paymentMethod = orderData.paymentMethod || "wallet";
       let paymentStatus = "pending";
       let paidAt = null;
 
+      // For blockchain system, prefer wallet payments
       if (paymentMethod === "wallet") {
         try {
-          // Deduct from wallet
+          // Check and deduct wallet balance
           await walletBalanceService.processPayment(
             customerId,
-            null, // orderId - will update after order creation
+            null,
             pricing.total,
             `Payment for order with ${validatedItems.length} items`,
             session
@@ -72,9 +73,20 @@ class OrderService {
 
           paymentStatus = "paid";
           paidAt = new Date();
+          console.log("✅ Wallet payment processed successfully");
         } catch (paymentError) {
-          throw new Error(`Payment failed: ${paymentError.message}`);
+          throw new Error(`Wallet payment failed: ${paymentError.message}`);
         }
+      } else if (paymentMethod === "card") {
+        // For testing: allow card payments but mark as pending
+        // In production, integrate with payment gateway
+        console.log(
+          "⚠️ Card payment - marking as pending (requires payment gateway)"
+        );
+        paymentStatus = "pending";
+        // You can integrate Stripe/PayPal here
+      } else {
+        throw new Error(`Unsupported payment method: ${paymentMethod}`);
       }
 
       // 6. Create order object
@@ -180,14 +192,24 @@ class OrderService {
         success: true,
         message: "Order created successfully",
         order: {
-          id: order._id,
+          id: order._id.toString(),
+          _id: order._id.toString(),
           orderNumber: order.orderNumber,
           status: order.status,
           paymentStatus: order.paymentStatus,
+          paymentMethod: order.paymentMethod,
           total: order.total,
           currency: order.currency,
           items: order.items.length,
           estimatedDelivery: order.estimatedDeliveryDate,
+          createdAt: order.createdAt,
+          // Include shipping for tracking
+          shippingAddress: order.shippingAddress,
+          trackingInfo: {
+            trackingNumber: order.trackingNumber || null,
+            courierName: order.courierName || null,
+            trackingUrl: order.trackingUrl || null,
+          },
         },
       };
     } catch (error) {
@@ -516,20 +538,44 @@ class OrderService {
         };
       }
 
-      // Get from blockchain
-      await this.fabricService.connect();
-      const history = await this.fabricService.getOrderHistory(
-        order.blockchainOrderId
-      );
-      await this.fabricService.disconnect();
+      try {
+        // Try to get from blockchain
+        await this.fabricService.connect();
+        const history = await this.fabricService.getOrderHistory(
+          order.blockchainOrderId
+        );
+        await this.fabricService.disconnect();
 
-      return {
-        success: true,
-        orderId: orderId,
-        orderNumber: order.orderNumber,
-        blockchainOrderId: order.blockchainOrderId,
-        history: history,
-      };
+        return {
+          success: true,
+          orderId: orderId,
+          orderNumber: order.orderNumber,
+          blockchainOrderId: order.blockchainOrderId,
+          blockchainVerified: true,
+          history: history,
+        };
+      } catch (blockchainError) {
+        // If blockchain history retrieval fails, return order status history instead
+        console.warn(
+          "⚠️ Blockchain history not available, using MongoDB history"
+        );
+
+        return {
+          success: true,
+          orderId: orderId,
+          orderNumber: order.orderNumber,
+          blockchainOrderId: order.blockchainOrderId,
+          blockchainVerified: false,
+          message:
+            "Blockchain history feature not yet implemented in chaincode",
+          history: order.statusHistory.map((h) => ({
+            status: h.status,
+            timestamp: h.timestamp,
+            updatedBy: h.updatedBy,
+            comment: h.comment,
+          })),
+        };
+      }
     } catch (error) {
       console.error("❌ Get blockchain history error:", error);
       throw error;
@@ -733,7 +779,14 @@ class OrderService {
   /**
    * Update order status
    */
-  async updateOrderStatus(orderId, newStatus, userId, userRole, notes = "") {
+  async updateOrderStatus(
+    orderId,
+    newStatus,
+    userId,
+    userRole,
+    notes = "",
+    trackingInfo = {}
+  ) {
     try {
       const order = await Order.findById(orderId);
       if (!order) {
@@ -774,7 +827,32 @@ class OrderService {
       // Set timestamps
       if (newStatus === "confirmed") order.confirmedAt = new Date();
       if (newStatus === "processing") order.processingAt = new Date();
-      if (newStatus === "shipped") order.shippedAt = new Date();
+      if (newStatus === "shipped") {
+        order.shippedAt = new Date();
+        // Use provided tracking number or generate one
+        if (trackingInfo && trackingInfo.trackingNumber) {
+          // ✅ Check if exists first
+          order.trackingNumber = trackingInfo.trackingNumber;
+          order.courierName = trackingInfo.carrier || "Standard";
+          if (trackingInfo.estimatedDelivery) {
+            order.estimatedDeliveryDate = new Date(
+              trackingInfo.estimatedDelivery
+            );
+          }
+          order.trackingUrl = this.generateTrackingUrl(
+            order.courierName,
+            order.trackingNumber
+          );
+        } else if (!order.trackingNumber) {
+          // Auto-generate tracking number
+          order.trackingNumber = `TRACK-${Date.now()}-${order.orderNumber.slice(-6)}`;
+          order.courierName = "Standard";
+          order.trackingUrl = this.generateTrackingUrl(
+            order.courierName,
+            order.trackingNumber
+          );
+        }
+      }
       if (newStatus === "delivered") order.deliveredAt = new Date();
       if (newStatus === "cancelled") order.cancelledAt = new Date();
 
@@ -820,12 +898,12 @@ class OrderService {
           previousStatus: oldStatus,
           newStatus,
           comment: notes,
+          trackingNumber: order.trackingNumber, // ✅ Include tracking number
         },
-        previousState: order.toObject(),
+        previousState: { status: oldStatus },
         newState: order.toObject(),
       });
 
-      // ...existing code...
       return {
         success: true,
         message: `Order status updated to ${newStatus}`,
@@ -833,6 +911,7 @@ class OrderService {
           id: order._id,
           orderNumber: order.orderNumber,
           status: order.status,
+          trackingNumber: order.trackingNumber, // ✅ Return tracking number
           statusHistory: order.statusHistory,
         },
       };
@@ -1678,6 +1757,134 @@ class OrderService {
     } catch (error) {
       console.error("❌ Get platform stats error:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Cancel order
+   */
+  async cancelOrder(orderId, userId, reason) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const order = await Order.findById(orderId).session(session);
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      // Check authorization
+      if (order.customerId.toString() !== userId) {
+        throw new Error("Unauthorized: You can only cancel your own orders");
+      }
+
+      // Check if order can be cancelled
+      if (!order.canCancel) {
+        throw new Error(
+          "Order cannot be cancelled at this stage. Please contact support."
+        );
+      }
+
+      // Store previous state for logging
+      const previousState = order.toObject();
+
+      // ✅ PROCESS REFUND IF PAYMENT WAS MADE
+      let refundProcessed = false;
+      let refundAmount = 0;
+
+      if (order.paymentStatus === "paid" && order.paymentMethod === "wallet") {
+        try {
+          // Refund the full amount to customer's wallet
+          await walletBalanceService.processRefund(
+            order.customerId,
+            order._id,
+            order.total,
+            `Refund for cancelled order ${order.orderNumber}`,
+            session
+          );
+
+          refundProcessed = true;
+          refundAmount = order.total;
+
+          // Update order payment status
+          order.paymentStatus = "refunded";
+          order.refundAmount = order.total;
+          order.refundedAt = new Date();
+          order.refundReason = "Order cancelled by customer";
+
+          console.log(`✅ Refunded $${order.total} to customer wallet`);
+        } catch (refundError) {
+          await session.abortTransaction();
+          throw new Error(`Refund failed: ${refundError.message}`);
+        }
+      }
+
+      // Update order status
+      order.status = "cancelled";
+      order.cancelledAt = new Date();
+      order.cancellationReason = reason;
+      order.cancelledBy = userId;
+
+      order.addStatusHistory("cancelled", userId, "customer", reason);
+      order.addSupplyChainEvent({
+        stage: "cancelled",
+        location: order.shippingAddress.city,
+        description: `Order cancelled by customer: ${reason}${refundProcessed ? ` - Refunded $${refundAmount}` : ""}`,
+        performedBy: userId,
+      });
+
+      // Release reserved stock
+      await this.releaseProductStock(order.items, session);
+
+      await order.save({ session });
+
+      await session.commitTransaction();
+
+      // 🆕 LOG ORDER CANCELLATION
+      const user = await User.findById(userId);
+      await logger.logOrder({
+        type: "order_cancelled",
+        action: `Order cancelled: ${order.orderNumber}${refundProcessed ? ` - Refunded $${refundAmount}` : ""}`,
+        orderId: order._id,
+        userId,
+        userDetails: user
+          ? {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+            }
+          : {},
+        status: "success",
+        data: {
+          reason,
+          refundProcessed,
+          refundAmount,
+        },
+        previousState,
+        newState: order.toObject(),
+      });
+
+      return {
+        success: true,
+        message: refundProcessed
+          ? `Order cancelled successfully. $${refundAmount} has been refunded to your wallet.`
+          : "Order cancelled successfully",
+        order: {
+          id: order._id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          cancelledAt: order.cancelledAt,
+          cancellationReason: order.cancellationReason,
+          refundProcessed,
+          refundAmount,
+        },
+      };
+    } catch (error) {
+      await session.abortTransaction();
+      console.error("❌ Cancel order error:", error);
+      throw error;
+    } finally {
+      session.endSession();
     }
   }
 }

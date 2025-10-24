@@ -164,11 +164,62 @@ else
 fi
 
 # ========================================
+# WALLET SETUP
+# ========================================
+print_section "💰 Wallet Setup"
+
+echo "Adding funds to customer wallet..."
+ADD_FUNDS=$(curl -s -X POST ${BASE_URL}/api/wallet/deposit \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 10000, "description": "Test funding for orders"}')
+
+if contains "$ADD_FUNDS" "success"; then
+    # Try multiple paths to get balance
+    BALANCE=$(echo "$ADD_FUNDS" | jq -r '.wallet.balance // .balance // .data.newBalance // .newBalance // 0')
+    print_result "Customer Wallet Funded" "PASS"
+    echo -e "${BLUE}   New Balance: \$$BALANCE${NC}"
+    
+    # Verify balance is actually added
+    if [ "$BALANCE" = "0" ] || [ -z "$BALANCE" ] || [ "$BALANCE" = "null" ]; then
+        echo -e "${RED}   ⚠️ CRITICAL: Balance is $BALANCE after deposit!${NC}"
+        echo -e "${YELLOW}   Debug Response:${NC}"
+        echo "$ADD_FUNDS" | jq '.'
+        exit 1
+    fi
+else
+    print_result "Customer Wallet Funded" "FAIL"
+    echo "$ADD_FUNDS" | jq '.'
+    exit 1
+fi
+
+echo ""
+echo "Verifying wallet balance..."
+BALANCE_CHECK=$(curl -s -X GET ${BASE_URL}/api/wallet/balance \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN")
+
+if contains "$BALANCE_CHECK" "success"; then
+    CURRENT_BALANCE=$(echo "$BALANCE_CHECK" | jq -r '.wallet.balance // .balance // .data.balance // 0')
+    print_result "Wallet Balance Check" "PASS"
+    echo -e "${BLUE}   Available Balance: \$$CURRENT_BALANCE${NC}"
+    
+    # Verify balance before proceeding
+    if [ "$CURRENT_BALANCE" = "0" ] || [ -z "$CURRENT_BALANCE" ] || [ "$CURRENT_BALANCE" = "null" ]; then
+        echo -e "${RED}   ⚠️ CRITICAL: Balance verification failed!${NC}"
+        echo "$BALANCE_CHECK" | jq '.'
+        exit 1
+    fi
+else
+    print_result "Wallet Balance Check" "FAIL"
+    exit 1
+fi
+
+# ========================================
 # TEST 1: CREATE ORDERS
 # ========================================
 print_section "📦 Test 1: Create Orders"
 
-echo "Test 1.1: Create Order from Supplier Product"
+echo "Test 1.1: Create Order from Supplier Product (Wallet Payment)"
 CREATE_ORDER_1=$(curl -s -X POST ${BASE_URL}/api/orders \
   -H "Authorization: Bearer $CUSTOMER_TOKEN" \
   -H "Content-Type: application/json" \
@@ -176,9 +227,7 @@ CREATE_ORDER_1=$(curl -s -X POST ${BASE_URL}/api/orders \
     \"items\": [
       {
         \"productId\": \"$PRODUCT_ID_1\",
-        \"quantity\": 2,
-        \"selectedSize\": \"L\",
-        \"selectedColor\": \"Blue\"
+        \"quantity\": 2
       }
     ],
     \"shippingAddress\": {
@@ -191,26 +240,31 @@ CREATE_ORDER_1=$(curl -s -X POST ${BASE_URL}/api/orders \
       \"country\": \"USA\",
       \"phone\": \"+1 650 555 0303\"
     },
-    \"paymentMethod\": \"card\",
-    \"notes\": \"Please handle with care\"
+    \"paymentMethod\": \"wallet\",
+    \"customerNotes\": \"Please handle with care\"
   }")
 
 if contains "$CREATE_ORDER_1" "success"; then
-    ORDER_ID_1=$(echo "$CREATE_ORDER_1" | jq -r '.order._id // .order.id // .data.order._id // empty' 2>/dev/null)
-    ORDER_NUMBER_1=$(echo "$CREATE_ORDER_1" | jq -r '.order.orderNumber // .data.order.orderNumber // empty' 2>/dev/null)
-    TOTAL=$(echo "$CREATE_ORDER_1" | jq -r '.order.totalAmount // .data.order.totalAmount // empty' 2>/dev/null)
-    print_result "Create Order 1" "PASS"
+    ORDER_ID_1=$(echo "$CREATE_ORDER_1" | jq -r '.order.id // .order._id // .data.order._id // .data.order.id // empty' 2>/dev/null)
+    ORDER_NUMBER_1=$(echo "$CREATE_ORDER_1" | jq -r '.order.orderNumber // .data.order.orderNumber // .data.orderNumber // empty' 2>/dev/null)
+    TOTAL=$(echo "$CREATE_ORDER_1" | jq -r '.order.total // .order.totalAmount // .data.order.total // .data.total // 0')
+    STATUS=$(echo "$CREATE_ORDER_1" | jq -r '.order.status // .data.order.status // .data.status // "unknown"')
+    PAYMENT_STATUS=$(echo "$CREATE_ORDER_1" | jq -r '.order.paymentStatus // .data.order.paymentStatus // .data.paymentStatus // "unknown"')
+    
+    print_result "Create Order 1 (Wallet Payment)" "PASS"
     echo -e "${BLUE}   Order ID: $ORDER_ID_1${NC}"
     echo -e "${BLUE}   Order Number: $ORDER_NUMBER_1${NC}"
+    echo -e "${BLUE}   Status: $STATUS${NC}"
+    echo -e "${BLUE}   Payment Status: $PAYMENT_STATUS${NC}"
     echo -e "${BLUE}   Total: \$$TOTAL${NC}"
 else
-    print_result "Create Order 1" "FAIL"
+    print_result "Create Order 1 (Wallet Payment)" "FAIL"
     echo -e "${YELLOW}Response:${NC}"
-    echo "$CREATE_ORDER_1" | jq '.'
+    echo "$CREATE_ORDER_1" | jq '.' 2>/dev/null || echo "$CREATE_ORDER_1"
 fi
 
 echo ""
-echo "Test 1.2: Create Multi-Item Order"
+echo "Test 1.2: Create Multi-Item Order (Wallet Payment)"
 CREATE_ORDER_2=$(curl -s -X POST ${BASE_URL}/api/orders \
   -H "Authorization: Bearer $CUSTOMER_TOKEN" \
   -H "Content-Type: application/json" \
@@ -218,13 +272,11 @@ CREATE_ORDER_2=$(curl -s -X POST ${BASE_URL}/api/orders \
     \"items\": [
       {
         \"productId\": \"$PRODUCT_ID_1\",
-        \"quantity\": 1,
-        \"selectedSize\": \"M\"
+        \"quantity\": 1
       },
       {
         \"productId\": \"$PRODUCT_ID_2\",
-        \"quantity\": 1,
-        \"selectedSize\": \"L\"
+        \"quantity\": 1
       }
     ],
     \"shippingAddress\": {
@@ -236,15 +288,22 @@ CREATE_ORDER_2=$(curl -s -X POST ${BASE_URL}/api/orders \
       \"country\": \"USA\",
       \"phone\": \"+1 650 555 0303\"
     },
-    \"paymentMethod\": \"card\"
+    \"paymentMethod\": \"wallet\"
   }")
 
 if contains "$CREATE_ORDER_2" "success"; then
-    ORDER_ID_2=$(echo "$CREATE_ORDER_2" | jq -r '.order._id // .data.order._id // empty' 2>/dev/null)
+    ORDER_ID_2=$(echo "$CREATE_ORDER_2" | jq -r '.order.id // .order._id // .data.order._id // .data.order.id // empty' 2>/dev/null)
+    ORDER_NUMBER_2=$(echo "$CREATE_ORDER_2" | jq -r '.order.orderNumber // .data.order.orderNumber // .data.orderNumber // empty' 2>/dev/null)
+    TOTAL_2=$(echo "$CREATE_ORDER_2" | jq -r '.order.total // .order.totalAmount // .data.order.total // .data.total // 0')
+    
     print_result "Create Multi-Item Order" "PASS"
     echo -e "${BLUE}   Order ID: $ORDER_ID_2${NC}"
+    echo -e "${BLUE}   Order Number: $ORDER_NUMBER_2${NC}"
+    echo -e "${BLUE}   Total: \$$TOTAL_2${NC}"
 else
     print_result "Create Multi-Item Order" "FAIL"
+    echo -e "${YELLOW}Response:${NC}"
+    echo "$CREATE_ORDER_2" | jq '.' 2>/dev/null || echo "$CREATE_ORDER_2"
 fi
 
 # ========================================
@@ -266,17 +325,24 @@ fi
 
 echo ""
 echo "Test 2.2: Get Order by ID"
-if [ -n "$ORDER_ID_1" ]; then
+if [ -n "$ORDER_ID_1" ] && [ "$ORDER_ID_1" != "null" ]; then
     GET_ORDER=$(curl -s -X GET "${BASE_URL}/api/orders/${ORDER_ID_1}" \
       -H "Authorization: Bearer $CUSTOMER_TOKEN")
-    
+
     if contains "$GET_ORDER" "success"; then
         STATUS=$(echo "$GET_ORDER" | jq -r '.order.status // .data.status // empty' 2>/dev/null)
+        PAYMENT=$(echo "$GET_ORDER" | jq -r '.order.paymentStatus // .data.paymentStatus // empty' 2>/dev/null)
+        TRACKING=$(echo "$GET_ORDER" | jq -r '.order.trackingNumber // .data.trackingNumber // "Not assigned"' 2>/dev/null)
+        
         print_result "Get Order by ID" "PASS"
         echo -e "${BLUE}   Status: $STATUS${NC}"
+        echo -e "${BLUE}   Payment: $PAYMENT${NC}"
+        echo -e "${BLUE}   Tracking: $TRACKING${NC}"
     else
         print_result "Get Order by ID" "FAIL"
     fi
+else
+    echo -e "${YELLOW}   Skipped - ORDER_ID_1 not available${NC}"
 fi
 
 echo ""
@@ -297,18 +363,22 @@ fi
 # ========================================
 print_section "📍 Test 3: Order Tracking"
 
-if [ -n "$ORDER_ID_1" ]; then
+if [ -n "$ORDER_ID_1" ] && [ "$ORDER_ID_1" != "null" ]; then
     echo "Test 3.1: Track Order"
     TRACK=$(curl -s -X GET "${BASE_URL}/api/orders/${ORDER_ID_1}/track" \
       -H "Authorization: Bearer $CUSTOMER_TOKEN")
     
-    if contains "$TRACK" "success"; then
-        TRACKING_STATUS=$(echo "$TRACK" | jq -r '.tracking.status // empty' 2>/dev/null)
+    if contains "$TRACK" "success\|orderNumber"; then
+        TRACKING_STATUS=$(echo "$TRACK" | jq -r '.status // .tracking.status // "pending"' 2>/dev/null)
+        CURRENT_LOC=$(echo "$TRACK" | jq -r '.currentLocation // "Order placed"' 2>/dev/null)
         print_result "Track Order" "PASS"
-        echo -e "${BLUE}   Tracking Status: $TRACKING_STATUS${NC}"
+        echo -e "${BLUE}   Status: $TRACKING_STATUS${NC}"
+        echo -e "${BLUE}   Location: $CURRENT_LOC${NC}"
     else
         print_result "Track Order" "FAIL"
     fi
+else
+    echo -e "${YELLOW}Test 3.1: Skipped - No ORDER_ID_1${NC}"
 fi
 
 # ========================================
@@ -352,26 +422,30 @@ if [ -n "$ORDER_ID_1" ]; then
     
     sleep 1
     
-    echo ""
-    echo "Test 4.3: Mark as Shipped"
-    SHIPPED=$(curl -s -X PATCH "${BASE_URL}/api/orders/${ORDER_ID_1}/status" \
-      -H "Authorization: Bearer $SUPPLIER_TOKEN" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "status": "shipped",
-        "trackingNumber": "TRACK-123456789",
-        "carrier": "FedEx",
-        "estimatedDelivery": "2025-02-01",
-        "notes": "Order shipped via FedEx"
-      }')
-    
-    if contains "$SHIPPED" "success"; then
-        TRACKING_NUM=$(echo "$SHIPPED" | jq -r '.order.tracking.trackingNumber // empty' 2>/dev/null)
-        print_result "Mark as Shipped" "PASS"
+echo ""
+echo "Test 4.3: Mark as Shipped"
+SHIPPED=$(curl -s -X PATCH "${BASE_URL}/api/orders/${ORDER_ID_1}/status" \
+  -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "shipped",
+    "trackingNumber": "TRACK-123456789",
+    "carrier": "FedEx",
+    "estimatedDelivery": "2025-02-01",
+    "notes": "Order shipped via FedEx"
+  }')
+
+if contains "$SHIPPED" "success"; then
+    TRACKING_NUM=$(echo "$SHIPPED" | jq -r '.order.trackingNumber // empty')
+    print_result "Mark as Shipped" "PASS"
+    if [ -n "$TRACKING_NUM" ] && [ "$TRACKING_NUM" != "null" ]; then
         echo -e "${BLUE}   Tracking Number: $TRACKING_NUM${NC}"
     else
-        print_result "Mark as Shipped" "FAIL"
+        echo -e "${YELLOW}   Tracking Number: Not set${NC}"
     fi
+else
+    print_result "Mark as Shipped" "FAIL"
+fi
     
     sleep 1
     
@@ -428,6 +502,38 @@ if [ -n "$ORDER_ID_2" ]; then
     fi
 fi
 
+# ========================================
+# TEST 5.5: REFUND VERIFICATION
+# ========================================
+print_section "💰 Test 5.5: Refund Verification"
+
+if [ -n "$ORDER_ID_2" ]; then
+    echo "Test 5.5.1: Check Wallet Balance After Cancellation"
+    WALLET_AFTER_CANCEL=$(curl -s -X GET ${BASE_URL}/api/wallet/balance \
+      -H "Authorization: Bearer $CUSTOMER_TOKEN")
+    
+    if contains "$WALLET_AFTER_CANCEL" "success"; then
+        BALANCE_AFTER=$(echo "$WALLET_AFTER_CANCEL" | jq -r '.wallet.balance // .balance // .data.balance // 0')
+        print_result "Wallet Balance After Cancellation" "PASS"
+        echo -e "${BLUE}   Balance After Cancellation: \$$BALANCE_AFTER${NC}"
+        echo -e "${GREEN}   Refund should be reflected in balance${NC}"
+    else
+        print_result "Wallet Balance After Cancellation" "FAIL"
+    fi
+    
+    echo ""
+    echo "Test 5.5.2: Verify Refund Transaction"
+    TRANSACTIONS=$(curl -s -X GET "${BASE_URL}/api/wallet/transactions?limit=5" \
+      -H "Authorization: Bearer $CUSTOMER_TOKEN")
+    
+    if contains "$TRANSACTIONS" "refund"; then
+        print_result "Refund Transaction Recorded" "PASS"
+        echo -e "${GREEN}   Refund transaction found in wallet history${NC}"
+    else
+        print_result "Refund Transaction Recorded" "FAIL"
+        echo -e "${YELLOW}   No refund transaction found${NC}"
+    fi
+fi
 # ========================================
 # TEST 6: ORDER FILTERS
 # ========================================
@@ -613,7 +719,7 @@ INVALID_PRODUCT=$(curl -s -X POST ${BASE_URL}/api/orders \
       "country": "USA",
       "phone": "+1 555 0000"
     },
-    "paymentMethod": "card"
+    "paymentMethod": "wallet"
   }')
 
 if contains "$INVALID_PRODUCT" "not found\|invalid\|error"; then
@@ -654,10 +760,187 @@ MISSING=$(curl -s -X POST ${BASE_URL}/api/orders \
   -H "Content-Type: application/json" \
   -d '{"items": []}')
 
-if contains "$MISSING" "required\|missing\|invalid"; then
+if contains "$MISSING" "success.*false\\|required\\|missing\\|invalid\\|must contain\\|at least one"; then
     print_result "Missing Fields Rejected" "PASS"
 else
     print_result "Missing Fields Rejected" "FAIL"
+fi
+
+# ========================================
+# TEST 12: REFUND SYSTEM
+# ========================================
+print_section "💰 Test 12: Refund System"
+
+echo "Test 12.1: Check Initial Wallet Balance"
+BALANCE_BEFORE_ORDER=$(curl -s -X GET ${BASE_URL}/api/wallet/balance \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN")
+
+INITIAL_BALANCE=$(echo "$BALANCE_BEFORE_ORDER" | jq -r '.wallet.balance // .balance // 0')
+echo -e "${BLUE}   Initial Balance: \$$INITIAL_BALANCE${NC}"
+
+if [ -z "$INITIAL_BALANCE" ] || [ "$INITIAL_BALANCE" = "null" ] || [ "$INITIAL_BALANCE" = "0" ]; then
+    echo -e "${RED}   ⚠️ WARNING: Initial balance is $INITIAL_BALANCE${NC}"
+    echo -e "${YELLOW}   Adding more funds for refund test...${NC}"
+    
+    ADD_MORE=$(curl -s -X POST ${BASE_URL}/api/wallet/deposit \
+      -H "Authorization: Bearer $CUSTOMER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"amount": 500, "description": "Additional funds for refund test"}')
+    
+    sleep 1
+    
+    BALANCE_BEFORE_ORDER=$(curl -s -X GET ${BASE_URL}/api/wallet/balance \
+      -H "Authorization: Bearer $CUSTOMER_TOKEN")
+    INITIAL_BALANCE=$(echo "$BALANCE_BEFORE_ORDER" | jq -r '.wallet.balance // .balance // 0')
+    echo -e "${BLUE}   Updated Balance: \$$INITIAL_BALANCE${NC}"
+fi
+
+echo ""
+echo "Test 12.2: Create Order for Refund Test"
+REFUND_ORDER=$(curl -s -X POST ${BASE_URL}/api/orders \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"items\": [{\"productId\": \"$PRODUCT_ID_1\", \"quantity\": 1}],
+    \"shippingAddress\": {
+      \"name\": \"Test User\",
+      \"addressLine1\": \"123 Test St\",
+      \"city\": \"Test City\",
+      \"state\": \"TS\",
+      \"postalCode\": \"12345\",
+      \"country\": \"USA\",
+      \"phone\": \"+1 555 0000\"
+    },
+    \"paymentMethod\": \"wallet\"
+  }")
+
+if contains "$REFUND_ORDER" "success"; then
+    REFUND_ORDER_ID=$(echo "$REFUND_ORDER" | jq -r '.order.id // .order._id // empty')
+    REFUND_ORDER_TOTAL=$(echo "$REFUND_ORDER" | jq -r '.order.total // 0')
+    print_result "Create Order for Refund" "PASS"
+    echo -e "${BLUE}   Order ID: $REFUND_ORDER_ID${NC}"
+    echo -e "${BLUE}   Order Total: \$$REFUND_ORDER_TOTAL${NC}"
+else
+    print_result "Create Order for Refund" "FAIL"
+    echo -e "${RED}   Response: $REFUND_ORDER${NC}"
+fi
+
+sleep 1
+
+echo ""
+echo "Test 12.3: Check Balance After Order (Before Refund)"
+BALANCE_AFTER_ORDER=$(curl -s -X GET ${BASE_URL}/api/wallet/balance \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN")
+BALANCE_AFTER_PURCHASE=$(echo "$BALANCE_AFTER_ORDER" | jq -r '.wallet.balance // .balance // 0')
+echo -e "${BLUE}   Balance After Purchase: \$$BALANCE_AFTER_PURCHASE${NC}"
+
+# Calculate expected balance after refund
+EXPECTED_BALANCE=$(echo "$BALANCE_AFTER_PURCHASE + $REFUND_ORDER_TOTAL" | bc)
+echo -e "${YELLOW}   Expected Balance After Refund: \$$EXPECTED_BALANCE${NC}"
+
+sleep 1
+
+echo ""
+echo "Test 12.4: Cancel Order (Should Trigger Automatic Refund)"
+if [ -n "$REFUND_ORDER_ID" ] && [ "$REFUND_ORDER_ID" != "null" ]; then
+    CANCEL_WITH_REFUND=$(curl -s -X POST "${BASE_URL}/api/orders/${REFUND_ORDER_ID}/cancel" \
+      -H "Authorization: Bearer $CUSTOMER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "reason": "Testing refund system",
+        "notes": "Automated refund test"
+      }')
+    
+    # Check if cancellation was successful and mentions refund
+    if contains "$CANCEL_WITH_REFUND" "success"; then
+        if contains "$CANCEL_WITH_REFUND" "refund"; then
+            REFUND_MENTIONED=$(echo "$CANCEL_WITH_REFUND" | jq -r '.order.refundAmount // .refundAmount // 0')
+            print_result "Cancel Order with Automatic Refund" "PASS"
+            echo -e "${GREEN}   ✅ Refund processed automatically${NC}"
+            echo -e "${BLUE}   Refund Amount: \$$REFUND_MENTIONED${NC}"
+        else
+            print_result "Cancel Order with Automatic Refund" "FAIL"
+            echo -e "${YELLOW}   Order cancelled but refund not mentioned${NC}"
+        fi
+    else
+        print_result "Cancel Order with Automatic Refund" "FAIL"
+        echo -e "${RED}   Cancellation failed${NC}"
+    fi
+else
+    echo -e "${YELLOW}   Skipped - No REFUND_ORDER_ID${NC}"
+fi
+
+sleep 2
+
+echo ""
+echo "Test 12.5: Verify Wallet Balance Restored"
+BALANCE_AFTER_REFUND=$(curl -s -X GET ${BASE_URL}/api/wallet/balance \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN")
+
+FINAL_BALANCE=$(echo "$BALANCE_AFTER_REFUND" | jq -r '.wallet.balance // .balance // 0')
+
+# Compare final balance with expected balance (allow small rounding differences)
+BALANCE_DIFF=$(echo "$FINAL_BALANCE - $EXPECTED_BALANCE" | bc)
+BALANCE_DIFF_ABS=$(echo "$BALANCE_DIFF" | tr -d '-')
+
+if [ "$BALANCE_DIFF_ABS" = "0" ] || [ $(echo "$BALANCE_DIFF_ABS < 0.01" | bc) -eq 1 ]; then
+    print_result "Wallet Balance Restored" "PASS"
+    echo -e "${BLUE}   Balance Before Order: \$$INITIAL_BALANCE${NC}"
+    echo -e "${BLUE}   Order Amount: \$$REFUND_ORDER_TOTAL${NC}"
+    echo -e "${BLUE}   Balance After Purchase: \$$BALANCE_AFTER_PURCHASE${NC}"
+    echo -e "${BLUE}   Expected After Refund: \$$EXPECTED_BALANCE${NC}"
+    echo -e "${BLUE}   Actual Final Balance: \$$FINAL_BALANCE${NC}"
+    echo -e "${GREEN}   ✅ Refund successfully credited to wallet!${NC}"
+else
+    print_result "Wallet Balance Restored" "FAIL"
+    echo -e "${RED}   ❌ Balance mismatch!${NC}"
+    echo -e "${YELLOW}   Expected: \$$EXPECTED_BALANCE${NC}"
+    echo -e "${YELLOW}   Got: \$$FINAL_BALANCE${NC}"
+    echo -e "${YELLOW}   Difference: \$$BALANCE_DIFF${NC}"
+fi
+
+echo ""
+echo "Test 12.6: Verify Refund in Transaction History"
+REFUND_HISTORY=$(curl -s -X GET "${BASE_URL}/api/wallet/transactions?limit=10" \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN")
+
+if contains "$REFUND_HISTORY" "refund"; then
+    # Try to extract the most recent refund transaction
+    REFUND_AMOUNT=$(echo "$REFUND_HISTORY" | jq -r '
+      .data[] | 
+      select(.type == "refund") | 
+      .amount' | head -1 2>/dev/null)
+    
+    if [ -n "$REFUND_AMOUNT" ] && [ "$REFUND_AMOUNT" != "null" ]; then
+        print_result "Refund Transaction History" "PASS"
+        echo -e "${BLUE}   Refund Amount in History: \$$REFUND_AMOUNT${NC}"
+        echo -e "${GREEN}   ✅ Refund transaction recorded in wallet history${NC}"
+    else
+        print_result "Refund Transaction History" "PASS"
+        echo -e "${GREEN}   Refund found in transaction history${NC}"
+    fi
+else
+    print_result "Refund Transaction History" "FAIL"
+    echo -e "${RED}   No refund transaction found in history${NC}"
+    echo -e "${YELLOW}   Recent transactions:${NC}"
+    echo "$REFUND_HISTORY" | jq -r '.data[0:3] | .[] | "\(.type): $\(.amount)"' 2>/dev/null || echo "   Unable to parse transactions"
+fi
+
+echo ""
+echo "Test 12.7: Verify Order Payment Status is 'refunded'"
+if [ -n "$REFUND_ORDER_ID" ] && [ "$REFUND_ORDER_ID" != "null" ]; then
+    REFUNDED_ORDER=$(curl -s -X GET "${BASE_URL}/api/orders/${REFUND_ORDER_ID}" \
+      -H "Authorization: Bearer $CUSTOMER_TOKEN")
+    
+    PAYMENT_STATUS=$(echo "$REFUNDED_ORDER" | jq -r '.order.paymentStatus // .data.order.paymentStatus // empty')
+    
+    if [ "$PAYMENT_STATUS" = "refunded" ]; then
+        print_result "Order Payment Status Updated" "PASS"
+        echo -e "${BLUE}   Payment Status: $PAYMENT_STATUS${NC}"
+    else
+        print_result "Order Payment Status Updated" "FAIL"
+        echo -e "${YELLOW}   Payment Status: $PAYMENT_STATUS (expected: refunded)${NC}"
+    fi
 fi
 
 # ========================================

@@ -34,7 +34,7 @@ class BlockchainService {
         entityType: "product",
       })
         .sort({ timestamp: 1 })
-        .populate("userId", "name email role")
+        .populate("performedBy", "name email role")
         .lean();
 
       // Query Hyperledger Fabric for on-chain data
@@ -98,13 +98,14 @@ class BlockchainService {
           stage: "Blockchain Event",
           timestamp: log.timestamp,
           action: log.action,
-          actor: log.userId
-            ? {
-                name: log.userId.name,
-                email: log.userId.email,
-                role: log.userId.role,
-              }
-            : null,
+          actor:
+            log.performedBy && log.performedBy._id
+              ? {
+                  name: log.performedBy.name,
+                  email: log.performedBy.email,
+                  role: log.performedBy.role,
+                }
+              : null,
           blockchainTxId: log.transactionId,
           verified: log.status === "success",
           executionTime: log.executionTime,
@@ -178,7 +179,7 @@ class BlockchainService {
         entityType: "order",
       })
         .sort({ timestamp: 1 })
-        .populate("userId", "name email role")
+        .populate("performedBy", "name email role")
         .lean();
 
       // Query Hyperledger Fabric
@@ -262,13 +263,14 @@ class BlockchainService {
           stage: "Blockchain Event",
           timestamp: log.timestamp,
           action: log.action,
-          actor: log.userId
-            ? {
-                name: log.userId.name,
-                email: log.userId.email,
-                role: log.userId.role,
-              }
-            : null,
+          actor:
+            log.performedBy && log.performedBy._id
+              ? {
+                  name: log.performedBy.name,
+                  email: log.performedBy.email,
+                  role: log.performedBy.role,
+                }
+              : null,
           blockchainTxId: log.transactionId,
           verified: log.status === "success",
           executionTime: log.executionTime,
@@ -326,14 +328,14 @@ class BlockchainService {
       if (isObjectId) {
         // Try to find by _id
         log = await BlockchainLog.findById(txId)
-          .populate("userId", "name email role walletAddress")
+          .populate("performedBy", "name email role walletAddress")
           .lean();
       }
 
       // If not found or not an ObjectId, try to find by transactionId
       if (!log) {
         log = await BlockchainLog.findOne({ transactionId: txId })
-          .populate("userId", "name email role walletAddress")
+          .populate("performedBy", "name email role walletAddress")
           .lean();
       }
 
@@ -402,14 +404,15 @@ class BlockchainService {
           type: log.type,
           action: log.action,
           timestamp: log.timestamp,
-          user: log.userId
-            ? {
-                name: log.userId.name,
-                email: log.userId.email,
-                role: log.userId.role,
-                walletAddress: log.userId.walletAddress,
-              }
-            : null,
+          user:
+            log.performedBy && log.performedBy._id
+              ? {
+                  name: log.performedBy.name,
+                  email: log.performedBy.email,
+                  role: log.performedBy.role,
+                  walletAddress: log.performedBy.walletAddress,
+                }
+              : null,
           blockchain: {
             blockHash: log.blockHash,
             blockNumber: log.blockNumber,

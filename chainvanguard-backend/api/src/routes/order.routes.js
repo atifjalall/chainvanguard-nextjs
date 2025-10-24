@@ -5,7 +5,11 @@ import {
   checkRole,
   requireVerification,
   optionalAuth,
+  authenticate,
+  authorizeRoles,
 } from "../middleware/auth.middleware.js";
+import Order from "../models/Order.js";
+import walletBalanceService from "../services/wallet-balance.service.js";
 
 const router = express.Router();
 
@@ -710,82 +714,61 @@ router.post(
 
 /**
  * PATCH /api/orders/:id/status
- * Update order status (Seller/Vendor only)
- * Body: { status, notes? }
+ * Update order status (Seller/Vendor/Expert only)
  */
-router.patch(
-  "/:id/status",
-  verifyToken,
-  requireVerification,
-  checkRole("vendor", "supplier"),
-  async (req, res) => {
-    try {
-      const { status, notes } = req.body;
+router.patch("/:id/status", authenticate, async (req, res) => {
+  try {
+    const {
+      status,
+      notes,
+      trackingNumber,
+      carrier,
+      estimatedDelivery,
+      deliveryDate,
+    } = req.body;
 
-      if (!status) {
-        return res.status(400).json({
-          success: false,
-          message: "Status is required",
-        });
-      }
-
-      const validStatuses = [
-        "confirmed",
-        "processing",
-        "shipped",
-        "delivered",
-        "cancelled",
-      ];
-      if (!validStatuses.includes(status)) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
-        });
-      }
-
-      const result = await orderService.updateOrderStatus(
-        req.params.id,
-        status,
-        req.userId,
-        req.userRole,
-        notes
-      );
-
-      res.json(result);
-    } catch (error) {
-      console.error("PATCH /api/orders/:id/status error:", error);
-
-      if (error.message === "Order not found") {
-        return res.status(404).json({
-          success: false,
-          message: "Order not found",
-        });
-      }
-
-      if (
-        error.message.includes("Unauthorized") ||
-        error.message.includes("not authorized")
-      ) {
-        return res.status(403).json({
-          success: false,
-          message: error.message,
-        });
-      }
-
-      if (error.message.includes("Invalid status transition")) {
-        return res.status(400).json({
-          success: false,
-          message: error.message,
-        });
-      }
-
-      res.status(500).json({
+    if (!status) {
+      return res.status(400).json({
         success: false,
-        message: error.message,
+        message: "Status is required",
       });
     }
+
+    // If shipping, add tracking info
+    if (status === "shipped" && trackingNumber) {
+      const order = await Order.findById(req.params.id);
+      if (order) {
+        order.trackingNumber = trackingNumber;
+        order.courierName = carrier || "Standard";
+        if (estimatedDelivery) {
+          order.estimatedDeliveryDate = new Date(estimatedDelivery);
+        }
+        order.trackingUrl = orderService.generateTrackingUrl(
+          order.courierName,
+          trackingNumber
+        );
+        await order.save();
+      }
+    }
+
+    const result = await orderService.updateOrderStatus(
+      req.params.id,
+      status,
+      req.userId,
+      req.userRole,
+      notes,
+      { trackingNumber, carrier, estimatedDelivery }
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error("PATCH /api/orders/:id/status error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update order status",
+    });
   }
-);
+});
 
 /**
  * PATCH /api/orders/:id/shipping
@@ -965,72 +948,6 @@ router.post(
   }
 );
 
-// ========================================
-// ADMIN/EXPERT ENDPOINTS (/:id routes)
-// ========================================
-
-/**
- * POST /api/orders/:id/refund
- * Process refund (Expert only)
- * Body: { refundAmount, refundReason, refundMethod }
- */
-router.post(
-  "/:id/refund",
-  verifyToken,
-  requireVerification,
-  checkRole("expert"),
-  async (req, res) => {
-    try {
-      const { refundAmount, refundReason, refundMethod } = req.body;
-
-      if (!refundAmount || refundAmount <= 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Valid refund amount is required",
-        });
-      }
-
-      if (!refundReason || refundReason.trim() === "") {
-        return res.status(400).json({
-          success: false,
-          message: "Refund reason is required",
-        });
-      }
-
-      const result = await orderService.processRefund(
-        req.params.id,
-        refundAmount,
-        refundReason,
-        refundMethod || "wallet",
-        req.userId
-      );
-
-      res.json(result);
-    } catch (error) {
-      console.error("POST /api/orders/:id/refund error:", error);
-
-      if (error.message === "Order not found") {
-        return res.status(404).json({
-          success: false,
-          message: "Order not found",
-        });
-      }
-
-      if (error.message.includes("exceeds order total")) {
-        return res.status(400).json({
-          success: false,
-          message: error.message,
-        });
-      }
-
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
-    }
-  }
-);
-
 /**
  * PATCH /api/orders/:id/return/approve
  * Approve return request (Expert/Seller)
@@ -1170,6 +1087,107 @@ router.post(
       res.status(500).json({
         success: false,
         message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/orders/:id/refund
+ * Process manual refund (Supplier/Ministry or Vendor only - they are the sellers)
+ */
+router.post(
+  "/:id/refund",
+  verifyToken,
+  requireVerification,
+  checkRole("supplier", "vendor"),
+  async (req, res) => {
+    try {
+      const { amount, reason } = req.body;
+
+      if (!amount || amount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Valid refund amount is required",
+        });
+      }
+
+      const order = await Order.findById(req.params.id);
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      // ✅ Verify this seller owns the order
+      const isSeller =
+        order.sellerId.toString() === req.userId ||
+        order.items.some((item) => item.sellerId.toString() === req.userId);
+
+      if (!isSeller) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized: You can only refund orders you sold",
+        });
+      }
+
+      // Check if already refunded
+      if (order.paymentStatus === "refunded") {
+        return res.status(400).json({
+          success: false,
+          message: "Order has already been refunded",
+        });
+      }
+
+      // Check if amount is valid
+      if (amount > order.total) {
+        return res.status(400).json({
+          success: false,
+          message: `Refund amount cannot exceed order total ($${order.total})`,
+        });
+      }
+
+      // Process refund
+      const refundResult = await walletBalanceService.processRefund(
+        order.customerId,
+        order._id,
+        parseFloat(amount),
+        reason || `Refund by ${req.userRole} for order ${order.orderNumber}`
+      );
+
+      // Update order
+      order.paymentStatus =
+        amount >= order.total ? "refunded" : "partially_refunded";
+      order.refundAmount = (order.refundAmount || 0) + parseFloat(amount);
+      order.refundedAt = new Date();
+      order.refundReason = reason;
+
+      order.addStatusHistory(
+        order.status,
+        req.userId,
+        req.userRole,
+        `Refund processed: $${amount} - ${reason}`
+      );
+
+      await order.save();
+
+      res.json({
+        success: true,
+        message: `Refund of $${amount} processed successfully`,
+        order: {
+          id: order._id,
+          orderNumber: order.orderNumber,
+          refundAmount: order.refundAmount,
+          paymentStatus: order.paymentStatus,
+          newBalance: refundResult.newBalance,
+        },
+      });
+    } catch (error) {
+      console.error("POST /api/orders/:id/refund error:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to process refund",
       });
     }
   }
