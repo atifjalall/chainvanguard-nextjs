@@ -46,7 +46,7 @@ const inventoryMovementSchema = new Schema({
   },
   performedByRole: {
     type: String,
-    enum: ["supplier", "vendor", "expert", "customer"],
+    enum: ["supplier", "vendor", "expert", "customer", "system"],
     required: true,
   },
   relatedOrderId: {
@@ -459,7 +459,7 @@ const inventorySchema = new Schema(
       // Processing & Care
       finish: {
         type: String,
-        enum: ["Raw", "Bleached", "Dyed", "Printed", "Coated", ""],
+        enum: ["Raw", "Bleached", "Dyed", "Printed", "Coated", "Plain", ""],
         default: "",
       },
       careInstructions: {

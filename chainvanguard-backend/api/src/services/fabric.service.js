@@ -14,6 +14,7 @@ class FabricService {
     this.userContract = null; // For user management
     this.productContract = null; // For product management
     this.orderContract = null; // For order management
+    this.inventoryContract = null;
     this.client = null;
   }
 
@@ -1162,6 +1163,7 @@ class FabricService {
     }
   }
 
+  // Replace the submitTransaction method in your FabricService class
   async submitTransaction(contractName, functionName, ...args) {
     const startTime = Date.now();
     let logData = {
@@ -1182,26 +1184,30 @@ class FabricService {
 
       const executionTime = Date.now() - startTime;
 
-      // Log successful transaction
+      // Log successful transaction (non-blocking)
       logData.status = "success";
       logData.executionTime = executionTime;
       logData.responseData = parsedResult;
       logData.transactionId = parsedResult.txId || logData.transactionId;
       logData.blockHash = parsedResult.blockHash;
 
-      await BlockchainLog.logTransaction(logData);
+      BlockchainLog.createLog(logData).catch((err) =>
+        console.warn("⚠️ Failed to log transaction:", err.message)
+      );
 
       return parsedResult;
     } catch (error) {
       const executionTime = Date.now() - startTime;
 
-      // Log failed transaction
+      // Log failed transaction (non-blocking)
       logData.status = "failed";
       logData.executionTime = executionTime;
       logData.errorMessage = error.message;
       logData.errorStack = error.stack;
 
-      await BlockchainLog.logTransaction(logData);
+      BlockchainLog.createLog(logData).catch((err) =>
+        console.warn("⚠️ Failed to log transaction:", err.message)
+      );
 
       console.error(`❌ Submit transaction failed:`, error);
       throw error;
@@ -1295,7 +1301,361 @@ class FabricService {
         throw new Error(`Unknown contract type: ${contractType}`);
     }
   }
-  
+
+  /**
+   * Generic invoke method for calling any chaincode function
+   * FIXED: Properly handles chaincode responses
+   */
+  async invoke(contractName, functionName, ...args) {
+    const startTime = Date.now();
+
+    // Normalize contract name - remove "Contract" suffix if present
+    const normalizedContractName = contractName
+      .replace(/Contract$/i, "")
+      .toLowerCase();
+
+    let logData = {
+      type: "blockchain_transaction",
+      entityType: "system",
+      chaincodeName: normalizedContractName,
+      functionName: functionName,
+      action: `${normalizedContractName}.${functionName}`,
+      status: "pending",
+      data: {
+        contractName: normalizedContractName,
+        functionName,
+        args: args,
+      },
+    };
+
+    try {
+      console.log(`📝 Invoking ${normalizedContractName}.${functionName}...`);
+      console.log(`📦 Args:`, args);
+
+      // Ensure the contract is initialized
+      await this.ensureContract(normalizedContractName);
+
+      // Get the appropriate contract
+      let contract;
+      switch (normalizedContractName) {
+        case "user":
+          contract = this.userContract;
+          break;
+        case "product":
+          contract = this.productContract;
+          break;
+        case "order":
+          contract = this.orderContract;
+          break;
+        case "inventory":
+          if (!this.inventoryContract) {
+            this.inventoryContract = this.network.getContract(
+              "inventory",
+              "inventory"
+            );
+          }
+          contract = this.inventoryContract;
+          break;
+        default:
+          throw new Error(`Unknown contract: ${normalizedContractName}`);
+      }
+
+      if (!contract) {
+        throw new Error(`Contract ${normalizedContractName} not initialized`);
+      }
+
+      // Submit transaction
+      const result = await contract.submitTransaction(functionName, ...args);
+
+      // Parse result - chaincode returns Buffer/Uint8Array
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      console.log(`📋 Raw chaincode response:`, resultStr);
+
+      // Try to parse as JSON
+      let parsedResult;
+      try {
+        parsedResult = JSON.parse(resultStr);
+      } catch (parseError) {
+        // If not JSON, return the string wrapped in an object
+        console.warn("⚠️ Response is not JSON, wrapping in object");
+        parsedResult = {
+          success: true,
+          result: resultStr,
+          message: resultStr,
+        };
+      }
+
+      const executionTime = Date.now() - startTime;
+
+      // Log successful transaction (non-blocking)
+      logData.status = "success";
+      logData.executionTime = executionTime;
+      logData.data.response = parsedResult;
+      logData.txHash = parsedResult.txId || ctx.stub?.getTxID?.() || "";
+      logData.blockNumber = parsedResult.blockNumber || 0;
+
+      BlockchainLog.createLog(logData).catch((err) =>
+        console.warn("⚠️ Failed to log transaction:", err.message)
+      );
+
+      console.log(
+        `✅ ${normalizedContractName}.${functionName} completed in ${executionTime}ms`
+      );
+
+      // Return the txId if it exists, otherwise return the whole result
+      if (parsedResult.txId) {
+        return parsedResult.txId;
+      }
+
+      return parsedResult;
+    } catch (error) {
+      const executionTime = Date.now() - startTime;
+
+      // Log failed transaction (non-blocking)
+      logData.status = "failed";
+      logData.executionTime = executionTime;
+      logData.error = error.message;
+      logData.data.errorStack = error.stack;
+
+      BlockchainLog.createLog(logData).catch((err) =>
+        console.warn("⚠️ Failed to log error:", err.message)
+      );
+
+      console.error(
+        `❌ Invoke ${normalizedContractName}.${functionName} failed:`,
+        error.message
+      );
+      console.error(`📋 Error details:`, error.details || error);
+
+      throw error;
+    }
+  }
+
+  /**
+   * Generic evaluate method for read-only queries
+   * @param {string} contractName - Contract name
+   * @param {string} functionName - Function to call
+   * @param {Array} args - Arguments for the function
+   * @returns {Promise<Object>} Result from chaincode
+   */
+  async evaluate(contractName, functionName, ...args) {
+    try {
+      // Normalize contract name
+      const normalizedContractName = contractName
+        .replace(/Contract$/i, "")
+        .toLowerCase();
+
+      console.log(`📖 Evaluating ${normalizedContractName}.${functionName}...`);
+
+      // Ensure the contract is initialized
+      await this.ensureContract(normalizedContractName);
+
+      // Get the appropriate contract
+      let contract;
+      switch (normalizedContractName) {
+        case "user":
+          contract = this.userContract;
+          break;
+        case "product":
+          contract = this.productContract;
+          break;
+        case "order":
+          contract = this.orderContract;
+          break;
+        case "inventory":
+          if (!this.inventoryContract) {
+            this.inventoryContract = this.network.getContract(
+              "inventory",
+              "inventory"
+            );
+          }
+          contract = this.inventoryContract;
+          break;
+        default:
+          throw new Error(`Unknown contract: ${normalizedContractName}`);
+      }
+
+      if (!contract) {
+        throw new Error(`Contract ${normalizedContractName} not initialized`);
+      }
+
+      // Evaluate transaction (read-only)
+      const result = await contract.evaluateTransaction(functionName, ...args);
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      let parsedResult;
+      try {
+        parsedResult = JSON.parse(resultStr);
+      } catch (e) {
+        parsedResult = { result: resultStr };
+      }
+
+      console.log(
+        `✅ ${normalizedContractName}.${functionName} evaluated successfully`
+      );
+
+      return parsedResult;
+    } catch (error) {
+      const normalizedContractName = contractName
+        .replace(/Contract$/i, "")
+        .toLowerCase();
+      console.error(
+        `❌ Evaluate ${normalizedContractName}.${functionName} failed:`,
+        error.message
+      );
+      throw error;
+    }
+  }
+
+  // Helper method to determine transaction type
+  _determineTransactionType(contractName, functionName) {
+    const normalized = contractName.replace(/Contract$/i, "").toLowerCase();
+
+    if (functionName.toLowerCase().includes("create")) {
+      return `${normalized}_created`;
+    }
+    if (functionName.toLowerCase().includes("update")) {
+      return `${normalized}_updated`;
+    }
+    if (
+      functionName.toLowerCase().includes("delete") ||
+      functionName.toLowerCase().includes("archive")
+    ) {
+      return `${normalized}_deleted`;
+    }
+    if (functionName.toLowerCase().includes("transfer")) {
+      return `${normalized}_transferred`;
+    }
+
+    return "blockchain_transaction";
+  }
+
+  /**
+   * Generic evaluate method for read-only queries
+   * @param {string} contractName - Contract name
+   * @param {string} functionName - Function to call
+   * @param {Array} args - Arguments for the function
+   * @returns {Promise<Object>} Result from chaincode
+   */
+  async evaluate(contractName, functionName, ...args) {
+    try {
+      console.log(`📖 Evaluating ${contractName}.${functionName}...`);
+
+      // Ensure the contract is initialized
+      await this.ensureContract(contractName);
+
+      // Get the appropriate contract
+      let contract;
+      switch (contractName.toLowerCase()) {
+        case "user":
+          contract = this.userContract;
+          break;
+        case "product":
+          contract = this.productContract;
+          break;
+        case "order":
+          contract = this.orderContract;
+          break;
+        case "inventory":
+          if (!this.inventoryContract) {
+            this.inventoryContract = this.network.getContract(
+              "inventory",
+              "inventory"
+            );
+          }
+          contract = this.inventoryContract;
+          break;
+        default:
+          throw new Error(`Unknown contract: ${contractName}`);
+      }
+
+      if (!contract) {
+        throw new Error(`Contract ${contractName} not initialized`);
+      }
+
+      // Evaluate transaction (read-only)
+      const result = await contract.evaluateTransaction(functionName, ...args);
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      let parsedResult;
+      try {
+        parsedResult = JSON.parse(resultStr);
+      } catch (e) {
+        parsedResult = { result: resultStr };
+      }
+
+      console.log(`✅ ${contractName}.${functionName} evaluated successfully`);
+
+      return parsedResult;
+    } catch (error) {
+      console.error(
+        `❌ Evaluate ${contractName}.${functionName} failed:`,
+        error.message
+      );
+      throw error;
+    }
+  }
+
+  // Update the ensureContract method to include inventory
+  async ensureContract(contractType = "order") {
+    if (!this.gateway || !this.network) {
+      await this.connect();
+    }
+
+    switch (contractType.toLowerCase()) {
+      case "user":
+        if (!this.userContract) {
+          this.userContract = this.network.getContract("user");
+          console.log("✅ User contract initialized");
+        }
+        break;
+      case "product":
+        if (!this.productContract) {
+          this.productContract = this.network.getContract("product");
+          console.log("✅ Product contract initialized");
+        }
+        break;
+      case "order":
+        if (!this.orderContract) {
+          this.orderContract = this.network.getContract("order");
+          console.log("✅ Order contract initialized");
+        }
+        break;
+      case "inventory":
+        if (!this.inventoryContract) {
+          this.inventoryContract = this.network.getContract(
+            "inventory",
+            "inventory"
+          );
+          console.log("✅ Inventory contract initialized");
+        }
+        break;
+      default:
+        throw new Error(`Unknown contract type: ${contractType}`);
+    }
+  }
 }
 
 export default FabricService;

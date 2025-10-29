@@ -20,7 +20,7 @@ const notificationSchema = new Schema(
       required: true,
       index: true,
     },
-
+ 
     // ========================================
     // NOTIFICATION TYPE & CATEGORY
     // ========================================

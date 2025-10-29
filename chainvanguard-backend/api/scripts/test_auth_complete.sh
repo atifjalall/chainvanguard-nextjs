@@ -759,10 +759,112 @@ fi
 
 sleep 1
 
+# ------------------------------------------------------------------
+# Final: Logins for env extraction (Supplier, Vendor, Customer, Expert)
+# ------------------------------------------------------------------
 echo ""
 echo "=============================================="
-echo "📊 TEST SUMMARY"
+echo "🔎 Final: Login each user and print env variables"
 echo "=============================================="
+echo ""
+
+# Helper to extract with multiple fallbacks
+extract() {
+  echo "$1" | jq -r "$2 // $3 // $4 // empty" 2>/dev/null || echo ""
+}
+
+# 1) Supplier - use latest password used in tests (recovered/changed)
+echo "Final Login: Supplier"
+FINAL_SUPPLIER_LOGIN=$(curl -s -X POST ${BASE_URL}/api/auth/login/password \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"address\": \"$SUPPLIER_ADDRESS\",
+    \"password\": \"NewFaisalabad2024!@#\"
+  }")
+
+SUPPLIER_TOKEN=$(echo "$FINAL_SUPPLIER_LOGIN" | jq -r '.data.token // .token // empty')
+# fetch profile to derive ids/wallets
+SUP_PROFILE=$(curl -s -X GET ${BASE_URL}/api/auth/profile -H "Authorization: Bearer $SUPPLIER_TOKEN")
+SUPPLIER_USER_ID=$(echo "$SUP_PROFILE" | jq -r '.data._id // .data.user._id // .data.id // .data.user.id // empty')
+SUPPLIER_WALLET=$(echo "$SUP_PROFILE" | jq -r '.data.walletAddress // .data.user.walletAddress // .data.wallet.address // .data.user.wallet // empty')
+SUPPLIER_ID=$(echo "$SUP_PROFILE" | jq -r '.data.wallet._id // .data.wallet.id // .data.user.walletId // .data.walletId // empty')
+
+echo ""
+echo "SUPPLIER_TOKEN=$SUPPLIER_TOKEN"
+echo "SUPPLIER_USER_ID=$SUPPLIER_USER_ID"
+echo "SUPPLIER_WALLET=$SUPPLIER_WALLET"
+echo "SUPPLIER_ID=$SUPPLIER_ID"
+echo ""
+
+# 2) Vendor - use latest changed password
+echo "Final Login: Vendor"
+FINAL_VENDOR_LOGIN=$(curl -s -X POST ${BASE_URL}/api/auth/login/password \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"address\": \"$VENDOR_ADDRESS\",
+    \"password\": \"NewKarachiFashion2024!@#\"
+  }")
+
+VENDOR_TOKEN=$(echo "$FINAL_VENDOR_LOGIN" | jq -r '.data.token // .token // empty')
+VENDOR_PROFILE=$(curl -s -X GET ${BASE_URL}/api/auth/profile -H "Authorization: Bearer $VENDOR_TOKEN")
+VENDOR_USER_ID=$(echo "$VENDOR_PROFILE" | jq -r '.data._id // .data.user._id // .data.id // .data.user.id // empty')
+VENDOR_WALLET=$(echo "$VENDOR_PROFILE" | jq -r '.data.walletAddress // .data.user.walletAddress // .data.wallet.address // .data.user.wallet // empty')
+VENDOR_ID=$(echo "$VENDOR_PROFILE" | jq -r '.data.wallet._id // .data.wallet.id // .data.user.walletId // .data.walletId // empty')
+
+echo ""
+echo "VENDOR_TOKEN=$VENDOR_TOKEN"
+echo "VENDOR_USER_ID=$VENDOR_USER_ID"
+echo "VENDOR_WALLET=$VENDOR_WALLET"
+echo "VENDOR_ID=$VENDOR_ID"
+echo ""
+
+# 3) Customer - password unchanged
+echo "Final Login: Customer"
+FINAL_CUSTOMER_LOGIN=$(curl -s -X POST ${BASE_URL}/api/auth/login/password \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"address\": \"$CUSTOMER_ADDRESS\",
+    \"password\": \"LahoreShopper2024!@#\"
+  }")
+
+CUSTOMER_TOKEN=$(echo "$FINAL_CUSTOMER_LOGIN" | jq -r '.data.token // .token // empty')
+CUSTOMER_PROFILE=$(curl -s -X GET ${BASE_URL}/api/auth/profile -H "Authorization: Bearer $CUSTOMER_TOKEN")
+CUSTOMER_USER_ID=$(echo "$CUSTOMER_PROFILE" | jq -r '.data._id // .data.user._id // .data.id // .data.user.id // empty')
+CUSTOMER_WALLET=$(echo "$CUSTOMER_PROFILE" | jq -r '.data.walletAddress // .data.user.walletAddress // .data.wallet.address // .data.user.wallet // empty')
+CUSTOMER_ID=$(echo "$CUSTOMER_PROFILE" | jq -r '.data.wallet._id // .data.wallet.id // .data.user.walletId // .data.walletId // empty')
+
+echo ""
+echo "CUSTOMER_TOKEN=$CUSTOMER_TOKEN"
+echo "CUSTOMER_USER_ID=$CUSTOMER_USER_ID"
+echo "CUSTOMER_WALLET=$CUSTOMER_WALLET"
+echo "CUSTOMER_ID=$CUSTOMER_ID"
+echo ""
+
+# 4) Expert - password unchanged
+echo "Final Login: Expert"
+FINAL_EXPERT_LOGIN=$(curl -s -X POST ${BASE_URL}/api/auth/login/password \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"address\": \"$EXPERT_ADDRESS\",
+    \"password\": \"IslamabadExpert2024!@#\"
+  }")
+
+EXPERT_TOKEN=$(echo "$FINAL_EXPERT_LOGIN" | jq -r '.data.token // .token // empty')
+EXPERT_PROFILE=$(curl -s -X GET ${BASE_URL}/api/auth/profile -H "Authorization: Bearer $EXPERT_TOKEN")
+EXPERT_USER_ID=$(echo "$EXPERT_PROFILE" | jq -r '.data._id // .data.user._id // .data.id // .data.user.id // empty')
+EXPERT_WALLET=$(echo "$EXPERT_PROFILE" | jq -r '.data.walletAddress // .data.user.walletAddress // .data.wallet.address // .data.user.wallet // empty')
+EXPERT_ID=$(echo "$EXPERT_PROFILE" | jq -r '.data.wallet._id // .data.wallet.id // .data.user.walletId // .data.walletId // empty')
+
+echo ""
+echo "EXPERT_TOKEN=$EXPERT_TOKEN"
+echo "EXPERT_USER_ID=$EXPERT_USER_ID"
+echo "EXPERT_WALLET=$EXPERT_WALLET"
+echo "EXPERT_ID=$EXPERT_ID"
+echo ""
+
+# ============================================
+# 📊 TEST SUMMARY
+# ============================================
 echo ""
 echo -e "${BLUE}Total Tests: $TOTAL_TESTS${NC}"
 echo -e "${GREEN}Passed: $PASSED_TESTS${NC}"
