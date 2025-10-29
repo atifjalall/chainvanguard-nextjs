@@ -1,5 +1,6 @@
 import express from "express";
 import productService from "../services/product.service.js";
+import { parseJsonFields } from "../middleware/parse-json-fields.js";
 import {
   verifyToken,
   checkRole,
@@ -378,9 +379,7 @@ router.get("/:id/related", async (req, res) => {
   }
 });
 
-// ========================================
 // PROTECTED ROUTES (Authentication required)
-// ========================================
 
 /**
  * POST /api/products
@@ -392,6 +391,7 @@ router.post(
   requireVerification,
   checkRole("vendor", "supplier"),
   uploadProductFiles,
+  parseJsonFields(["apparelDetails"]),
   handleUploadError,
   async (req, res) => {
     try {
@@ -474,9 +474,59 @@ router.put(
   requireVerification,
   checkRole("vendor", "supplier"),
   uploadProductFiles,
+  parseJsonFields(["apparelDetails"]),
   handleUploadError,
   async (req, res) => {
     try {
+      console.log("========================================");
+      console.log("📝 UPDATE PRODUCT REQUEST");
+      console.log("========================================");
+      console.log("Product ID:", req.params.id);
+      console.log("User ID:", req.userId);
+
+      // Log files
+      if (req.files) {
+        console.log("📁 Files received:");
+        Object.keys(req.files).forEach((key) => {
+          console.log(`  - ${key}: ${req.files[key].length} files`);
+          req.files[key].forEach((file, idx) => {
+            console.log(
+              `    ${idx + 1}. ${file.originalname} (${(file.size / 1024).toFixed(2)} KB)`
+            );
+          });
+        });
+      } else {
+        console.log("📁 No files received");
+      }
+
+      // Log body keys
+      console.log("📄 Body fields:", Object.keys(req.body));
+
+      // Parse arrays
+      if (req.body["tags[]"]) {
+        req.body.tags = Array.isArray(req.body["tags[]"])
+          ? req.body["tags[]"]
+          : [req.body["tags[]"]];
+        delete req.body["tags[]"];
+      }
+
+      if (req.body["certifications[]"]) {
+        req.body.certifications = Array.isArray(req.body["certifications[]"])
+          ? req.body["certifications[]"]
+          : [req.body["certifications[]"]];
+        delete req.body["certifications[]"];
+      }
+
+      if (req.body["removeImages[]"]) {
+        req.body.removeImages = Array.isArray(req.body["removeImages[]"])
+          ? req.body["removeImages[]"]
+          : [req.body["removeImages[]"]];
+        delete req.body["removeImages[]"];
+        console.log("🗑️  Images to remove:", req.body.removeImages);
+      }
+
+      console.log("========================================");
+
       const product = await productService.updateProduct(
         req.params.id,
         req.body,
@@ -484,13 +534,16 @@ router.put(
         req.userId
       );
 
+      console.log("✅ Product update completed successfully");
+      console.log("========================================");
+
       res.json({
         success: true,
         message: "Product updated successfully",
         product,
       });
     } catch (error) {
-      console.error("PUT /api/products/:id error:", error);
+      console.error("❌ PUT /api/products/:id error:", error);
 
       if (error.message === "Product not found") {
         return res.status(404).json({

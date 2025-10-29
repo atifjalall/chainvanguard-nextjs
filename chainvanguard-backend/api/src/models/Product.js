@@ -79,7 +79,17 @@ const productSchema = new Schema(
 
     productType: {
       type: String,
-      enum: ["Casual", "Formal", "Sports", "Party", "Traditional", "Workwear"],
+      enum: [
+        "Casual",
+        "Formal",
+        "Sports",
+        "Party",
+        "Traditional",
+        "Workwear",
+        "Evening",
+        "School",
+        "Activewear",
+      ],
       default: "Casual",
     },
 
@@ -92,16 +102,50 @@ const productSchema = new Schema(
     // APPAREL-SPECIFIC ATTRIBUTES
     // ========================================
     apparelDetails: {
-      // Size & Fit
+      // Size & Fit - EXPANDED for Kids
       size: {
         type: String,
-        enum: ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL", "Free Size"],
+        enum: [
+          // Standard Adult Sizes
+          "XXS",
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL",
+          "XXL",
+          "XXXL",
+          "Free Size",
+          // Kids Sizes - Toddler
+          "2T",
+          "3T",
+          "4T",
+          // Kids Sizes - Numeric
+          "5",
+          "6",
+          "7",
+          "8",
+          "10",
+          "12",
+          "14",
+          "16",
+        ],
         required: true,
         index: true,
       },
       fit: {
         type: String,
-        enum: ["Slim Fit", "Regular Fit", "Loose Fit", "Oversized"],
+        enum: [
+          "Slim Fit",
+          "Regular Fit",
+          "Loose Fit",
+          "Oversized",
+          "Athletic Fit",
+          "Relaxed Fit",
+          "Bodycon",
+          "A-Line",
+          "Comfortable Fit",
+        ],
         default: "Regular Fit",
       },
 
@@ -118,8 +162,14 @@ const productSchema = new Schema(
           "Striped",
           "Checked",
           "Printed",
+          "Floral",
+          "Abstract",
+          "Geometric",
+          "Polka Dot",
           "Embroidered",
-          "Other",
+          "Plaid",
+          "Cartoon",
+          "Animal Print",
         ],
         default: "Solid",
       },
@@ -131,31 +181,44 @@ const productSchema = new Schema(
       },
       fabricType: {
         type: String,
-        default: "",
+        enum: [
+          "Cotton",
+          "Polyester",
+          "Silk",
+          "Wool",
+          "Linen",
+          "Denim",
+          "Jersey",
+          "Chiffon",
+          "Satin",
+          "Velvet",
+          "Fleece",
+          "Soft Cotton",
+          "Lace",
+        ],
+        default: "Cotton",
       },
       fabricWeight: {
         type: String,
         default: "",
       },
-      fabricComposition: [
-        {
-          material: { type: String },
-          percentage: { type: Number, min: 0, max: 100 },
-        },
-      ],
+      careInstructions: {
+        type: String,
+        default: "Machine wash cold, tumble dry low",
+      },
 
-      // Style Attributes
+      // Design Details
       neckline: {
         type: String,
         enum: [
-          "Crew Neck",
-          "V-Neck",
           "Round Neck",
-          "Collar",
-          "Off-Shoulder",
+          "V-Neck",
+          "Crew Neck",
+          "Polo Neck",
           "Boat Neck",
+          "Off-Shoulder",
+          "Collar",
           "Turtleneck",
-          "Other",
         ],
         default: "Crew Neck",
       },
@@ -164,35 +227,126 @@ const productSchema = new Schema(
         enum: ["Sleeveless", "Short Sleeve", "3/4 Sleeve", "Long Sleeve"],
         default: "Short Sleeve",
       },
+    },
 
-      // Care Instructions
-      careInstructions: {
-        type: String,
-        default: "Machine wash cold, tumble dry low",
-      },
-      washingTemperature: {
-        type: String,
-        default: "30°C",
-      },
-      ironingInstructions: {
-        type: String,
-        default: "Low heat",
-      },
-      dryCleanOnly: {
-        type: Boolean,
-        default: false,
-      },
+    // ========================================
+    // PRICING
+    // ========================================
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+      index: true,
+    },
+    costPrice: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    originalPrice: {
+      type: Number,
+      min: 0,
+    },
+    discount: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
+    },
 
-      // Measurements (for size chart)
-      measurements: {
-        chest: { type: Number, default: 0 },
-        waist: { type: Number, default: 0 },
-        length: { type: Number, default: 0 },
-        shoulder: { type: Number, default: 0 },
-        sleeve: { type: Number, default: 0 },
-        hips: { type: Number, default: 0 },
-        unit: { type: String, default: "cm" },
+    // ========================================
+    // INVENTORY
+    // ========================================
+    quantity: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    reservedQuantity: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    minStockLevel: {
+      type: Number,
+      min: 0,
+      default: 10,
+    },
+    sku: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+
+    // ========================================
+    // IMAGES
+    // ========================================
+    images: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        ipfsHash: {
+          type: String,
+        },
+        cloudinaryId: {
+          type: String,
+        },
+        publicId: {
+          type: String,
+        },
+        viewType: {
+          type: String,
+          enum: ["front", "back", "side", "detail", "worn", "tag"],
+          default: "front",
+        },
+        isMain: {
+          type: Boolean,
+          default: false,
+        },
       },
+    ],
+
+    // ========================================
+    // PHYSICAL PROPERTIES
+    // ========================================
+    weight: {
+      type: Number,
+      min: 0,
+    },
+    dimensions: {
+      type: String,
+    },
+
+    // ========================================
+    // TAGS & METADATA
+    // ========================================
+    tags: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+    season: {
+      type: String,
+      enum: ["Spring", "Summer", "Autumn", "Winter", "All Season"],
+      default: "All Season",
+    },
+    countryOfOrigin: {
+      type: String,
+      default: "",
+    },
+    manufacturer: {
+      type: String,
+      default: "",
     },
 
     // ========================================
@@ -210,194 +364,134 @@ const productSchema = new Schema(
     },
     sellerWalletAddress: {
       type: String,
-      required: true,
-    },
-    sellerRole: {
-      type: String,
-      enum: ["supplier", "vendor"],
-      default: "supplier",
-    },
-
-    // ========================================
-    // PRICING
-    // ========================================
-    price: {
-      type: Number,
-      required: true,
-      min: 0,
-      index: true,
-    },
-    currency: {
-      type: String,
-      default: "USD",
-    },
-    costPrice: {
-      type: Number,
-      default: 0,
-    },
-    wholesalePrice: {
-      type: Number,
-      default: 0,
-    },
-    markup: {
-      type: Number,
-      default: 0,
-    },
-
-    // ========================================
-    // INVENTORY
-    // ========================================
-    quantity: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    reservedQuantity: {
-      type: Number,
-      default: 0,
-    },
-    minStockLevel: {
-      type: Number,
-      default: 10,
-    },
-    sku: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
-    barcode: {
-      type: String,
       default: "",
     },
-    unit: {
+
+    // ========================================
+    // STATUS
+    // ========================================
+    status: {
       type: String,
-      default: "piece",
+      enum: [
+        "draft",
+        "active",
+        "inactive",
+        "out_of_stock",
+        "discontinued",
+        "archived",
+      ],
+      default: "active",
+      index: true,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    isNewArrival: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    isBestseller: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
 
     // ========================================
-    // IMAGES (Cloudinary + IPFS)
+    // CERTIFICATIONS
     // ========================================
-    images: [
+    isSustainable: {
+      type: Boolean,
+      default: false,
+    },
+    certifications: {
+      type: [String],
+      default: [],
+    },
+
+    // ========================================
+    // RATINGS & REVIEWS
+    // ========================================
+    averageRating: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: 0,
+    },
+    totalReviews: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    reviews: [
       {
-        url: { type: String, required: true },
-        publicId: { type: String, required: true },
-        ipfsHash: { type: String, default: "" },
-        isMain: { type: Boolean, default: false },
-        viewType: {
-          type: String,
-          enum: ["front", "back", "side", "detail", "worn", "tag", "other"],
-          default: "front",
+        userId: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        userName: String,
+        rating: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 5,
+        },
+        comment: String,
+        verifiedPurchase: {
+          type: Boolean,
+          default: false,
+        },
+        images: [String],
+        helpful: {
+          type: Number,
+          default: 0,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
         },
       },
     ],
 
     // ========================================
-    // DOCUMENTS/CERTIFICATES (IPFS)
+    // SALES & VIEWS
     // ========================================
-    certificates: [
-      {
-        name: { type: String, required: true },
-        certificateNumber: { type: String, default: "" },
-        type: {
-          type: String,
-          enum: [
-            "GOTS",
-            "Fair Trade",
-            "OEKO-TEX",
-            "ISO",
-            "Origin",
-            "Quality",
-            "Compliance",
-            "Other",
-          ],
-          default: "Other",
-        },
-        issueDate: { type: Date, default: null },
-        expiryDate: { type: Date, default: null },
-        ipfsHash: { type: String, required: true },
-        ipfsUrl: { type: String, required: true },
-        cloudinaryUrl: { type: String, default: "" },
-        fileSize: { type: Number, default: 0 },
-        mimeType: { type: String, default: "application/pdf" },
-      },
-    ],
-
-    // ========================================
-    // MANUFACTURING & ORIGIN
-    // ========================================
-    manufacturingDetails: {
-      manufacturerId: { type: String, default: "" },
-      manufacturerName: { type: String, default: "" },
-      manufactureDate: { type: Date, default: null },
-      batchNumber: { type: String, default: "" },
-      productionCountry: { type: String, default: "" },
-      productionFacility: { type: String, default: "" },
-      productionLine: { type: String, default: "" },
+    totalSold: {
+      type: Number,
+      min: 0,
+      default: 0,
     },
-
-    // Physical specifications
-    specifications: {
-      weight: { type: Number, default: 0 },
-      weightUnit: { type: String, default: "kg" },
-      packageWeight: { type: Number, default: 0 },
-      packageType: { type: String, default: "Poly Bag" },
-      dimensions: {
-        length: { type: Number, default: 0 },
-        width: { type: Number, default: 0 },
-        height: { type: Number, default: 0 },
-        unit: { type: String, default: "cm" },
-      },
+    totalRevenue: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    views: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    lastViewedAt: {
+      type: Date,
+    },
+    lastSoldAt: {
+      type: Date,
     },
 
     // ========================================
-    // SUSTAINABILITY & CERTIFICATIONS
-    // ========================================
-    sustainability: {
-      isOrganic: { type: Boolean, default: false },
-      isFairTrade: { type: Boolean, default: false },
-      isRecycled: { type: Boolean, default: false },
-      isCarbonNeutral: { type: Boolean, default: false },
-      waterSaving: { type: Boolean, default: false },
-      ethicalProduction: { type: Boolean, default: false },
-    },
-
-    qualityGrade: {
-      type: String,
-      enum: ["A", "B", "C", "Premium", "Standard"],
-      default: "Standard",
-    },
-
-    // ========================================
-    // SUPPLY CHAIN & TRACKING
-    // ========================================
-    currentLocation: {
-      facility: { type: String, default: "" },
-      address: { type: String, default: "" },
-      city: { type: String, default: "" },
-      country: { type: String, default: "" },
-      coordinates: {
-        lat: { type: Number, default: 0 },
-        lng: { type: Number, default: 0 },
-      },
-    },
-
-    supplyChainSummary: {
-      totalStages: { type: Number, default: 0 },
-      currentStage: { type: String, default: "Created" },
-      lastUpdate: { type: Date, default: Date.now },
-    },
-
-    // ========================================
-    // BLOCKCHAIN INTEGRATION
+    // BLOCKCHAIN
     // ========================================
     blockchainProductId: {
       type: String,
-      unique: true,
-      sparse: true,
-    },
-    blockchainTxId: {
-      type: String,
-      default: "",
+      index: true,
     },
     blockchainVerified: {
       type: Boolean,
@@ -405,305 +499,151 @@ const productSchema = new Schema(
     },
     ipfsHash: {
       type: String,
-      default: "",
     },
-    qrCode: {
+    fabricTransactionId: {
       type: String,
-      default: "",
-    },
-
-    // ========================================
-    // STATUS & VISIBILITY
-    // ========================================
-    status: {
-      type: String,
-      enum: [
-        "draft",
-        "active",
-        "out_of_stock",
-        "discontinued",
-        "pending_verification",
-        "archived",
-      ],
-      default: "active",
       index: true,
     },
 
-    isVerified: {
+    // ========================================
+    // SHIPPING
+    // ========================================
+    freeShipping: {
       type: Boolean,
       default: false,
     },
-    isFeatured: {
-      type: Boolean,
-      default: false,
-    },
-    isPublished: {
-      type: Boolean,
-      default: true,
-    },
-
-    // ========================================
-    // SEO & MARKETING
-    // ========================================
-    slug: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
-    tags: [{ type: String }],
-    keywords: [{ type: String }],
-    metaDescription: {
-      type: String,
-      default: "",
-    },
-
-    season: {
-      type: String,
-      enum: ["Spring", "Summer", "Autumn", "Winter", "All Season"],
-      default: "All Season",
-    },
-    collection: {
-      type: String,
-      default: "",
-    },
-
-    // ========================================
-    // STATISTICS & ANALYTICS
-    // ========================================
-    views: {
+    shippingCost: {
       type: Number,
-      default: 0,
-    },
-    favorites: {
-      type: Number,
-      default: 0,
-    },
-    cartAdditions: {
-      type: Number,
-      default: 0,
-    },
-    totalSold: {
-      type: Number,
-      default: 0,
-    },
-    totalRevenue: {
-      type: Number,
-      default: 0,
-    },
-    averageRating: {
-      type: Number,
-      default: 0,
       min: 0,
-      max: 5,
-    },
-    totalReviews: {
-      type: Number,
       default: 0,
     },
-    lastViewedAt: {
-      type: Date,
-      default: null,
+    estimatedDeliveryDays: {
+      type: Number,
+      min: 0,
+      default: 7,
     },
-    lastSoldAt: {
-      type: Date,
-      default: null,
-    },
+
+    // ========================================
+    // DATES
+    // ========================================
     lastRestockedAt: {
       type: Date,
-      default: null,
-    },
-
-    // ========================================
-    // ADDITIONAL FIELDS
-    // ========================================
-    minimumOrderQuantity: {
-      type: Number,
-      default: 1,
-    },
-    warrantyPeriod: {
-      type: String,
-      default: "",
-    },
-    returnPolicy: {
-      type: String,
-      default: "30 days",
-    },
-    shippingDetails: {
-      weight: { type: Number, default: 0 },
-      dimensions: {
-        length: { type: Number, default: 0 },
-        width: { type: Number, default: 0 },
-        height: { type: Number, default: 0 },
-      },
-      freeShipping: { type: Boolean, default: false },
-      shippingCost: { type: Number, default: 0 },
     },
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
 // ========================================
-// INDEXES FOR PERFORMANCE
+// INDEXES
 // ========================================
+productSchema.index({ name: "text", description: "text", tags: "text" });
+productSchema.index({ category: 1, subcategory: 1 });
 productSchema.index({ sellerId: 1, status: 1 });
-productSchema.index({ category: 1, subcategory: 1, status: 1 });
-productSchema.index({ "apparelDetails.size": 1, "apparelDetails.color": 1 });
 productSchema.index({ price: 1, status: 1 });
 productSchema.index({ createdAt: -1 });
 productSchema.index({ totalSold: -1 });
 productSchema.index({ averageRating: -1 });
-productSchema.index({ isFeatured: 1, status: 1 });
-
-// Text search index
-productSchema.index({
-  name: "text",
-  description: "text",
-  tags: "text",
-  "apparelDetails.material": "text",
-  "apparelDetails.color": "text",
-  brand: "text",
-});
 
 // ========================================
 // VIRTUALS
 // ========================================
+
 // Available quantity (total - reserved)
 productSchema.virtual("availableQuantity").get(function () {
-  return Math.max(0, this.quantity - (this.reservedQuantity || 0));
+  return this.quantity - (this.reservedQuantity || 0);
 });
 
 // Stock status
 productSchema.virtual("stockStatus").get(function () {
-  const available = this.availableQuantity;
-  if (available === 0) return "out_of_stock";
+  const available = this.quantity - (this.reservedQuantity || 0);
+  if (available <= 0) return "out_of_stock";
   if (available <= this.minStockLevel) return "low_stock";
   return "in_stock";
 });
 
-// Full product URL
+// Product URL
 productSchema.virtual("url").get(function () {
-  return `${process.env.FRONTEND_URL}/products/${this.slug}`;
+  return `/products/${this.slug || this._id}`;
 });
 
 // ========================================
-// PRE-SAVE HOOKS
+// MIDDLEWARE
 // ========================================
-productSchema.pre("save", async function (next) {
-  try {
-    // Auto-generate SKU if not provided
-    if (!this.sku) {
-      const category = this.category.substring(0, 3).toUpperCase();
-      const subcat = this.subcategory.substring(0, 3).toUpperCase();
-      const size = this.apparelDetails?.size?.substring(0, 1) || "X";
-      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-      this.sku = `${category}-${subcat}-${size}-${random}`;
-    }
+// Generate slug before save
+productSchema.pre("save", function (next) {
+  if (!this.slug && this.name) {
+    this.slug = this.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
 
-    // Auto-generate slug
-    if (!this.slug) {
-      this.slug =
-        this.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, "") +
-        "-" +
-        Date.now();
-    }
-
-    // Update stock status
-    if (this.quantity === 0 && this.status === "active") {
-      this.status = "out_of_stock";
-    } else if (this.quantity > 0 && this.status === "out_of_stock") {
-      this.status = "active";
-    }
-
-    // Set main image if none selected
-    if (this.images.length > 0 && !this.images.some((img) => img.isMain)) {
-      this.images[0].isMain = true;
-    }
-
-    // Update last restocked date if quantity increased
-    if (this.isModified("quantity") && this.quantity > 0) {
-      const original = this.$locals?.original?.quantity || 0;
-      if (this.quantity > original) {
-        this.lastRestockedAt = new Date();
-      }
-    }
-
-    next();
-  } catch (error) {
-    next(error);
+    // Append a random string to ensure uniqueness
+    this.slug += `-${Date.now().toString(36)}`;
   }
+  next();
+});
+
+// Update stock status before save
+productSchema.pre("save", function (next) {
+  if (this.quantity <= 0) {
+    this.status = "out_of_stock";
+  } else if (
+    this.status === "out_of_stock" &&
+    this.quantity > this.minStockLevel
+  ) {
+    this.status = "active";
+  }
+  next();
 });
 
 // ========================================
 // METHODS
 // ========================================
-// Reserve quantity for orders
-productSchema.methods.reserveQuantity = async function (qty) {
-  if (this.availableQuantity < qty) {
-    throw new Error("Insufficient stock available");
+
+// Check if product is in stock
+productSchema.methods.isInStock = function (requestedQuantity = 1) {
+  return this.availableQuantity >= requestedQuantity;
+};
+
+// Reserve quantity
+productSchema.methods.reserveQuantity = async function (quantity) {
+  if (!this.isInStock(quantity)) {
+    throw new Error("Insufficient stock");
   }
-  this.reservedQuantity = (this.reservedQuantity || 0) + qty;
+  this.reservedQuantity = (this.reservedQuantity || 0) + quantity;
   return this.save();
 };
 
 // Release reserved quantity
-productSchema.methods.releaseQuantity = async function (qty) {
-  this.reservedQuantity = Math.max(0, (this.reservedQuantity || 0) - qty);
+productSchema.methods.releaseReservedQuantity = async function (quantity) {
+  this.reservedQuantity = Math.max((this.reservedQuantity || 0) - quantity, 0);
   return this.save();
 };
 
-// Decrement quantity after sale
-productSchema.methods.decrementQuantity = async function (qty) {
-  if (this.quantity < qty) {
-    throw new Error("Insufficient stock");
-  }
-  this.quantity -= qty;
-  this.totalSold += qty;
+// Update stock after purchase
+productSchema.methods.updateStockAfterPurchase = async function (quantity) {
+  this.quantity -= quantity;
+  this.reservedQuantity = Math.max((this.reservedQuantity || 0) - quantity, 0);
+  this.totalSold += quantity;
   this.lastSoldAt = new Date();
   return this.save();
 };
 
-// Increment view count
-productSchema.methods.incrementViews = async function () {
-  this.views += 1;
-  this.lastViewedAt = new Date();
+// Add review
+productSchema.methods.addReview = async function (reviewData) {
+  this.reviews.push(reviewData);
+
+  // Recalculate average rating
+  const totalRating = this.reviews.reduce((sum, r) => sum + r.rating, 0);
+  this.averageRating = totalRating / this.reviews.length;
+  this.totalReviews = this.reviews.length;
+
   return this.save();
 };
-
-// ========================================
-// STATICS
-// ========================================
-// Find by SKU
-productSchema.statics.findBySKU = function (sku) {
-  return this.findOne({ sku: sku.toUpperCase() });
-};
-
-// Find low stock products
-productSchema.statics.findLowStock = function (sellerId) {
-  const query = {
-    status: "active",
-    $expr: { $lte: ["$quantity", "$minStockLevel"] },
-  };
-  if (sellerId) query.sellerId = sellerId;
-  return this.find(query);
-};
-
-// Find featured products
-productSchema.statics.findFeatured = function (limit = 10) {
-  return this.find({ isFeatured: true, status: "active" })
-    .sort({ totalSold: -1, averageRating: -1 })
-    .limit(limit);
-};
-
-// ========================================
-// ENSURE VIRTUALS IN JSON
-// ========================================
-productSchema.set("toJSON", { virtuals: true });
-productSchema.set("toObject", { virtuals: true });
 
 export default model("Product", productSchema);

@@ -53,17 +53,19 @@ export const APPAREL_CATEGORIES = {
     subcategories: [
       "T-Shirts",
       "Shirts",
+      "Sweaters", // ADDED
+      "Hoodies",
       "Jeans",
       "Trousers",
       "Shorts",
       "Dresses",
       "Jackets",
-      "Hoodies",
+      "Coats", // ADDED
       "Activewear",
       "Sleepwear",
       "Underwear",
     ],
-    sizes: ["2T", "3T", "4T", "5", "6", "7", "8", "10", "12", "14"],
+    sizes: ["2T", "3T", "4T", "5", "6", "7", "8", "10", "12", "14", "16"], // Added 16
     description: "Kids' clothing and apparel",
   },
   Unisex: {
@@ -82,38 +84,144 @@ export const APPAREL_CATEGORIES = {
 };
 
 // ========================================
-// PRODUCT TYPES
+// PRODUCT TYPES - GENDER SPECIFIC
 // ========================================
-export const PRODUCT_TYPES = [
-  { value: "Casual", label: "Casual" },
-  { value: "Formal", label: "Formal" },
-  { value: "Sports", label: "Sports" },
-  { value: "Party", label: "Party" },
-  { value: "Traditional", label: "Traditional" },
-  { value: "Workwear", label: "Workwear" },
-];
+export const PRODUCT_TYPES = {
+  Men: [
+    { value: "Casual", label: "Casual" },
+    { value: "Formal", label: "Formal" },
+    { value: "Sports", label: "Sports" },
+    { value: "Workwear", label: "Workwear" },
+    { value: "Party", label: "Party" },
+  ],
+  Women: [
+    { value: "Casual", label: "Casual" },
+    { value: "Formal", label: "Formal" },
+    { value: "Sports", label: "Sports" },
+    { value: "Party", label: "Party" },
+    { value: "Traditional", label: "Traditional" },
+    { value: "Evening", label: "Evening Wear" },
+  ],
+  Kids: [
+    { value: "Casual", label: "Casual" },
+    { value: "Sports", label: "Sports" },
+    { value: "Party", label: "Party" },
+    { value: "School", label: "School Wear" },
+  ],
+  Unisex: [
+    { value: "Casual", label: "Casual" },
+    { value: "Sports", label: "Sports" },
+    { value: "Activewear", label: "Activewear" },
+  ],
+};
 
 // ========================================
-// FIT TYPES
+// FIT TYPES - GENDER SPECIFIC
 // ========================================
-export const FIT_TYPES = [
-  { value: "Slim Fit", label: "Slim Fit" },
-  { value: "Regular Fit", label: "Regular Fit" },
-  { value: "Loose Fit", label: "Loose Fit" },
-  { value: "Oversized", label: "Oversized" },
-];
+export const FIT_TYPES = {
+  Men: [
+    { value: "Slim Fit", label: "Slim Fit" },
+    { value: "Regular Fit", label: "Regular Fit" },
+    { value: "Loose Fit", label: "Loose Fit" },
+    { value: "Athletic Fit", label: "Athletic Fit" },
+    { value: "Relaxed Fit", label: "Relaxed Fit" },
+  ],
+  Women: [
+    { value: "Slim Fit", label: "Slim Fit" },
+    { value: "Regular Fit", label: "Regular Fit" },
+    { value: "Loose Fit", label: "Loose Fit" },
+    { value: "Bodycon", label: "Bodycon" },
+    { value: "A-Line", label: "A-Line" },
+    { value: "Oversized", label: "Oversized" },
+  ],
+  Kids: [
+    { value: "Regular Fit", label: "Regular Fit" },
+    { value: "Loose Fit", label: "Loose Fit" },
+    { value: "Comfortable Fit", label: "Comfortable Fit" },
+  ],
+  Unisex: [
+    { value: "Regular Fit", label: "Regular Fit" },
+    { value: "Loose Fit", label: "Loose Fit" },
+    { value: "Oversized", label: "Oversized" },
+  ],
+};
 
 // ========================================
-// PATTERNS
+// PATTERNS - GENDER SPECIFIC
 // ========================================
-export const PATTERNS = [
-  { value: "Solid", label: "Solid" },
-  { value: "Striped", label: "Striped" },
-  { value: "Checked", label: "Checked" },
-  { value: "Printed", label: "Printed" },
-  { value: "Embroidered", label: "Embroidered" },
-  { value: "Other", label: "Other" },
-];
+export const PATTERNS = {
+  Men: [
+    { value: "Solid", label: "Solid" },
+    { value: "Striped", label: "Striped" },
+    { value: "Checked", label: "Checked" },
+    { value: "Plaid", label: "Plaid" },
+    { value: "Printed", label: "Printed" },
+  ],
+  Women: [
+    { value: "Solid", label: "Solid" },
+    { value: "Striped", label: "Striped" },
+    { value: "Checked", label: "Checked" },
+    { value: "Floral", label: "Floral" },
+    { value: "Polka Dot", label: "Polka Dot" },
+    { value: "Abstract", label: "Abstract" },
+    { value: "Geometric", label: "Geometric" },
+    { value: "Embroidered", label: "Embroidered" },
+    { value: "Printed", label: "Printed" },
+  ],
+  Kids: [
+    { value: "Solid", label: "Solid" },
+    { value: "Striped", label: "Striped" },
+    { value: "Checked", label: "Checked" },
+    { value: "Printed", label: "Printed" },
+    { value: "Cartoon", label: "Cartoon" },
+    { value: "Animal Print", label: "Animal Print" },
+  ],
+  Unisex: [
+    { value: "Solid", label: "Solid" },
+    { value: "Striped", label: "Striped" },
+    { value: "Printed", label: "Printed" },
+  ],
+};
+
+// ========================================
+// FABRIC TYPES - GENDER SPECIFIC
+// ========================================
+export const FABRIC_TYPES = {
+  Men: [
+    { value: "Cotton", label: "Cotton" },
+    { value: "Polyester", label: "Polyester" },
+    { value: "Denim", label: "Denim" },
+    { value: "Linen", label: "Linen" },
+    { value: "Wool", label: "Wool" },
+    { value: "Jersey", label: "Jersey" },
+    { value: "Fleece", label: "Fleece" },
+  ],
+  Women: [
+    { value: "Cotton", label: "Cotton" },
+    { value: "Polyester", label: "Polyester" },
+    { value: "Silk", label: "Silk" },
+    { value: "Chiffon", label: "Chiffon" },
+    { value: "Satin", label: "Satin" },
+    { value: "Velvet", label: "Velvet" },
+    { value: "Linen", label: "Linen" },
+    { value: "Denim", label: "Denim" },
+    { value: "Jersey", label: "Jersey" },
+    { value: "Lace", label: "Lace" },
+  ],
+  Kids: [
+    { value: "Cotton", label: "Cotton" },
+    { value: "Polyester", label: "Polyester" },
+    { value: "Jersey", label: "Jersey" },
+    { value: "Fleece", label: "Fleece" },
+    { value: "Soft Cotton", label: "Soft Cotton" },
+  ],
+  Unisex: [
+    { value: "Cotton", label: "Cotton" },
+    { value: "Polyester", label: "Polyester" },
+    { value: "Jersey", label: "Jersey" },
+    { value: "Fleece", label: "Fleece" },
+  ],
+};
 
 // ========================================
 // NECKLINES
@@ -264,6 +372,47 @@ export const getSizesByCategory = (category) => {
 };
 
 /**
+ * Get product types for a specific category
+ */
+export const getProductTypesByCategory = (category) => {
+  if (!PRODUCT_TYPES[category]) {
+    // Return all types if category not found
+    return PRODUCT_TYPES.Men;
+  }
+  return PRODUCT_TYPES[category];
+};
+
+/**
+ * Get fit types for a specific category
+ */
+export const getFitTypesByCategory = (category) => {
+  if (!FIT_TYPES[category]) {
+    return FIT_TYPES.Unisex;
+  }
+  return FIT_TYPES[category];
+};
+
+/**
+ * Get patterns for a specific category
+ */
+export const getPatternsByCategory = (category) => {
+  if (!PATTERNS[category]) {
+    return PATTERNS.Unisex;
+  }
+  return PATTERNS[category];
+};
+
+/**
+ * Get fabric types for a specific category
+ */
+export const getFabricTypesByCategory = (category) => {
+  if (!FABRIC_TYPES[category]) {
+    return FABRIC_TYPES.Unisex;
+  }
+  return FABRIC_TYPES[category];
+};
+
+/**
  * Validate if a subcategory belongs to a category
  */
 export const validateCategorySubcategory = (category, subcategory) => {
@@ -292,6 +441,7 @@ export const getCategoriesForAPI = () => {
     productTypes: PRODUCT_TYPES,
     fitTypes: FIT_TYPES,
     patterns: PATTERNS,
+    fabricTypes: FABRIC_TYPES,
     necklines: NECKLINES,
     sleeveLengths: SLEEVE_LENGTHS,
     seasons: SEASONS,
@@ -340,6 +490,7 @@ export default {
   PRODUCT_TYPES,
   FIT_TYPES,
   PATTERNS,
+  FABRIC_TYPES,
   NECKLINES,
   SLEEVE_LENGTHS,
   SEASONS,
@@ -350,6 +501,10 @@ export default {
   getAllCategories,
   getSubcategoriesByCategory,
   getSizesByCategory,
+  getProductTypesByCategory,
+  getFitTypesByCategory,
+  getPatternsByCategory,
+  getFabricTypesByCategory,
   validateCategorySubcategory,
   validateCategorySize,
   getCategoriesForAPI,

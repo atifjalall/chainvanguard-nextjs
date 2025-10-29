@@ -464,39 +464,37 @@ router.get(
  */
 router.get("/:id", verifyToken, requireVerification, async (req, res) => {
   try {
-    const order = await orderService.getOrderById(
-      req.params.id,
-      req.userId,
-      req.userRole
-    );
+    const order = await Order.findById(req.params.id)
+      .populate("customerId", "name email walletAddress")
+      .populate("sellerId", "name walletAddress");
 
-    res.json({
-      success: true,
-      order,
-    });
-  } catch (error) {
-    console.error("GET /api/orders/:id error:", error);
-
-    if (error.message === "Order not found") {
+    if (!order) {
       return res.status(404).json({
         success: false,
         message: "Order not found",
       });
     }
 
-    if (
-      error.message.includes("Unauthorized") ||
-      error.message.includes("Access denied")
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: error.message,
-      });
-    }
+    // DEBUG: Log what we're sending
+    console.log("[ORDER ROUTE] Sending order:", {
+      _id: order._id,
+      id: order._id.toString(),
+      orderNumber: order.orderNumber,
+    });
 
+    res.json({
+      success: true,
+      order: {
+        ...order.toObject(),
+        id: order._id.toString(), // ENSURE id is a string
+        _id: order._id.toString(), // ENSURE _id is a string
+      },
+    });
+  } catch (error) {
+    console.error("[ORDER ROUTE] Error:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Error fetching order",
     });
   }
 });

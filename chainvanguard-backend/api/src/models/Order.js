@@ -224,6 +224,7 @@ const orderSchema = new Schema(
         "bank_transfer",
         "credit_card",
         "debit_card",
+        "crypto",
       ],
       default: "wallet",
     },
@@ -286,7 +287,7 @@ const orderSchema = new Schema(
     trackingUrl: { type: String, default: "" },
     courierName: {
       type: String,
-      enum: ["FedEx", "UPS", "DHL", "USPS", "Local", "Other", ""],
+      enum: ["FedEx", "UPS", "USPS", "DHL", "Local", "Other"],
       default: "",
     },
 

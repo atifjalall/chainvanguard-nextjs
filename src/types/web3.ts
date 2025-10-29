@@ -8,16 +8,19 @@ export interface WalletData {
 
 export interface Transaction {
   id: string;
+  type: "deposit" | "withdrawal" | "payment" | "received";
+  amount: number;
+  description: string;
+  timestamp: string;
+  status: "pending" | "completed" | "failed";
   from: string;
   to: string;
-  amount: number;
-  type: "send" | "receive" | "contract";
-  status: "pending" | "confirmed" | "failed";
-  timestamp: string;
-  description?: string;
+  txHash?: string;
+  category?: string;
+  counterparty?: string;
 }
 
-export type UserRole = "supplier" | "vendor" | "customer" | "blockchain-expert";
+export type UserRole = "supplier" | "vendor" | "customer" | "expert";
 
 export interface User {
   id: string;
@@ -29,8 +32,8 @@ export interface User {
   phone?: string;
   loginAt?: string;
   isAuthenticated: boolean;
-  createdAt: string; // ✅ Added this
-  updatedAt: string; // ✅ Added this
+  createdAt: string;
+  updatedAt: string;
 
   // Business information (optional, for suppliers/vendors)
   companyName?: string;

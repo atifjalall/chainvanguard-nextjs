@@ -80,6 +80,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
+import SupplierVendorsSkeleton from "@/components/skeletons/supplierVendorsSkeleton";
 
 // Vendor interface
 interface Vendor {
@@ -292,7 +293,6 @@ export default function SupplierVendorsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
-  const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -428,58 +428,42 @@ export default function SupplierVendorsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            Loading vendor partners...
-          </p>
-        </div>
-      </div>
-    );
+    return <SupplierVendorsSkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/10">
-      <div className="space-y-8 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
+      <div className="relative z-10 p-6 space-y-6">
         {/* Header */}
         <div
           className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900 dark:from-gray-100 dark:via-blue-400 dark:to-gray-100 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Vendor Partners
               </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400">
+              <p className="text-base text-gray-600 dark:text-gray-400">
                 Manage relationships with your supply chain vendor network
               </p>
             </div>
-
             <div className="flex items-center gap-3">
               <Button
                 onClick={loadVendors}
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                variant="outline"
+                className="hidden lg:flex items-center gap-2 text-xs cursor-pointer"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>
               <Button
                 variant="outline"
-                className="shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm border-0"
+                className="flex items-center gap-2 text-xs cursor-pointer"
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4" />
                 Export
-              </Button>
-              <Button
-                onClick={() => setIsAddVendorOpen(true)}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add Vendor
               </Button>
             </div>
           </div>
@@ -491,92 +475,70 @@ export default function SupplierVendorsPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
               {
                 title: "Total Vendors",
                 value: totalVendors.toLocaleString(),
                 subtitle: "Partner companies",
                 icon: Users,
-                gradient: "from-blue-500 to-cyan-500",
-                bgGradient: "from-blue-500/5 via-transparent to-cyan-500/5",
-                iconBg: "from-blue-500 to-cyan-500",
+                iconColor: "text-blue-600",
+                iconBg: "bg-blue-100 dark:bg-blue-900/30",
               },
               {
                 title: "Active Partners",
                 value: activeVendors.toString(),
                 subtitle: "Currently active",
                 icon: CheckCircle,
-                gradient: "from-green-500 to-emerald-500",
-                bgGradient: "from-green-500/5 via-transparent to-emerald-500/5",
-                iconBg: "from-green-500 to-emerald-500",
+                iconColor: "text-green-600",
+                iconBg: "bg-green-100 dark:bg-green-900/30",
               },
               {
                 title: "Total Volume",
                 value: formatCurrency(totalVolume),
                 subtitle: "Partnership value",
                 icon: DollarSign,
-                gradient: "from-green-500 to-teal-500",
-                bgGradient: "from-green-500/5 via-transparent to-teal-500/5",
-                iconBg: "from-green-500 to-teal-500",
+                iconColor: "text-green-600",
+                iconBg: "bg-green-100 dark:bg-green-900/30",
               },
               {
                 title: "Avg. Order Value",
                 value: formatCurrency(avgOrderValue),
                 subtitle: "Per transaction",
                 icon: TrendingUp,
-                gradient: "from-purple-500 to-indigo-500",
-                bgGradient: "from-purple-500/5 via-transparent to-indigo-500/5",
-                iconBg: "from-purple-500 to-indigo-500",
+                iconColor: "text-purple-600",
+                iconBg: "bg-purple-100 dark:bg-purple-900/30",
               },
               {
                 title: "Pending",
                 value: pendingVendors.toString(),
                 subtitle: "Need attention",
                 icon: Clock,
-                gradient: "from-yellow-500 to-orange-500",
-                bgGradient: "from-yellow-500/5 via-transparent to-orange-500/5",
-                iconBg: "from-yellow-500 to-orange-500",
-              },
-              {
-                title: "Inactive",
-                value: inactiveVendors.toString(),
-                subtitle: "Require follow-up",
-                icon: AlertCircle,
-                gradient: "from-gray-500 to-slate-500",
-                bgGradient: "from-gray-500/5 via-transparent to-slate-500/5",
-                iconBg: "from-gray-500 to-slate-500",
+                iconColor: "text-yellow-600",
+                iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
               },
             ].map((stat, index) => (
               <Card
                 key={index}
-                className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl"
+                className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl"
               >
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`}
-                />
-                <CardContent className="relative z-10 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div
-                      className={`h-12 w-12 rounded-xl bg-gradient-to-r ${stat.iconBg} flex items-center justify-center shadow-lg`}
-                    >
-                      <stat.icon className="h-6 w-6 text-white" />
-                    </div>
-                    {index === 2 && (
-                      <ArrowUpRight className="h-5 w-5 text-green-500" />
-                    )}
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                    {stat.title}
+                  </CardTitle>
+                  <div
+                    className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
+                  >
+                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      {stat.value}
-                    </p>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {stat.title}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">
-                      {stat.subtitle}
-                    </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    {stat.value}
                   </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {stat.subtitle}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -589,28 +551,35 @@ export default function SupplierVendorsPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-            <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row gap-4 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-base">
+                <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <Filter className="h-4 w-4 text-purple-600" />
+                </div>
+                Filters & Search
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Filter and search through your vendor partners
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Search vendors by name, email, business type, or specialization..."
+                    placeholder="Search vendors by name, email or business type"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500/20"
+                    className="pl-9 h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300"
                   />
                 </div>
-
                 <Select
                   value={selectedStatus}
                   onValueChange={setSelectedStatus}
                 >
-                  <SelectTrigger className="w-full lg:w-48 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-4 w-4 text-gray-500" />
-                      <SelectValue placeholder="All Status" />
-                    </div>
+                  <SelectTrigger className="h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300 cursor-pointer">
+                    <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
                     {statusOptions.map((status) => (
@@ -620,13 +589,9 @@ export default function SupplierVendorsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-full lg:w-48 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                    <div className="flex items-center gap-2">
-                      <SlidersHorizontal className="h-4 w-4 text-gray-500" />
-                      <SelectValue placeholder="Sort by" />
-                    </div>
+                  <SelectTrigger className="h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300 cursor-pointer">
+                    <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
                     {sortOptions.map((option) => (
@@ -637,62 +602,85 @@ export default function SupplierVendorsPage() {
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Tabs and View Controls */}
-              <div className="flex items-center justify-between">
-                <Tabs
-                  value={selectedTab}
-                  onValueChange={setSelectedTab}
-                  className="w-full"
-                >
-                  <div className="flex items-center justify-between">
-                    <TabsList className="bg-gray-100/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                      <TabsTrigger value="all" className="px-6">
-                        All Vendors ({totalVendors})
-                      </TabsTrigger>
-                      <TabsTrigger value="active" className="px-6">
-                        Active ({activeVendors})
-                      </TabsTrigger>
-                      <TabsTrigger value="pending" className="px-6">
-                        Pending ({pendingVendors})
-                      </TabsTrigger>
-                      <TabsTrigger value="inactive" className="px-6">
-                        Inactive ({inactiveVendors})
-                      </TabsTrigger>
-                    </TabsList>
-
-                    {/* View Mode Toggle */}
-                    <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                      <Button
-                        variant={viewMode === "grid" ? "default" : "ghost"}
-                        size="sm"
-                        className={`h-8 w-8 p-0 ${
-                          viewMode === "grid"
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                        }`}
-                        onClick={() => setViewMode("grid")}
-                      >
-                        <Grid3X3 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant={viewMode === "list" ? "default" : "ghost"}
-                        size="sm"
-                        className={`h-8 w-8 p-0 ${
-                          viewMode === "list"
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                        }`}
-                        onClick={() => setViewMode("list")}
-                      >
-                        <List className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </Tabs>
+              <div className="flex flex-wrap gap-2 items-center mt-2">
+                {searchTerm && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                  >
+                    &quot;{searchTerm}&quot;
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                {selectedStatus !== "All Status" && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                  >
+                    {selectedStatus}
+                    <button
+                      onClick={() => setSelectedStatus("All Status")}
+                      className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                <span className="text-xs text-gray-600 dark:text-gray-400 ml-2 whitespace-nowrap">
+                  {filteredAndSortedVendors.length} vendors found
+                </span>
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Tabs - move out of Filters & Search, center after filters card */}
+        <div
+          className={`flex justify-center mt-6 transition-all duration-700 delay-350 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <Tabs
+            value={selectedTab}
+            onValueChange={setSelectedTab}
+            className="w-full flex justify-center"
+          >
+            <TabsList className="grid max-w-2xl w-full grid-cols-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur border-gray-200 dark:border-gray-700 mx-auto">
+              <TabsTrigger
+                value="all"
+                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
+              >
+                <Users className="h-4 w-4" />
+                All Vendors ({totalVendors})
+              </TabsTrigger>
+              <TabsTrigger
+                value="active"
+                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Active ({activeVendors})
+              </TabsTrigger>
+              <TabsTrigger
+                value="pending"
+                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
+              >
+                <Clock className="h-4 w-4" />
+                Pending ({pendingVendors})
+              </TabsTrigger>
+              <TabsTrigger
+                value="inactive"
+                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
+              >
+                <XCircle className="h-4 w-4" />
+                Inactive ({inactiveVendors})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Vendor Content */}
@@ -709,7 +697,7 @@ export default function SupplierVendorsPage() {
                     {filteredAndSortedVendors.map((vendor) => (
                       <Card
                         key={vendor.id}
-                        className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl overflow-hidden group"
+                        className="border border-white/20 dark:border-gray-700/30 shadow-md hover:shadow-lg transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden group"
                       >
                         <CardContent className="p-6">
                           <div className="flex items-start gap-4 mb-4">
@@ -819,7 +807,7 @@ export default function SupplierVendorsPage() {
                                   setSelectedVendor(vendor);
                                   setIsDetailsOpen(true);
                                 }}
-                                className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20"
+                                className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 cursor-pointer"
                               >
                                 <Eye className="h-3 w-3 mr-1" />
                                 Details
@@ -831,7 +819,7 @@ export default function SupplierVendorsPage() {
                     ))}
                   </div>
                 ) : (
-                  <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+                  <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                     <CardContent className="p-0">
                       <div className="space-y-0">
                         {filteredAndSortedVendors.map((vendor, index) => (
@@ -915,7 +903,7 @@ export default function SupplierVendorsPage() {
                                     setSelectedVendor(vendor);
                                     setIsDetailsOpen(true);
                                   }}
-                                  className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20"
+                                  className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 cursor-pointer"
                                 >
                                   <Eye className="h-3 w-3 mr-1" />
                                   Details
@@ -931,30 +919,22 @@ export default function SupplierVendorsPage() {
               </TabsContent>
             </Tabs>
           ) : (
-            <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-r from-gray-400 to-gray-500 flex items-center justify-center mb-6">
-                  <Users className="h-8 w-8 text-white" />
+            <Card className="text-center py-16 border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden">
+              <CardContent>
+                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+                  <Users className="h-10 w-10 text-gray-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   {totalVendors === 0
                     ? "No Vendor Partners Yet"
                     : "No Vendors Found"}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
                   {totalVendors === 0
                     ? "Start building your vendor network to expand your supply chain reach."
                     : "Try adjusting your search terms or filters to find vendor partners."}
                 </p>
-                {totalVendors === 0 ? (
-                  <Button
-                    onClick={() => setIsAddVendorOpen(true)}
-                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add First Vendor
-                  </Button>
-                ) : (
+                {totalVendors !== 0 && (
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -962,7 +942,7 @@ export default function SupplierVendorsPage() {
                       setSelectedStatus("All Status");
                       setSelectedTab("all");
                     }}
-                    className="shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm border-0"
+                    className="inline-flex items-center gap-2 cursor-pointer"
                   >
                     Clear All Filters
                   </Button>
@@ -1181,7 +1161,7 @@ export default function SupplierVendorsPage() {
                               );
                               toast.success("Wallet address copied!");
                             }}
-                            className="h-7 w-7 p-0"
+                            className="h-7 w-7 p-0 cursor-pointer"
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
@@ -1213,7 +1193,7 @@ export default function SupplierVendorsPage() {
             <Button
               variant="outline"
               onClick={() => setIsDetailsOpen(false)}
-              className="shadow-lg hover:shadow-xl transition-all duration-300"
+              className="shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
             >
               Close
             </Button>
@@ -1222,115 +1202,10 @@ export default function SupplierVendorsPage() {
                 setIsDetailsOpen(false);
                 toast.success("Vendor contact initiated");
               }}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
             >
               <MessageCircle className="h-4 w-4 mr-2" />
               Contact Vendor
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Vendor Dialog */}
-      <Dialog open={isAddVendorOpen} onOpenChange={setIsAddVendorOpen}>
-        <DialogContent className="max-w-2xl bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-0 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-gray-100">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
-                <UserPlus className="h-4 w-4 text-white" />
-              </div>
-              Add New Vendor Partner
-            </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-400">
-              Create a new vendor partnership for your supply chain network
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Company Name *
-                </Label>
-                <Input
-                  placeholder="Enter company name"
-                  className="mt-1 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm focus:ring-2 focus:ring-green-500/20"
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Email Address *
-                </Label>
-                <Input
-                  placeholder="vendor@company.com"
-                  type="email"
-                  className="mt-1 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm focus:ring-2 focus:ring-green-500/20"
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Phone Number
-                </Label>
-                <Input
-                  placeholder="+1 (555) 123-4567"
-                  className="mt-1 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm focus:ring-2 focus:ring-green-500/20"
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Business Type *
-                </Label>
-                <Select>
-                  <SelectTrigger className="mt-1 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                    <SelectValue placeholder="Select business type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                    <SelectItem value="retail">Retail</SelectItem>
-                    <SelectItem value="distribution">Distribution</SelectItem>
-                    <SelectItem value="healthcare">Healthcare</SelectItem>
-                    <SelectItem value="technology">Technology</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Specialization Areas
-              </Label>
-              <Input
-                placeholder="e.g., Electronics, Textiles, Raw Materials (comma separated)"
-                className="mt-1 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm focus:ring-2 focus:ring-green-500/20"
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Notes
-              </Label>
-              <Textarea
-                placeholder="Add any additional notes about this vendor partnership..."
-                className="mt-1 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm focus:ring-2 focus:ring-green-500/20"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setIsAddVendorOpen(false)}
-              className="shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setIsAddVendorOpen(false);
-                toast.success("Vendor partnership invitation sent!");
-              }}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Handshake className="h-4 w-4 mr-2" />
-              Add Vendor Partner
             </Button>
           </DialogFooter>
         </DialogContent>

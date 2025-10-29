@@ -83,16 +83,17 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { Product } from "@/types";
 import { toast } from "sonner";
+import SupplierDashboardSkeleton from "@/components/skeletons/supplierDashboardSkeleton";
 
 interface DashboardMetrics {
-  totalProducts: number;
+  totalInventory: number;
   totalVendors: number;
   totalTransactions: number;
   totalRevenue: number;
   totalOrders: number;
-  activeProducts: number;
-  lowStockProducts: number;
-  outOfStockProducts: number;
+  activeInventory: number;
+  lowStockInventory: number;
+  outOfStockInventory: number;
   pendingVendors: number;
   completedTransactions: number;
   totalInventoryValue: number;
@@ -298,7 +299,7 @@ const mockTopProducts: TopProduct[] = [
 export default function SupplierDashboard() {
   const { user } = useAuth();
   const router = useRouter();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -319,11 +320,12 @@ export default function SupplierDashboard() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Load products
-      const savedProducts = localStorage.getItem(
+      // Load inventory
+      const savedInventory = localStorage.getItem(
         `supplier_${user?.id}_products`
       );
-      const productsData = savedProducts ? JSON.parse(savedProducts) : [];
+      const inventoryData = savedInventory ? JSON.parse(savedInventory) : [];
+      setInventory(inventoryData);
 
       // Load vendors
       const savedVendors = localStorage.getItem(`supplier_${user?.id}_vendors`);
@@ -337,7 +339,6 @@ export default function SupplierDashboard() {
         ? JSON.parse(savedTransactions)
         : [];
 
-      setProducts(productsData);
       setVendors(vendorsData);
       setTransactions(transactionsData);
     } catch (error) {
@@ -350,14 +351,18 @@ export default function SupplierDashboard() {
 
   // Calculate comprehensive metrics
   const metrics: DashboardMetrics = useMemo(() => {
-    const totalProducts = products.length;
-    const activeProducts = products.filter((p) => p.status === "active").length;
-    const lowStockProducts = products.filter(
-      (p) => p.quantity < (p.minimumOrderQuantity || 10) * 2
+    const totalInventory = inventory.length;
+    const activeInventory = inventory.filter(
+      (i) => i.status === "active"
     ).length;
-    const outOfStockProducts = products.filter((p) => p.quantity === 0).length;
-    const totalInventoryValue = products.reduce(
-      (sum, p) => sum + p.price * p.quantity,
+    const lowStockInventory = inventory.filter(
+      (i) => i.quantity < (i.minimumOrderQuantity || 10) * 2
+    ).length;
+    const outOfStockInventory = inventory.filter(
+      (i) => i.quantity === 0
+    ).length;
+    const totalInventoryValue = inventory.reduce(
+      (sum, i) => sum + i.price * i.quantity,
       0
     );
 
@@ -375,20 +380,20 @@ export default function SupplierDashboard() {
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     return {
-      totalProducts,
+      totalInventory,
       totalVendors,
       totalTransactions,
       totalRevenue,
       totalOrders,
-      activeProducts,
-      lowStockProducts,
-      outOfStockProducts,
+      activeInventory,
+      lowStockInventory,
+      outOfStockInventory,
       pendingVendors,
       completedTransactions,
       totalInventoryValue,
       avgOrderValue,
     };
-  }, [products, vendors, transactions]);
+  }, [inventory, vendors, transactions]);
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -505,216 +510,171 @@ export default function SupplierDashboard() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/20 to-cyan-400/20 blur-sm"></div>
-        </div>
-      </div>
-    );
+    return <SupplierDashboardSkeleton />;
   }
 
   return (
-    <div className="space-y-8 p-6">
-      {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-              Supply Chain Dashboard
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg mt-2">
-              Manage your inventory, vendors, and supply operations
-            </p>
-            <div className="flex items-center gap-2 mt-3">
-              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
-                <Factory className="h-3 w-3 mr-1" />
-                Supply Chain
-              </Badge>
-              <Badge variant="outline" className="border-gray-300">
-                <Shield className="h-3 w-3 mr-1" />
-                Blockchain Secured
-              </Badge>
-              <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
-                <Package className="h-3 w-3 mr-1" />
-                {metrics.totalProducts} Products
-              </Badge>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
+      <div className="relative z-10 p-6 space-y-6">
+        {/* Header */}
+        <div
+          className={`transform transition-all duration-700 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+          }`}
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                Supplier Dashboard
+              </h1>
+              <p className="text-base text-gray-600 dark:text-gray-400">
+                Manage your inventory, vendors, and supply operations
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge className="bg-green-100/80 text-green-700 dark:bg-green-900/30 dark:text-green-400 shadow-sm backdrop-blur-sm text-xs">
+                  {metrics.totalInventory} Inventory Items
+                </Badge>
+                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm backdrop-blur-sm text-xs">
+                  {metrics.totalVendors} Vendors
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="border-blue-700 text-blue-700 bg-transparent dark:bg-blue-950 dark:text-blue-300 dark:border-blue-950 shadow-sm backdrop-blur-sm flex items-center gap-1 text-xs"
+                >
+                  <Shield className="h-3 w-3 mr-1 text-blue-500 dark:text-blue-300" />
+                  Blockchain Secured
+                </Badge>
+              </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Select
-              value={selectedTimeRange}
-              onValueChange={setSelectedTimeRange}
+            <button
+              onClick={() => router.push("/supplier/add-inventory")}
+              className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer shadow-lg hover:shadow-xl"
             >
-              <SelectTrigger className="w-40 border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 backdrop-blur">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Last 7 Days</SelectItem>
-                <SelectItem value="30d">Last 30 Days</SelectItem>
-                <SelectItem value="90d">Last 3 Months</SelectItem>
-                <SelectItem value="1y">Last Year</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              onClick={loadDashboardData}
-              className="shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-            <Button
-              onClick={() => setIsAddProductOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
+              <Plus className="h-4 w-4" />
+              Add Inventory
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Metrics Cards */}
-      <div
-        className={`transform transition-all duration-700 delay-200 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-          {[
-            {
-              title: "Total Revenue",
-              value: formatCurrency(metrics.totalRevenue || 389000),
-              subtitle: "+12.5% vs last month",
-              icon: DollarSign,
-              gradient: "from-green-500 to-emerald-500",
-              bgGradient: "from-green-500/5 via-transparent to-emerald-500/5",
-              trend: "up",
-            },
-            {
-              title: "Active Vendors",
-              value: metrics.totalVendors || mockTopVendors.length,
-              subtitle: `${metrics.pendingVendors || 1} pending`,
-              icon: Users,
-              gradient: "from-blue-500 to-cyan-500",
-              bgGradient: "from-blue-500/5 via-transparent to-cyan-500/5",
-              trend: "up",
-            },
-            {
-              title: "Total Products",
-              value: metrics.totalProducts || mockTopProducts.length,
-              subtitle: `${metrics.activeProducts || 3} active`,
-              icon: Package,
-              gradient: "from-purple-500 to-indigo-500",
-              bgGradient: "from-purple-500/5 via-transparent to-indigo-500/5",
-              trend: "neutral",
-            },
-            {
-              title: "Inventory Value",
-              value: formatCurrency(metrics.totalInventoryValue || 137000),
-              subtitle: "Current stock value",
-              icon: Warehouse,
-              gradient: "from-orange-500 to-amber-500",
-              bgGradient: "from-orange-500/5 via-transparent to-amber-500/5",
-              trend: "up",
-            },
-            {
-              title: "Low Stock Items",
-              value: metrics.lowStockProducts || 2,
-              subtitle: "Need reordering",
-              icon: AlertTriangle,
-              gradient: "from-red-500 to-pink-500",
-              bgGradient: "from-red-500/5 via-transparent to-pink-500/5",
-              trend: "down",
-            },
-            {
-              title: "Avg Order Value",
-              value: formatCurrency(metrics.avgOrderValue || 1547),
-              subtitle: "+3.8% vs last month",
-              icon: Target,
-              gradient: "from-yellow-500 to-amber-500",
-              bgGradient: "from-yellow-500/5 via-transparent to-amber-500/5",
-              trend: "up",
-            },
-          ].map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card
-                key={index}
-                className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl group"
-              >
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`}
-                />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    {stat.title}
-                  </CardTitle>
-                  <div
-                    className={`h-10 w-10 rounded-full bg-gradient-to-r ${stat.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
-                  >
-                    <Icon className="h-5 w-5 text-white" />
-                  </div>
-                </CardHeader>
-                <CardContent className="relative z-10">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-                    {stat.value}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {stat.trend === "up" && (
-                      <ArrowUpRight className="h-3 w-3 text-green-500" />
-                    )}
-                    {stat.trend === "down" && (
-                      <ArrowDownRight className="h-3 w-3 text-red-500" />
-                    )}
+        {/* Stats Grid */}
+        <div
+          className={`transform transition-all duration-700 delay-200 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+            {[
+              {
+                title: "Total Revenue",
+                value: formatCurrency(metrics.totalRevenue || 389000),
+                subtitle: "+12.5% vs last month",
+                icon: DollarSign,
+                iconColor: "text-green-600",
+                iconBg: "bg-green-100 dark:bg-green-900/30",
+              },
+              {
+                title: "Active Vendors",
+                value: metrics.totalVendors,
+                subtitle: `${metrics.pendingVendors} pending`,
+                icon: Users,
+                iconColor: "text-blue-600",
+                iconBg: "bg-blue-100 dark:bg-blue-900/30",
+              },
+              {
+                title: "Total Inventory",
+                value: metrics.totalInventory,
+                subtitle: `${metrics.activeInventory} active`,
+                icon: Warehouse,
+                iconColor: "text-purple-600",
+                iconBg: "bg-purple-100 dark:bg-purple-900/30",
+              },
+              {
+                title: "Inventory Value",
+                value: formatCurrency(metrics.totalInventoryValue || 137000),
+                subtitle: "Current stock value",
+                icon: Warehouse,
+                iconColor: "text-orange-600",
+                iconBg: "bg-orange-100 dark:bg-orange-900/30",
+              },
+              {
+                title: "Low Stock Items",
+                value: metrics.lowStockInventory,
+                subtitle: "Need reordering",
+                icon: AlertTriangle,
+                iconColor: "text-amber-600",
+                iconBg: "bg-amber-100 dark:bg-amber-900/30",
+              },
+              {
+                title: "Avg Order Value",
+                value: formatCurrency(metrics.avgOrderValue || 1547),
+                subtitle: "+3.8% vs last month",
+                icon: Target,
+                iconColor: "text-yellow-600",
+                iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
+              },
+            ].map((stat, index) => {
+              const Icon = stat.icon;
+              return (
+                <Card
+                  key={index}
+                  className="border border-white/20 dark:border-gray-700/30 shadow-md hover:shadow-lg transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:scale-[1.02]"
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                      {stat.title}
+                    </CardTitle>
+                    <div
+                      className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
+                    >
+                      <Icon className={`h-5 w-5 ${stat.iconColor}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                      {stat.value}
+                    </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
                       {stat.subtitle}
                     </p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div
-        className={`transform transition-all duration-700 delay-400 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Recent Activity */}
-          <div className="xl:col-span-2">
-            <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5 rounded-lg" />
-              <CardHeader className="relative z-10">
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-white" />
+        {/* Main Content */}
+        <div
+          className={`transform transition-all duration-700 delay-400 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Recent Activity */}
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl xl:col-span-2 hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-base">
+                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Activity className="h-4 w-4 text-blue-600" />
                   </div>
                   Recent Activity
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs">
                   Latest updates from your supply chain
                 </CardDescription>
               </CardHeader>
-              <CardContent className="relative z-10">
+              <CardContent>
                 <div className="space-y-4">
                   {recentActivity.slice(0, 6).map((activity) => {
                     const Icon = getActivityIcon(activity.type);
                     return (
                       <div
                         key={activity.id}
-                        className="flex items-start gap-4 p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-white/70 dark:hover:bg-gray-900/70 transition-all duration-300"
+                        className="flex items-center gap-4 p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all cursor-pointer border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md"
+                        style={{
+                          minHeight: "90px", // slightly reduced height
+                          alignItems: "center", // vertical center
+                        }}
                       >
                         <div
                           className={`h-10 w-10 rounded-full flex items-center justify-center ${
@@ -747,7 +707,7 @@ export default function SupplierDashboard() {
                               </span>
                             </div>
                           </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                             {activity.description}
                           </p>
                           {activity.customer && (
@@ -762,9 +722,10 @@ export default function SupplierDashboard() {
                 </div>
                 <div className="mt-6 text-center">
                   <Button
-                    variant="outline"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => router.push("/supplier/transactions")}
-                    className="shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/20"
                   >
                     View All Transactions
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -772,28 +733,24 @@ export default function SupplierDashboard() {
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Quick Stats */}
-          <div className="space-y-6">
             {/* Performance Overview */}
-            <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-indigo-500/5 rounded-lg" />
-              <CardHeader className="relative z-10">
-                <CardTitle className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center">
-                    <BarChart3 className="h-4 w-4 text-white" />
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-base">
+                  <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <BarChart3 className="h-4 w-4 text-purple-600" />
                   </div>
                   Performance
                 </CardTitle>
               </CardHeader>
-              <CardContent className="relative z-10 space-y-4">
+              <CardContent className="space-y-4">
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                       Revenue Goal
                     </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
                       {formatCurrency(389000)} / {formatCurrency(500000)}
                     </span>
                   </div>
@@ -804,10 +761,10 @@ export default function SupplierDashboard() {
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                       Vendor Satisfaction
                     </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
                       4.7/5
                     </span>
                   </div>
@@ -816,13 +773,12 @@ export default function SupplierDashboard() {
                     94% satisfaction rate
                   </p>
                 </div>
-
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                       Stock Turnover
                     </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
                       6.2x
                     </span>
                   </div>
@@ -833,331 +789,268 @@ export default function SupplierDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </div>
 
-            {/* Quick Actions */}
-            <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5 rounded-lg" />
-              <CardHeader className="relative z-10">
-                <CardTitle className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
-                    <Zap className="h-4 w-4 text-white" />
+        {/* Bottom Section */}
+        <div
+          className={`transform transition-all duration-700 delay-600 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Vendors */}
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-base">
+                  <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                    <Crown className="h-4 w-4 text-indigo-600" />
                   </div>
-                  Quick Actions
+                  Top Vendors
                 </CardTitle>
+                <CardDescription className="text-xs">
+                  Your highest performing vendor partners
+                </CardDescription>
               </CardHeader>
-              <CardContent className="relative z-10">
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push("/supplier/add-product")}
-                    className="h-auto p-3 flex-col gap-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur hover:bg-white/70 dark:hover:bg-gray-900/70"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span className="text-xs">Add Product</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push("/supplier/vendors")}
-                    className="h-auto p-3 flex-col gap-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur hover:bg-white/70 dark:hover:bg-gray-900/70"
-                  >
-                    <Users className="h-4 w-4" />
-                    <span className="text-xs">Manage Vendors</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push("/supplier/inventory")}
-                    className="h-auto p-3 flex-col gap-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur hover:bg-white/70 dark:hover:bg-gray-900/70"
-                  >
-                    <Warehouse className="h-4 w-4" />
-                    <span className="text-xs">Check Inventory</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push("/supplier/insights")}
-                    className="h-auto p-3 flex-col gap-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur hover:bg-white/70 dark:hover:bg-gray-900/70"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    <span className="text-xs">View Analytics</span>
-                  </Button>
+              <CardContent>
+                <div className="space-y-4">
+                  {mockTopVendors.map((vendor, index) => {
+                    const statusConfig = getStatusConfig(vendor.status);
+                    const StatusIcon = statusConfig.icon;
+                    return (
+                      <div
+                        key={vendor.id}
+                        className="flex items-center gap-4 p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all cursor-pointer border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md"
+                      >
+                        <div className="relative">
+                          <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800 shadow-lg">
+                            <AvatarImage src="" alt={vendor.name} />
+                            <AvatarFallback className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 font-bold">
+                              {getInitials(vendor.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -top-1 -right-1">
+                            {index === 0 && (
+                              <div className="h-6 w-6 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                                <Crown className="h-3 w-3 text-yellow-600" />
+                              </div>
+                            )}
+                            {index === 1 && (
+                              <div className="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                <Award className="h-2 w-2 text-gray-600" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                              {vendor.name}
+                            </h4>
+                            <Badge
+                              className={`${statusConfig.color} flex items-center gap-1 text-xs`}
+                            >
+                              <StatusIcon className="h-3 w-3" />
+                              {statusConfig.label}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 text-xs">
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                                {formatCurrency(vendor.totalSpent)}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">
+                                Total Spent
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                                {vendor.totalOrders}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">
+                                Orders
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                                {vendor.rating}/5
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">
+                                Rating
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Top Products */}
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-base">
+                  <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <TrendingUp className="h-4 w-4 text-orange-600" />
+                  </div>
+                  Top Products
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Your best performing supply items
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {mockTopProducts.map((product) => {
+                    const statusConfig = getStatusConfig(product.status);
+                    const StatusIcon = statusConfig.icon;
+                    return (
+                      <div
+                        key={product.id}
+                        className="flex items-center gap-4 p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all cursor-pointer border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md"
+                      >
+                        <div className="h-12 w-12 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 font-bold">
+                          {getInitials(product.name)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                              {product.name}
+                            </h4>
+                            <Badge
+                              className={`${statusConfig.color} flex items-center gap-1 text-xs`}
+                            >
+                              <StatusIcon className="h-3 w-3" />
+                              {statusConfig.label}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 text-xs">
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                                {formatCurrency(product.revenue)}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">
+                                Revenue
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                                {product.totalSold}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">
+                                Sold
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                                {product.currentStock}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">
+                                In Stock
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
-      </div>
 
-      {/* Bottom Section */}
-      <div
-        className={`transform transition-all duration-700 delay-600 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Top Vendors */}
-          <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 rounded-lg" />
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center">
-                  <Crown className="h-4 w-4 text-white" />
+        {/* Quick Actions - moved to bottom */}
+        <div
+          className={`transform transition-all duration-700 delay-700 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-base">
+                <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                  <Zap className="h-4 w-4 text-indigo-600" />
                 </div>
-                Top Vendors
+                Quick Actions
               </CardTitle>
-              <CardDescription>
-                Your highest performing vendor partners
+              <CardDescription className="text-xs">
+                Manage your supply chain efficiently
               </CardDescription>
             </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="space-y-4">
-                {mockTopVendors.map((vendor, index) => {
-                  const statusConfig = getStatusConfig(vendor.status);
-                  const StatusIcon = statusConfig.icon;
-                  return (
-                    <div
-                      key={vendor.id}
-                      className="flex items-center gap-4 p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-white/70 dark:hover:bg-gray-900/70 transition-all duration-300"
-                    >
-                      <div className="relative">
-                        <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800 shadow-lg">
-                          <AvatarImage src="" alt={vendor.name} />
-                          <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white font-bold">
-                            {getInitials(vendor.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="absolute -top-1 -right-1">
-                          {index === 0 && (
-                            <div className="h-6 w-6 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 flex items-center justify-center">
-                              <Crown className="h-3 w-3 text-white" />
-                            </div>
-                          )}
-                          {index === 1 && (
-                            <div className="h-5 w-5 rounded-full bg-gradient-to-r from-gray-400 to-gray-500 flex items-center justify-center">
-                              <Award className="h-2 w-2 text-white" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-                            {vendor.name}
-                          </h4>
-                          <Badge
-                            className={`${statusConfig.color} flex items-center gap-1 text-xs`}
-                          >
-                            <StatusIcon className="h-3 w-3" />
-                            {statusConfig.label}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 text-sm">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
-                              {formatCurrency(vendor.totalSpent)}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Total Spent
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
-                              {vendor.totalOrders}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Orders
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
-                              {vendor.rating}/5
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Rating
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Top Products */}
-          <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-amber-500/5 rounded-lg" />
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center">
-                  <TrendingUp className="h-4 w-4 text-white" />
-                </div>
-                Top Products
-              </CardTitle>
-              <CardDescription>
-                Your best performing supply items
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="space-y-4">
-                {mockTopProducts.map((product) => {
-                  const statusConfig = getStatusConfig(product.status);
-                  const StatusIcon = statusConfig.icon;
-                  return (
-                    <div
-                      key={product.id}
-                      className="flex items-center gap-4 p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-white/70 dark:hover:bg-gray-900/70 transition-all duration-300"
-                    >
-                      <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold">
-                        {getInitials(product.name)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-                            {product.name}
-                          </h4>
-                          <Badge
-                            className={`${statusConfig.color} flex items-center gap-1 text-xs`}
-                          >
-                            <StatusIcon className="h-3 w-3" />
-                            {statusConfig.label}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 text-sm">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
-                              {formatCurrency(product.revenue)}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Revenue
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
-                              {product.totalSold}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Sold
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
-                              {product.currentStock}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              In Stock
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <button
+                  onClick={() => router.push("/supplier/add-inventory")}
+                  className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
+                >
+                  <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <Plus className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                      Add Inventory
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      New supply item
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => router.push("/supplier/vendors")}
+                  className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
+                >
+                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <Users className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                      Manage Vendors
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      Vendor partners
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => router.push("/supplier/inventory")}
+                  className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
+                >
+                  <div className="h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <Warehouse className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                      Check Inventory
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      Stock overview
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => router.push("/supplier/insights")}
+                  className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
+                >
+                  <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <BarChart3 className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                      View Analytics
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      Supply insights
+                    </p>
+                  </div>
+                </button>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
-
-      {/* Add Product Dialog */}
-      <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-0 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-              Add New Product
-            </DialogTitle>
-            <DialogDescription>
-              Add a new product to your supply catalog. All fields are required.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Product Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Enter product name"
-                  className="border-gray-300 dark:border-gray-700"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select>
-                  <SelectTrigger className="border-gray-300 dark:border-gray-700">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="raw-materials">Raw Materials</SelectItem>
-                    <SelectItem value="electronics">
-                      Electronics Components
-                    </SelectItem>
-                    <SelectItem value="textiles">Textiles & Fabrics</SelectItem>
-                    <SelectItem value="machinery">
-                      Machinery & Equipment
-                    </SelectItem>
-                    <SelectItem value="chemicals">
-                      Chemicals & Materials
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Enter product description"
-                className="border-gray-300 dark:border-gray-700 min-h-[100px]"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="price">Price ($)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  placeholder="0.00"
-                  className="border-gray-300 dark:border-gray-700"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  placeholder="0"
-                  className="border-gray-300 dark:border-gray-700"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="min-order">Minimum Order</Label>
-                <Input
-                  id="min-order"
-                  type="number"
-                  placeholder="0"
-                  className="border-gray-300 dark:border-gray-700"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddProductOpen(false)}
-              className="border-gray-300 dark:border-gray-700"
-            >
-              Cancel
-            </Button>
-            <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

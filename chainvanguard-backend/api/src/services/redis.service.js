@@ -80,9 +80,25 @@ class RedisService {
 
   // Invalidate product cache
   async invalidateProduct(productId) {
-    await this.del(`product:${productId}`);
-    await this.delPattern("products:*"); // Clear all product lists
-    return true;
+    try {
+      // Delete specific product cache
+      await this.del(`product:${productId}`);
+
+      // Delete all product list caches
+      await this.delPattern("products:*");
+
+      // Delete seller-specific caches
+      await this.delPattern(`products:seller:*`);
+
+      // Delete category caches
+      await this.delPattern(`products:category:*`);
+
+      console.log(`✅ All caches invalidated for product: ${productId}`);
+      return true;
+    } catch (error) {
+      console.error("Redis invalidation error:", error);
+      return false;
+    }
   }
 
   // Session management

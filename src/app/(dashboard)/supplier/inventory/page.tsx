@@ -71,6 +71,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { Product } from "@/types";
 import { toast } from "sonner";
+import SupplierInventorySkeleton from "@/components/skeletons/supplierInventorySkeleton";
 
 const statusOptions = [
   "All Status",
@@ -302,7 +303,7 @@ export default function SupplierInventoryPage() {
       setAdjustingItem(null);
     } catch (error) {
       console.error("Error adjusting stock:", error);
-      toast.error("Failed to adjust stock");
+      toast.error("Failed to Edit stock");
     }
   };
 
@@ -375,58 +376,49 @@ export default function SupplierInventoryPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            Loading inventory...
-          </p>
-        </div>
-      </div>
-    );
+    return <SupplierInventorySkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/10">
-      <div className="space-y-8 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
+      <div className="relative z-10 p-6 space-y-6">
         {/* Header */}
         <div
           className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900 dark:from-gray-100 dark:via-blue-400 dark:to-gray-100 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Supply Chain Inventory
               </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400">
+              <p className="text-base text-gray-600 dark:text-gray-400">
                 Manage stock levels and track inventory across your supply chain
               </p>
             </div>
-
             <div className="flex items-center gap-3">
               <Button
                 onClick={loadInventory}
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                variant="outline"
+                className="hidden lg:flex items-center gap-2 text-xs cursor-pointer"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>
               <Button
                 variant="outline"
-                className="shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm border-0"
+                className="flex items-center gap-2 text-xs cursor-pointer"
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4" />
                 Export
               </Button>
               <Button
-                onClick={() => router.push("/supplier/add-product")}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                onClick={() => router.push("/supplier/add-inventory")}
+                className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-lg hover:shadow-xl text-xs cursor-pointer"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
+                <Plus className="h-4 w-4" />
+                Add Inventory
               </Button>
             </div>
           </div>
@@ -438,126 +430,111 @@ export default function SupplierInventoryPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
               {
                 title: "Total Items",
                 value: totalItems.toLocaleString(),
                 subtitle: "Products in inventory",
                 icon: Package,
-                gradient: "from-blue-500 to-cyan-500",
-                bgGradient: "from-blue-500/5 via-transparent to-cyan-500/5",
-                iconBg: "from-blue-500 to-cyan-500",
+                iconColor: "text-blue-600",
+                iconBg: "bg-blue-100 dark:bg-blue-900/30",
               },
               {
                 title: "Total Value",
                 value: formatCurrency(totalValue),
                 subtitle: "Inventory worth",
                 icon: DollarSign,
-                gradient: "from-green-500 to-emerald-500",
-                bgGradient: "from-green-500/5 via-transparent to-emerald-500/5",
-                iconBg: "from-green-500 to-emerald-500",
+                iconColor: "text-green-600",
+                iconBg: "bg-green-100 dark:bg-green-900/30",
               },
               {
                 title: "In Stock",
                 value: inStockItems.toString(),
                 subtitle: "Available items",
                 icon: CheckCircle,
-                gradient: "from-green-500 to-teal-500",
-                bgGradient: "from-green-500/5 via-transparent to-teal-500/5",
-                iconBg: "from-green-500 to-teal-500",
+                iconColor: "text-green-600",
+                iconBg: "bg-green-100 dark:bg-green-900/30",
               },
               {
                 title: "Low Stock",
                 value: lowStockItems.toString(),
                 subtitle: "Need restocking",
                 icon: AlertTriangle,
-                gradient: "from-yellow-500 to-orange-500",
-                bgGradient: "from-yellow-500/5 via-transparent to-orange-500/5",
-                iconBg: "from-yellow-500 to-orange-500",
+                iconColor: "text-yellow-600",
+                iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
               },
               {
                 title: "Out of Stock",
                 value: outOfStockItems.toString(),
                 subtitle: "Require immediate attention",
                 icon: XCircle,
-                gradient: "from-red-500 to-pink-500",
-                bgGradient: "from-red-500/5 via-transparent to-pink-500/5",
-                iconBg: "from-red-500 to-pink-500",
-              },
-              {
-                title: "Reserved",
-                value: reservedItems.toString(),
-                subtitle: "Allocated items",
-                icon: Shield,
-                gradient: "from-purple-500 to-indigo-500",
-                bgGradient: "from-purple-500/5 via-transparent to-indigo-500/5",
-                iconBg: "from-purple-500 to-indigo-500",
+                iconColor: "text-red-600",
+                iconBg: "bg-red-100 dark:bg-red-900/30",
               },
             ].map((stat, index) => (
               <Card
                 key={index}
-                className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl"
+                className="border border-white/20 dark:border-gray-700/30 shadow-md hover:shadow-lg transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:scale-[1.02]"
               >
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`}
-                />
-                <CardContent className="relative z-10 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div
-                      className={`h-12 w-12 rounded-xl bg-gradient-to-r ${stat.iconBg} flex items-center justify-center shadow-lg`}
-                    >
-                      <stat.icon className="h-6 w-6 text-white" />
-                    </div>
-                    {index === 1 && (
-                      <ArrowUpRight className="h-5 w-5 text-green-500" />
-                    )}
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                    {stat.title}
+                  </CardTitle>
+                  <div
+                    className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
+                  >
+                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      {stat.value}
-                    </p>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {stat.title}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">
-                      {stat.subtitle}
-                    </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    {stat.value}
                   </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {stat.subtitle}
+                  </p>
                 </CardContent>
               </Card>
             ))}
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filters Card */}
         <div
           className={`transform transition-all duration-700 delay-300 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-            <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-base">
+                <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <Filter className="h-4 w-4 text-purple-600" />
+                </div>
+                Filters & Search
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Filter and search through your inventory
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Search inventory by name, SKU, or category..."
+                    placeholder="Search inventory by name, SKU, or category"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500/20"
+                    className="pl-9 h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300"
                   />
                 </div>
-
                 <Select
                   value={selectedStatus}
                   onValueChange={setSelectedStatus}
                 >
-                  <SelectTrigger className="w-full lg:w-48 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-4 w-4 text-gray-500" />
-                      <SelectValue placeholder="All Status" />
-                    </div>
+                  <SelectTrigger className="h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300 cursor-pointer">
+                    <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
                     {statusOptions.map((status) => (
@@ -567,13 +544,9 @@ export default function SupplierInventoryPage() {
                     ))}
                   </SelectContent>
                 </Select>
-
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-full lg:w-48 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-gray-500" />
-                      <SelectValue placeholder="Sort by" />
-                    </div>
+                  <SelectTrigger className="h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300 cursor-pointer">
+                    <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
                     {sortOptions.map((option) => (
@@ -583,6 +556,41 @@ export default function SupplierInventoryPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex gap-2 items-center">
+                  {searchTerm && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                    >
+                      &quot;{searchTerm}&quot;
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                  {selectedStatus !== "All Status" && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                    >
+                      {selectedStatus}
+                      <button
+                        onClick={() => setSelectedStatus("All Status")}
+                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                  <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
+                    {filteredAndSortedInventory.length} items found
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -595,27 +603,31 @@ export default function SupplierInventoryPage() {
           }`}
         >
           {filteredAndSortedInventory.length > 0 ? (
-            <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <CardHeader className="border-b border-gray-200/50 dark:border-gray-800/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-3 text-gray-900 dark:text-gray-100">
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                        <Warehouse className="h-4 w-4 text-white" />
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+              <CardHeader className="border-b border-gray-200 dark:border-gray-800">
+                <div className="flex flex-row items-center gap-4">
+                  <div className="flex flex-col">
+                    <CardTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <Warehouse className="h-4 w-4 text-blue-600" />
                       </div>
                       Inventory Overview
                     </CardTitle>
-                    <CardDescription className="text-gray-600 dark:text-gray-400">
+                    {/* Remove items found from here */}
+                    {/* <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
                       {filteredAndSortedInventory.length} items found
-                    </CardDescription>
+                    </CardDescription> */}
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
-                  >
-                    <Activity className="h-3 w-3 mr-1" />
-                    Live Data
-                  </Badge>
+                  <div className="flex-1" />
+                  <div>
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 text-xs"
+                    >
+                      <Activity className="h-3 w-3 mr-1" />
+                      Live Data
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -658,36 +670,37 @@ export default function SupplierInventoryPage() {
                           key={item.id}
                           className="border-b border-gray-200/30 dark:border-gray-800/30 hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors"
                         >
-                          <TableCell>
+                          <TableCell className="pl-8 pr-4">
                             <div className="flex items-center gap-3">
                               <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
                                 <Package className="h-5 w-5 text-white" />
                               </div>
                               <div>
-                                <p className="font-medium text-gray-900 dark:text-gray-100">
+                                <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
                                   {item.name}
                                 </p>
-                                {item.origin && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-500">
-                                    Origin: {item.origin}
-                                  </p>
-                                )}
+                                <p className="text-xs text-gray-500 dark:text-gray-500">
+                                  Origin: {item.origin}
+                                </p>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="pl-4 pr-4">
                             <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
                               {item.sku}
                             </code>
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="font-medium">
+                          <TableCell className="pl-4 pr-4">
+                            <Badge
+                              variant="outline"
+                              className="font-medium text-xs"
+                            >
                               {item.category}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="pl-4 pr-4">
                             <div>
-                              <p className="font-bold text-gray-900 dark:text-gray-100">
+                              <p className="font-bold text-gray-900 dark:text-gray-100 text-xs">
                                 {item.quantity.toLocaleString()}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-500">
@@ -695,7 +708,7 @@ export default function SupplierInventoryPage() {
                               </p>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="pl-4 pr-4">
                             <div className="flex items-center gap-2">
                               {getStatusIcon(item.inventoryStatus)}
                               <Badge
@@ -706,31 +719,46 @@ export default function SupplierInventoryPage() {
                               </Badge>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                          <TableCell className="pl-4 pr-4">
+                            <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
                               {formatCurrency(item.price)}
                             </span>
                           </TableCell>
-                          <TableCell>
-                            <span className="font-bold text-green-600 dark:text-green-400">
+                          <TableCell className="pl-4 pr-4">
+                            <span className="font-bold text-green-600 dark:text-green-400 text-xs">
                               {formatCurrency(item.totalValue)}
                             </span>
                           </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                          <TableCell className="pl-4 pr-4">
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
                               {formatDate(item.lastUpdated)}
                             </span>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="pl-4 pr-8">
                             <div className="flex items-center gap-2">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleAdjustStock(item)}
-                                className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20"
+                                onClick={() =>
+                                  router.push(`/supplier/inventory/${item.id}/`)
+                                }
+                                className="h-8 px-3 hover:bg-gray-50 hover:border-gray-200 dark:hover:bg-gray-900/20 text-xs cursor-pointer"
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  router.push(
+                                    `/supplier/inventory/${item.id}/edit`
+                                  )
+                                }
+                                className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 text-xs cursor-pointer"
                               >
                                 <Edit className="h-3 w-3 mr-1" />
-                                Adjust
+                                Edit
                               </Button>
                             </div>
                           </TableCell>
@@ -742,15 +770,15 @@ export default function SupplierInventoryPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-r from-gray-400 to-gray-500 flex items-center justify-center mb-6">
-                  <Package className="h-8 w-8 text-white" />
+            <Card className="text-center py-16 border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden">
+              <CardContent>
+                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+                  <Package className="h-10 w-10 text-gray-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   {totalItems === 0 ? "No Inventory Items" : "No Items Found"}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
                   {totalItems === 0
                     ? "Start by adding your first supply product to track inventory."
                     : "Try adjusting your search terms or filters to find items."}
@@ -758,7 +786,7 @@ export default function SupplierInventoryPage() {
                 {totalItems === 0 ? (
                   <Button
                     onClick={() => router.push("/supplier/add-product")}
-                    className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add First Item
@@ -770,7 +798,7 @@ export default function SupplierInventoryPage() {
                       setSearchTerm("");
                       setSelectedStatus("All Status");
                     }}
-                    className="shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm border-0"
+                    className="inline-flex items-center gap-2 text-xs cursor-pointer"
                   >
                     Clear Filters
                   </Button>
@@ -783,27 +811,27 @@ export default function SupplierInventoryPage() {
 
       {/* Stock Adjustment Dialog */}
       <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
-        <DialogContent className="max-w-md bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-0 shadow-2xl">
+        <DialogContent className="max-w-md bg-white dark:bg-gray-950 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 shadow-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-gray-100">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                <Edit className="h-4 w-4 text-white" />
+            <DialogTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
+              <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <Edit className="h-4 w-4 text-blue-600" />
               </div>
-              Adjust Stock Level
+              Edit Stock Level
             </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-400">
-              Adjust inventory for &quot;{adjustingItem?.name}&quot;
+            <DialogDescription className="text-xs text-gray-600 dark:text-gray-400">
+              Edit inventory for &quot;{adjustingItem?.name}&quot;
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
             <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 rounded-lg border border-gray-200/50 dark:border-gray-800/50">
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 Current Stock
               </Label>
               <div className="flex items-center gap-2 mt-1">
                 <Package className="h-4 w-4 text-gray-500" />
-                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <span className="text-base font-bold text-gray-900 dark:text-gray-100">
                   {adjustingItem?.quantity?.toLocaleString() || 0} units
                 </span>
               </div>
@@ -812,7 +840,7 @@ export default function SupplierInventoryPage() {
             <div>
               <Label
                 htmlFor="adjustment-quantity"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="text-xs font-medium text-gray-700 dark:text-gray-300"
               >
                 Adjustment Amount
               </Label>
@@ -835,7 +863,7 @@ export default function SupplierInventoryPage() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 Adjustment Reason
               </Label>
               <Select
@@ -844,7 +872,7 @@ export default function SupplierInventoryPage() {
                   setAdjustForm((prev) => ({ ...prev, reason: value }))
                 }
               >
-                <SelectTrigger className="mt-1 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
+                <SelectTrigger className="mt-1 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm cursor-pointer">
                   <SelectValue placeholder="Select reason" />
                 </SelectTrigger>
                 <SelectContent>
@@ -862,7 +890,7 @@ export default function SupplierInventoryPage() {
             <div>
               <Label
                 htmlFor="adjustment-notes"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="text-xs font-medium text-gray-700 dark:text-gray-300"
               >
                 Notes (Optional)
               </Label>
@@ -883,14 +911,14 @@ export default function SupplierInventoryPage() {
             <Button
               variant="outline"
               onClick={() => setIsAdjustOpen(false)}
-              className="shadow-lg hover:shadow-xl transition-all duration-300"
+              className="shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSaveAdjustment}
               disabled={!adjustForm.quantity || !adjustForm.reason}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               Save Adjustment

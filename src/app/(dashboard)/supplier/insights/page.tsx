@@ -63,6 +63,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
+import SupplierInsightsSkeleton from "@/components/skeletons/supplierInsightsSkeleton";
 
 // Supplier analytics data interfaces
 interface SupplyData {
@@ -559,20 +560,20 @@ export default function SupplierAnalyticsPage() {
     gradient: string;
     bgGradient: string;
   }) => (
-    <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+    <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/60 dark:bg-gray-900/60 border border-white/20 dark:border-gray-700/30">
       <div className={`absolute inset-0 bg-gradient-to-br ${bgGradient}`} />
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-        <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+        <CardTitle className="text-base font-medium text-gray-600 dark:text-gray-400">
           {title}
         </CardTitle>
         <div
-          className={`h-10 w-10 rounded-full bg-gradient-to-r ${gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
+          className={`h-10 w-10 rounded-full ${gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}
         >
           <Icon className="h-5 w-5 text-white" />
         </div>
       </CardHeader>
       <CardContent className="relative z-10">
-        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+        <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
           {formatter(value)}
         </div>
         <div className="flex items-center gap-1">
@@ -599,18 +600,11 @@ export default function SupplierAnalyticsPage() {
   );
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/20 to-cyan-400/20 blur-sm"></div>
-        </div>
-      </div>
-    );
+    return <SupplierInsightsSkeleton />;
   }
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950 p-6 space-y-8">
       {/* Header */}
       <div
         className={`transform transition-all duration-700 ${
@@ -619,31 +613,32 @@ export default function SupplierAnalyticsPage() {
       >
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               Supply Chain Analytics
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg mt-2">
+            <p className="text-base text-gray-600 dark:text-gray-400 mt-2">
               Track your supply performance and vendor relationships
             </p>
             <div className="flex items-center gap-2 mt-3">
-              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+              <Badge
+                variant="secondary"
+                className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 text-xs"
+              >
                 <BarChart3 className="h-3 w-3 mr-1" />
                 Real-time Analytics
               </Badge>
-              <Badge variant="outline" className="border-gray-300">
+              <Badge
+                variant="secondary"
+                className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800 text-xs"
+              >
                 <Shield className="h-3 w-3 mr-1" />
                 Blockchain Secured
               </Badge>
-              <Badge className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white">
-                <Sparkles className="h-3 w-3 mr-1" />
-                AI Insights
-              </Badge>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
             <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-40 border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 backdrop-blur">
+              <SelectTrigger className="w-40 h-10 border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 backdrop-blur text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -656,19 +651,17 @@ export default function SupplierAnalyticsPage() {
             </Select>
             <Button
               variant="outline"
-              size="sm"
+              className="flex items-center gap-2 text-xs"
               onClick={loadAnalytics}
-              className="shadow-lg hover:shadow-xl transition-all duration-300"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-4 w-4" />
               Refresh
             </Button>
             <Button
               variant="outline"
-              size="sm"
-              className="shadow-lg hover:shadow-xl transition-all duration-300"
+              className="flex items-center gap-2 text-xs"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-4 w-4" />
               Export
             </Button>
           </div>
@@ -682,49 +675,75 @@ export default function SupplierAnalyticsPage() {
         }`}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <MetricCard
-            title="Total Revenue"
-            value={currentPeriodData.revenue.value}
-            growth={currentPeriodData.revenue.growth}
-            icon={DollarSign}
-            formatter={formatCurrency}
-            gradient="from-green-500 to-emerald-500"
-            bgGradient="from-green-500/5 via-transparent to-emerald-500/5"
-          />
-          <MetricCard
-            title="Supply Orders"
-            value={currentPeriodData.orders.value}
-            growth={currentPeriodData.orders.growth}
-            icon={Truck}
-            gradient="from-blue-500 to-cyan-500"
-            bgGradient="from-blue-500/5 via-transparent to-cyan-500/5"
-          />
-          <MetricCard
-            title="Active Vendors"
-            value={currentPeriodData.vendors.value}
-            growth={currentPeriodData.vendors.growth}
-            icon={Building2}
-            gradient="from-purple-500 to-indigo-500"
-            bgGradient="from-purple-500/5 via-transparent to-indigo-500/5"
-          />
-          <MetricCard
-            title="Avg Order Value"
-            value={currentPeriodData.avgOrderValue.value}
-            growth={currentPeriodData.avgOrderValue.growth}
-            icon={Target}
-            formatter={formatCurrency}
-            gradient="from-orange-500 to-amber-500"
-            bgGradient="from-orange-500/5 via-transparent to-amber-500/5"
-          />
-          <MetricCard
-            title="Inventory Value"
-            value={currentPeriodData.inventoryValue.value}
-            growth={currentPeriodData.inventoryValue.growth}
-            icon={Package}
-            formatter={formatCurrency}
-            gradient="from-pink-500 to-rose-500"
-            bgGradient="from-pink-500/5 via-transparent to-rose-500/5"
-          />
+          {[
+            {
+              title: "Total Revenue",
+              value: currentPeriodData.revenue.value,
+              subtitle: "Total supply revenue",
+              icon: DollarSign,
+              iconColor: "text-green-600",
+              iconBg: "bg-green-100 dark:bg-green-900/30",
+              formatter: formatCurrency,
+            },
+            {
+              title: "Supply Orders",
+              value: currentPeriodData.orders.value,
+              subtitle: "Orders processed",
+              icon: Truck,
+              iconColor: "text-blue-600",
+              iconBg: "bg-blue-100 dark:bg-blue-900/30",
+            },
+            {
+              title: "Active Vendors",
+              value: currentPeriodData.vendors.value,
+              subtitle: "Vendor partners",
+              icon: Building2,
+              iconColor: "text-purple-600",
+              iconBg: "bg-purple-100 dark:bg-purple-900/30",
+            },
+            {
+              title: "Avg Order Value",
+              value: currentPeriodData.avgOrderValue.value,
+              subtitle: "Average order value",
+              icon: Target,
+              iconColor: "text-orange-600",
+              iconBg: "bg-orange-100 dark:bg-orange-900/30",
+              formatter: formatCurrency,
+            },
+            {
+              title: "Inventory Value",
+              value: currentPeriodData.inventoryValue.value,
+              subtitle: "Total inventory worth",
+              icon: Package,
+              iconColor: "text-pink-600",
+              iconBg: "bg-pink-100 dark:bg-pink-900/30",
+              formatter: formatCurrency,
+            },
+          ].map((stat, index) => (
+            <Card
+              key={index}
+              className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl"
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  {stat.title}
+                </CardTitle>
+                <div
+                  className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
+                >
+                  <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                  {stat.formatter ? stat.formatter(stat.value) : stat.value}
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {stat.subtitle}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
 
@@ -739,28 +758,28 @@ export default function SupplierAnalyticsPage() {
             <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur border-gray-200 dark:border-gray-700">
               <TabsTrigger
                 value="supply"
-                className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
                 <BarChart3 className="h-4 w-4" />
                 Supply Trends
               </TabsTrigger>
               <TabsTrigger
                 value="products"
-                className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
                 <Factory className="h-4 w-4" />
                 Products
               </TabsTrigger>
               <TabsTrigger
                 value="vendors"
-                className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
                 <Building2 className="h-4 w-4" />
                 Vendors
               </TabsTrigger>
               <TabsTrigger
                 value="performance"
-                className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
                 <Activity className="h-4 w-4" />
                 Performance
@@ -771,8 +790,7 @@ export default function SupplierAnalyticsPage() {
           <TabsContent value="supply" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Revenue Trend */}
-              <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader className="relative z-10">
                   <div className="flex items-center justify-between">
                     <div>
@@ -787,7 +805,7 @@ export default function SupplierAnalyticsPage() {
                       value={selectedMetric}
                       onValueChange={(value: any) => setSelectedMetric(value)}
                     >
-                      <SelectTrigger className="w-32 border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 backdrop-blur">
+                      <SelectTrigger className="w-32 h-10 border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 backdrop-blur text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -853,8 +871,7 @@ export default function SupplierAnalyticsPage() {
               </Card>
 
               {/* Orders vs Inventory */}
-              <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5" />
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader className="relative z-10">
                   <CardTitle className="text-gray-900 dark:text-gray-100">
                     Orders vs Inventory Value
@@ -918,8 +935,7 @@ export default function SupplierAnalyticsPage() {
             </div>
 
             {/* Average Order Value */}
-            <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-indigo-500/5" />
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
               <CardHeader className="relative z-10">
                 <CardTitle className="text-gray-900 dark:text-gray-100">
                   Average Supply Order Value
@@ -961,8 +977,7 @@ export default function SupplierAnalyticsPage() {
           </TabsContent>
 
           <TabsContent value="products" className="space-y-6">
-            <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-amber-500/5" />
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
               <CardHeader className="relative z-10">
                 <CardTitle className="text-gray-900 dark:text-gray-100">
                   Top Supply Products
@@ -1048,9 +1063,8 @@ export default function SupplierAnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
-
             {/* Category Performance Chart */}
-            <Card className="border border-border bg-card">
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle className="text-foreground">
                   Category Revenue Distribution
@@ -1093,7 +1107,7 @@ export default function SupplierAnalyticsPage() {
           <TabsContent value="vendors" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Vendor Revenue Pie Chart */}
-              <Card className="border border-border bg-card">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader>
                   <CardTitle className="text-foreground">
                     Revenue by Vendor
@@ -1131,7 +1145,7 @@ export default function SupplierAnalyticsPage() {
               </Card>
 
               {/* Vendor Performance */}
-              <Card className="border border-border bg-card">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader>
                   <CardTitle className="text-foreground">
                     Vendor Performance
@@ -1183,7 +1197,7 @@ export default function SupplierAnalyticsPage() {
           <TabsContent value="performance" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Performance Metrics */}
-              <Card className="border border-border bg-card">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-foreground">
                     Order Fulfillment
@@ -1203,7 +1217,7 @@ export default function SupplierAnalyticsPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-border bg-card">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-foreground">
                     Vendor Satisfaction
@@ -1221,7 +1235,7 @@ export default function SupplierAnalyticsPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-border bg-card">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-foreground">
                     Lead Time
@@ -1239,7 +1253,7 @@ export default function SupplierAnalyticsPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-border bg-card">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-foreground">
                     Quality Score
@@ -1261,7 +1275,7 @@ export default function SupplierAnalyticsPage() {
             </div>
 
             {/* Supply Chain Insights */}
-            <Card className="border border-border bg-card">
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle className="text-foreground">
                   Supply Chain Insights
@@ -1332,7 +1346,7 @@ export default function SupplierAnalyticsPage() {
             </Card>
 
             {/* Supply Goals & Targets */}
-            <Card className="border border-border bg-card">
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle className="text-foreground">
                   Supply Chain Goals
@@ -1424,68 +1438,73 @@ export default function SupplierAnalyticsPage() {
             </Card>
           </TabsContent>
         </Tabs>
-
         {/* Quick Actions */}
-        <Card className="border border-border bg-card">
+        <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 mt-6">
           <CardHeader>
-            <CardTitle className="text-foreground">Quick Actions</CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardTitle className="flex items-center gap-3 text-base">
+              <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-indigo-600" />
+              </div>
+              Quick Actions
+            </CardTitle>
+            <CardDescription className="text-xs">
               Common supply chain actions based on your analytics
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Button
-                variant="outline"
-                className="justify-start h-auto p-4 flex-col gap-2"
-              >
-                <Factory className="h-5 w-5" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <button className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group">
+                <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <Factory className="h-6 w-6 text-blue-600" />
+                </div>
                 <div className="text-center">
-                  <div className="font-medium">Add Supply Product</div>
-                  <div className="text-xs text-muted-foreground">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                    Add Supply Product
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     Expand catalog
-                  </div>
+                  </p>
                 </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="justify-start h-auto p-4 flex-col gap-2"
-              >
-                <Building2 className="h-5 w-5" />
+              </button>
+              <button className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group">
+                <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <Building2 className="h-6 w-6 text-green-600" />
+                </div>
                 <div className="text-center">
-                  <div className="font-medium">Manage Vendors</div>
-                  <div className="text-xs text-muted-foreground">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                    Manage Vendors
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     Partner relationships
-                  </div>
+                  </p>
                 </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="justify-start h-auto p-4 flex-col gap-2"
-              >
-                <Package className="h-5 w-5" />
+              </button>
+              <button className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group">
+                <div className="h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <Package className="h-6 w-6 text-orange-600" />
+                </div>
                 <div className="text-center">
-                  <div className="font-medium">Check Inventory</div>
-                  <div className="text-xs text-muted-foreground">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                    Check Inventory
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     Stock levels
-                  </div>
+                  </p>
                 </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="justify-start h-auto p-4 flex-col gap-2"
-              >
-                <Download className="h-5 w-5" />
+              </button>
+              <button className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group">
+                <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <Download className="h-6 w-6 text-indigo-600" />
+                </div>
                 <div className="text-center">
-                  <div className="font-medium">Export Report</div>
-                  <div className="text-xs text-muted-foreground">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                    Export Report
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     Supply chain data
-                  </div>
+                  </p>
                 </div>
-              </Button>
+              </button>
             </div>
           </CardContent>
         </Card>

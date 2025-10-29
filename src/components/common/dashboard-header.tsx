@@ -14,7 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Package, LogOut, Settings, User, Wallet } from "lucide-react";
+import { Package, LogOut, Settings, User, Wallet, X, Menu } from "lucide-react";
+import { Heart, Bell, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function DashboardHeader() {
@@ -23,10 +24,15 @@ export function DashboardHeader() {
   const router = useRouter();
 
   const handleLogout = () => {
-    disconnectWallet(); // Disconnect wallet first
-    logout(); // Then logout user
+    disconnectWallet();
+    logout();
     router.push("/login");
   };
+
+  const isSupplier = user?.role === "supplier";
+  const isVendor = user?.role === "vendor";
+  const isCustomer = user?.role === "customer";
+  const isBlockchainExpert = user?.role === "expert";
 
   const getRoleColor = (role?: string) => {
     switch (role) {
@@ -70,6 +76,7 @@ export function DashboardHeader() {
         .join("")
         .toUpperCase();
     }
+
     if (user?.walletName) {
       return user.walletName
         .split(" ")
@@ -77,6 +84,7 @@ export function DashboardHeader() {
         .join("")
         .toUpperCase();
     }
+
     return "U";
   };
 
@@ -86,33 +94,34 @@ export function DashboardHeader() {
 
   return (
     <header className="bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50">
-      <div className="flex h-16 items-center justify-between px-6">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Package className="h-5 w-5 text-white" />
+      <div className="flex h-14 items-center justify-between px-4">
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <div className="h-6 w-6 rounded-lg bg-blue-600 flex items-center justify-center">
+              <Package className="h-4 w-4 text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
               ChainVanguard
             </span>
           </div>
+
           {user?.role && (
             <Badge
               variant="outline"
-              className={`ml-4 ${getRoleColor(user.role)}`}
+              className={`ml-2 ${getRoleColor(user.role)}`}
             >
               {getRoleDisplayName(user.role)}
             </Badge>
           )}
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
           {/* Wallet Info */}
           {currentWallet && (
-            <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-gray-100/50 dark:bg-gray-800/50 rounded-lg backdrop-blur-sm">
-              <Wallet className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {balance} CVG
+            <div className="hidden md:flex items-center space-x-1 px-2 py-0.5 bg-gray-100/50 dark:bg-gray-800/50 rounded-lg backdrop-blur-sm">
+              <Wallet className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                ${balance}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {formatAddress(currentWallet.address)}
@@ -123,6 +132,37 @@ export function DashboardHeader() {
           {/* Theme Toggle */}
           <ThemeToggle />
 
+          {/* Notifications (Everyone sees this) */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+          >
+            <Bell className="h-4 w-4" />
+          </Button>
+
+          {/* Wishlist (Only CUSTOMER) */}
+          {isCustomer && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+            >
+              <Heart className="h-4 w-4" />
+            </Button>
+          )}
+
+          {/* Cart (Vendor & Customer → Yes | Supplier → No) */}
+          {(isVendor || isCustomer) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+            >
+              <ShoppingCart className="h-4 w-4" />
+            </Button>
+          )}
+
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -131,42 +171,39 @@ export function DashboardHeader() {
                 className="relative h-8 w-8 rounded-full hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-blue-600 text-white text-sm font-semibold">
+                  <AvatarFallback className="bg-blue-600 text-white text-xs font-semibold">
                     {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent
-              className="w-72 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50"
+              className="w-64 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50"
               align="end"
               forceMount
             >
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-2">
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
+                    <Avatar className="h-5 w-5">
                       <AvatarFallback className="bg-blue-600 text-white text-xs">
                         {getUserInitials()}
                       </AvatarFallback>
                     </Avatar>
-                    <p className="text-sm font-medium leading-none text-gray-900 dark:text-gray-100">
+                    <p className="text-xs font-medium leading-none text-gray-900 dark:text-gray-100">
                       {getDisplayName()}
                     </p>
                   </div>
-                  {user?.email && (
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {user.email}
-                    </p>
-                  )}
-                  {user?.role && (
-                    <Badge
-                      variant="outline"
-                      className={`text-xs w-fit ${getRoleColor(user.role)}`}
-                    >
-                      {getRoleDisplayName(user.role)}
-                    </Badge>
-                  )}
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {user?.email}
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={`text-xs w-fit ${getRoleColor(user?.role)}`}
+                  >
+                    {getRoleDisplayName(user?.role)}
+                  </Badge>
                 </div>
               </DropdownMenuLabel>
 
@@ -185,7 +222,7 @@ export function DashboardHeader() {
                         {formatAddress(currentWallet.address)}
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Balance: {balance} CVG
+                        Balance: ${balance}
                       </p>
                     </div>
                   </DropdownMenuLabel>
@@ -193,15 +230,15 @@ export function DashboardHeader() {
               )}
 
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50">
+              <DropdownMenuItem>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50">
+              <DropdownMenuItem>
                 <Wallet className="mr-2 h-4 w-4" />
                 <span>Wallet Settings</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50">
+              <DropdownMenuItem>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
