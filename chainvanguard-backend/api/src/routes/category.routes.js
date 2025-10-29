@@ -1,14 +1,13 @@
-import { Router } from "express";
+import express from "express";
 import {
   getAllCategories,
   getSubcategoriesByCategory,
   getSizesByCategory,
+  getProductTypesByCategory,
+  getFitTypesByCategory,
+  getPatternsByCategory,
+  getFabricTypesByCategory,
   getCategoriesForAPI,
-  getAllSizes,
-  getAllSubcategories,
-  PRODUCT_TYPES,
-  FIT_TYPES,
-  PATTERNS,
   NECKLINES,
   SLEEVE_LENGTHS,
   SEASONS,
@@ -18,20 +17,21 @@ import {
   COMMON_COLORS,
 } from "../config/categories.js";
 
-const router = Router();
+const router = express.Router();
 
 // ========================================
 // GET ALL CATEGORIES WITH METADATA
 // ========================================
 router.get("/", (req, res) => {
   try {
-    const data = getCategoriesForAPI();
+    const categoriesData = getCategoriesForAPI();
+
     res.json({
       success: true,
-      data,
+      ...categoriesData,
     });
   } catch (error) {
-    console.error("Error fetching categories:", error);
+    console.error("Get categories error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch categories",
@@ -41,20 +41,47 @@ router.get("/", (req, res) => {
 });
 
 // ========================================
-// GET CATEGORIES ONLY (Simple list)
+// GET CATEGORY-SPECIFIC OPTIONS
 // ========================================
-router.get("/list", (req, res) => {
+router.get("/:category/options", (req, res) => {
   try {
-    const categories = getAllCategories();
+    const { category } = req.params;
+
+    // Validate category
+    const validCategories = ["Men", "Women", "Kids", "Unisex"];
+    if (!validCategories.includes(category)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid category. Must be one of: ${validCategories.join(", ")}`,
+      });
+    }
+
+    const options = {
+      subcategories: getSubcategoriesByCategory(category),
+      sizes: getSizesByCategory(category),
+      productTypes: getProductTypesByCategory(category),
+      fitTypes: getFitTypesByCategory(category),
+      patterns: getPatternsByCategory(category),
+      fabricTypes: getFabricTypesByCategory(category),
+      necklines: NECKLINES,
+      sleeveLengths: SLEEVE_LENGTHS,
+      seasons: SEASONS,
+      certificationTypes: CERTIFICATION_TYPES,
+      qualityGrades: QUALITY_GRADES,
+      commonMaterials: COMMON_MATERIALS,
+      commonColors: COMMON_COLORS,
+    };
+
     res.json({
       success: true,
-      data: categories,
+      category,
+      ...options,
     });
   } catch (error) {
-    console.error("Error fetching category list:", error);
+    console.error("Get category options error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch category list",
+      message: "Failed to fetch category options",
       error: error.message,
     });
   }
@@ -77,10 +104,11 @@ router.get("/:category/subcategories", (req, res) => {
 
     res.json({
       success: true,
-      data: subcategories,
+      category,
+      subcategories,
     });
   } catch (error) {
-    console.error("Error fetching subcategories:", error);
+    console.error("Get subcategories error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch subcategories",
@@ -106,10 +134,11 @@ router.get("/:category/sizes", (req, res) => {
 
     res.json({
       success: true,
-      data: sizes,
+      category,
+      sizes,
     });
   } catch (error) {
-    console.error("Error fetching sizes:", error);
+    console.error("Get sizes error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch sizes",
@@ -119,55 +148,20 @@ router.get("/:category/sizes", (req, res) => {
 });
 
 // ========================================
-// GET ALL SIZES (All categories combined)
+// GET PRODUCT TYPES BY CATEGORY
 // ========================================
-router.get("/sizes/all", (req, res) => {
+router.get("/:category/product-types", (req, res) => {
   try {
-    const sizes = getAllSizes();
-    res.json({
-      success: true,
-      data: sizes,
-    });
-  } catch (error) {
-    console.error("Error fetching all sizes:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch sizes",
-      error: error.message,
-    });
-  }
-});
+    const { category } = req.params;
+    const productTypes = getProductTypesByCategory(category);
 
-// ========================================
-// GET ALL SUBCATEGORIES (All categories combined)
-// ========================================
-router.get("/subcategories/all", (req, res) => {
-  try {
-    const subcategories = getAllSubcategories();
     res.json({
       success: true,
-      data: subcategories,
+      category,
+      productTypes,
     });
   } catch (error) {
-    console.error("Error fetching all subcategories:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch subcategories",
-      error: error.message,
-    });
-  }
-});
-
-// ========================================
-// GET PRODUCT TYPES
-// ========================================
-router.get("/types/product", (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: PRODUCT_TYPES,
-    });
-  } catch (error) {
+    console.error("Get product types error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch product types",
@@ -177,15 +171,20 @@ router.get("/types/product", (req, res) => {
 });
 
 // ========================================
-// GET FIT TYPES
+// GET FIT TYPES BY CATEGORY
 // ========================================
-router.get("/types/fit", (req, res) => {
+router.get("/:category/fit-types", (req, res) => {
   try {
+    const { category } = req.params;
+    const fitTypes = getFitTypesByCategory(category);
+
     res.json({
       success: true,
-      data: FIT_TYPES,
+      category,
+      fitTypes,
     });
   } catch (error) {
+    console.error("Get fit types error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch fit types",
@@ -195,15 +194,20 @@ router.get("/types/fit", (req, res) => {
 });
 
 // ========================================
-// GET PATTERNS
+// GET PATTERNS BY CATEGORY
 // ========================================
-router.get("/options/patterns", (req, res) => {
+router.get("/:category/patterns", (req, res) => {
   try {
+    const { category } = req.params;
+    const patterns = getPatternsByCategory(category);
+
     res.json({
       success: true,
-      data: PATTERNS,
+      category,
+      patterns,
     });
   } catch (error) {
+    console.error("Get patterns error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch patterns",
@@ -213,42 +217,23 @@ router.get("/options/patterns", (req, res) => {
 });
 
 // ========================================
-// GET MATERIALS
+// GET FABRIC TYPES BY CATEGORY
 // ========================================
-router.get("/options/materials", (req, res) => {
+router.get("/:category/fabric-types", (req, res) => {
   try {
-    res.json({
-      success: true,
-      data: COMMON_MATERIALS.map((material) => ({
-        value: material,
-        label: material,
-      })),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch materials",
-      error: error.message,
-    });
-  }
-});
+    const { category } = req.params;
+    const fabricTypes = getFabricTypesByCategory(category);
 
-// ========================================
-// GET COLORS
-// ========================================
-router.get("/options/colors", (req, res) => {
-  try {
     res.json({
       success: true,
-      data: COMMON_COLORS.map((color) => ({
-        value: color,
-        label: color,
-      })),
+      category,
+      fabricTypes,
     });
   } catch (error) {
+    console.error("Get fabric types error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch colors",
+      message: "Failed to fetch fabric types",
       error: error.message,
     });
   }

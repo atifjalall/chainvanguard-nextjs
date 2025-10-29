@@ -88,7 +88,7 @@ router.post("/register", async (req, res) => {
       success: true,
       message: "Registration successful!",
       data: result,
-      warning: "⚠️ Save your 12-word recovery phrase securely!",
+      warning: "Save your 12-word recovery phrase securely!",
     });
   } catch (error) {
     console.error("❌ Registration error:", error);
@@ -103,6 +103,52 @@ router.post("/register", async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || "Registration failed",
+    });
+  }
+});
+
+/**
+ * GET /api/auth/check-email
+ * Check if email already exists (public - no auth required)
+ */
+router.get("/check-email", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: "Email parameter is required",
+      });
+    }
+
+    console.log(`🔍 Checking if email exists: ${email}`);
+
+    // Check if email exists in database
+    const existingUser = await User.findOne({
+      email: email.toLowerCase().trim(),
+    }).select("email");
+
+    if (existingUser) {
+      console.log(`❌ Email already exists: ${email}`);
+      return res.json({
+        success: true,
+        exists: true,
+        message: "Email is already registered",
+      });
+    }
+
+    console.log(`✅ Email available: ${email}`);
+    res.json({
+      success: true,
+      exists: false,
+      message: "Email is available",
+    });
+  } catch (error) {
+    console.error("❌ Check email error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to check email availability",
     });
   }
 });
@@ -681,5 +727,51 @@ router.get(
     }
   }
 );
+
+/**
+ * POST /api/auth/wallet/exists
+ * Check if wallet address exists in database
+ */
+router.post("/wallet/exists", async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: "Wallet address is required",
+      });
+    }
+
+    // Check if wallet exists
+    const user = await User.findOne({
+      walletAddress: walletAddress.toLowerCase(),
+    }).select("walletAddress walletName");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Wallet not found",
+      });
+    }
+
+    console.log(`✅ Wallet exists: ${user.walletAddress}`);
+
+    res.json({
+      success: true,
+      message: "Wallet found",
+      data: {
+        walletAddress: user.walletAddress,
+        walletName: user.walletName,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Wallet exists check error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to check wallet",
+    });
+  }
+});
 
 export default router;

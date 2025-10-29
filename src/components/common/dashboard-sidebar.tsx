@@ -25,6 +25,10 @@ import {
   Menu,
   X,
   Wallet,
+  PackageCheck,
+  PackagePlus,
+  Boxes,
+  CreditCard,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -59,13 +63,16 @@ export function DashboardSidebar() {
       case "supplier":
         return [
           { href: "/supplier", label: "Dashboard", icon: Home },
-          { href: "/supplier/add-product", label: "Add Product", icon: Plus },
-          { href: "/supplier/products", label: "Products", icon: Package },
+          {
+            href: "/supplier/add-inventory",
+            label: "Add Inventory",
+            icon: PackagePlus,
+          },
           { href: "/supplier/inventory", label: "Inventory", icon: Warehouse },
           {
             href: "/supplier/transactions",
             label: "Transactions",
-            icon: History,
+            icon: CreditCard,
           },
           { href: "/supplier/vendors", label: "Vendors", icon: Users },
           { href: "/supplier/insights", label: "Insights", icon: BarChart },
@@ -76,16 +83,22 @@ export function DashboardSidebar() {
       case "vendor":
         return [
           { href: "/vendor", label: "Dashboard", icon: Home },
-          { href: "/vendor/add-product", label: "Add Product", icon: Plus },
-          { href: "/vendor/my-products", label: "My Products", icon: Package },
-          { href: "/vendor/orders", label: "Orders", icon: ShoppingCart },
+          { href: "/vendor/browse", label: "Browse Inventory", icon: Boxes },
+          { href: "/vendor/cart", label: "My Cart", icon: ShoppingCart },
+          {
+            href: "/vendor/add-product",
+            label: "Add Product",
+            icon: PackagePlus,
+          },
+          {
+            href: "/vendor/my-products",
+            label: "My Products",
+            icon: PackageCheck,
+          },
+          { href: "/vendor/orders", label: "Orders", icon: ClipboardList },
           { href: "/vendor/customers", label: "Customers", icon: Users },
           { href: "/vendor/insights", label: "Insights", icon: TrendingUp },
-          {
-            href: "/vendor/history",
-            label: "Sales History",
-            icon: History,
-          },
+          { href: "/vendor/history", label: "Sales History", icon: History },
           { href: "/wallet", label: "Wallet", icon: Wallet },
         ];
 
@@ -101,7 +114,7 @@ export function DashboardSidebar() {
         ];
 
       // 4. Blockchain Expert
-      case "blockchain-expert":
+      case "expert":
         return [
           { href: "/blockchain-expert", label: "Dashboard", icon: Home },
           {
@@ -144,21 +157,6 @@ export function DashboardSidebar() {
 
   const navigationItems = getNavigationItems();
 
-  const getRoleDisplayName = (role?: string) => {
-    switch (role) {
-      case "blockchain-expert":
-        return "Blockchain Expert";
-      case "supplier":
-        return "Supplier Portal";
-      case "vendor":
-        return "Vendor Portal";
-      case "customer":
-        return "Customer Portal";
-      default:
-        return "Navigation";
-    }
-  };
-
   // Mobile toggle button
   const MobileToggle = () => (
     <div className="md:hidden fixed top-4 left-4 z-50">
@@ -191,7 +189,7 @@ export function DashboardSidebar() {
 
       <div
         className={cn(
-          "fixed left-0 top-0 h-full bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 z-40 transition-all duration-300 ease-in-out",
+          "fixed left-0 top-0 h-full bg-transparent backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 z-40 transition-all duration-300 ease-in-out",
           isMobile
             ? isOpen
               ? "w-64 translate-x-0"
@@ -199,12 +197,9 @@ export function DashboardSidebar() {
             : "w-64 translate-x-0"
         )}
       >
-        <div className="h-full py-6 overflow-y-auto">
+        <div className="h-full pt-12 pb-6 overflow-y-auto">
           <div className="px-3 py-2">
             <div className="flex items-center justify-between mb-4 px-4">
-              <h2 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100">
-                {getRoleDisplayName(user?.role)}
-              </h2>
               {isMobile && (
                 <Button
                   variant="ghost"

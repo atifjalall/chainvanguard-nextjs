@@ -3,12 +3,18 @@ import { Transaction, WalletData } from "./web3";
 // User and Authentication Types
 export interface User {
   id: string;
+  _id?: string;
   name: string;
   email?: string;
   phone?: string;
   role: UserRole;
   walletAddress: string;
   walletName: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
   // Business info for suppliers/vendors
   companyName?: string;
   businessAddress?: string;
@@ -24,7 +30,7 @@ export interface User {
   avatar?: string;
 }
 
-export type UserRole = "supplier" | "vendor" | "customer" | "blockchain-expert";
+export type UserRole = "supplier" | "vendor" | "customer" | "expert";
 
 export interface AuthContextType {
   user: User | null;
@@ -52,19 +58,25 @@ export interface RegisterData {
   registrationNumber?: string;
 }
 
+// Add these to your existing WalletContextType interface
 export interface WalletContextType {
-  currentWallet: WalletData | null
-  isConnected: boolean
-  balance: number
-  transactions: Transaction[]
-  connectWallet: (walletId: string, password: string) => Promise<boolean>
-  disconnectWallet: () => void
-  createWallet: (name: string, password: string) => Promise<WalletData>
-  getAllWallets: () => WalletData[]
-  generateRecoveryPhrase: () => string
-  recoverWallet: (recoveryPhrase: string, newPassword: string) => Promise<WalletData>
-  isLoading: boolean
-  updateBalance: (newBalance: number) => void
+  currentWallet: WalletData | null;
+  isConnected: boolean;
+  balance: number;
+  transactions: Transaction[];
+  connectWallet: (walletId: string, password: string) => Promise<boolean>;
+  disconnectWallet: () => void;
+  createWallet: (name: string, password: string) => Promise<WalletData>;
+  getAllWallets: () => WalletData[];
+  generateRecoveryPhrase: () => string;
+  recoverWallet: (
+    recoveryPhrase: string,
+    newPassword: string
+  ) => Promise<WalletData>;
+  isLoading: boolean;
+  updateBalance: (newBalance: number) => void;
+  refreshBalance?: () => Promise<void>;
+  refreshTransactions?: () => Promise<void>;
 }
 
 export interface HyperledgerWallet {
@@ -77,45 +89,241 @@ export interface HyperledgerWallet {
   createdAt: string;
 }
 
-// Product Types
+// ========================================
+// PRODUCT TYPES - COMPLETE BACKEND SYNC
+// ========================================
+
+export interface ApparelDetails {
+  // Size & Fit
+  size: "XXS" | "XS" | "S" | "M" | "L" | "XL" | "XXL" | "XXXL" | "Free Size";
+  fit?: "Slim Fit" | "Regular Fit" | "Loose Fit" | "Oversized";
+
+  // Style Details
+  color: string;
+  pattern?:
+    | "Solid"
+    | "Striped"
+    | "Checked"
+    | "Printed"
+    | "Floral"
+    | "Abstract"
+    | "Geometric"
+    | "Polka Dot";
+
+  // Material & Fabric
+  material: string; // e.g., "100% Cotton"
+  fabricType?:
+    | "Cotton"
+    | "Polyester"
+    | "Silk"
+    | "Wool"
+    | "Linen"
+    | "Denim"
+    | "Jersey"
+    | "Chiffon"
+    | "Satin"
+    | "Velvet";
+  fabricWeight?: string; // e.g., "180 GSM"
+  careInstructions?: string;
+
+  // Design Details
+  neckline?:
+    | "Round Neck"
+    | "V-Neck"
+    | "Crew Neck"
+    | "Polo Neck"
+    | "Boat Neck"
+    | "Off-Shoulder"
+    | "Collar";
+  sleeveLength?:
+    | "Sleeveless"
+    | "Short Sleeve"
+    | "3/4 Sleeve"
+    | "Long Sleeve"
+    | "Full Sleeve";
+}
+
+export interface ProductImage {
+  url: string;
+  ipfsHash?: string;
+  cloudinaryId?: string;
+  isMain: boolean;
+}
+
+export interface ProductReview {
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  verifiedPurchase: boolean;
+  images?: string[];
+  createdAt: Date;
+  helpful: number;
+}
+
 export interface Product {
+  // MongoDB ID
   id: string;
+  _id: string;
+
+  // Basic Information
   name: string;
   description: string;
-  category: string;
+
+  // Category System
+  category: "Men" | "Women" | "Kids" | "Unisex";
+  subcategory:
+    | "T-Shirts"
+    | "Shirts"
+    | "Blouses"
+    | "Sweaters"
+    | "Hoodies"
+    | "Jackets"
+    | "Coats"
+    | "Jeans"
+    | "Trousers"
+    | "Shorts"
+    | "Skirts"
+    | "Dresses"
+    | "Suits"
+    | "Jumpsuits"
+    | "Scarves"
+    | "Belts"
+    | "Hats"
+    | "Bags"
+    | "Shoes"
+    | "Sneakers"
+    | "Boots"
+    | "Sandals"
+    | "Activewear"
+    | "Sleepwear"
+    | "Swimwear"
+    | "Underwear";
+
+  productType?:
+    | "Casual"
+    | "Formal"
+    | "Sports"
+    | "Party"
+    | "Traditional"
+    | "Workwear";
+  brand?: string;
+
+  // QR Code
+  qrCode?: string;
+  qrCodeImageUrl?: string;
+
+  // Apparel-Specific Attributes
+  apparelDetails: ApparelDetails;
+
+  // Pricing
   price: number;
+  costPrice?: number;
+  originalPrice?: number;
+  discount?: number;
+
+  // Inventory
   quantity: number;
-  images?: string[];
-  supplierId: string;
-  supplierName: string;
-  createdAt: string;
-  updatedAt: string;
-  status: ProductStatus;
-  sku?: string;
-  weight?: string;
+  reservedQuantity?: number;
+  minStockLevel: number;
+  sku: string;
+  slug: string;
+
+  // Images
+  images: ProductImage[];
+
+  // Physical Properties
+  weight?: number;
+  dimensions?: string;
+
+  // Tags & Metadata
+  tags: string[];
+  season?: "Summer" | "Winter" | "Monsoon" | "All Season";
+  countryOfOrigin?: string;
+  manufacturer?: string;
+
+  // Seller Information
+  sellerId: string;
+  sellerName: string;
+  sellerWalletAddress?: string;
+
+  // Legacy compatibility
+  supplierId?: string;
+  supplierName?: string;
+
+  // Status
+  status:
+    | "draft"
+    | "active"
+    | "inactive"
+    | "out_of_stock"
+    | "discontinued"
+    | "archived";
+  isVerified: boolean;
+  isFeatured: boolean;
+  isNewArrival: boolean;
+  isBestseller: boolean;
+
+  // Certifications
+  isSustainable: boolean;
+  certifications: string[];
+
+  // Ratings & Reviews
+  averageRating: number;
+  totalReviews: number;
+  reviews?: ProductReview[];
+
+  // Sales & Views
+  totalSold: number;
+  views: number;
+  lastViewedAt?: Date | string;
+  lastSoldAt?: Date | string;
+  reviewCount?: number;
+
+  // Blockchain
+  blockchainProductId?: string;
+  blockchainVerified: boolean;
+  ipfsHash?: string;
+  fabricTransactionId?: string;
+
+  // Shipping
+  freeShipping: boolean;
+  shippingCost: number;
+  estimatedDeliveryDays?: number;
+
+  // Dates
+  lastRestockedAt?: Date | string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+
+  // Virtuals (computed fields)
+  availableQuantity?: number;
+  stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
+  url?: string;
+
+  // Legacy fields for backward compatibility
   manufacturingDate?: string;
   expiryDate?: string;
-  tags?: string[];
-  brand?: string;
+  warranty?: string;
+  origin?: string;
+  minimumOrderQuantity?: number;
   model?: string;
   color?: string;
   material?: string;
-  warranty?: string;
-  certifications?: string;
-  origin?: string;
-  minimumOrderQuantity?: number;
-  dimensions?: string
 }
 
 export type ProductStatus =
   | "active"
   | "inactive"
   | "out-of-stock"
+  | "out_of_stock"
   | "discontinued"
   | "available"
   | "reserved"
   | "sold"
-  | "pending-approval";
+  | "pending-approval"
+  | "draft"
+  | "archived";
 
 export interface ProductFormData {
   name: string;
@@ -126,7 +334,40 @@ export interface ProductFormData {
   images: File[];
 }
 
-// Blockchain Types
+export interface ProductListResponse {
+  success: boolean;
+  products: Product[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface ProductResponse {
+  data: never[];
+  success: boolean;
+  product: Product;
+  message?: string;
+}
+
+export interface ProductStatsResponse {
+  success: boolean;
+  stats: {
+    totalProducts: number;
+    activeProducts: number;
+    outOfStock: number;
+    lowStock: number;
+    totalValue: number;
+    averagePrice: number;
+  };
+}
+
+// ========================================
+// BLOCKCHAIN TYPES
+// ========================================
+
 export interface BlockchainTransaction {
   id: string;
   hash: string;
@@ -184,29 +425,153 @@ export interface SmartContract {
   deployedAt: string;
 }
 
-// Order Types
+// ========================================
+// ORDER TYPES
+// ========================================
+
 export interface Order {
-  id: string;
+  _id?: string;
+  id?: string;
+  orderNumber: string;
+
+  // Customer info
   customerId: string;
   customerName: string;
-  vendorId: string;
-  vendorName: string;
-  products: OrderItem[];
-  totalAmount: number;
+  customerEmail: string;
+  customerPhone?: string;
+  customerWalletAddress: string;
+
+  // Seller info
+  sellerId: string;
+  sellerName: string;
+  sellerWalletAddress: string;
+  sellerRole?: "vendor" | "supplier";
+
+  // Order items (backend uses 'items' not 'products')
+  items: OrderItem[];
+  products?: OrderItem[]; // Keep for backwards compatibility
+
+  // Pricing
+  subtotal: number;
+  shippingCost?: number;
+  tax?: number;
+  discount?: number;
+  discountCode?: string;
+  total: number;
+  totalAmount?: number; // Alias for total
+  currency?: string;
+
+  // Status
   status: OrderStatus;
-  shippingAddress: Address;
+  statusHistory?: StatusHistory[];
+
+  // Shipping Address (full structure from backend)
+  shippingAddress: {
+    name: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+    latitude?: number;
+    longitude?: number;
+    addressType?: "home" | "office" | "other";
+  };
+
+  // Billing Address
+  billingAddress?: {
+    name?: string;
+    phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+  };
+
+  // Shipping details
+  shippingMethod?: "standard" | "express" | "overnight" | "pickup";
+  estimatedDeliveryDate?: string;
+  actualDeliveryDate?: string;
+  trackingNumber?: string;
+  trackingId?: string; // Alias for trackingNumber
+  trackingUrl?: string;
+  courierName?: "FedEx" | "UPS" | "DHL" | "USPS" | "Local" | "Other" | "";
+  carrier?: string; // Alias for courierName
+
+  // Payment
   paymentMethod: PaymentMethod;
+  paymentStatus?: "pending" | "paid" | "failed" | "refunded";
+  paymentIntentId?: string;
+  transactionHash?: string;
+  paidAt?: string;
+
+  // Blockchain
+  blockchainOrderId?: string;
+  blockchainTxId?: string;
+  blockchainTxHash?: string;
+
+  // Timestamps
   createdAt: string;
   updatedAt: string;
-  trackingId?: string;
+  confirmedAt?: string;
+  processingAt?: string;
+  shippedAt?: string;
+  deliveredAt?: string;
+  cancelledAt?: string;
+  refundedAt?: string;
+
+  // Additional
+  customerNotes?: string;
+  specialInstructions?: string;
+  isGift?: boolean;
+  giftMessage?: string;
+  cancellationReason?: string;
+  refundAmount?: number;
+  refundReason?: string;
 }
 
 export interface OrderItem {
+  _id?: string;
   productId: string;
   productName: string;
+  sku?: string;
   quantity: number;
   price: number;
-  totalPrice: number;
+  subtotal: number;
+  productSnapshot?: {
+    category?: string;
+    subcategory?: string;
+    brand?: string;
+    apparelDetails?: {
+      size?: string;
+      color?: string;
+      material?: string;
+      fit?: string;
+    };
+    images?: Array<{
+      url?: string;
+      cloudinaryUrl?: string;
+      isMain?: boolean;
+    }>;
+    blockchainProductId?: string;
+  };
+  image?: string; // For backwards compatibility
+  trackingQRCode?: string;
+  sellerId?: string;
+  sellerName?: string;
+  sellerWalletAddress?: string;
+}
+
+export interface StatusHistory {
+  status: OrderStatus;
+  changedBy?: string;
+  changedByRole?: "customer" | "vendor" | "supplier" | "expert";
+  timestamp: string;
+  notes?: string;
 }
 
 export type OrderStatus =
@@ -215,7 +580,8 @@ export type OrderStatus =
   | "processing"
   | "shipped"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  | "refunded";
 
 export interface Address {
   street: string;
@@ -225,14 +591,22 @@ export interface Address {
   country: string;
 }
 
-export type PaymentMethod = "crypto" | "card" | "bank-transfer";
+export type PaymentMethod = "crypto" | "card" | "bank-transfer" | "wallet";
 
-// Cart Types
+// ========================================
+// CART TYPES
+// ========================================
+
 export interface CartItem {
   productId: string;
   product: Product;
   quantity: number;
   addedAt: string;
+  selectedSize?: string;
+  selectedColor?: string;
+  selectedFit?: string;
+  price: number;
+  subtotal: number;
 }
 
 export interface Cart {
@@ -242,7 +616,10 @@ export interface Cart {
   updatedAt: string;
 }
 
-// IPFS Types
+// ========================================
+// IPFS TYPES
+// ========================================
+
 export interface IPFSFile {
   hash: string;
   name: string;
@@ -259,7 +636,10 @@ export interface IPFSUploadResponse {
   error?: string;
 }
 
-// Hyperledger Fabric Types
+// ========================================
+// HYPERLEDGER FABRIC TYPES
+// ========================================
+
 export interface FabricConnectionProfile {
   name: string;
   version: string;
@@ -305,7 +685,10 @@ export interface FabricTransaction {
   error?: string;
 }
 
-// Analytics and Dashboard Types
+// ========================================
+// ANALYTICS AND DASHBOARD TYPES
+// ========================================
+
 export interface DashboardMetrics {
   totalProducts: number;
   totalOrders: number;
@@ -330,7 +713,10 @@ export interface PerformanceMetric {
   trend: "up" | "down" | "stable";
 }
 
-// Consensus and Network Types
+// ========================================
+// CONSENSUS AND NETWORK TYPES
+// ========================================
+
 export interface ConsensusNode {
   id: string;
   name: string;
@@ -351,7 +737,10 @@ export interface NetworkHealth {
   networkLatency: number;
 }
 
-// Role Preservation Utility Types
+// ========================================
+// ROLE PRESERVATION UTILITY TYPES
+// ========================================
+
 export interface RolePreservationData {
   address: string;
   role: UserRole;
@@ -367,7 +756,10 @@ export interface WalletMetadata {
   channelName: string;
 }
 
-// Form Types
+// ========================================
+// FORM TYPES
+// ========================================
+
 export interface FormFieldError {
   field: string;
   message: string;
@@ -384,7 +776,10 @@ export interface ValidationError {
   [key: string]: string;
 }
 
-// Notification Types
+// ========================================
+// NOTIFICATION TYPES
+// ========================================
+
 export interface Notification {
   id: string;
   type: "success" | "error" | "warning" | "info";
@@ -401,9 +796,13 @@ export interface NotificationAction {
   variant?: "primary" | "secondary";
 }
 
-// Search and Filter Types
+// ========================================
+// SEARCH AND FILTER TYPES
+// ========================================
+
 export interface SearchFilters {
   category?: string;
+  subcategory?: string;
   priceRange?: {
     min: number;
     max: number;
@@ -414,9 +813,16 @@ export interface SearchFilters {
     start: string;
     end: string;
   };
+  size?: string;
+  color?: string;
+  brand?: string;
+  search?: string;
 }
 
-// Component Props Types
+// ========================================
+// COMPONENT PROPS TYPES
+// ========================================
+
 export interface BaseComponentProps {
   className?: string;
   children?: React.ReactNode;
@@ -427,14 +833,20 @@ export interface LoadingState {
   error?: string | null;
 }
 
-// Route Protection Types
+// ========================================
+// ROUTE PROTECTION TYPES
+// ========================================
+
 export interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: UserRole[];
   redirectTo?: string;
 }
 
-// Chart and Visualization Types
+// ========================================
+// CHART AND VISUALIZATION TYPES
+// ========================================
+
 export interface ChartDataPoint {
   name: string;
   value: number;
@@ -450,7 +862,10 @@ export interface ChartConfig {
   colors?: string[];
 }
 
-// File Upload Types
+// ========================================
+// FILE UPLOAD TYPES
+// ========================================
+
 export interface FileUploadConfig {
   maxSize: number;
   allowedTypes: string[];
@@ -466,7 +881,10 @@ export interface UploadedFile {
   uploadedAt: string;
 }
 
-// Theme Types
+// ========================================
+// THEME TYPES
+// ========================================
+
 export type Theme = "light" | "dark" | "system";
 
 export interface ThemeConfig {
@@ -474,7 +892,10 @@ export interface ThemeConfig {
   setTheme: (theme: Theme) => void;
 }
 
-// Error Types
+// ========================================
+// ERROR TYPES
+// ========================================
+
 export interface AppError {
   code: string;
   message: string;
@@ -482,7 +903,10 @@ export interface AppError {
   timestamp: string;
 }
 
-// Configuration Types
+// ========================================
+// CONFIGURATION TYPES
+// ========================================
+
 export interface AppConfig {
   apiUrl: string;
   chainId: number;
@@ -502,7 +926,10 @@ export interface AppConfig {
   };
 }
 
-// API Response Types
+// ========================================
+// API RESPONSE TYPES
+// ========================================
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -529,7 +956,10 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   };
 }
 
-// Recovery and Backup Types
+// ========================================
+// RECOVERY AND BACKUP TYPES
+// ========================================
+
 export interface RecoveryPhrase {
   phrase: string;
   walletId: string;
@@ -548,7 +978,10 @@ export interface BackupData {
   createdAt: string;
 }
 
-// Business Types for Suppliers/Vendors
+// ========================================
+// BUSINESS TYPES FOR SUPPLIERS/VENDORS
+// ========================================
+
 export type BusinessType =
   | "manufacturer"
   | "distributor"
@@ -572,7 +1005,10 @@ export interface BusinessInfo {
   email?: string;
 }
 
-// Organization MSP mappings
+// ========================================
+// ORGANIZATION MSP MAPPINGS
+// ========================================
+
 export const MSP_MAPPINGS = {
   supplier: "SupplierMSP",
   vendor: "VendorMSP",

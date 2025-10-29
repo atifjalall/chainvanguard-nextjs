@@ -9,6 +9,7 @@ import {
   validateCategorySubcategory,
   validateCategorySize,
 } from "../config/categories.js";
+import qrService from "./qr.service.js";
 import logger from "../utils/logger.js";
 
 class ProductService {
@@ -146,11 +147,26 @@ class ProductService {
         console.log(`✅ Uploaded ${uploadedCertificates.length} certificates`);
       }
 
-      // 6. Generate QR code (if needed)
+      // 6. Generate QR code automatically
       let qrCode = "";
-      if (productData.generateQR) {
-        // TODO: Generate QR code with product URL
-        qrCode = `${process.env.FRONTEND_URL}/products/${productData.slug || ""}`;
+      let qrCodeImageUrl = "";
+
+      console.log("🎯 Generating QR code for product...");
+
+      try {
+        // Generate unique QR code string
+        qrCode = qrService.generateQRCodeString(
+          seller._id.toString(),
+          "product"
+        );
+
+        console.log(`✅ QR Code generated: ${qrCode}`);
+      } catch (error) {
+        console.error(
+          "⚠️  QR generation failed (non-blocking):",
+          error.message
+        );
+        // Don't fail product creation if QR fails
       }
 
       // 7. Create product in MongoDB
@@ -280,6 +296,39 @@ class ProductService {
 
       await product.save();
       console.log(`✅ Product saved to MongoDB: ${product._id}`);
+
+      // 9. Generate QR code image asynchronously (don't block response)
+      if (product._id) {
+        // Generate QR in background
+        qrService
+          .generateProductQR(product._id.toString(), seller._id.toString())
+          .then((qrResult) => {
+            if (qrResult.success) {
+              console.log(
+                `✅ QR code image generated for product: ${product._id}`
+              );
+
+              // Update product with QR image URL
+              Product.findByIdAndUpdate(
+                product._id,
+                {
+                  qrCodeImageUrl: qrResult.data.imageUrl,
+                  $set: { qrCode: qrResult.data.code },
+                },
+                { new: true }
+              ).catch((err) =>
+                console.error("⚠️  Failed to update product with QR:", err)
+              );
+            }
+          })
+          .catch((error) => {
+            console.error(
+              `⚠️  QR image generation failed for ${product._id}:`,
+              error.message
+            );
+            // Don't fail - QR can be generated later
+          });
+      }
 
       // 🆕 LOG PRODUCT CREATION
       await logger.logProduct({
@@ -442,10 +491,25 @@ class ProductService {
         .populate("sellerId", "name email companyName walletAddress")
         .lean();
 
-      const response = buildPaginationResponse(products, page, limit, total);
+      const productsWithTimestamps = products.map((product) => ({
+        ...product,
+        images: product.images
+          ? product.images.map((img) => ({
+              ...img,
+              url: `${img.url}?t=${Date.now()}`,
+            }))
+          : [],
+      }));
 
-      // Cache for 5 minutes
-      await redisService.set(cacheKey, response, 300);
+      const response = buildPaginationResponse(
+        productsWithTimestamps,
+        page,
+        limit,
+        total
+      );
+
+      // Cache for shorter time (2 minutes)
+      await redisService.set(cacheKey, response, 120);
 
       return response;
     } catch (error) {
@@ -460,21 +524,8 @@ class ProductService {
 
   async getProductById(productId, incrementView = false) {
     try {
-      // Check cache first
-      const cachedProduct = await redisService.getCachedProduct(productId);
-      if (cachedProduct) {
-        console.log("✅ Returning cached product");
-
-        // Increment view count (async)
-        if (incrementView) {
-          Product.findByIdAndUpdate(productId, {
-            $inc: { views: 1 },
-            lastViewedAt: new Date(),
-          }).catch((err) => console.error("View count update failed:", err));
-        }
-
-        return cachedProduct;
-      }
+      // ✅ Don't use cache for fresh data
+      console.log("🔍 Fetching fresh product from database:", productId);
 
       // Get from MongoDB
       const product = await Product.findById(productId)
@@ -494,8 +545,16 @@ class ProductService {
         product.views += 1;
       }
 
-      // Cache for 10 minutes
-      await redisService.cacheProduct(productId, product);
+      // ✅ Add timestamp to image URLs to bust cache
+      if (product.images) {
+        product.images = product.images.map((img) => ({
+          ...img,
+          url: `${img.url}?t=${Date.now()}`,
+        }));
+      }
+
+      // ✅ Cache for shorter time (1 minute instead of 10)
+      await redisService.cacheProduct(productId, product, 60);
 
       return product;
     } catch (error) {
@@ -507,9 +566,28 @@ class ProductService {
   // ========================================
   // UPDATE PRODUCT
   // ========================================
+  // chainvanguard-backend/api/src/services/product.service.js
 
   async updateProduct(productId, updateData, files, userId) {
     try {
+      console.log("🚀 Starting product update...");
+      console.log("📦 Product ID:", productId);
+
+      // ✅ FIX: Handle files object from multer.fields()
+      let imagesToUpload = [];
+
+      if (files) {
+        console.log("📁 Files object received:", Object.keys(files));
+
+        // Files come as object with 'images' and 'certificates' keys
+        if (files.images && Array.isArray(files.images)) {
+          imagesToUpload = files.images;
+          console.log(`📸 Found ${imagesToUpload.length} images to upload`);
+        }
+      } else {
+        console.log("ℹ️  No files received");
+      }
+
       // Get existing product
       const product = await Product.findById(productId);
       if (!product) {
@@ -521,86 +599,133 @@ class ProductService {
         throw new Error("Unauthorized: You can only update your own products");
       }
 
-      // Validate category/subcategory if changed
-      if (updateData.category && updateData.subcategory) {
-        if (
-          !validateCategorySubcategory(
-            updateData.category,
-            updateData.subcategory
-          )
-        ) {
-          throw new Error(
-            `Invalid subcategory '${updateData.subcategory}' for category '${updateData.category}'`
+      // ✅ Handle image removal if specified
+      if (updateData.removeImages && Array.isArray(updateData.removeImages)) {
+        console.log(`🗑️  Removing ${updateData.removeImages.length} images...`);
+
+        for (const publicId of updateData.removeImages) {
+          try {
+            await cloudinaryService.deleteImage(publicId);
+            console.log(`✅ Deleted from Cloudinary: ${publicId}`);
+          } catch (err) {
+            console.warn(
+              `⚠️  Could not delete image from Cloudinary: ${publicId}`
+            );
+          }
+
+          // Remove from product.images array
+          product.images = product.images.filter(
+            (img) => img.publicId !== publicId
           );
         }
+
+        console.log(`✅ Removed images, remaining: ${product.images.length}`);
       }
 
-      // Handle new images
-      if (files && files.images) {
-        console.log(`📸 Uploading ${files.images.length} new images...`);
+      // ✅ Reset main image flag on all existing images
+      product.images.forEach((img) => {
+        img.isMain = false;
+      });
 
-        for (let i = 0; i < files.images.length; i++) {
-          const file = files.images[i];
+      // ✅ Handle new images upload
+      if (imagesToUpload.length > 0) {
+        console.log(`📸 Uploading ${imagesToUpload.length} new images...`);
 
-          const cloudinaryResult = await cloudinaryService.uploadImage(
-            file.buffer,
-            file.originalname,
-            "products"
-          );
+        for (let i = 0; i < imagesToUpload.length; i++) {
+          const file = imagesToUpload[i];
 
-          const ipfsResult = await ipfsService.uploadBuffer(
-            file.buffer,
-            file.originalname,
-            { productId: productId.toString() }
-          );
-
-          product.images.push({
-            url: cloudinaryResult.url,
-            publicId: cloudinaryResult.publicId,
-            ipfsHash: ipfsResult.success ? ipfsResult.ipfsHash : "",
-            isMain: product.images.length === 0 && i === 0,
-            viewType: this._getViewType(file.originalname, i),
+          console.log(`Uploading image ${i + 1}/${imagesToUpload.length}:`, {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
           });
-        }
-      }
 
-      // Handle new certificates
-      if (files && files.certificates) {
-        console.log(
-          `📄 Uploading ${files.certificates.length} new certificates...`
-        );
+          try {
+            // Upload to Cloudinary
+            const cloudinaryResult = await cloudinaryService.uploadImage(
+              file.buffer,
+              file.originalname,
+              "products"
+            );
 
-        for (const cert of files.certificates) {
-          const ipfsResult = await ipfsService.uploadBuffer(
-            cert.buffer,
-            cert.originalname,
-            { productId: productId.toString() }
-          );
-
-          const cloudinaryResult = await cloudinaryService.uploadDocument(
-            cert.buffer,
-            cert.originalname,
-            "certificates"
-          );
-
-          if (ipfsResult.success) {
-            product.certificates.push({
-              name: updateData.certificateName || cert.originalname,
-              certificateNumber: updateData.certificateNumber || "",
-              type: updateData.certificateType || "Other",
-              issueDate: updateData.certificateIssueDate || null,
-              expiryDate: updateData.certificateExpiryDate || null,
-              ipfsHash: ipfsResult.ipfsHash,
-              ipfsUrl: ipfsResult.ipfsUrl,
-              cloudinaryUrl: cloudinaryResult.url,
-              fileSize: cert.size,
-              mimeType: cert.mimetype,
+            console.log(`✅ Cloudinary upload successful:`, {
+              url: cloudinaryResult.url,
+              publicId: cloudinaryResult.publicId,
             });
+
+            // Upload to IPFS (optional)
+            let ipfsHash = "";
+            try {
+              const ipfsResult = await ipfsService.uploadBuffer(
+                file.buffer,
+                file.originalname,
+                { productId: productId.toString() }
+              );
+              ipfsHash = ipfsResult.success ? ipfsResult.ipfsHash : "";
+              console.log(`✅ IPFS upload successful: ${ipfsHash}`);
+            } catch (ipfsError) {
+              console.warn(
+                "⚠️  IPFS upload failed (non-blocking):",
+                ipfsError.message
+              );
+            }
+
+            // Add new image to product
+            product.images.push({
+              url: cloudinaryResult.url,
+              publicId: cloudinaryResult.publicId,
+              ipfsHash: ipfsHash,
+              isMain: false, // Will be set below
+              viewType: this._getViewType(file.originalname, i),
+            });
+
+            console.log(`✅ Image ${i + 1} added to product`);
+          } catch (uploadError) {
+            console.error(`❌ Failed to upload image ${i + 1}:`, uploadError);
+            throw new Error(`Failed to upload image: ${uploadError.message}`);
           }
         }
+
+        console.log(
+          `✅ All ${imagesToUpload.length} images uploaded successfully`
+        );
+      } else {
+        console.log("ℹ️  No new images to upload");
       }
 
-      // Update fields
+      // ✅ Set the FIRST image as main (whether existing or new)
+      if (product.images.length > 0) {
+        product.images[0].isMain = true;
+        console.log(`✅ Set main image: ${product.images[0].url}`);
+      } else {
+        console.warn("⚠️  Product has no images after update!");
+      }
+
+      // ✅ Clean up apparelDetails - remove empty strings from enum fields
+      if (updateData.apparelDetails) {
+        const cleanedApparelDetails = { ...updateData.apparelDetails };
+
+        // Remove empty enum fields
+        if (cleanedApparelDetails.fabricType === "") {
+          delete cleanedApparelDetails.fabricType;
+        }
+        if (cleanedApparelDetails.fit === "") {
+          delete cleanedApparelDetails.fit;
+        }
+        if (cleanedApparelDetails.pattern === "") {
+          delete cleanedApparelDetails.pattern;
+        }
+        if (cleanedApparelDetails.neckline === "") {
+          delete cleanedApparelDetails.neckline;
+        }
+        if (cleanedApparelDetails.sleeveLength === "") {
+          delete cleanedApparelDetails.sleeveLength;
+        }
+
+        updateData.apparelDetails = cleanedApparelDetails;
+      }
+
+      // Update other fields
       const allowedUpdates = [
         "name",
         "description",
@@ -610,30 +735,24 @@ class ProductService {
         "brand",
         "price",
         "costPrice",
-        "wholesalePrice",
         "quantity",
         "minStockLevel",
+        "sku",
+        "weight",
+        "dimensions",
         "apparelDetails",
-        "manufacturingDetails",
-        "specifications",
-        "sustainability",
-        "qualityGrade",
-        "currentLocation",
         "tags",
-        "keywords",
-        "metaDescription",
         "season",
-        "collection",
-        "status",
+        "countryOfOrigin",
+        "manufacturer",
         "isFeatured",
-        "minimumOrderQuantity",
-        "warrantyPeriod",
-        "returnPolicy",
-        "shippingDetails",
+        "isNewArrival",
+        "isBestseller",
+        "isSustainable",
+        "certifications",
+        "freeShipping",
+        "shippingCost",
       ];
-
-      // Store previous state for logging
-      const previousState = product.toObject();
 
       allowedUpdates.forEach((field) => {
         if (updateData[field] !== undefined) {
@@ -641,45 +760,60 @@ class ProductService {
         }
       });
 
+      // ✅ Force update timestamp to bust cache
+      product.updatedAt = new Date();
+
+      // Save the product
       await product.save();
-      console.log(`✅ Product updated: ${productId}`);
 
-      // 🆕 LOG PRODUCT UPDATE
-      const user = await User.findById(userId);
-      await logger.logProduct({
-        type: "product_updated",
-        action: `Product updated: ${product.name}`,
-        productId: product._id,
-        userId,
-        userDetails: user
-          ? {
-              walletAddress: user.walletAddress,
-              role: user.role,
-              name: user.name,
-            }
-          : {},
-        status: "success",
-        data: { updates: updateData },
-        previousState,
-        newState: product.toObject(),
-      });
+      console.log(`✅ Product updated successfully: ${productId}`);
+      console.log(`✅ Final image count: ${product.images.length}`);
 
-      // Update blockchain (async)
+      // Log all image URLs for debugging
+      if (product.images.length > 0) {
+        console.log("📸 Image URLs:");
+        product.images.forEach((img, idx) => {
+          console.log(`  ${idx + 1}. ${img.url} (Main: ${img.isMain})`);
+        });
+      }
+
+      // ✅ Aggressively clear ALL caches
+      await redisService.invalidateProduct(productId);
+      await redisService.delPattern("products:*");
+      await redisService.delPattern("product:*");
+
+      console.log(`✅ Cache invalidated for product: ${productId}`);
+
+      // Update blockchain (async - don't wait)
       this.updateProductOnBlockchain(product).catch((err) =>
         console.error("⚠️  Blockchain update failed:", err.message)
       );
 
-      // Invalidate cache
-      await redisService.invalidateProduct(productId);
-      await redisService.delPattern("products:*");
+      // ✅ Return populated product with fresh data and cache-busted URLs
+      const updatedProduct = await Product.findById(productId)
+        .populate("sellerId", "name email companyName walletAddress")
+        .lean();
 
-      return product;
+      // ✅ Add timestamp to all image URLs to bust browser cache
+      if (updatedProduct && updatedProduct.images) {
+        const timestamp = Date.now();
+        updatedProduct.images = updatedProduct.images.map((img) => ({
+          ...img,
+          url: `${img.url}?t=${timestamp}`,
+        }));
+
+        console.log(
+          `✅ Added cache-busting timestamp to ${updatedProduct.images.length} images`
+        );
+      }
+
+      return updatedProduct;
     } catch (error) {
       console.error("❌ Update product error:", error);
+      console.error("Error stack:", error.stack);
       throw error;
     }
   }
-
   // ========================================
   // UPDATE STOCK ONLY
   // ========================================

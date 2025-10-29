@@ -1,78 +1,111 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import {
+import React, {
   createContext,
   useContext,
   useState,
   useEffect,
-  ReactNode,
+  useCallback,
 } from "react";
-import { User, UserRole } from "@/types/web3";
-import { RolePreservation, ROLE_STORAGE_KEYS } from "@/utils/role-preservation";
+import { User, UserRole } from "@/types";
+import { authAPI } from "@/lib/api/auth.api";
+
+const ROLE_STORAGE_KEYS = {
+  PRIMARY: "chainvanguard_auth_user",
+  BACKUP: "chainvanguard_user",
+  ROLE_MAP: "chainvanguard_role_map",
+  AUTH_TOKEN: "chainvanguard_auth_token",
+};
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (walletAddress: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  updateProfile: (updates: Partial<User>) => void;
   setUserRole: (role: UserRole) => void;
-  updateProfile: (profileData: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider = ({ children }: AuthProviderProps) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize auth state from localStorage
   useEffect(() => {
-    const savedUser = localStorage.getItem(ROLE_STORAGE_KEYS.PRIMARY);
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
+    initializeAuth();
+  }, []);
 
-        // Verify and recover role if missing
-        if (!userData.role && userData.walletAddress) {
-          const recoveredRole = RolePreservation.retrieveRole(
-            userData.walletAddress
-          );
-          if (recoveredRole) {
-            userData.role = recoveredRole;
+  const initializeAuth = useCallback(async () => {
+    setIsLoading(true);
+
+    try {
+      console.log("[AUTH] Initializing authentication...");
+
+      const token = localStorage.getItem(ROLE_STORAGE_KEYS.AUTH_TOKEN);
+
+      if (!token) {
+        console.log("[AUTH] No auth token found");
+        setIsLoading(false);
+        return;
+      }
+
+      const savedUser = localStorage.getItem(ROLE_STORAGE_KEYS.PRIMARY);
+
+      if (savedUser) {
+        try {
+          const userData: User = JSON.parse(savedUser);
+          console.log("[AUTH] Found saved user:", userData.email);
+
+          setUser(userData);
+          setIsAuthenticated(true);
+
+          try {
+            const profileResponse = await authAPI.getProfile();
+            const backendUser = profileResponse.data;
+
+            console.log("[AUTH] Synced with backend user data");
             localStorage.setItem(
               ROLE_STORAGE_KEYS.PRIMARY,
-              JSON.stringify(userData)
+              JSON.stringify(backendUser)
             );
-            console.log(
-              "[AUTH] Role recovered during initialization:",
-              recoveredRole
+            setUser(backendUser);
+          } catch (error) {
+            console.warn(
+              "[AUTH] Backend sync failed, using cached data:",
+              error
             );
           }
+        } catch (error) {
+          console.error("[AUTH] Error parsing saved user:", error);
+          localStorage.removeItem(ROLE_STORAGE_KEYS.PRIMARY);
         }
+      } else {
+        try {
+          const profileResponse = await authAPI.getProfile();
+          const userData = profileResponse.data;
 
-        setUser(userData);
-        setIsAuthenticated(true);
-        console.log("[AUTH] Auth provider initialized with user:", userData);
-      } catch (error) {
-        console.error("[AUTH] Error parsing saved user data:", error);
-        localStorage.removeItem(ROLE_STORAGE_KEYS.PRIMARY);
+          console.log("[AUTH] Fetched user from backend:", userData.email);
+          localStorage.setItem(
+            ROLE_STORAGE_KEYS.PRIMARY,
+            JSON.stringify(userData)
+          );
+          setUser(userData);
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error("[AUTH] Failed to fetch user profile:", error);
+          await logout();
+        }
       }
+    } catch (error) {
+      console.error("[AUTH] Auth initialization error:", error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const login = async (
@@ -82,163 +115,181 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsLoading(true);
 
     try {
-      console.log("[AUTH] Starting login for wallet:", walletAddress);
+      console.log("[AUTH] Login called for wallet:", walletAddress);
 
-      // Step 1: Try to retrieve existing user data (preserving everything)
-      let userData: User | null = null;
-      const existingUserData = localStorage.getItem(ROLE_STORAGE_KEYS.PRIMARY);
+      // Check if we have user data from backend already
+      const backendUserData = localStorage.getItem(ROLE_STORAGE_KEYS.PRIMARY);
+      const authToken = localStorage.getItem(ROLE_STORAGE_KEYS.AUTH_TOKEN);
 
-      if (existingUserData) {
+      if (backendUserData && authToken) {
         try {
-          userData = JSON.parse(existingUserData);
-          console.log("[AUTH] Found existing user data:", userData);
+          const userData: User = JSON.parse(backendUserData);
+          console.log("[AUTH] Using existing backend user data");
 
-          // Check if this is the same wallet
-          if (userData?.walletAddress === walletAddress) {
-            // Same wallet - preserve all data, just update login time
-            userData.loginAt = new Date().toISOString();
-            userData.isAuthenticated = true;
-            userData.updatedAt = new Date().toISOString();
-            console.log(
-              "[AUTH] Same wallet login, data preserved with role:",
-              userData.role
-            );
-          } else {
-            // Different wallet - try to recover role for this wallet
-            userData = null; // Reset to create new user data
+          if (
+            userData.walletAddress?.toLowerCase() ===
+            walletAddress.toLowerCase()
+          ) {
+            setUser(userData);
+            setIsAuthenticated(true);
+            console.log("[AUTH] ✅ Login successful with cached data");
+            return;
           }
         } catch (error) {
-          console.error("[AUTH] Error parsing existing user data:", error);
-          userData = null;
+          console.error("[AUTH] Error parsing cached user data:", error);
         }
       }
 
-      // Step 2: If no matching user data, try to recover or create new
-      if (!userData) {
-        console.log(
-          "[AUTH] Creating new user data, attempting role recovery..."
-        );
-
-        const recoveredRole = RolePreservation.retrieveRole(walletAddress);
-
-        userData = {
-          id: Date.now().toString(),
-          walletAddress,
-          walletName: RolePreservation.getWalletName(walletAddress),
-          role: recoveredRole || undefined,
-          name: "User",
-          loginAt: new Date().toISOString(),
-          isAuthenticated: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        console.log(
-          "[AUTH] Created user data with recovered role:",
-          userData.role
-        );
-      }
-
-      // Step 3: Double-check role preservation
-      if (!userData.role) {
-        console.warn("[AUTH] Role still missing, attempting final recovery...");
-        const recoveredRole = RolePreservation.retrieveRole(walletAddress);
-        if (recoveredRole) {
-          userData.role = recoveredRole;
-          console.log("[AUTH] Final role recovery successful:", recoveredRole);
-        }
-      }
-
-      // Step 4: Save with full role preservation
-      if (userData.role) {
-        RolePreservation.saveRole(walletAddress, userData.role, userData);
-      } else {
-        localStorage.setItem(
-          ROLE_STORAGE_KEYS.PRIMARY,
-          JSON.stringify(userData)
-        );
-      }
-
-      // Step 5: Update auth state
-      setUser(userData);
-      setIsAuthenticated(true);
-
-      // Step 6: Verify consistency
-      const consistency = RolePreservation.verifyRoleConsistency(walletAddress);
-      console.log("[AUTH] Role consistency check:", consistency);
-
-      console.log(
-        "[AUTH] Login completed successfully with role:",
-        userData.role
+      // If no valid cached data, this is an error - login should have been called by login page
+      console.warn(
+        "[AUTH] No cached user data found - user should login via API first"
       );
-    } catch (error) {
-      console.error("[AUTH] Login failed:", error);
-      throw new Error("Authentication failed");
+    } catch (error: any) {
+      console.error("[AUTH] Login error:", error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    console.log("[AUTH] Logging out user");
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem(ROLE_STORAGE_KEYS.PRIMARY);
-    localStorage.removeItem("chainvanguard_current_wallet");
-    // Clear auth cookie
-    document.cookie =
-      "chainvanguard_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+  const logout = async (): Promise<void> => {
+    setIsLoading(true);
+
+    try {
+      console.log("[AUTH] Logging out...");
+
+      try {
+        await authAPI.logout();
+      } catch (error) {
+        console.warn("[AUTH] Backend logout failed:", error);
+      }
+
+      localStorage.removeItem(ROLE_STORAGE_KEYS.PRIMARY);
+      localStorage.removeItem(ROLE_STORAGE_KEYS.AUTH_TOKEN);
+      localStorage.removeItem(ROLE_STORAGE_KEYS.BACKUP);
+      localStorage.removeItem("chainvanguard_auth");
+
+      document.cookie =
+        "chainvanguard_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+
+      setUser(null);
+      setIsAuthenticated(false);
+
+      console.log("[AUTH] Logout completed");
+    } catch (error) {
+      console.error("[AUTH] Logout error:", error);
+      setUser(null);
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const setUserRole = (role: UserRole) => {
-    if (!user) {
-      console.warn("[AUTH] Cannot set role: no user logged in");
+  const updateProfile = useCallback(
+    (updates: Partial<User>) => {
+      if (!user) {
+        console.warn("[AUTH] Cannot update profile - no user logged in");
+        return;
+      }
+
+      try {
+        const updatedUser: User = {
+          ...user,
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        };
+
+        console.log("[AUTH] Updating user profile");
+
+        localStorage.setItem(
+          ROLE_STORAGE_KEYS.PRIMARY,
+          JSON.stringify(updatedUser)
+        );
+        localStorage.setItem(
+          ROLE_STORAGE_KEYS.BACKUP,
+          JSON.stringify(updatedUser)
+        );
+
+        if (updates.role) {
+          updateRoleMap(updatedUser.walletAddress, updates.role);
+        }
+
+        setUser(updatedUser);
+
+        console.log("[AUTH] Profile updated successfully");
+      } catch (error) {
+        console.error("[AUTH] Error updating profile:", error);
+      }
+    },
+    [user]
+  );
+
+  const setUserRole = useCallback(
+    (role: UserRole) => {
+      if (!user) {
+        console.warn("[AUTH] Cannot set role - no user logged in");
+        return;
+      }
+
+      console.log("[AUTH] Setting user role to:", role);
+
+      const organizationMSP =
+        role === "supplier"
+          ? "SupplierMSP"
+          : role === "vendor"
+            ? "VendorMSP"
+            : role === "customer"
+              ? "CustomerMSP"
+              : "AdminMSP";
+
+      updateProfile({
+        role,
+        organizationMSP,
+      });
+    },
+    [user, updateProfile]
+  );
+
+  const refreshUser = async (): Promise<void> => {
+    if (!isAuthenticated) {
+      console.log("[AUTH] Cannot refresh - user not authenticated");
       return;
     }
 
-    const updatedUser = {
-      ...user,
-      role,
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      console.log("[AUTH] Refreshing user data from backend...");
 
-    // Save with full preservation
-    RolePreservation.saveRole(user.walletAddress, role, updatedUser);
+      const profileResponse = await authAPI.getProfile();
+      const userData = profileResponse.data;
 
-    setUser(updatedUser);
+      localStorage.setItem(ROLE_STORAGE_KEYS.PRIMARY, JSON.stringify(userData));
+      localStorage.setItem(ROLE_STORAGE_KEYS.BACKUP, JSON.stringify(userData));
 
-    console.log("[AUTH] Role set with full preservation:", role);
+      setUser(userData);
+
+      console.log("[AUTH] User data refreshed successfully");
+    } catch (error) {
+      console.error("[AUTH] Failed to refresh user data:", error);
+
+      if ((error as any)?.response?.status === 401) {
+        await logout();
+        throw new Error("Session expired. Please login again.");
+      }
+    }
   };
 
-  const updateProfile = (profileData: Partial<User>) => {
-    if (!user) {
-      console.warn("[AUTH] Cannot update profile: no user logged in");
-      return;
+  const updateRoleMap = (walletAddress: string, role: UserRole) => {
+    try {
+      const roleMapStr = localStorage.getItem(ROLE_STORAGE_KEYS.ROLE_MAP);
+      const roleMap = roleMapStr ? JSON.parse(roleMapStr) : {};
+
+      roleMap[walletAddress.toLowerCase()] = role;
+
+      localStorage.setItem(ROLE_STORAGE_KEYS.ROLE_MAP, JSON.stringify(roleMap));
+      console.log("[AUTH] Role map updated for wallet:", walletAddress);
+    } catch (error) {
+      console.error("[AUTH] Error updating role map:", error);
     }
-
-    const updatedUser = {
-      ...user,
-      ...profileData,
-      updatedAt: new Date().toISOString(),
-    };
-
-    // If role is being updated, use full preservation
-    if (profileData.role) {
-      RolePreservation.saveRole(
-        user.walletAddress,
-        profileData.role,
-        updatedUser
-      );
-    } else {
-      localStorage.setItem(
-        ROLE_STORAGE_KEYS.PRIMARY,
-        JSON.stringify(updatedUser)
-      );
-    }
-
-    setUser(updatedUser);
-
-    console.log("[AUTH] Profile updated with preservation");
   };
 
   const value: AuthContextType = {
@@ -247,9 +298,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     isLoading,
     login,
     logout,
-    setUserRole,
     updateProfile,
+    setUserRole,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}
+
+export default AuthProvider;
