@@ -3,7 +3,7 @@ import { Schema, model } from "mongoose";
 
 const blockchainLogSchema = new Schema(
   {
-    // Action Type - EXPANDED
+    // Action Type - EXPANDED with Inventory & Notification
     type: {
       type: String,
       enum: [
@@ -14,6 +14,8 @@ const blockchainLogSchema = new Schema(
         "product_transferred",
         "product_status_changed",
         "product_image_uploaded",
+        "product_review_added",
+        "product_restocked",
 
         // Order Actions
         "order_created",
@@ -21,6 +23,7 @@ const blockchainLogSchema = new Schema(
         "order_cancelled",
         "order_status_changed",
         "order_delivered",
+        "order_refunded",
 
         // Payment & Wallet Actions
         "payment_processed",
@@ -48,6 +51,37 @@ const blockchainLogSchema = new Schema(
         "cart_item_updated",
         "cart_cleared",
 
+        // Inventory Actions
+        "inventory_created",
+        "inventory_updated",
+        "inventory_deleted",
+        "inventory_restocked",
+        "inventory_consumed",
+        "inventory_reserved",
+        "inventory_released",
+        "inventory_adjusted",
+        "inventory_transferred",
+        "inventory_damaged",
+        "inventory_quality_check",
+        "inventory_low_stock_alert",
+        "inventory_out_of_stock",
+        "inventory_reorder_triggered",
+        "inventory_batch_created",
+        "inventory_batch_expired",
+        "inventory_location_changed",
+        "inventory_status_changed",
+
+        // Notification Actions
+        "notification_created",
+        "notification_sent",
+        "notification_delivered",
+        "notification_read",
+        "notification_archived",
+        "notification_deleted",
+        "notification_failed",
+        "notification_clicked",
+        "notification_action_taken",
+
         // Blockchain Actions
         "blockchain_transaction",
         "consensus_update",
@@ -63,7 +97,7 @@ const blockchainLogSchema = new Schema(
       index: true,
     },
 
-    // Entity Type
+    // Entity Type - EXPANDED
     entityType: {
       type: String,
       enum: [
@@ -75,6 +109,10 @@ const blockchainLogSchema = new Schema(
         "transfer",
         "cart",
         "auth",
+        "inventory",
+        "notification",
+        "batch",
+        "quality_check",
         "system",
       ],
       required: true,

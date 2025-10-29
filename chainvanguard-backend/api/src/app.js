@@ -16,6 +16,8 @@ import expertRoutes from "./routes/expert.routes.js";
 import blockchainRoutes from "./routes/blockchain.routes.js";
 import ministryRoutes from "./routes/ministry.routes.js";
 import walletRoutes from "./routes/wallet.routes.js";
+import inventoryRoutes from "./routes/inventory.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 dotenv.config();
 
@@ -149,6 +151,8 @@ app.use("/api/expert", expertRoutes);
 app.use("/api/blockchain", blockchainRoutes);
 app.use("/api/ministry", ministryRoutes);
 app.use("/api/wallet", walletRoutes);
+app.use("/api/inventory", inventoryRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // ========================================
 // API INFO ENDPOINT

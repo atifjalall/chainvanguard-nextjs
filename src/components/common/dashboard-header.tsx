@@ -98,7 +98,7 @@ export function DashboardHeader() {
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
             <div className="h-6 w-6 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Package className="h-4 w-4 text-white" />
+              <Package className="h-4 w-4 text-white cursor-pointer" />
             </div>
             <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
               ChainVanguard
@@ -119,7 +119,7 @@ export function DashboardHeader() {
           {/* Wallet Info */}
           {currentWallet && (
             <div className="hidden md:flex items-center space-x-1 px-2 py-0.5 bg-gray-100/50 dark:bg-gray-800/50 rounded-lg backdrop-blur-sm">
-              <Wallet className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+              <Wallet className="h-3 w-3 text-gray-600 dark:text-gray-400 cursor-pointer" />
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 ${balance}
               </span>
@@ -130,25 +130,28 @@ export function DashboardHeader() {
           )}
 
           {/* Theme Toggle */}
-          <ThemeToggle />
+          <div className="cursor-pointer">
+            <ThemeToggle />
+          </div>
 
           {/* Notifications (Everyone sees this) */}
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+            className="h-8 w-8 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 cursor-pointer"
           >
-            <Bell className="h-4 w-4" />
+            <Bell className="h-4 w-4 cursor-pointer" />
           </Button>
 
           {/* Wishlist (Only CUSTOMER) */}
-          {isCustomer && (
+          {(isCustomer || isVendor) && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+              className="h-8 w-8 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 cursor-pointer"
+              onClick={() => router.push("/vendor/wishlist")}
             >
-              <Heart className="h-4 w-4" />
+              <Heart className="h-4 w-4 cursor-pointer" />
             </Button>
           )}
 
@@ -157,9 +160,10 @@ export function DashboardHeader() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+              className="h-8 w-8 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 cursor-pointer"
+              onClick={() => router.push("/vendor/cart")}
             >
-              <ShoppingCart className="h-4 w-4" />
+              <ShoppingCart className="h-4 w-4 cursor-pointer" />
             </Button>
           )}
 
@@ -168,7 +172,7 @@ export function DashboardHeader() {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="relative h-8 w-8 rounded-full hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+                className="relative h-8 w-8 rounded-full hover:bg-gray-100/50 dark:hover:bg-gray-800/50 cursor-pointer"
               >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-blue-600 text-white text-xs font-semibold">
@@ -231,15 +235,15 @@ export function DashboardHeader() {
 
               <DropdownMenuSeparator />
               <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
+                <User className="mr-2 h-4 w-4 cursor-pointer" />
                 <span>Profile</span>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Wallet className="mr-2 h-4 w-4" />
+                <Wallet className="mr-2 h-4 w-4 cursor-pointer" />
                 <span>Wallet Settings</span>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className="mr-2 h-4 w-4 cursor-pointer" />
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -247,7 +251,7 @@ export function DashboardHeader() {
                 onClick={handleLogout}
                 className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
               >
-                <LogOut className="mr-2 h-4 w-4" />
+                <LogOut className="mr-2 h-4 w-4 cursor-pointer" />
                 <span>Disconnect & Logout</span>
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -29,6 +29,7 @@ import {
   PackagePlus,
   Boxes,
   CreditCard,
+  Inbox,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -69,12 +70,18 @@ export function DashboardSidebar() {
             icon: PackagePlus,
           },
           { href: "/supplier/inventory", label: "Inventory", icon: Warehouse },
+
+          {
+            href: "/supplier/vendor-requests",
+            label: "Vendor Requests",
+            icon: Inbox,
+          },
+          { href: "/supplier/vendors", label: "Vendors", icon: Users },
           {
             href: "/supplier/transactions",
             label: "Transactions",
             icon: CreditCard,
           },
-          { href: "/supplier/vendors", label: "Vendors", icon: Users },
           { href: "/supplier/insights", label: "Insights", icon: BarChart },
           { href: "/wallet", label: "Wallet", icon: Wallet },
         ];
@@ -84,6 +91,11 @@ export function DashboardSidebar() {
         return [
           { href: "/vendor", label: "Dashboard", icon: Home },
           { href: "/vendor/browse", label: "Browse Inventory", icon: Boxes },
+          {
+            href: "/vendor/my-inventory",
+            label: "My Inventory",
+            icon: Warehouse,
+          },
           { href: "/vendor/cart", label: "My Cart", icon: ShoppingCart },
           {
             href: "/vendor/add-product",
