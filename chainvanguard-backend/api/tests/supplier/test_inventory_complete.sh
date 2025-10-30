@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================
-# INVENTORY SYSTEM TEST SCRIPT
+# INVENTORY SYSTEM TEST SCRIPT - ENHANCED
 # Tests all inventory routes and functionality
 # ============================================
 
@@ -48,6 +48,12 @@ print_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
+print_debug() {
+    if [ "$DEBUG" = "true" ]; then
+        echo -e "${YELLOW}🐛 DEBUG: $1${NC}"
+    fi
+}
+
 # ============================================
 # HEADER
 # ============================================
@@ -90,8 +96,9 @@ SUPPLIER_PROFILE=$(curl -s -X GET "$BASE_URL/auth/profile" \
 SUPPLIER_AUTH_SUCCESS=$(echo $SUPPLIER_PROFILE | jq -r '.success')
 if [ "$SUPPLIER_AUTH_SUCCESS" = "true" ]; then
     SUPPLIER_NAME=$(echo $SUPPLIER_PROFILE | jq -r '.data.name')
+    SUPPLIER_ID_FROM_PROFILE=$(echo $SUPPLIER_PROFILE | jq -r '.data._id')
     print_success "Supplier authenticated: $SUPPLIER_NAME"
-    print_info "Supplier ID: $SUPPLIER_ID"
+    print_info "Supplier ID: ${SUPPLIER_ID:-$SUPPLIER_ID_FROM_PROFILE}"
 else
     print_error "Supplier authentication failed"
     echo $SUPPLIER_PROFILE | jq '.'
@@ -106,8 +113,11 @@ VENDOR_PROFILE=$(curl -s -X GET "$BASE_URL/auth/profile" \
 VENDOR_AUTH_SUCCESS=$(echo $VENDOR_PROFILE | jq -r '.success')
 if [ "$VENDOR_AUTH_SUCCESS" = "true" ]; then
     VENDOR_NAME=$(echo $VENDOR_PROFILE | jq -r '.data.name')
+    VENDOR_ID_FROM_PROFILE=$(echo $VENDOR_PROFILE | jq -r '.data._id')
     print_success "Vendor authenticated: $VENDOR_NAME"
-    print_info "Vendor ID: $VENDOR_ID"
+    print_info "Vendor ID: ${VENDOR_ID:-$VENDOR_ID_FROM_PROFILE}"
+    # Use profile ID if env var is not set
+    VENDOR_ID="${VENDOR_ID:-$VENDOR_ID_FROM_PROFILE}"
 else
     print_error "Vendor authentication failed"
 fi
@@ -130,7 +140,7 @@ CREATE_RESPONSE=$(curl -s -X POST "$BASE_URL/inventory" \
     "subcategory": "Cotton Fabric",
     "quantity": 1000,
     "unit": "meters",
-    "price": 5.50,
+    "pricePerUnit": 5.50,
     "minStockLevel": 200,
     "reorderLevel": 250,
     "reorderQuantity": 500,
@@ -140,6 +150,12 @@ CREATE_RESPONSE=$(curl -s -X POST "$BASE_URL/inventory" \
       "color": "White",
       "finish": "Plain"
     },
+    "batches": [{
+      "batchNumber": "BATCH-'$(date +%Y%m%d)'",
+      "quantity": 1000,
+      "manufactureDate": "2025-10-01",
+      "expiryDate": "2026-10-01"
+    }],
     "tags": ["cotton", "fabric", "premium", "test"]
   }')
 
@@ -148,11 +164,14 @@ CREATE_SUCCESS=$(echo $CREATE_RESPONSE | jq -r '.success')
 if [ "$CREATE_SUCCESS" = "true" ]; then
     INVENTORY_ID=$(echo $CREATE_RESPONSE | jq -r '.data._id')
     INVENTORY_NAME=$(echo $CREATE_RESPONSE | jq -r '.data.name')
+    INVENTORY_QTY=$(echo $CREATE_RESPONSE | jq -r '.data.quantity')
     print_success "Inventory item created successfully"
     print_info "Inventory ID: $INVENTORY_ID"
     print_info "Name: $INVENTORY_NAME"
+    print_info "Quantity: $INVENTORY_QTY meters"
 else
     print_error "Failed to create inventory item"
+    echo "Response:"
     echo $CREATE_RESPONSE | jq '.'
     exit 1
 fi
@@ -180,6 +199,7 @@ if [ "$ALL_SUCCESS" = "true" ]; then
     print_info "Current page: $CURRENT_PAGE"
 else
     print_error "Failed to retrieve inventory items"
+    echo $ALL_INVENTORY | jq '.'
 fi
 
 sleep 1
@@ -200,11 +220,14 @@ GET_SUCCESS=$(echo $GET_INVENTORY | jq -r '.success')
 if [ "$GET_SUCCESS" = "true" ]; then
     RETRIEVED_NAME=$(echo $GET_INVENTORY | jq -r '.data.name')
     RETRIEVED_QTY=$(echo $GET_INVENTORY | jq -r '.data.quantity')
+    RETRIEVED_PRICE=$(echo $GET_INVENTORY | jq -r '.data.pricePerUnit // .data.pricePerUnit')
     print_success "Retrieved inventory item"
     print_info "Name: $RETRIEVED_NAME"
     print_info "Quantity: $RETRIEVED_QTY meters"
+    print_info "pricePerUnit: \$$RETRIEVED_PRICE per meter"
 else
     print_error "Failed to retrieve inventory by ID"
+    echo $GET_INVENTORY | jq '.'
 fi
 
 sleep 1
@@ -221,18 +244,19 @@ UPDATE_RESPONSE=$(curl -s -X PUT "$BASE_URL/inventory/$INVENTORY_ID" \
   -H "Authorization: Bearer $SUPPLIER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "price": 6.00,
+    "pricePerUnit": 6.00,
     "description": "Updated: Premium quality 100% cotton fabric - REVISED"
   }')
 
 UPDATE_SUCCESS=$(echo $UPDATE_RESPONSE | jq -r '.success')
 
 if [ "$UPDATE_SUCCESS" = "true" ]; then
-    UPDATED_PRICE=$(echo $UPDATE_RESPONSE | jq -r '.data.price')
+    UPDATED_PRICE=$(echo $UPDATE_RESPONSE | jq -r '.data.pricePerUnit // .data.pricePerUnit')
     print_success "Inventory updated successfully"
-    print_info "New price: \$$UPDATED_PRICE"
+    print_info "New pricePerUnit: \$$UPDATED_PRICE per meter"
 else
     print_error "Failed to update inventory"
+    echo $UPDATE_RESPONSE | jq '.'
 fi
 
 sleep 1
@@ -256,24 +280,30 @@ if [ "$MY_SUCCESS" = "true" ]; then
     print_info "Supplier's items: $MY_ITEM_COUNT"
 else
     print_error "Failed to retrieve supplier's inventory"
+    echo $MY_INVENTORY | jq '.'
 fi
 
 sleep 1
 
 # ============================================
-# 7. ADD STOCK
+# 7. ADD STOCK (WITH BATCH DATA)
 # ============================================
 
 print_header "7. ADD STOCK"
 
-print_test "Adding stock to inventory..."
+print_test "Adding stock to inventory with batch data..."
 
 ADD_STOCK=$(curl -s -X POST "$BASE_URL/inventory/$INVENTORY_ID/add-stock" \
   -H "Authorization: Bearer $SUPPLIER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "quantity": 500,
-    "notes": "Restocking from new shipment - Test batch"
+    "notes": "Restocking from new shipment - Test batch",
+    "batchData": {
+      "batchNumber": "BATCH-'$(date +%Y%m%d)'-RESTOCK",
+      "manufactureDate": "2025-10-15",
+      "expiryDate": "2026-10-15"
+    }
   }')
 
 ADD_SUCCESS=$(echo $ADD_STOCK | jq -r '.success')
@@ -284,6 +314,7 @@ if [ "$ADD_SUCCESS" = "true" ]; then
     print_info "New quantity: $NEW_QTY meters"
 else
     print_error "Failed to add stock"
+    echo $ADD_STOCK | jq '.'
 fi
 
 sleep 1
@@ -313,6 +344,7 @@ if [ "$REDUCE_SUCCESS" = "true" ]; then
     print_info "New quantity: $NEW_QTY meters"
 else
     print_error "Failed to reduce stock"
+    echo $REDUCE_STOCK | jq '.'
 fi
 
 sleep 1
@@ -343,6 +375,7 @@ if [ "$RESERVE_SUCCESS" = "true" ]; then
     print_info "Available: $AVAILABLE_QTY meters"
 else
     print_error "Failed to reserve quantity"
+    echo $RESERVE | jq '.'
 fi
 
 sleep 1
@@ -372,6 +405,7 @@ if [ "$RELEASE_SUCCESS" = "true" ]; then
     print_info "Available: $AVAILABLE_QTY meters"
 else
     print_error "Failed to release quantity"
+    echo $RELEASE | jq '.'
 fi
 
 sleep 1
@@ -405,6 +439,7 @@ if [ "$QC_SUCCESS" = "true" ]; then
     print_info "Total quality checks: $QC_COUNT"
 else
     print_error "Failed to add quality check"
+    echo $QUALITY_CHECK | jq '.'
 fi
 
 sleep 1
@@ -453,6 +488,7 @@ if [ "$ANALYTICS_SUCCESS" = "true" ]; then
     print_info "Total items: $TOTAL_ITEMS"
 else
     print_error "Failed to retrieve analytics"
+    echo $ANALYTICS | jq '.'
 fi
 
 sleep 1
@@ -476,6 +512,7 @@ if [ "$SEARCH_SUCCESS" = "true" ]; then
     print_info "Found: $SEARCH_COUNT items"
 else
     print_error "Search failed"
+    echo $SEARCH | jq '.'
 fi
 
 sleep 1
@@ -495,21 +532,25 @@ if [ -n "$VENDOR_ID" ] && [ "$VENDOR_ID" != "null" ]; then
       -d "{
         \"vendorId\": \"$VENDOR_ID\",
         \"quantity\": 100,
-        \"price\": 6.00
+        \"pricePerUnit\": 6.00
       }")
     
     SELL_SUCCESS=$(echo $SELL | jq -r '.success')
     
     if [ "$SELL_SUCCESS" = "true" ]; then
         print_success "Inventory sold to vendor successfully"
-        REMAINING_QTY=$(echo $SELL | jq -r '.data.quantity')
+        REMAINING_QTY=$(echo $SELL | jq -r '.data.inventory.quantity // .data.quantity')
+        SOLD_AMOUNT=$(echo $SELL | jq -r '.data.transaction.totalAmount')
         print_info "Remaining quantity: $REMAINING_QTY meters"
+        print_info "Sale amount: \$$SOLD_AMOUNT"
     else
         print_error "Failed to sell inventory to vendor"
         echo $SELL | jq '.'
     fi
     
     sleep 1
+else
+    print_info "Skipping vendor sale test (VENDOR_ID not available)"
 fi
 
 # ============================================

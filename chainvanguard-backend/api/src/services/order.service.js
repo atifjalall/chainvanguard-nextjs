@@ -1,13 +1,14 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
-import Cart from "../models/Cart.js"; // ✅ ADDED
-import mongoose from "mongoose"; // ✅ ADDED
+import Cart from "../models/Cart.js";
+import mongoose from "mongoose";
 import redisService from "./redis.service.js";
 import FabricService from "./fabric.service.js";
 import { buildPaginationResponse } from "../utils/helpers.js";
 import walletBalanceService from "./wallet-balance.service.js";
 import logger from "../utils/logger.js";
+import loyaltyService from "./loyalty.service.js";
 
 class OrderService {
   constructor() {
@@ -47,6 +48,31 @@ class OrderService {
         orderData.shippingAddress,
         orderData.discountCode
       );
+
+      let loyaltyDiscount = {
+        discount: 0,
+        finalAmount: pricing.total,
+        discountPercentage: 0,
+      };
+
+      // Check if this is a vendor buying from supplier
+      if (customer.role === "vendor" && validatedItems.length > 0) {
+        const seller = await User.findById(validatedItems[0].sellerId);
+        if (seller && seller.role === "supplier") {
+          try {
+            loyaltyDiscount = await loyaltyService.calculateDiscount(
+              customer._id,
+              seller._id,
+              pricing.total
+            );
+            console.log(
+              `✅ Loyalty discount calculated: ${loyaltyDiscount.discount}`
+            );
+          } catch (error) {
+            console.error("Failed to calculate loyalty discount:", error);
+          }
+        }
+      }
 
       // 4. Get primary seller
       const primarySeller = await User.findById(
@@ -109,7 +135,10 @@ class OrderService {
         tax: pricing.tax,
         discount: pricing.discount,
         discountCode: orderData.discountCode || "",
-        total: pricing.total,
+        total: loyaltyDiscount.finalAmount,
+        originalAmount: pricing.total,
+        discountAmount: loyaltyDiscount.discount,
+        discountPercentage: loyaltyDiscount.discountPercentage,
         currency: "USD",
 
         shippingAddress: orderData.shippingAddress,
@@ -877,7 +906,31 @@ class OrderService {
         await this.releaseProductStock(order.items);
       }
 
-      await order.save();
+      await order.save(); // ← LINE 880
+
+      // ✨ ADD THIS ENTIRE BLOCK RIGHT HERE (after order.save())
+
+      // Award loyalty points when order is delivered
+      if (newStatus === "delivered" || newStatus === "completed") {
+        try {
+          // Check if buyer is a vendor and seller is a supplier
+          const buyer = await User.findById(order.customerId);
+          const seller = await User.findById(order.sellerId);
+
+          if (
+            buyer &&
+            buyer.role === "vendor" &&
+            seller &&
+            seller.role === "supplier"
+          ) {
+            await loyaltyService.awardPoints(buyer._id, order._id);
+            console.log(`✅ Awarded loyalty points to vendor ${buyer.name}`);
+          }
+        } catch (error) {
+          console.error("❌ Failed to award loyalty points:", error);
+          // Don't fail the order update if points fail
+        }
+      }
 
       // 🆕 LOG STATUS UPDATE
       const user = await User.findById(userId);
@@ -1885,6 +1938,496 @@ class OrderService {
       throw error;
     } finally {
       session.endSession();
+    }
+  }
+
+  /**
+   * Get vendor's customers with statistics
+   */
+  async getVendorCustomers(vendorId, filters = {}) {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sortBy = "totalSpent",
+      sortOrder = "desc",
+    } = filters;
+
+    try {
+      // Aggregate to get customer stats
+      const matchStage = {
+        sellerId: mongoose.Types.ObjectId(vendorId),
+        status: { $in: ["delivered", "completed", "shipped", "processing"] },
+      };
+
+      const pipeline = [
+        { $match: matchStage },
+        {
+          $group: {
+            _id: "$customerId",
+            totalOrders: { $sum: 1 },
+            totalSpent: { $sum: "$total" },
+            lastOrderDate: { $max: "$createdAt" },
+            firstOrderDate: { $min: "$createdAt" },
+            avgOrderValue: { $avg: "$total" },
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "customer",
+          },
+        },
+        { $unwind: "$customer" },
+        {
+          $project: {
+            _id: 1,
+            name: "$customer.name",
+            email: "$customer.email",
+            phone: "$customer.phone",
+            city: "$customer.city",
+            state: "$customer.state",
+            country: "$customer.country",
+            totalOrders: 1,
+            totalSpent: 1,
+            avgOrderValue: 1,
+            lastOrderDate: 1,
+            firstOrderDate: 1,
+            customerSince: "$firstOrderDate",
+          },
+        },
+      ];
+
+      // Add search filter
+      if (search) {
+        pipeline.push({
+          $match: {
+            $or: [
+              { name: { $regex: search, $options: "i" } },
+              { email: { $regex: search, $options: "i" } },
+              { phone: { $regex: search, $options: "i" } },
+            ],
+          },
+        });
+      }
+
+      // Sort
+      const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
+      pipeline.push({ $sort: sort });
+
+      // Count total before pagination
+      const countPipeline = [...pipeline, { $count: "total" }];
+      const totalResult = await Order.aggregate(countPipeline);
+      const total = totalResult[0]?.total || 0;
+
+      // Add pagination
+      const skip = (page - 1) * limit;
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: Number(limit) });
+
+      const customers = await Order.aggregate(pipeline);
+
+      return {
+        customers,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      console.error("❌ Get vendor customers error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get vendor customer statistics
+   */
+  async getVendorCustomerStats(vendorId) {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const stats = await Order.aggregate([
+        {
+          $match: {
+            sellerId: mongoose.Types.ObjectId(vendorId),
+            status: {
+              $in: ["delivered", "completed", "shipped", "processing"],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalCustomers: { $addToSet: "$customerId" },
+            activeCustomers: {
+              $addToSet: {
+                $cond: [
+                  { $gte: ["$createdAt", thirtyDaysAgo] },
+                  "$customerId",
+                  null,
+                ],
+              },
+            },
+            totalOrders: { $sum: 1 },
+            totalRevenue: { $sum: "$total" },
+            repeatOrders: {
+              $sum: {
+                $cond: [{ $gt: [{ $size: "$items" }, 1] }, 1, 0],
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            totalCustomers: { $size: "$totalCustomers" },
+            activeCustomers: {
+              $size: {
+                $filter: {
+                  input: "$activeCustomers",
+                  cond: { $ne: ["$$this", null] },
+                },
+              },
+            },
+            totalOrders: 1,
+            avgOrderValue: { $divide: ["$totalRevenue", "$totalOrders"] },
+            repeatCustomerRate: {
+              $multiply: [{ $divide: ["$repeatOrders", "$totalOrders"] }, 100],
+            },
+          },
+        },
+      ]);
+
+      return (
+        stats[0] || {
+          totalCustomers: 0,
+          activeCustomers: 0,
+          totalOrders: 0,
+          avgOrderValue: 0,
+          repeatCustomerRate: 0,
+        }
+      );
+    } catch (error) {
+      console.error("❌ Get vendor customer stats error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get detailed customer information
+   */
+  async getCustomerDetails(vendorId, customerId) {
+    try {
+      // Verify customer has orders with this vendor
+      const customerOrders = await Order.find({
+        sellerId: vendorId,
+        customerId: customerId,
+      }).limit(1);
+
+      if (customerOrders.length === 0) {
+        throw new Error("Customer not found");
+      }
+
+      // Get customer info
+      const customer = await User.findById(customerId).select(
+        "name email phone city state country walletAddress createdAt"
+      );
+
+      if (!customer) {
+        throw new Error("Customer not found");
+      }
+
+      // Get order statistics
+      const orderStats = await Order.aggregate([
+        {
+          $match: {
+            sellerId: mongoose.Types.ObjectId(vendorId),
+            customerId: mongoose.Types.ObjectId(customerId),
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalOrders: { $sum: 1 },
+            totalSpent: { $sum: "$total" },
+            avgOrderValue: { $avg: "$total" },
+            completedOrders: {
+              $sum: {
+                $cond: [{ $in: ["$status", ["delivered", "completed"]] }, 1, 0],
+              },
+            },
+            pendingOrders: {
+              $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+            },
+            cancelledOrders: {
+              $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
+            },
+            lastOrderDate: { $max: "$createdAt" },
+            firstOrderDate: { $min: "$createdAt" },
+          },
+        },
+      ]);
+
+      return {
+        ...customer.toObject(),
+        orderStats: orderStats[0] || {
+          totalOrders: 0,
+          totalSpent: 0,
+          avgOrderValue: 0,
+          completedOrders: 0,
+          pendingOrders: 0,
+          cancelledOrders: 0,
+        },
+      };
+    } catch (error) {
+      console.error("❌ Get customer details error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get customer order history with vendor
+   */
+  async getCustomerOrderHistory(vendorId, customerId, filters = {}) {
+    const { page = 1, limit = 20, status, startDate, endDate } = filters;
+
+    try {
+      const query = {
+        sellerId: vendorId,
+        customerId: customerId,
+      };
+
+      if (status) {
+        query.status = status;
+      }
+
+      if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) query.createdAt.$gte = new Date(startDate);
+        if (endDate) query.createdAt.$lte = new Date(endDate);
+      }
+
+      const skip = (page - 1) * limit;
+
+      const [orders, total] = await Promise.all([
+        Order.find(query)
+          .select(
+            "orderNumber total status createdAt items paymentMethod deliveryDate"
+          )
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(Number(limit)),
+        Order.countDocuments(query),
+      ]);
+
+      return {
+        orders,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      console.error("❌ Get customer order history error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get customer's favorite products
+   */
+  async getCustomerFavoriteProducts(vendorId, customerId) {
+    try {
+      const favoriteProducts = await Order.aggregate([
+        {
+          $match: {
+            sellerId: mongoose.Types.ObjectId(vendorId),
+            customerId: mongoose.Types.ObjectId(customerId),
+            status: { $in: ["delivered", "completed"] },
+          },
+        },
+        { $unwind: "$items" },
+        {
+          $group: {
+            _id: "$items.productId",
+            purchaseCount: { $sum: 1 },
+            totalQuantity: { $sum: "$items.quantity" },
+            totalSpent: {
+              $sum: { $multiply: ["$items.quantity", "$items.price"] },
+            },
+            lastPurchaseDate: { $max: "$createdAt" },
+          },
+        },
+        { $sort: { purchaseCount: -1 } },
+        { $limit: 10 },
+        {
+          $lookup: {
+            from: "products",
+            localField: "_id",
+            foreignField: "_id",
+            as: "product",
+          },
+        },
+        { $unwind: "$product" },
+        {
+          $project: {
+            _id: 1,
+            name: "$product.name",
+            category: "$product.category",
+            image: { $arrayElemAt: ["$product.images", 0] },
+            price: "$product.price",
+            purchaseCount: 1,
+            totalQuantity: 1,
+            totalSpent: 1,
+            lastPurchaseDate: 1,
+          },
+        },
+      ]);
+
+      return favoriteProducts;
+    } catch (error) {
+      console.error("❌ Get customer favorite products error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get top spending customers
+   */
+  async getTopSpenders(vendorId, limit = 10, timeframe = "all") {
+    try {
+      const dateFilter = this.getDateFilterForTimeframe(timeframe);
+
+      const matchStage = {
+        sellerId: mongoose.Types.ObjectId(vendorId),
+        status: { $in: ["delivered", "completed"] },
+      };
+
+      if (dateFilter) {
+        matchStage.createdAt = dateFilter;
+      }
+
+      const topSpenders = await Order.aggregate([
+        { $match: matchStage },
+        {
+          $group: {
+            _id: "$customerId",
+            totalSpent: { $sum: "$total" },
+            orderCount: { $sum: 1 },
+            lastOrderDate: { $max: "$createdAt" },
+          },
+        },
+        { $sort: { totalSpent: -1 } },
+        { $limit: Number(limit) },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "customer",
+          },
+        },
+        { $unwind: "$customer" },
+        {
+          $project: {
+            _id: 1,
+            name: "$customer.name",
+            email: "$customer.email",
+            totalSpent: 1,
+            orderCount: 1,
+            lastOrderDate: 1,
+            avgOrderValue: { $divide: ["$totalSpent", "$orderCount"] },
+          },
+        },
+      ]);
+
+      return topSpenders;
+    } catch (error) {
+      console.error("❌ Get top spenders error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get recently active customers
+   */
+  async getRecentlyActiveCustomers(vendorId, limit = 20) {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentCustomers = await Order.aggregate([
+        {
+          $match: {
+            sellerId: mongoose.Types.ObjectId(vendorId),
+            createdAt: { $gte: thirtyDaysAgo },
+          },
+        },
+        {
+          $group: {
+            _id: "$customerId",
+            lastOrderDate: { $max: "$createdAt" },
+            recentOrders: { $sum: 1 },
+            recentSpent: { $sum: "$total" },
+          },
+        },
+        { $sort: { lastOrderDate: -1 } },
+        { $limit: Number(limit) },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "customer",
+          },
+        },
+        { $unwind: "$customer" },
+        {
+          $project: {
+            _id: 1,
+            name: "$customer.name",
+            email: "$customer.email",
+            lastOrderDate: 1,
+            recentOrders: 1,
+            recentSpent: 1,
+          },
+        },
+      ]);
+
+      return recentCustomers;
+    } catch (error) {
+      console.error("❌ Get recently active customers error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper: Get date filter for timeframe
+   */
+  getDateFilterForTimeframe(timeframe) {
+    const now = new Date();
+    let startDate;
+
+    switch (timeframe) {
+      case "week":
+        startDate = new Date(now.setDate(now.getDate() - 7));
+        return { $gte: startDate };
+      case "month":
+        startDate = new Date(now.setMonth(now.getMonth() - 1));
+        return { $gte: startDate };
+      case "year":
+        startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+        return { $gte: startDate };
+      case "all":
+      default:
+        return null; // No filter for all time
     }
   }
 }

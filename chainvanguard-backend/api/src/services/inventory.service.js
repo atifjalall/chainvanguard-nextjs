@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import FabricService from "./fabric.service.js";
 import ipfsService from "./ipfs.service.js";
 import cloudinaryService from "./cloudinary.service.js";
+import qrService from "./qr.service.js";
 import redisService from "./redis.service.js";
 import logger from "../utils/logger.js";
 
@@ -81,8 +82,20 @@ class InventoryService {
         createdAt: inventory.createdAt,
       };
 
-      const ipfsHash = await ipfsService.uploadJSON(ipfsMetadata);
-      inventory.ipfsHash = ipfsHash;
+      // Generate fileName for IPFS upload
+      const ipfsFileName = `inventory-metadata-${inventory._id.toString()}.json`;
+      const ipfsResult = await ipfsService.uploadJSON(
+        ipfsMetadata,
+        ipfsFileName
+      );
+
+      // Handle IPFS result properly
+      if (ipfsResult.success) {
+        inventory.ipfsHash = ipfsResult.ipfsHash;
+      } else {
+        console.warn("⚠️  IPFS metadata upload failed:", ipfsResult.error);
+        inventory.ipfsHash = ""; // Set empty string instead of error object
+      }
 
       // Store on blockchain
       const blockchainData = {
@@ -93,7 +106,7 @@ class InventoryService {
         supplierName: supplier.name || supplier.email,
         quantity: inventory.quantity,
         price: inventory.price,
-        ipfsHash,
+        ipfsHash: inventory.ipfsHash || "",
         timestamp: new Date().toISOString(),
       };
 
@@ -113,6 +126,26 @@ class InventoryService {
         }
 
         await inventory.save();
+
+        if (inventory._id) {
+          // Generate QR in background - don't block response
+          this.generateInventoryQR(inventory._id.toString(), userId)
+            .then((qrResult) => {
+              if (qrResult.success) {
+                console.log(
+                  `✅ QR code generated for inventory: ${inventory._id}`
+                );
+              }
+            })
+            .catch((error) => {
+              console.error(
+                `⚠️  QR generation failed for ${inventory._id}:`,
+                error.message
+              );
+              // Don't fail - QR can be generated later via API
+            });
+        }
+
         logger.success("Inventory saved to blockchain", {
           txId: inventory.blockchainTxId,
         });
@@ -974,6 +1007,308 @@ class InventoryService {
       return inventory;
     } catch (error) {
       logger.error("Error releasing quantity:", error);
+      throw error;
+    }
+  }
+
+  async generateInventoryQR(inventoryId, userId) {
+    try {
+      console.log(`🎯 Generating QR for inventory: ${inventoryId}`);
+
+      // Check if inventory exists
+      const inventory = await Inventory.findById(inventoryId);
+      if (!inventory) {
+        throw new Error("Inventory item not found");
+      }
+
+      // Check if QR already exists
+      if (inventory.qrCode && inventory.qrCodeGenerated) {
+        console.log("✅ QR code already exists");
+        return {
+          success: true,
+          message: "QR code already exists",
+          data: {
+            code: inventory.qrCode,
+            imageUrl: inventory.qrCodeImageUrl,
+          },
+        };
+      }
+
+      // Generate unique QR code string
+      const qrCodeString = qrService.generateQRCodeString(
+        inventoryId,
+        "inventory"
+      );
+
+      // Create tracking URL
+      const trackingUrl = `${
+        process.env.FRONTEND_URL || "http://localhost:3000"
+      }/track/inventory/${qrCodeString}`;
+
+      // Generate QR image
+      const qrImageBuffer = await qrService.generateQRImage(trackingUrl, {
+        width: 512,
+      });
+
+      let ipfsResult = null;
+      let cloudinaryResult = null;
+
+      // Try IPFS upload (non-critical - can fail)
+      try {
+        ipfsResult = await ipfsService.uploadBuffer(
+          qrImageBuffer,
+          `qr-inventory-${qrCodeString}.png`,
+          {
+            type: "qr-code-inventory",
+            inventoryId: inventoryId.toString(),
+            inventoryName: inventory.name,
+            supplierId: inventory.supplierId.toString(),
+          }
+        );
+        console.log("✅ IPFS upload successful");
+      } catch (ipfsError) {
+        console.warn(
+          "⚠️  IPFS upload failed (non-critical):",
+          ipfsError.message
+        );
+        // Continue without IPFS - Cloudinary is enough
+        ipfsResult = {
+          success: false,
+          ipfsHash: "",
+          ipfsUrl: "",
+        };
+      }
+
+      // Try Cloudinary upload (critical - must succeed)
+      try {
+        cloudinaryResult = await cloudinaryService.uploadImage(
+          qrImageBuffer,
+          `qr-inventory-${qrCodeString}`,
+          "qr_codes/inventory"
+        );
+        console.log("✅ Cloudinary upload successful");
+      } catch (cloudinaryError) {
+        console.error("❌ Cloudinary upload failed:", cloudinaryError.message);
+        throw new Error("Failed to store QR code image");
+      }
+
+      // Save QR record to QRCode collection
+      const QRCodeModel = (await import("../models/QRCode.js")).default;
+
+      const qrRecord = new QRCodeModel({
+        code: qrCodeString,
+        type: "inventory",
+        entityId: inventoryId,
+        entityModel: "Inventory",
+        qrImageUrl: {
+          ipfsHash: ipfsResult.ipfsHash || "",
+          ipfsUrl: ipfsResult.ipfsUrl || "",
+          cloudinaryUrl: cloudinaryResult.url,
+        },
+        metadata: {
+          inventoryName: inventory.name,
+          supplierName: inventory.supplierName,
+          category: inventory.category,
+          createdBy: userId,
+          blockchainTxId: inventory.blockchainTxId || "",
+        },
+        status: "active",
+      });
+
+      await qrRecord.save();
+
+      // Update inventory with QR code
+      inventory.qrCode = qrCodeString;
+      inventory.qrCodeImageUrl = cloudinaryResult.url;
+      inventory.qrCodeGenerated = true;
+      inventory.qrMetadata = {
+        generatedAt: new Date(),
+        generatedBy: userId,
+        ipfsHash: ipfsResult.ipfsHash || "",
+        cloudinaryUrl: cloudinaryResult.url,
+        trackingUrl: trackingUrl,
+      };
+
+      await inventory.save();
+
+      console.log(`✅ QR code generated successfully: ${qrCodeString}`);
+
+      return {
+        success: true,
+        message: "QR code generated successfully",
+        data: {
+          code: qrCodeString,
+          trackingUrl,
+          imageUrl: cloudinaryResult.url,
+          ipfsUrl: ipfsResult.ipfsUrl || "",
+          inventoryId: inventoryId,
+        },
+      };
+    } catch (error) {
+      console.error("❌ Inventory QR generation failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Scan inventory QR code
+   */
+  async scanInventoryQR(qrCode, scanData) {
+    try {
+      const { scannedBy, location, device, ipAddress, purpose, notes } =
+        scanData;
+
+      // Find inventory by QR code
+      const inventory = await Inventory.findOne({ qrCode })
+        .populate("supplierId", "name companyName email walletAddress")
+        .populate("scanHistory.scannedBy", "name email role");
+
+      if (!inventory) {
+        throw new Error("Inventory not found for this QR code");
+      }
+
+      // Record scan
+      inventory.scanHistory.push({
+        scannedAt: new Date(),
+        scannedBy: scannedBy || null,
+        scannerRole: scanData.scannerRole || "guest",
+        location,
+        purpose: purpose || "tracking",
+        device,
+        ipAddress,
+        notes,
+      });
+
+      inventory.totalScans += 1;
+      inventory.lastScannedAt = new Date();
+      inventory.lastScannedBy = scannedBy || null;
+
+      await inventory.save();
+
+      // Log to blockchain (optional - don't block on failure)
+      try {
+        await this.fabricService.invoke(
+          "inventory",
+          "recordInventoryScan",
+          JSON.stringify({
+            inventoryId: inventory._id.toString(),
+            qrCode,
+            scannedAt: new Date().toISOString(),
+            scannedBy: scannedBy?.toString() || "guest",
+            location,
+            purpose,
+          })
+        );
+      } catch (bcError) {
+        console.warn(
+          "⚠️  Blockchain logging failed (non-critical):",
+          bcError.message
+        );
+      }
+
+      return {
+        success: true,
+        message: "QR code scanned successfully",
+        data: {
+          inventory: {
+            id: inventory._id,
+            name: inventory.name,
+            category: inventory.category,
+            quantity: inventory.quantity,
+            supplier: inventory.supplierId,
+            qualityScore: inventory.qualityChecks?.[0]?.qualityScore || null,
+            certifications: inventory.certifications,
+            batches: inventory.batches,
+          },
+          scanInfo: {
+            scanCount: inventory.totalScans,
+            lastScanned: inventory.lastScannedAt,
+            trackingUrl: inventory.qrMetadata?.trackingUrl,
+          },
+        },
+      };
+    } catch (error) {
+      console.error("❌ Inventory QR scan failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get inventory tracking info via QR
+   */
+  async trackInventoryByQR(qrCode) {
+    try {
+      const inventory = await Inventory.findOne({ qrCode })
+        .populate("supplierId", "name companyName email")
+        .populate("scanHistory.scannedBy", "name role")
+        .select(
+          "name category quantity batches movements qualityChecks certifications supplierId createdAt qrMetadata totalScans"
+        );
+
+      if (!inventory) {
+        return {
+          success: false,
+          message: "Inventory not found",
+        };
+      }
+
+      // Get blockchain history (optional - don't fail if unavailable)
+      let blockchainHistory = [];
+      try {
+        const bcHistory = await this.fabricService.query(
+          "inventory",
+          "getInventoryHistory",
+          inventory._id.toString()
+        );
+        blockchainHistory = JSON.parse(bcHistory);
+      } catch (error) {
+        console.warn("Could not fetch blockchain history:", error.message);
+      }
+
+      return {
+        success: true,
+        data: {
+          inventory: {
+            id: inventory._id,
+            name: inventory.name,
+            category: inventory.category,
+            currentQuantity: inventory.quantity,
+            supplier: inventory.supplierId,
+            createdAt: inventory.createdAt,
+            totalScans: inventory.totalScans,
+            qrCode: inventory.qrCode,
+            qrImageUrl: inventory.qrCodeImageUrl,
+          },
+          batches: inventory.batches.map((b) => ({
+            batchNumber: b.batchNumber,
+            quantity: b.quantity,
+            manufactureDate: b.manufactureDate,
+            expiryDate: b.expiryDate,
+            status: b.status,
+          })),
+          qualityChecks: inventory.qualityChecks.map((qc) => ({
+            inspectionDate: qc.inspectionDate,
+            status: qc.status,
+            qualityScore: qc.qualityScore,
+            findings: qc.findings,
+          })),
+          movements: inventory.movements.slice(-10).map((m) => ({
+            type: m.type,
+            quantity: m.quantity,
+            timestamp: m.timestamp,
+            performedByRole: m.performedByRole,
+          })),
+          certifications: inventory.certifications,
+          scanHistory: inventory.scanHistory.slice(-5).map((s) => ({
+            scannedAt: s.scannedAt,
+            location: s.location,
+            purpose: s.purpose,
+          })),
+          blockchainHistory: blockchainHistory.slice(-10),
+        },
+      };
+    } catch (error) {
+      console.error("❌ Track inventory failed:", error);
       throw error;
     }
   }

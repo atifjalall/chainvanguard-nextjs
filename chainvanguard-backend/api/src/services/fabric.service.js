@@ -24,8 +24,8 @@ class FabricService {
 
       // Configuration
       const channelName = "supply-chain-channel";
-      const userChaincodeName = "user"; // ✅ Matches deployed chaincode
-      const productChaincodeName = "product"; // ✅ Matches deployed chaincode
+      const userChaincodeName = "user";
+      const productChaincodeName = "product";
       const mspId = "Org1MSP";
 
       // Use ABSOLUTE paths to fabric-samples

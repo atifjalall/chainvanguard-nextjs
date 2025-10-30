@@ -928,4 +928,268 @@ router.get(
   }
 );
 
+/**
+ * GET /api/products/vendor/:vendorId/store
+ * Get vendor's public storefront information
+ * Access: Public (no auth required)
+ */
+router.get("/vendor/:vendorId/store", async (req, res) => {
+  try {
+    const vendor = await User.findById(req.params.vendorId).select(
+      "name companyName email phone city state country businessType vendorSettings createdAt"
+    );
+
+    if (!vendor || vendor.role !== "vendor") {
+      return res.status(404).json({
+        success: false,
+        message: "Vendor not found",
+      });
+    }
+
+    // Get vendor statistics
+    const [productCount, totalSales, recentOrders, avgRating] =
+      await Promise.all([
+        // Count active products
+        Product.countDocuments({
+          seller: req.params.vendorId,
+          status: "active",
+        }),
+
+        // Count delivered orders
+        Order.aggregate([
+          {
+            $match: {
+              sellerId: mongoose.Types.ObjectId(req.params.vendorId),
+              status: "delivered",
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: 1 },
+              totalRevenue: { $sum: "$total" },
+            },
+          },
+        ]),
+
+        // Get recent orders count (last 30 days)
+        Order.countDocuments({
+          sellerId: req.params.vendorId,
+          createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+        }),
+
+        // TODO: Calculate from reviews when review system is implemented
+        Promise.resolve(4.5),
+      ]);
+
+    // Get top categories
+    const topCategories = await Product.aggregate([
+      {
+        $match: {
+          seller: mongoose.Types.ObjectId(req.params.vendorId),
+          status: "active",
+        },
+      },
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]);
+
+    res.json({
+      success: true,
+      store: {
+        vendor: {
+          id: vendor._id,
+          name: vendor.name,
+          companyName: vendor.companyName,
+          businessType: vendor.businessType,
+          location: `${vendor.city}, ${vendor.state}, ${vendor.country}`
+            .replace(/, ,/g, ",")
+            .replace(/^, |, $/g, ""),
+          memberSince: vendor.createdAt,
+          description: vendor.vendorSettings?.storeDescription || "",
+          banner: vendor.vendorSettings?.storeBanner || "",
+          operatingHours:
+            vendor.vendorSettings?.operatingHours || "Mon-Fri: 9AM-6PM",
+          socialLinks: vendor.vendorSettings?.socialLinks || {},
+        },
+        stats: {
+          productCount,
+          totalSales: totalSales[0]?.total || 0,
+          totalRevenue: totalSales[0]?.totalRevenue || 0,
+          recentOrders,
+          avgRating,
+          topCategories: topCategories.map((cat) => ({
+            category: cat._id,
+            productCount: cat.count,
+          })),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("❌ GET /api/products/vendor/:vendorId/store error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to get vendor store",
+    });
+  }
+});
+
+/**
+ * GET /api/products/vendor/:vendorId/products
+ * Get vendor's products with filtering
+ * Access: Public (no auth required)
+ * Query params: category, subcategory, minPrice, maxPrice, search, inStock, page, limit, sortBy, sortOrder
+ */
+router.get("/vendor/:vendorId/products", async (req, res) => {
+  try {
+    const {
+      category,
+      subcategory,
+      minPrice,
+      maxPrice,
+      search,
+      inStock,
+      page = 1,
+      limit = 20,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = req.query;
+
+    // Build query
+    const query = {
+      seller: req.params.vendorId,
+      status: "active",
+    };
+
+    if (category) query.category = category;
+    if (subcategory) query.subcategory = subcategory;
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+
+    if (inStock === "true") {
+      query.stock = { $gt: 0 };
+    }
+
+    // Pagination and sorting
+    const skip = (page - 1) * limit;
+    const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
+
+    const [products, total] = await Promise.all([
+      Product.find(query)
+        .select(
+          "name price images category subcategory stock description createdAt"
+        )
+        .sort(sort)
+        .skip(skip)
+        .limit(Number(limit)),
+      Product.countDocuments(query),
+    ]);
+
+    res.json({
+      success: true,
+      products,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / limit),
+      },
+      filters: {
+        category,
+        subcategory,
+        minPrice,
+        maxPrice,
+        search,
+        inStock,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "❌ GET /api/products/vendor/:vendorId/products error:",
+      error
+    );
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to get vendor products",
+    });
+  }
+});
+
+/**
+ * GET /api/products/vendor/:vendorId/categories
+ * Get vendor's product categories with counts
+ * Access: Public
+ */
+router.get("/vendor/:vendorId/categories", async (req, res) => {
+  try {
+    const categories = await Product.aggregate([
+      {
+        $match: {
+          seller: mongoose.Types.ObjectId(req.params.vendorId),
+          status: "active",
+        },
+      },
+      {
+        $group: {
+          _id: {
+            category: "$category",
+            subcategory: "$subcategory",
+          },
+          count: { $sum: 1 },
+          minPrice: { $min: "$price" },
+          maxPrice: { $max: "$price" },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.category",
+          subcategories: {
+            $push: {
+              name: "$_id.subcategory",
+              count: "$count",
+              priceRange: {
+                min: "$minPrice",
+                max: "$maxPrice",
+              },
+            },
+          },
+          totalProducts: { $sum: "$count" },
+        },
+      },
+      { $sort: { totalProducts: -1 } },
+    ]);
+
+    res.json({
+      success: true,
+      categories,
+    });
+  } catch (error) {
+    console.error(
+      "❌ GET /api/products/vendor/:vendorId/categories error:",
+      error
+    );
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to get vendor categories",
+    });
+  }
+});
+
 export default router;

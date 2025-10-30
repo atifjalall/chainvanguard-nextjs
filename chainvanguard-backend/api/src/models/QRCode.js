@@ -10,7 +10,7 @@ const QRCodeSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["product", "order", "batch"],
+      enum: ["product", "order", "batch", "inventory"],
       required: true,
     },
     entityId: {
@@ -21,7 +21,7 @@ const QRCodeSchema = new mongoose.Schema(
     entityModel: {
       type: String,
       required: true,
-      enum: ["Product", "Order"],
+      enum: ["Product", "Order", "Inventory"],
     },
     qrImageUrl: {
       ipfsHash: String,
@@ -43,6 +43,9 @@ const QRCodeSchema = new mongoose.Schema(
     ],
     metadata: {
       productName: String,
+      inventoryName: String, // ✅ Added for inventory
+      supplierName: String, // ✅ Added for inventory
+      category: String, // ✅ Added for inventory
       sellerName: String,
       createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
       blockchainTxId: String,

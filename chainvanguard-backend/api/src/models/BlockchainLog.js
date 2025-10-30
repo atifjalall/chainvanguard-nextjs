@@ -92,6 +92,15 @@ const blockchainLogSchema = new Schema(
         "system_health_check",
         "fault_detected",
         "security_alert",
+
+        // Vendor Specific Actions
+        "vendor_request_created",
+        "vendor_request_updated",
+        "vendor_request_approved",
+        "vendor_request_rejected",
+        "vendor_request_cancelled",
+        "vendor_request_fulfilled",
+        "vendor_request_status_changed",
       ],
       required: true,
       index: true,
@@ -114,6 +123,7 @@ const blockchainLogSchema = new Schema(
         "batch",
         "quality_check",
         "system",
+        "vendor_request",
       ],
       required: true,
     },

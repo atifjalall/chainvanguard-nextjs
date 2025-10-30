@@ -114,19 +114,22 @@ export const verifyToken = authenticate;
 /**
  * 👮 Role-Based Access Control
  */
-export const authorizeRoles = (allowedRoles = []) => {
+export const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user) {
+    const rolesArray = allowedRoles.flat(); // ADD THIS LINE
+
+    if (!req.userId || !req.userRole) {
       return res.status(401).json({
         success: false,
         error: "Authentication required",
       });
     }
 
-    if (!allowedRoles.includes(req.userRole)) {
+    if (!rolesArray.includes(req.userRole)) {
+      // CHANGE allowedRoles to rolesArray
       return res.status(403).json({
         success: false,
-        error: `Access denied. Required role: ${allowedRoles.join(" or ")}`,
+        error: `Access denied. Required role: ${rolesArray.join(" or ")}`,
       });
     }
 

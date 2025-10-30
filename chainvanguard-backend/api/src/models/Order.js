@@ -210,6 +210,9 @@ const orderSchema = new Schema(
     discount: { type: Number, default: 0, min: 0 },
     discountCode: { type: String, default: "" },
     total: { type: Number, required: true, min: 0 }, // Final amount
+    originalAmount: { type: Number, default: 0 }, // Amount before discount
+    discountAmount: { type: Number, default: 0 }, // Discount applied
+    discountPercentage: { type: Number, default: 0 }, // Discount percentage
     currency: { type: String, default: "USD" },
 
     // ========================================
