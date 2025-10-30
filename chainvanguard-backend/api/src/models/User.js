@@ -64,6 +64,162 @@ const userSchema = new Schema(
     blockchainTxId: { type: String, default: "" },
     blockchainUserId: { type: String, default: "" },
 
+    // ============================================
+    // NEW: Supplier-specific settings
+    // ============================================
+    supplierSettings: {
+      // Auto-approve purchase requests from vendors
+      autoApproveRequests: {
+        type: Boolean,
+        default: false,
+      },
+
+      // Minimum order value for auto-approval (in PKR)
+      minOrderValue: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      // Reward points system
+      rewardPointsEnabled: {
+        type: Boolean,
+        default: true,
+      },
+
+      // How many reward points per 100 PKR spent
+      rewardPointsRate: {
+        type: Number,
+        default: 1,
+        min: 0,
+      },
+
+      // Discount percentage for reward points
+      discountForRewards: {
+        type: Number,
+        default: 10,
+        min: 0,
+        max: 100,
+      },
+
+      // Business hours
+      businessHours: {
+        type: String,
+        default: "9:00 AM - 6:00 PM",
+      },
+
+      // Response time (in hours)
+      avgResponseTime: {
+        type: Number,
+        default: 24,
+      },
+
+      // Accepted payment methods
+      acceptedPaymentMethods: {
+        type: [String],
+        default: ["wallet", "card"],
+      },
+    },
+
+    // ============================================
+    // NEW: Vendor-specific settings
+    // ============================================
+    vendorSettings: {
+      // Preferred suppliers
+      preferredSuppliers: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+      ],
+
+      // Credit limit with suppliers
+      creditLimit: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      // Business license verification
+      licenseVerified: {
+        type: Boolean,
+        default: false,
+      },
+
+      // Store description
+      storeDescription: {
+        type: String,
+        maxlength: 500,
+        default: "",
+      },
+
+      // Store banner/logo
+      storeBanner: {
+        type: String,
+        default: "",
+      },
+
+      // Social media links
+      socialLinks: {
+        facebook: String,
+        twitter: String,
+        instagram: String,
+        website: String,
+      },
+
+      // Operating hours
+      operatingHours: {
+        type: String,
+        default: "Mon-Fri: 9AM-6PM",
+      },
+    },
+
+    loyaltyPoints: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalSpent: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    discountEligible: {
+      type: Boolean,
+      default: false,
+    },
+
+    // Supplier discount settings
+    discountSettings: {
+      pointsRequired: {
+        type: Number,
+        default: 1000,
+        min: 0,
+      },
+      discountPercentage: {
+        type: Number,
+        default: 10,
+        min: 0,
+        max: 100,
+      },
+      enabled: {
+        type: Boolean,
+        default: true,
+      },
+    },
+
+    settings: {
+      type: Schema.Types.Mixed,
+      default: {
+        autoApproveRequests: false,
+        notificationPreferences: {
+          email: true,
+          sms: false,
+          push: true,
+        },
+      },
+    },
+
     // Timestamps
     emailVerifiedAt: { type: Date, default: null },
     lastLoginAt: { type: Date, default: null },

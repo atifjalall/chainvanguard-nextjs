@@ -18,6 +18,14 @@ import ministryRoutes from "./routes/ministry.routes.js";
 import walletRoutes from "./routes/wallet.routes.js";
 import inventoryRoutes from "./routes/inventory.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import vendorRequestRoutes from "./routes/vendor_request.routes.js";
+import wishlistRoutes from "./routes/wishlist.routes.js";
+import loyaltyRoutes from "./routes/loyalty.routes.js";
+import dashboardRoutes from "./routes/dashboard.routes.js";
+import vendorCustomerRoutes from "./routes/vendor.customer.routes.js";
+import reviewRoutes from "./routes/review.routes.js";
+import returnRoutes from "./routes/return.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
 
 dotenv.config();
 
@@ -153,6 +161,14 @@ app.use("/api/ministry", ministryRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/vendor-requests", vendorRequestRoutes);
+app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/loyalty", loyaltyRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/vendor/customers", vendorCustomerRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/returns", returnRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // ========================================
 // API INFO ENDPOINT

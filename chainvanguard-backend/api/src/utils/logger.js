@@ -974,6 +974,49 @@ class Logger {
   success(message, context = {}) {
     console.log(`✅ SUCCESS: ${message}`, context);
   }
+
+  // ========================================
+  // VENDOR REQUEST LOGGING
+  // ========================================
+
+  /**
+   * Log vendor request activity
+   */
+  async logVendorRequest({
+    action,
+    type,
+    requestId,
+    requestNumber = null,
+    vendorId = null,
+    supplierId = null,
+    total = null,
+    status = null,
+    itemCount = null,
+    rejectionReason = null,
+    data = {},
+  }) {
+    return this.log({
+      type,
+      entityType: "vendor_request",
+      entityId: requestId,
+      action,
+      performedBy: vendorId || supplierId,
+      status: "success",
+      data: {
+        requestNumber,
+        vendorId,
+        supplierId,
+        total,
+        status,
+        itemCount,
+        rejectionReason,
+        ...data,
+      },
+      metadata: {
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
 }
 
 export default new Logger();

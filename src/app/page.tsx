@@ -337,7 +337,7 @@ export default function LandingPage() {
           `}</style>
 
           {/* Header - Glassmorphism */}
-          <header className="bg-white/60 dark:bg-gray-950/60 backdrop-blur-2xl border-b border-white/20 dark:border-gray-700/30 sticky top-0 z-50 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)]">
+          <header className="bg-transparent dark:bg-transparent backdrop-blur-2xl border-b-0 sticky top-0 z-50 shadow-none">
             <div className="container mx-auto px-6 flex h-16 items-center justify-between">
               <FocusMotionDiv className="flex items-center space-x-3 cursor-pointer rounded-lg outline-none">
                 <motion.div

@@ -1,6 +1,6 @@
 import express from "express";
 import inventoryService from "../services/inventory.service.js";
-import { authenticate } from "../middleware/auth.middleware.js";
+import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
 import { uploadProductFiles } from "../middleware/upload.middleware.js";
 import { parseJsonFields } from "../middleware/parse-json-fields.js";
 import logger from "../utils/logger.js";
@@ -454,12 +454,12 @@ router.post("/:id/sell-to-vendor", authenticate, async (req, res) => {
       });
     }
 
-    const { vendorId, quantity, price } = req.body;
+    const { vendorId, quantity, pricePerUnit } = req.body;
 
-    if (!vendorId || !quantity || !price) {
+    if (!vendorId || !quantity || !pricePerUnit) {
       return res.status(400).json({
         success: false,
-        message: "Vendor ID, quantity, and price are required",
+        message: "Vendor ID, quantity, and price per unit are required",
       });
     }
 
@@ -467,7 +467,7 @@ router.post("/:id/sell-to-vendor", authenticate, async (req, res) => {
       req.params.id,
       vendorId,
       Number(quantity),
-      Number(price)
+      Number(pricePerUnit)
     );
 
     res.json({
@@ -588,6 +588,160 @@ router.post("/:id/release", authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Error releasing quantity",
+    });
+  }
+});
+
+/**
+ * GET /api/inventory/vendor/current
+ * Get vendor's current inventory (purchased from suppliers)
+ */
+router.get(
+  "/vendor/current",
+  authenticate,
+  authorizeRoles("vendor"),
+  async (req, res) => {
+    try {
+      const Order = (await import("../models/Order.js")).default;
+
+      // Get all delivered orders where vendor was buyer
+      const orders = await Order.find({
+        customerId: req.userId, // Note: customerId because vendor is buying
+        sellerRole: "supplier", // Only from suppliers
+        status: { $in: ["delivered", "completed"] },
+      })
+        .populate("sellerId", "name companyName")
+        .populate("items.productId")
+        .sort({ createdAt: -1 });
+
+      // Calculate inventory summary
+      const inventoryMap = new Map();
+
+      orders.forEach((order) => {
+        order.items.forEach((item) => {
+          if (!item.productId) return;
+
+          const key = item.productId._id.toString();
+
+          if (!inventoryMap.has(key)) {
+            inventoryMap.set(key, {
+              product: item.productId,
+              supplier: order.sellerId,
+              totalReceived: 0,
+              lastPurchaseDate: order.createdAt,
+              totalSpent: 0,
+            });
+          }
+
+          const entry = inventoryMap.get(key);
+          entry.totalReceived += item.quantity;
+          entry.totalSpent += item.subtotal;
+
+          if (order.createdAt > entry.lastPurchaseDate) {
+            entry.lastPurchaseDate = order.createdAt;
+          }
+        });
+      });
+
+      const currentInventory = Array.from(inventoryMap.values());
+
+      res.json({
+        success: true,
+        inventory: currentInventory,
+        summary: {
+          totalItems: currentInventory.length,
+          totalOrders: orders.length,
+          totalSpent: currentInventory.reduce(
+            (sum, item) => sum + item.totalSpent,
+            0
+          ),
+        },
+      });
+    } catch (error) {
+      console.error("❌ GET /api/inventory/vendor/current error:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to get current inventory",
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/inventory/:id/generate-qr
+ * Generate QR code for inventory item
+ */
+router.post(
+  "/:id/generate-qr",
+  authenticate,
+  authorizeRoles("supplier"),
+  async (req, res) => {
+    try {
+      const result = await inventoryService.generateInventoryQR(
+        req.params.id,
+        req.user.userId
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating inventory QR:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to generate QR code",
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/qr/inventory/scan
+ * Scan inventory QR code
+ */
+router.post("/inventory/scan", async (req, res) => {
+  try {
+    const { qrCode, location, device, purpose, notes } = req.body;
+
+    if (!qrCode) {
+      return res.status(400).json({
+        success: false,
+        message: "QR code is required",
+      });
+    }
+
+    const result = await inventoryService.scanInventoryQR(qrCode, {
+      scannedBy: req.userId || null,
+      scannerRole: req.user?.role || "guest",
+      location,
+      device,
+      ipAddress: req.ip,
+      purpose,
+      notes,
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error scanning inventory QR:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to scan QR code",
+    });
+  }
+});
+
+/**
+ * GET /api/qr/inventory/track/:qrCode
+ * Track inventory via QR code (public)
+ */
+router.get("/inventory/track/:qrCode", async (req, res) => {
+  try {
+    const result = await inventoryService.trackInventoryByQR(req.params.qrCode);
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error tracking inventory:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to track inventory",
     });
   }
 });

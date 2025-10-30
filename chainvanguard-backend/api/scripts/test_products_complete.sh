@@ -1,37 +1,24 @@
 #!/bin/bash
 
-source /Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env
-
 # ============================================
-# ChainVanguard - Simple Product Test Script
-# ============================================
-# Your credentials are already filled in!
+# ChainVanguard - Complete Product Testing
+# Pakistan Textile Supply Chain
 # ============================================
 
-# ========================================
-# 📝 YOUR CREDENTIALS (Pre-filled)
-# ========================================
+set -e
 
-# User Addresses & Passwords
-SUPPLIER_ADDRESS="$SUPPLIER_ADDRESS"
-SUPPLIER_PASSWORD="$SUPPLIER_PASSWORD"
+# Load environment variables from specific path
+ENV_PATH="/Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env"
 
-VENDOR_ADDRESS="$VENDOR_ADDRESS"
-VENDOR_PASSWORD="$VENDOR_PASSWORD"
+if [ -f "$ENV_PATH" ]; then
+    source "$ENV_PATH"
+    echo "✅ Loaded .env from: $ENV_PATH"
+else
+    echo "❌ .env file not found at: $ENV_PATH"
+    exit 1
+fi
 
-# Existing Product ID (for update tests)
-EXISTING_PRODUCT_ID="$PRODUCT_ID_1"
-
-# API Base URL
-BASE_URL="http://localhost:3001"
-
-# ========================================
-# NO NEED TO EDIT BELOW THIS LINE
-# ========================================
-
-echo "🧪 ChainVanguard Product Testing"
-echo "================================="
-echo ""
+BASE_URL="${TEST_BASE_URL:-http://localhost:3001}"
 
 # Colors
 GREEN='\033[0;32m'
@@ -46,11 +33,14 @@ TOTAL_TESTS=0
 PASSED_TESTS=0
 FAILED_TESTS=0
 
-# Storage
-SUPPLIER_TOKEN="$SUPPLIER_TOKEN"
-VENDOR_TOKEN="$VENDOR_TOKEN"
-NEW_PRODUCT_ID="$PRODUCT_ID_1"
-NEW_PRODUCT_ID_2="$PRODUCT_ID_2"
+# Product IDs for testing
+SUPPLIER_PRODUCT_ID=""
+VENDOR_PRODUCT_ID=""
+
+echo "=========================================="
+echo "🧪 ChainVanguard Product Testing"
+echo "=========================================="
+echo ""
 
 # Functions
 print_result() {
@@ -84,113 +74,164 @@ contains() {
 }
 
 # ========================================
-# PRE-FLIGHT CHECK
+# PRE-FLIGHT CHECKS
 # ========================================
 print_section "🔧 Pre-flight Checks"
 
+# Check jq
+if ! command -v jq &> /dev/null; then
+    echo -e "${RED}❌ jq not installed. Install with: brew install jq${NC}"
+    exit 1
+fi
+
+# Check server
 SERVER_CHECK=$(curl -s ${BASE_URL}/health 2>/dev/null)
 if contains "$SERVER_CHECK" "OK"; then
     print_result "Server Health" "PASS"
 else
     print_result "Server Health" "FAIL"
     echo -e "${RED}Server not running at ${BASE_URL}${NC}"
-    echo "Start with: npm run dev"
     exit 1
 fi
 
-# Check if jq is installed
-if ! command -v jq &> /dev/null; then
-    echo -e "${YELLOW}⚠️  jq not found. Install with: brew install jq${NC}"
+# Check credentials
+if [ -z "$SUPPLIER_TOKEN" ]; then
+    echo -e "${RED}❌ SUPPLIER_TOKEN not found in .env${NC}"
+    echo "Please run auth tests first"
     exit 1
 fi
 
-# ========================================
-# LOGIN
-# ========================================
-print_section "🔐 Authentication"
-
-echo "Logging in as Supplier..."
-SUPPLIER_LOGIN=$(curl -s -X POST ${BASE_URL}/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"address\": \"$SUPPLIER_ADDRESS\",
-    \"password\": \"$SUPPLIER_PASSWORD\"
-  }")
-
-SUPPLIER_TOKEN=$(echo "$SUPPLIER_LOGIN" | jq -r '.data.token // .token // empty' 2>/dev/null)
-
-if [ -n "$SUPPLIER_TOKEN" ] && [ "$SUPPLIER_TOKEN" != "null" ]; then
-    print_result "Supplier Login" "PASS"
-    echo -e "${BLUE}   Address: $SUPPLIER_ADDRESS${NC}"
-    echo -e "${BLUE}   Token: ${SUPPLIER_TOKEN:0:40}...${NC}"
-else
-    print_result "Supplier Login" "FAIL"
-    echo -e "${RED}Response:${NC}"
-    echo "$SUPPLIER_LOGIN" | jq '.'
+if [ -z "$VENDOR_TOKEN" ]; then
+    echo -e "${RED}❌ VENDOR_TOKEN not found in .env${NC}"
+    echo "Please run auth tests first"
     exit 1
 fi
 
-echo ""
-echo "Logging in as Vendor..."
-VENDOR_LOGIN=$(curl -s -X POST ${BASE_URL}/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"address\": \"$VENDOR_ADDRESS\",
-    \"password\": \"$VENDOR_PASSWORD\"
-  }")
+echo -e "${BLUE}   Supplier Token: ${SUPPLIER_TOKEN:0:30}...${NC}"
+echo -e "${BLUE}   Vendor Token: ${VENDOR_TOKEN:0:30}...${NC}"
 
-VENDOR_TOKEN=$(echo "$VENDOR_LOGIN" | jq -r '.data.token // .token // empty' 2>/dev/null)
-
-if [ -n "$VENDOR_TOKEN" ] && [ "$VENDOR_TOKEN" != "null" ]; then
-    print_result "Vendor Login" "PASS"
-    echo -e "${BLUE}   Address: $VENDOR_ADDRESS${NC}"
-else
-    print_result "Vendor Login" "FAIL"
-    echo -e "${YELLOW}Continuing with Supplier only...${NC}"
-fi
+sleep 1
 
 # ========================================
-# TEST EXISTING PRODUCT
+# TEST 1: CREATE PRODUCTS
 # ========================================
-print_section "📦 Testing Existing Product"
+print_section "🆕 Test 1: Create Products"
 
-echo "Getting product: $EXISTING_PRODUCT_ID"
-EXISTING=$(curl -s "${BASE_URL}/api/products/${EXISTING_PRODUCT_ID}")
-
-if contains "$EXISTING" "success"; then
-    print_result "Get Existing Product" "PASS"
-    PROD_NAME=$(echo "$EXISTING" | jq -r '.product.name' 2>/dev/null)
-    PROD_PRICE=$(echo "$EXISTING" | jq -r '.product.price' 2>/dev/null)
-    PROD_STOCK=$(echo "$EXISTING" | jq -r '.product.quantity' 2>/dev/null)
-    echo -e "${BLUE}   Name: $PROD_NAME${NC}"
-    echo -e "${BLUE}   Price: \$$PROD_PRICE${NC}"
-    echo -e "${BLUE}   Stock: $PROD_STOCK${NC}"
-else
-    print_result "Get Existing Product" "FAIL"
-fi
-
-# ========================================
-# CREATE NEW PRODUCTS
-# ========================================
-print_section "🆕 Creating New Products"
-
-echo "1. Creating Premium T-Shirt..."
-CREATE_1=$(curl -s -X POST ${BASE_URL}/api/products \
+# Test 1.1: Create Supplier Product (Premium Cotton Fabric)
+echo "Test 1.1: Create Supplier Product - Premium Cotton Fabric"
+SUPPLIER_PRODUCT=$(curl -s -X POST ${BASE_URL}/api/products \
   -H "Authorization: Bearer $SUPPLIER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Premium Cotton T-Shirt - Gray",
-    "description": "Comfortable premium cotton t-shirt",
+    "name": "Premium Cotton Fabric Roll - White",
+    "description": "High-quality 100% cotton fabric from Faisalabad mills. Perfect for premium garments.",
+    "category": "Fabric",
+    "subcategory": "Cotton",
+    "productType": "Raw Material",
+    "brand": "Faisalabad Textile Mills",
+    "price": 850.00,
+    "quantity": 500,
+    "minStockLevel": 50,
+    "apparelDetails": {
+      "size": "Standard Roll",
+      "color": "White",
+      "material": "100% Pure Cotton",
+      "fabricWeight": "200 GSM",
+      "fabricType": "Plain Weave",
+      "pattern": "Solid"
+    },
+    "tags": ["cotton", "fabric", "premium", "faisalabad"],
+    "season": "All Season",
+    "isFeatured": true
+  }')
+
+echo "$SUPPLIER_PRODUCT" | jq '.'
+
+if echo "$SUPPLIER_PRODUCT" | jq -e '.success == true' > /dev/null; then
+    SUPPLIER_PRODUCT_ID=$(echo "$SUPPLIER_PRODUCT" | jq -r '.product._id')
+    SUPPLIER_SKU=$(echo "$SUPPLIER_PRODUCT" | jq -r '.product.sku')
+    print_result "Create Supplier Product" "PASS"
+    echo -e "${BLUE}   Product ID: $SUPPLIER_PRODUCT_ID${NC}"
+    echo -e "${BLUE}   SKU: $SUPPLIER_SKU${NC}"
+    
+    # Save to env
+    if [ -n "$SUPPLIER_PRODUCT_ID" ]; then
+        sed -i.bak "s|^PRODUCT_ID_1=.*|PRODUCT_ID_1=$SUPPLIER_PRODUCT_ID|" "$ENV_PATH"
+        echo -e "${GREEN}   ✅ Saved PRODUCT_ID_1 to .env${NC}"
+    fi
+else
+    print_result "Create Supplier Product" "FAIL"
+    ERROR_MSG=$(echo "$SUPPLIER_PRODUCT" | jq -r '.message // .error // "Unknown error"')
+    echo -e "${RED}   Error: $ERROR_MSG${NC}"
+fi
+
+sleep 2
+
+# Test 1.2: Create Second Supplier Product (Denim Fabric)
+echo ""
+echo "Test 1.2: Create Second Supplier Product - Denim Fabric"
+SUPPLIER_PRODUCT_2=$(curl -s -X POST ${BASE_URL}/api/products \
+  -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Premium Denim Fabric - Indigo Blue",
+    "description": "Authentic denim fabric with classic indigo dye. Made in Faisalabad.",
+    "category": "Fabric",
+    "subcategory": "Denim",
+    "productType": "Raw Material",
+    "brand": "Faisalabad Textile Mills",
+    "price": 1200.00,
+    "quantity": 300,
+    "minStockLevel": 30,
+    "apparelDetails": {
+      "size": "Standard Roll",
+      "color": "Indigo Blue",
+      "material": "98% Cotton, 2% Elastane",
+      "fabricWeight": "12 oz",
+      "fabricType": "Twill Weave",
+      "pattern": "Denim"
+    },
+    "tags": ["denim", "fabric", "indigo", "faisalabad"],
+    "season": "All Season"
+  }')
+
+if echo "$SUPPLIER_PRODUCT_2" | jq -e '.success == true' > /dev/null; then
+    SUPPLIER_PRODUCT_ID_2=$(echo "$SUPPLIER_PRODUCT_2" | jq -r '.product._id')
+    print_result "Create Second Supplier Product" "PASS"
+    echo -e "${BLUE}   Product ID: $SUPPLIER_PRODUCT_ID_2${NC}"
+    
+    # Save to env
+    if [ -n "$SUPPLIER_PRODUCT_ID_2" ]; then
+        sed -i.bak "s|^PRODUCT_ID_2=.*|PRODUCT_ID_2=$SUPPLIER_PRODUCT_ID_2|" "$ENV_PATH"
+        echo -e "${GREEN}   ✅ Saved PRODUCT_ID_2 to .env${NC}"
+    fi
+else
+    print_result "Create Second Supplier Product" "FAIL"
+    ERROR_MSG=$(echo "$SUPPLIER_PRODUCT_2" | jq -r '.message // .error // "Unknown error"')
+    echo -e "${RED}   Error: $ERROR_MSG${NC}"
+fi
+
+sleep 2
+
+# Test 1.3: Create Vendor Product (Fashion T-Shirt)
+echo ""
+echo "Test 1.3: Create Vendor Product - Fashion T-Shirt"
+VENDOR_PRODUCT=$(curl -s -X POST ${BASE_URL}/api/products \
+  -H "Authorization: Bearer $VENDOR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Premium Cotton T-Shirt - Karachi Fashion",
+    "description": "Stylish premium cotton t-shirt from Karachi Fashion Boutique",
     "category": "Men",
     "subcategory": "T-Shirts",
     "productType": "Casual",
-    "brand": "PremiumWear",
-    "price": 34.99,
-    "quantity": 400,
-    "minStockLevel": 40,
+    "brand": "Karachi Fashion",
+    "price": 1499.00,
+    "quantity": 200,
+    "minStockLevel": 20,
     "apparelDetails": {
-      "size": "L",
-      "color": "Gray",
+      "size": "M",
+      "color": "Navy Blue",
       "material": "100% Cotton",
       "fit": "Regular Fit",
       "pattern": "Solid",
@@ -199,262 +240,420 @@ CREATE_1=$(curl -s -X POST ${BASE_URL}/api/products \
       "neckline": "Crew Neck",
       "sleeveLength": "Short Sleeve"
     },
-    "tags": ["premium", "cotton", "gray"],
-    "season": "All Season"
+    "tags": ["tshirt", "cotton", "fashion", "karachi"],
+    "season": "Summer",
+    "isFeatured": true
   }')
 
-if contains "$CREATE_1" "success"; then
-    NEW_PRODUCT_ID=$(echo "$CREATE_1" | jq -r '.product._id' 2>/dev/null)
-    NEW_SKU=$(echo "$CREATE_1" | jq -r '.product.sku' 2>/dev/null)
-    print_result "Create Premium T-Shirt" "PASS"
-    echo -e "${BLUE}   ID: $NEW_PRODUCT_ID${NC}"
-    echo -e "${BLUE}   SKU: $NEW_SKU${NC}"
+if echo "$VENDOR_PRODUCT" | jq -e '.success == true' > /dev/null; then
+    VENDOR_PRODUCT_ID=$(echo "$VENDOR_PRODUCT" | jq -r '.product._id')
+    VENDOR_SKU=$(echo "$VENDOR_PRODUCT" | jq -r '.product.sku')
+    print_result "Create Vendor Product" "PASS"
+    echo -e "${BLUE}   Product ID: $VENDOR_PRODUCT_ID${NC}"
+    echo -e "${BLUE}   SKU: $VENDOR_SKU${NC}"
 else
-    print_result "Create Premium T-Shirt" "FAIL"
-    echo -e "${YELLOW}Response:${NC}"
-    echo "$CREATE_1" | jq '.'
+    print_result "Create Vendor Product" "FAIL"
+    ERROR_MSG=$(echo "$VENDOR_PRODUCT" | jq -r '.message // .error // "Unknown error"')
+    echo -e "${RED}   Error: $ERROR_MSG${NC}"
 fi
 
+sleep 2
+
+# Test 1.4: Create Product with Missing Fields (Should Fail)
 echo ""
-echo "2. Creating Denim Jeans..."
-CREATE_2=$(curl -s -X POST ${BASE_URL}/api/products \
+echo "Test 1.4: Create Product with Missing Fields (Should FAIL)"
+INVALID_PRODUCT=$(curl -s -X POST ${BASE_URL}/api/products \
   -H "Authorization: Bearer $SUPPLIER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Slim Fit Denim Jeans - Dark Blue",
-    "description": "Modern slim fit jeans",
-    "category": "Men",
-    "subcategory": "Jeans",
-    "productType": "Casual",
-    "brand": "DenimPro",
-    "price": 64.99,
-    "quantity": 250,
-    "apparelDetails": {
-      "size": "32",
-      "color": "Dark Blue",
-      "material": "98% Cotton, 2% Elastane",
-      "fit": "Slim Fit",
-      "pattern": "Solid"
-    },
-    "tags": ["denim", "jeans", "slim"],
-    "season": "All Season"
+    "name": "Incomplete Product",
+    "price": 100
   }')
 
-if contains "$CREATE_2" "success"; then
-    NEW_PRODUCT_ID_2=$(echo "$CREATE_2" | jq -r '.product._id' 2>/dev/null)
-    print_result "Create Denim Jeans" "PASS"
-    echo -e "${BLUE}   ID: $NEW_PRODUCT_ID_2${NC}"
+if echo "$INVALID_PRODUCT" | jq -e '.success == false' > /dev/null; then
+    print_result "Reject Invalid Product" "PASS"
+    echo -e "${BLUE}   Correctly rejected incomplete product${NC}"
 else
-    print_result "Create Denim Jeans" "FAIL"
+    print_result "Reject Invalid Product" "FAIL"
 fi
 
-# Vendor Product
-if [ -n "$VENDOR_TOKEN" ] && [ "$VENDOR_TOKEN" != "null" ]; then
-    echo ""
-    echo "3. Creating Vendor Product (Hoodie)..."
-    CREATE_3=$(curl -s -X POST ${BASE_URL}/api/products \
-      -H "Authorization: Bearer $VENDOR_TOKEN" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "name": "Casual Hoodie - Charcoal",
-        "description": "Comfortable casual hoodie",
-        "category": "Unisex",
-        "subcategory": "Hoodies",
-        "productType": "Casual",
-        "price": 49.99,
-        "quantity": 180,
-        "apparelDetails": {
-          "size": "M",
-          "color": "Charcoal",
-          "material": "Cotton Blend",
-          "fit": "Regular Fit",
-          "pattern": "Solid"
-        },
-        "tags": ["hoodie", "casual"],
-        "season": "All Season"
-      }')
-    
-    if contains "$CREATE_3" "success"; then
-        print_result "Create Hoodie (Vendor)" "PASS"
-    else
-        print_result "Create Hoodie (Vendor)" "FAIL"
-    fi
-fi
+sleep 1
 
 # ========================================
-# READ OPERATIONS
+# TEST 2: READ OPERATIONS
 # ========================================
-print_section "🔍 Product Retrieval"
+print_section "🔍 Test 2: Read Operations"
 
-# Get All
-echo "Getting all products..."
-ALL=$(curl -s "${BASE_URL}/api/products?limit=20")
-if contains "$ALL" "pagination"; then
-    TOTAL=$(echo "$ALL" | jq -r '.pagination.total' 2>/dev/null)
+# Test 2.1: Get All Products
+echo "Test 2.1: Get All Products (Pagination)"
+ALL_PRODUCTS=$(curl -s "${BASE_URL}/api/products?limit=20")
+
+if echo "$ALL_PRODUCTS" | jq -e '.success == true' > /dev/null; then
+    TOTAL=$(echo "$ALL_PRODUCTS" | jq -r '.pagination.total')
     print_result "Get All Products" "PASS"
     echo -e "${BLUE}   Total Products: $TOTAL${NC}"
 else
     print_result "Get All Products" "FAIL"
 fi
 
-# Get by ID
-if [ -n "$NEW_PRODUCT_ID" ]; then
-    echo ""
-    echo "Getting product by ID..."
-    GET_ONE=$(curl -s "${BASE_URL}/api/products/${NEW_PRODUCT_ID}")
-    if contains "$GET_ONE" "Premium Cotton"; then
+sleep 1
+
+# Test 2.2: Get Product by ID
+echo ""
+echo "Test 2.2: Get Product by ID"
+if [ -n "$SUPPLIER_PRODUCT_ID" ]; then
+    GET_PRODUCT=$(curl -s "${BASE_URL}/api/products/${SUPPLIER_PRODUCT_ID}")
+    
+    if echo "$GET_PRODUCT" | jq -e '.success == true' > /dev/null; then
+        PRODUCT_NAME=$(echo "$GET_PRODUCT" | jq -r '.product.name')
+        PRODUCT_PRICE=$(echo "$GET_PRODUCT" | jq -r '.product.price')
         print_result "Get Product by ID" "PASS"
+        echo -e "${BLUE}   Name: $PRODUCT_NAME${NC}"
+        echo -e "${BLUE}   Price: Rs. $PRODUCT_PRICE${NC}"
     else
         print_result "Get Product by ID" "FAIL"
     fi
+else
+    print_result "Get Product by ID" "FAIL"
+    echo -e "${YELLOW}   No product ID available${NC}"
 fi
 
-# Search
+sleep 1
+
+# Test 2.3: Search Products
 echo ""
-echo "Searching for 'cotton'..."
+echo "Test 2.3: Search Products (Cotton)"
 SEARCH=$(curl -s "${BASE_URL}/api/products/search?q=cotton")
-if contains "$SEARCH" "success"; then
-    SEARCH_COUNT=$(echo "$SEARCH" | jq -r '.pagination.total' 2>/dev/null)
+
+if echo "$SEARCH" | jq -e '.success == true' > /dev/null; then
+    SEARCH_TOTAL=$(echo "$SEARCH" | jq -r '.pagination.total')
     print_result "Search Products" "PASS"
-    echo -e "${BLUE}   Results: $SEARCH_COUNT${NC}"
+    echo -e "${BLUE}   Found: $SEARCH_TOTAL products${NC}"
 else
     print_result "Search Products" "FAIL"
 fi
 
-# Filter by Category
+sleep 1
+
+# Test 2.4: Filter by Category
 echo ""
-echo "Filtering by category (Men)..."
-FILTER=$(curl -s "${BASE_URL}/api/products?category=Men&limit=10")
-if contains "$FILTER" "success"; then
-    FILTER_COUNT=$(echo "$FILTER" | jq -r '.pagination.total' 2>/dev/null)
+echo "Test 2.4: Filter by Category (Fabric)"
+FILTER=$(curl -s "${BASE_URL}/api/products?category=Fabric")
+
+if echo "$FILTER" | jq -e '.success == true' > /dev/null; then
+    FILTER_TOTAL=$(echo "$FILTER" | jq -r '.pagination.total')
     print_result "Filter by Category" "PASS"
-    echo -e "${BLUE}   Men's Products: $FILTER_COUNT${NC}"
+    echo -e "${BLUE}   Fabric Products: $FILTER_TOTAL${NC}"
 else
     print_result "Filter by Category" "FAIL"
 fi
 
-# Featured Products
+sleep 1
+
+# Test 2.5: Get Featured Products
 echo ""
-echo "Getting featured products..."
-FEATURED=$(curl -s "${BASE_URL}/api/products/featured?limit=5")
-if contains "$FEATURED" "success"; then
+echo "Test 2.5: Get Featured Products"
+FEATURED=$(curl -s "${BASE_URL}/api/products/featured?limit=10")
+
+if echo "$FEATURED" | jq -e '.success == true' > /dev/null; then
+    FEATURED_COUNT=$(echo "$FEATURED" | jq -r '.products | length')
     print_result "Get Featured Products" "PASS"
+    echo -e "${BLUE}   Featured: $FEATURED_COUNT products${NC}"
 else
     print_result "Get Featured Products" "FAIL"
 fi
 
-# ========================================
-# UPDATE OPERATIONS
-# ========================================
-print_section "✏️  Product Updates"
+sleep 1
 
-if [ -n "$NEW_PRODUCT_ID" ]; then
-    echo "Updating product price and stock..."
-    UPDATE=$(curl -s -X PUT "${BASE_URL}/api/products/${NEW_PRODUCT_ID}" \
+# Test 2.6: Get Products by Seller
+echo ""
+echo "Test 2.6: Get Products by Seller (Supplier)"
+SELLER_PRODUCTS=$(curl -s "${BASE_URL}/api/products/by-seller/${SUPPLIER_USER_ID}")
+
+if echo "$SELLER_PRODUCTS" | jq -e '.success == true' > /dev/null; then
+    SELLER_TOTAL=$(echo "$SELLER_PRODUCTS" | jq -r '.pagination.total')
+    print_result "Get Products by Seller" "PASS"
+    echo -e "${BLUE}   Supplier's Products: $SELLER_TOTAL${NC}"
+else
+    print_result "Get Products by Seller" "FAIL"
+fi
+
+sleep 1
+
+# ========================================
+# TEST 3: UPDATE OPERATIONS
+# ========================================
+print_section "✏️  Test 3: Update Operations"
+
+if [ -n "$SUPPLIER_PRODUCT_ID" ]; then
+    # Test 3.1: Update Product Price and Stock
+    echo "Test 3.1: Update Product (Price & Stock)"
+    UPDATE=$(curl -s -X PUT "${BASE_URL}/api/products/${SUPPLIER_PRODUCT_ID}" \
       -H "Authorization: Bearer $SUPPLIER_TOKEN" \
       -H "Content-Type: application/json" \
       -d '{
-        "price": 29.99,
-        "quantity": 500,
+        "price": 900.00,
+        "quantity": 600,
         "isFeatured": true
       }')
     
-    if contains "$UPDATE" "success"; then
-        NEW_PRICE=$(echo "$UPDATE" | jq -r '.product.price' 2>/dev/null)
-        NEW_STOCK=$(echo "$UPDATE" | jq -r '.product.quantity' 2>/dev/null)
+    if echo "$UPDATE" | jq -e '.success == true' > /dev/null; then
+        NEW_PRICE=$(echo "$UPDATE" | jq -r '.product.price')
+        NEW_STOCK=$(echo "$UPDATE" | jq -r '.product.quantity')
         print_result "Update Product" "PASS"
-        echo -e "${BLUE}   New Price: \$$NEW_PRICE${NC}"
+        echo -e "${BLUE}   New Price: Rs. $NEW_PRICE${NC}"
         echo -e "${BLUE}   New Stock: $NEW_STOCK${NC}"
     else
         print_result "Update Product" "FAIL"
     fi
     
+    sleep 2
+    
+    # Test 3.2: Update Stock Only
     echo ""
-    echo "Updating stock only..."
-    STOCK=$(curl -s -X PATCH "${BASE_URL}/api/products/${NEW_PRODUCT_ID}/stock" \
+    echo "Test 3.2: Update Stock Only (PATCH)"
+    STOCK_UPDATE=$(curl -s -X PATCH "${BASE_URL}/api/products/${SUPPLIER_PRODUCT_ID}/stock" \
       -H "Authorization: Bearer $SUPPLIER_TOKEN" \
       -H "Content-Type: application/json" \
-      -d '{"quantity": 600}')
+      -d '{"quantity": 700}')
     
-    if contains "$STOCK" "success"; then
+    if echo "$STOCK_UPDATE" | jq -e '.success == true' > /dev/null; then
+        UPDATED_STOCK=$(echo "$STOCK_UPDATE" | jq -r '.product.quantity')
         print_result "Update Stock Only" "PASS"
+        echo -e "${BLUE}   Updated Stock: $UPDATED_STOCK${NC}"
     else
         print_result "Update Stock Only" "FAIL"
     fi
+    
+    sleep 2
+    
+    # Test 3.3: Update Status
+    echo ""
+    echo "Test 3.3: Update Product Status"
+    STATUS_UPDATE=$(curl -s -X PATCH "${BASE_URL}/api/products/${SUPPLIER_PRODUCT_ID}/status" \
+      -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"status": "active"}')
+    
+    if echo "$STATUS_UPDATE" | jq -e '.success == true' > /dev/null; then
+        print_result "Update Product Status" "PASS"
+    else
+        print_result "Update Product Status" "FAIL"
+    fi
 fi
 
-# ========================================
-# CATEGORY TESTS
-# ========================================
-print_section "🏷️  Categories"
+sleep 1
 
-CATS=$(curl -s "${BASE_URL}/api/categories")
-if contains "$CATS" "Men"; then
-    CAT_COUNT=$(echo "$CATS" | jq -r '.data.categories | length' 2>/dev/null)
+# ========================================
+# TEST 4: CATEGORY & METADATA
+# ========================================
+print_section "🏷️  Test 4: Categories & Metadata"
+
+# Test 4.1: Get All Categories
+echo "Test 4.1: Get All Categories"
+CATEGORIES=$(curl -s "${BASE_URL}/api/categories")
+
+if echo "$CATEGORIES" | jq -e '.success == true' > /dev/null; then
+    CAT_COUNT=$(echo "$CATEGORIES" | jq -r '.data.categories | length')
     print_result "Get Categories" "PASS"
-    echo -e "${BLUE}   Categories: $CAT_COUNT${NC}"
+    echo -e "${BLUE}   Total Categories: $CAT_COUNT${NC}"
 else
     print_result "Get Categories" "FAIL"
 fi
 
-SUBS=$(curl -s "${BASE_URL}/api/categories/Men/subcategories")
-if contains "$SUBS" "T-Shirts"; then
+sleep 1
+
+# Test 4.2: Get Subcategories
+echo ""
+echo "Test 4.2: Get Subcategories (Men)"
+SUBCATEGORIES=$(curl -s "${BASE_URL}/api/categories/Men/subcategories")
+
+if echo "$SUBCATEGORIES" | jq -e '.success == true' > /dev/null; then
+    SUB_COUNT=$(echo "$SUBCATEGORIES" | jq -r '.data.subcategories | length')
     print_result "Get Subcategories" "PASS"
+    echo -e "${BLUE}   Men's Subcategories: $SUB_COUNT${NC}"
 else
     print_result "Get Subcategories" "FAIL"
 fi
 
+sleep 1
+
+# Test 4.3: Get Materials
+echo ""
+echo "Test 4.3: Get Available Materials"
 MATERIALS=$(curl -s "${BASE_URL}/api/categories/options/materials")
-if contains "$MATERIALS" "Cotton"; then
+
+if echo "$MATERIALS" | jq -e '.success == true' > /dev/null; then
+    MAT_COUNT=$(echo "$MATERIALS" | jq -r '.data.materials | length')
     print_result "Get Materials" "PASS"
+    echo -e "${BLUE}   Available Materials: $MAT_COUNT${NC}"
 else
     print_result "Get Materials" "FAIL"
 fi
 
-# ========================================
-# AUTHORIZATION
-# ========================================
-print_section "🔒 Authorization Tests"
+sleep 1
 
-# Test unauthorized access
-UNAUTH=$(curl -s -X PUT "${BASE_URL}/api/products/${NEW_PRODUCT_ID}" \
-  -H "Content-Type: application/json" \
-  -d '{"price": 1}')
+# Test 4.4: Get Colors
+echo ""
+echo "Test 4.4: Get Available Colors"
+COLORS=$(curl -s "${BASE_URL}/api/categories/options/colors")
 
-if contains "$UNAUTH" "Unauthorized\|token\|401"; then
-    print_result "Block Unauthorized Update" "PASS"
+if echo "$COLORS" | jq -e '.success == true' > /dev/null; then
+    COLOR_COUNT=$(echo "$COLORS" | jq -r '.data.colors | length')
+    print_result "Get Colors" "PASS"
+    echo -e "${BLUE}   Available Colors: $COLOR_COUNT${NC}"
 else
-    print_result "Block Unauthorized Update" "FAIL"
+    print_result "Get Colors" "FAIL"
 fi
 
-# Test unauthorized create
+sleep 1
+
+# ========================================
+# TEST 5: AUTHORIZATION & SECURITY
+# ========================================
+print_section "🔒 Test 5: Authorization & Security"
+
+# Test 5.1: Unauthorized Create
+echo "Test 5.1: Block Unauthorized Product Creation"
 UNAUTH_CREATE=$(curl -s -X POST ${BASE_URL}/api/products \
   -H "Content-Type: application/json" \
-  -d '{"name": "Test", "price": 10}')
+  -d '{
+    "name": "Unauthorized Product",
+    "price": 100
+  }')
 
-if contains "$UNAUTH_CREATE" "Unauthorized\|token\|401"; then
+if echo "$UNAUTH_CREATE" | jq -e '.success == false' > /dev/null 2>&1 || \
+   echo "$UNAUTH_CREATE" | grep -qi "unauthorized\|token\|401"; then
     print_result "Block Unauthorized Create" "PASS"
 else
     print_result "Block Unauthorized Create" "FAIL"
 fi
 
-# ========================================
-# BLOCKCHAIN STATUS
-# ========================================
-print_section "⛓️  Blockchain Status"
+sleep 1
 
-if [ -n "$NEW_PRODUCT_ID" ]; then
-    HISTORY=$(curl -s "${BASE_URL}/api/products/${NEW_PRODUCT_ID}/history")
+# Test 5.2: Cross-User Update (Should Fail)
+echo ""
+echo "Test 5.2: Block Cross-User Update"
+if [ -n "$SUPPLIER_PRODUCT_ID" ]; then
+    CROSS_UPDATE=$(curl -s -X PUT "${BASE_URL}/api/products/${SUPPLIER_PRODUCT_ID}" \
+      -H "Authorization: Bearer $VENDOR_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"price": 1}')
     
-    if contains "$HISTORY" "success"; then
-        VERIFIED=$(echo "$HISTORY" | jq -r '.success' 2>/dev/null)
-        print_result "Get Product History" "PASS"
-        echo -e "${BLUE}   Blockchain Verified: $VERIFIED${NC}"
+    if echo "$CROSS_UPDATE" | jq -e '.success == false' > /dev/null 2>&1 || \
+       echo "$CROSS_UPDATE" | grep -qi "unauthorized\|permission\|403"; then
+        print_result "Block Cross-User Update" "PASS"
+        echo -e "${BLUE}   Correctly denied vendor updating supplier's product${NC}"
     else
-        print_result "Get Product History" "FAIL"
-        echo -e "${YELLOW}   Note: Product not on blockchain yet${NC}"
+        print_result "Block Cross-User Update" "FAIL"
     fi
+else
+    print_result "Block Cross-User Update" "FAIL"
+    echo -e "${YELLOW}   No product ID for testing${NC}"
 fi
+
+sleep 1
+
+# Test 5.3: Customer Cannot Create Product
+echo ""
+echo "Test 5.3: Block Customer Product Creation"
+CUSTOMER_CREATE=$(curl -s -X POST ${BASE_URL}/api/products \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Customer Product",
+    "description": "Test",
+    "category": "Men",
+    "subcategory": "T-Shirts",
+    "price": 100,
+    "quantity": 10,
+    "apparelDetails": {
+      "size": "M",
+      "color": "Blue",
+      "material": "Cotton"
+    }
+  }')
+
+if echo "$CUSTOMER_CREATE" | jq -e '.success == false' > /dev/null 2>&1 || \
+   echo "$CUSTOMER_CREATE" | grep -qi "unauthorized\|denied\|403"; then
+    print_result "Block Customer Create" "PASS"
+else
+    print_result "Block Customer Create" "FAIL"
+fi
+
+sleep 1
+
+# ========================================
+# TEST 6: VENDOR STORE
+# ========================================
+print_section "🏪 Test 6: Vendor Store Features"
+
+# Test 6.1: Get Vendor Store Info
+echo "Test 6.1: Get Vendor Store Information"
+VENDOR_STORE=$(curl -s "${BASE_URL}/api/products/vendor/${VENDOR_USER_ID}/store")
+
+if echo "$VENDOR_STORE" | jq -e '.success == true' > /dev/null; then
+    STORE_NAME=$(echo "$VENDOR_STORE" | jq -r '.store.storeName // "N/A"')
+    PRODUCT_COUNT=$(echo "$VENDOR_STORE" | jq -r '.store.productCount // 0')
+    print_result "Get Vendor Store Info" "PASS"
+    echo -e "${BLUE}   Store: $STORE_NAME${NC}"
+    echo -e "${BLUE}   Products: $PRODUCT_COUNT${NC}"
+else
+    print_result "Get Vendor Store Info" "FAIL"
+fi
+
+sleep 1
+
+# Test 6.2: Get Vendor Products
+echo ""
+echo "Test 6.2: Get Vendor Products"
+VENDOR_PRODUCTS=$(curl -s "${BASE_URL}/api/products/vendor/${VENDOR_USER_ID}/products")
+
+if echo "$VENDOR_PRODUCTS" | jq -e '.success == true' > /dev/null; then
+    VENDOR_PROD_COUNT=$(echo "$VENDOR_PRODUCTS" | jq -r '.pagination.total')
+    print_result "Get Vendor Products" "PASS"
+    echo -e "${BLUE}   Vendor Products: $VENDOR_PROD_COUNT${NC}"
+else
+    print_result "Get Vendor Products" "FAIL"
+fi
+
+sleep 1
+
+# Test 6.3: Get Vendor Categories
+echo ""
+echo "Test 6.3: Get Vendor Categories"
+VENDOR_CATEGORIES=$(curl -s "${BASE_URL}/api/products/vendor/${VENDOR_USER_ID}/categories")
+
+if echo "$VENDOR_CATEGORIES" | jq -e '.success == true' > /dev/null; then
+    print_result "Get Vendor Categories" "PASS"
+else
+    print_result "Get Vendor Categories" "FAIL"
+fi
+
+sleep 1
+
+# ========================================
+# TEST 7: BLOCKCHAIN INTEGRATION
+# ========================================
+print_section "⛓️  Test 7: Blockchain Integration"
+
+if [ -n "$SUPPLIER_PRODUCT_ID" ]; then
+    echo "Test 7.1: Get Product Blockchain History"
+    HISTORY=$(curl -s "${BASE_URL}/api/products/${SUPPLIER_PRODUCT_ID}/history")
+    
+    if echo "$HISTORY" | jq -e '.success == true' > /dev/null; then
+        print_result "Get Blockchain History" "PASS"
+        echo -e "${BLUE}   Product tracked on blockchain${NC}"
+    else
+        print_result "Get Blockchain History" "FAIL"
+        echo -e "${YELLOW}   Note: Product may not be on blockchain yet${NC}"
+    fi
+else
+    print_result "Get Blockchain History" "FAIL"
+    echo -e "${YELLOW}   No product ID for testing${NC}"
+fi
+
+sleep 1
 
 # ========================================
 # SUMMARY
@@ -476,13 +675,16 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo -e "${GREEN}║                                  ║${NC}"
     echo -e "${GREEN}╚══════════════════════════════════╝${NC}"
     echo ""
-    echo "Products in Database:"
-    [ -n "$EXISTING_PRODUCT_ID" ] && echo "  ✓ Existing: $EXISTING_PRODUCT_ID"
-    [ -n "$NEW_PRODUCT_ID" ] && echo "  ✓ T-Shirt: $NEW_PRODUCT_ID"
-    [ -n "$NEW_PRODUCT_ID_2" ] && echo "  ✓ Jeans: $NEW_PRODUCT_ID_2"
+    echo "📦 Products Created:"
+    [ -n "$SUPPLIER_PRODUCT_ID" ] && echo "  ✓ Supplier Product 1: $SUPPLIER_PRODUCT_ID"
+    [ -n "$SUPPLIER_PRODUCT_ID_2" ] && echo "  ✓ Supplier Product 2: $SUPPLIER_PRODUCT_ID_2"
+    [ -n "$VENDOR_PRODUCT_ID" ] && echo "  ✓ Vendor Product: $VENDOR_PRODUCT_ID"
     echo ""
-    echo "✅ ChainVanguard Product API is fully functional!"
+    echo "💾 Product IDs saved to .env file"
     echo ""
+    echo "✅ ChainVanguard Product System Ready!"
+    echo ""
+    exit 0
 else
     echo -e "${RED}╔══════════════════════════════════╗${NC}"
     echo -e "${RED}║                                  ║${NC}"
@@ -490,11 +692,11 @@ else
     echo -e "${RED}║                                  ║${NC}"
     echo -e "${RED}╚══════════════════════════════════╝${NC}"
     echo ""
-    echo "Troubleshooting:"
-    echo "  1. Check server logs for errors"
-    echo "  2. Verify MongoDB is running"
-    echo "  3. Check credentials in script"
+    echo "🔍 Troubleshooting:"
+    echo "  1. Check if users are email verified"
+    echo "  2. Check server logs for errors"
+    echo "  3. Verify tokens in .env are valid"
+    echo "  4. Check MongoDB connection"
     echo ""
+    exit 1
 fi
-
-exit $([ $FAILED_TESTS -eq 0 ] && echo 0 || echo 1)

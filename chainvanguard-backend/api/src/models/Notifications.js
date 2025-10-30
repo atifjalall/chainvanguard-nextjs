@@ -20,7 +20,7 @@ const notificationSchema = new Schema(
       required: true,
       index: true,
     },
- 
+
     // ========================================
     // NOTIFICATION TYPE & CATEGORY
     // ========================================
@@ -92,6 +92,14 @@ const notificationSchema = new Schema(
         "general",
         "promotional",
         "reminder",
+
+        // Vendor Specific
+        "vendor_request_created",
+        "vendor_request_approved",
+        "vendor_request_rejected",
+        "vendor_request_cancelled",
+        "vendor_request_updated",
+        "vendor_request_fulfilled",
       ],
       required: true,
       index: true,
@@ -110,6 +118,7 @@ const notificationSchema = new Schema(
         "system",
         "supply_chain",
         "security",
+        "vendor_requests",
       ],
       required: true,
       index: true,
@@ -162,6 +171,7 @@ const notificationSchema = new Schema(
           "wallet",
           "cart",
           "batch",
+          "vendor_request",
           "",
         ],
         default: "",

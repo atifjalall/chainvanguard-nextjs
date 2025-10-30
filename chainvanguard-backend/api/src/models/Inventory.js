@@ -359,10 +359,89 @@ const inventorySchema = new Schema(
 
     qrCode: {
       type: String,
+      default: "",
       index: true,
+      unique: true,
+      sparse: true, // Allows null values
     },
+
     qrCodeImageUrl: {
       type: String,
+      default: "",
+    },
+
+    qrCodeGenerated: {
+      type: Boolean,
+      default: false,
+    },
+
+    qrMetadata: {
+      generatedAt: Date,
+      generatedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+      ipfsHash: String,
+      cloudinaryUrl: String,
+      trackingUrl: String,
+    },
+
+    // Tracking data from QR scans
+    scanHistory: [
+      {
+        scannedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        scannedBy: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+        scannerRole: {
+          type: String,
+          enum: [
+            "supplier",
+            "vendor",
+            "expert",
+            "ministry",
+            "customer",
+            "guest",
+          ],
+        },
+        location: {
+          latitude: Number,
+          longitude: Number,
+          address: String,
+          city: String,
+          country: String,
+        },
+        purpose: {
+          type: String,
+          enum: [
+            "receiving",
+            "quality_check",
+            "transfer",
+            "inspection",
+            "verification",
+            "tracking",
+            "other",
+          ],
+        },
+        device: String,
+        ipAddress: String,
+        notes: String,
+      },
+    ],
+
+    totalScans: {
+      type: Number,
+      default: 0,
+    },
+
+    lastScannedAt: Date,
+    lastScannedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
     },
 
     materialType: {
@@ -459,7 +538,29 @@ const inventorySchema = new Schema(
       // Processing & Care
       finish: {
         type: String,
-        enum: ["Raw", "Bleached", "Dyed", "Printed", "Coated", "Plain", ""],
+        enum: [
+          "Raw",
+          "Bleached",
+          "Dyed",
+          "Printed",
+          "Coated",
+          "Plain",
+          "Satin",
+          "Plain Weave",
+          "Twill",
+          "Satin Weave",
+          "Jacquard",
+          "Houndstooth",
+          "Tartan",
+          "Chevron",
+          "Geometric",
+          "Abstract",
+          "Digital",
+          "3D",
+          "Textured",
+          "Metallic",
+          "",
+        ],
         default: "",
       },
       careInstructions: {
@@ -479,7 +580,7 @@ const inventorySchema = new Schema(
     // ========================================
     // PRICING (Like Product)
     // ========================================
-    price: {
+    pricePerUnit: {
       type: Number,
       required: true,
       min: 0,
@@ -984,7 +1085,7 @@ const inventorySchema = new Schema(
 inventorySchema.index({ name: "text", description: "text", tags: "text" });
 inventorySchema.index({ category: 1, subcategory: 1 });
 inventorySchema.index({ supplierId: 1, status: 1 });
-inventorySchema.index({ price: 1, status: 1 });
+inventorySchema.index({ pricePerUnit: 1, status: 1 });
 inventorySchema.index({ createdAt: -1 });
 inventorySchema.index({ totalConsumed: -1 });
 inventorySchema.index({ averageRating: -1 });
@@ -1020,7 +1121,7 @@ inventorySchema.virtual("url").get(function () {
 
 // Stock value
 inventorySchema.virtual("stockValue").get(function () {
-  return this.quantity * (this.price || 0);
+  return this.quantity * (this.pricePerUnit || 0);
 });
 
 // Days until reorder needed
@@ -1220,7 +1321,7 @@ inventorySchema.statics.getTotalValueBySupplier = async function (supplierId) {
       $group: {
         _id: "$supplierId",
         totalValue: {
-          $sum: { $multiply: ["$quantity", "$price"] },
+          $sum: { $multiply: ["$quantity", "$pricePerUnit"] },
         },
         totalItems: { $sum: 1 },
       },
