@@ -5,6 +5,7 @@ import notificationService from "./notification.service.js";
 import logger from "../utils/logger.js";
 import mongoose from "mongoose";
 import loyaltyService from "./loyalty.service.js";
+import fabricService from "./fabric.service.js";
 
 class VendorRequestService {
   /**
@@ -86,7 +87,52 @@ class VendorRequestService {
 
       await request.save();
 
-      // ✅ FIXED: Log to blockchain using logger utility
+      // ✅ ADD: Record to blockchain
+      try {
+        const blockchainData = {
+          requestId: request._id.toString(),
+          requestNumber: request.requestNumber,
+          vendorId: vendorId.toString(),
+          vendorName: vendor.name || vendor.email || vendor.companyName || "",
+          supplierId: supplierId.toString(),
+          supplierName:
+            supplier.name || supplier.email || supplier.companyName || "",
+          items: request.items.map((item) => ({
+            inventoryId: item.inventoryId.toString(),
+            inventoryName: "", // You can populate this if needed
+            quantity: item.quantity,
+            pricePerUnit: item.pricePerUnit,
+            subtotal: item.subtotal,
+          })),
+          subtotal: request.subtotal,
+          tax: request.tax,
+          total: request.total,
+          status: request.status,
+          vendorNotes: request.vendorNotes || "",
+          supplierNotes: request.supplierNotes || "",
+          autoApproved: request.autoApproved || false,
+          timestamp: new Date().toISOString(),
+        };
+
+        const blockchainResult =
+          await fabricService.createVendorRequest(blockchainData);
+
+        // Update MongoDB with blockchain confirmation
+        request.blockchainVerified = true;
+        request.blockchainTxId =
+          blockchainResult.txId || blockchainResult.requestId || "";
+        await request.save();
+
+        console.log(
+          "✅ Vendor request recorded on blockchain:",
+          blockchainResult
+        );
+      } catch (blockchainError) {
+        console.error("⚠️ Blockchain recording failed:", blockchainError);
+        // Continue - don't fail the request if blockchain fails
+      }
+
+      // Existing blockchain logging
       try {
         await logger.logVendorRequest({
           action: "Vendor request created",
@@ -101,7 +147,6 @@ class VendorRequestService {
         });
       } catch (error) {
         console.error("❌ Blockchain logging failed:", error);
-        // Continue even if blockchain fails
       }
 
       await notificationService.createNotification({
@@ -227,7 +272,33 @@ class VendorRequestService {
 
       await request.save();
 
-      // ✅ FIXED: Log to blockchain using logger utility
+      // ✅ ADD: Record approval to blockchain
+      try {
+        const blockchainResult = await fabricService.approveVendorRequest(
+          requestId,
+          supplierId.toString(),
+          new Date().toISOString(),
+          supplierNotes || ""
+        );
+
+        // Update MongoDB with blockchain confirmation
+        if (!request.blockchainVerified) {
+          request.blockchainVerified = true;
+        }
+        if (blockchainResult.txId) {
+          request.blockchainTxId = blockchainResult.txId;
+        }
+        await request.save();
+
+        console.log("✅ Approval recorded on blockchain:", blockchainResult);
+      } catch (blockchainError) {
+        console.error(
+          "⚠️ Blockchain approval recording failed:",
+          blockchainError
+        );
+      }
+
+      // Existing blockchain logging
       try {
         await logger.logVendorRequest({
           action: "Vendor request approved",
@@ -308,7 +379,33 @@ class VendorRequestService {
 
       await request.save();
 
-      // ✅ FIXED: Log to blockchain using logger utility
+      // ✅ ADD: Record rejection to blockchain
+      try {
+        const blockchainResult = await fabricService.rejectVendorRequest(
+          requestId,
+          supplierId.toString(),
+          new Date().toISOString(),
+          rejectionReason
+        );
+
+        // Update MongoDB with blockchain confirmation
+        if (!request.blockchainVerified) {
+          request.blockchainVerified = true;
+        }
+        if (blockchainResult.txId) {
+          request.blockchainTxId = blockchainResult.txId;
+        }
+        await request.save();
+
+        console.log("✅ Rejection recorded on blockchain:", blockchainResult);
+      } catch (blockchainError) {
+        console.error(
+          "⚠️ Blockchain rejection recording failed:",
+          blockchainError
+        );
+      }
+
+      // Existing blockchain logging
       try {
         await logger.logVendorRequest({
           action: "Vendor request rejected",
@@ -384,7 +481,36 @@ class VendorRequestService {
 
       await request.save();
 
-      // ✅ FIXED: Log to blockchain using logger utility
+      // ✅ ADD: Record cancellation to blockchain
+      try {
+        const blockchainResult = await fabricService.cancelVendorRequest(
+          requestId,
+          vendorId.toString(),
+          new Date().toISOString(),
+          "Request cancelled by vendor"
+        );
+
+        // Update MongoDB with blockchain confirmation
+        if (!request.blockchainVerified) {
+          request.blockchainVerified = true;
+        }
+        if (blockchainResult.txId) {
+          request.blockchainTxId = blockchainResult.txId;
+        }
+        await request.save();
+
+        console.log(
+          "✅ Cancellation recorded on blockchain:",
+          blockchainResult
+        );
+      } catch (blockchainError) {
+        console.error(
+          "⚠️ Blockchain cancellation recording failed:",
+          blockchainError
+        );
+      }
+
+      // Existing blockchain logging
       try {
         await logger.logVendorRequest({
           action: "Vendor request cancelled",
@@ -400,7 +526,6 @@ class VendorRequestService {
 
       // Get vendor info for notification
       const vendor = await User.findById(vendorId);
-
 
       await notificationService.createNotification({
         userId: request.supplierId,
@@ -713,40 +838,6 @@ class VendorRequestService {
   }
 
   /**
-   * Toggle auto-approve for supplier
-   */
-  async toggleAutoApprove(supplierId) {
-    try {
-      const supplier = await User.findById(supplierId);
-
-      if (!supplier) {
-        throw new Error("Supplier not found");
-      }
-
-      // Initialize settings if not exists
-      if (!supplier.settings) {
-        supplier.settings = {};
-      }
-
-      // Toggle the value
-      const newValue = !supplier.settings.autoApproveRequests;
-      supplier.settings.autoApproveRequests = newValue;
-      supplier.settings.updatedAt = new Date();
-
-      await supplier.save();
-
-      return {
-        supplierId: supplier._id,
-        autoApprove: newValue,
-        updatedAt: supplier.settings.updatedAt,
-      };
-    } catch (error) {
-      console.error("Error toggling auto-approve:", error);
-      throw error;
-    }
-  }
-
-  /**
    * Update supplier settings
    */
   async updateSupplierSettings(supplierId, settings) {
@@ -789,6 +880,229 @@ class VendorRequestService {
       };
     } catch (error) {
       console.error("❌ Update supplier settings error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update request status
+   */
+  async updateRequestStatus(requestId, supplierId, newStatus, notes) {
+    const request = await VendorRequest.findById(requestId);
+
+    if (!request) {
+      throw new Error("Request not found");
+    }
+
+    if (request.supplierId.toString() !== supplierId) {
+      throw new Error("Unauthorized");
+    }
+
+    if (request.isCompleted) {
+      throw new Error("Cannot modify completed transaction");
+    }
+
+    const validStatuses = [
+      "pending",
+      "approved",
+      "rejected",
+      "cancelled",
+      "completed",
+    ];
+    if (!validStatuses.includes(newStatus)) {
+      throw new Error("Invalid status");
+    }
+
+    request.status = newStatus;
+    if (notes) {
+      request.supplierNotes = notes;
+    }
+    request.updatedAt = new Date();
+
+    await request.save();
+
+    // ✅ ADD: Record status update to blockchain
+    try {
+      const blockchainResult = await fabricService.updateVendorRequestStatus(
+        requestId,
+        newStatus,
+        supplierId.toString(),
+        new Date().toISOString(),
+        notes || ""
+      );
+
+      if (!request.blockchainVerified) {
+        request.blockchainVerified = true;
+      }
+      if (blockchainResult.txId) {
+        request.blockchainTxId = blockchainResult.txId;
+      }
+      await request.save();
+
+      console.log("✅ Status update recorded on blockchain:", blockchainResult);
+    } catch (blockchainError) {
+      console.error(
+        "⚠️ Blockchain status update recording failed:",
+        blockchainError
+      );
+    }
+
+    return {
+      success: true,
+      message: "Status updated successfully",
+      request,
+    };
+  }
+
+  /**
+   * Complete and lock transaction
+   */
+  async completeTransaction(requestId, supplierId, notes) {
+    const request = await VendorRequest.findById(requestId);
+
+    if (!request) {
+      throw new Error("Request not found");
+    }
+
+    if (request.supplierId.toString() !== supplierId) {
+      throw new Error("Unauthorized");
+    }
+
+    if (request.status !== "approved" && request.status !== "completed") {
+      throw new Error("Can only complete approved transactions");
+    }
+
+    request.status = "completed";
+    request.isCompleted = true;
+    request.completedAt = new Date();
+    if (notes) {
+      request.supplierNotes = notes;
+    }
+
+    await request.save();
+
+    // ✅ ADD: Record completion to blockchain (locks the request)
+    try {
+      const blockchainResult = await fabricService.completeVendorRequest(
+        requestId,
+        supplierId.toString(),
+        new Date().toISOString(),
+        notes || "Transaction completed"
+      );
+
+      if (!request.blockchainVerified) {
+        request.blockchainVerified = true;
+      }
+      if (blockchainResult.txId) {
+        request.blockchainTxId = blockchainResult.txId;
+      }
+      await request.save();
+
+      console.log(
+        "✅ Transaction completed and locked on blockchain:",
+        blockchainResult
+      );
+    } catch (blockchainError) {
+      console.error(
+        "⚠️ Blockchain completion recording failed:",
+        blockchainError
+      );
+    }
+
+    // Log to blockchain
+    try {
+      await logger.logVendorRequest({
+        action: "Vendor request completed",
+        type: "vendor_request_completed",
+        requestId: request._id.toString(),
+        requestNumber: request.requestNumber,
+        supplierId: supplierId.toString(),
+        status: "completed",
+      });
+    } catch (error) {
+      console.error("❌ Blockchain logging failed:", error);
+    }
+
+    // Send notification
+    await notificationService.createNotification({
+      userId: request.vendorId,
+      userRole: "vendor",
+      type: "vendor_request_completed",
+      category: "vendor_requests",
+      title: "Transaction Completed",
+      message: `Transaction #${request.requestNumber} has been completed`,
+      priority: "high",
+      relatedEntity: {
+        entityType: "vendor_request",
+        entityId: request._id,
+      },
+    });
+
+    await request.populate([
+      { path: "vendorId", select: "name email companyName" },
+      { path: "supplierId", select: "name email companyName" },
+      {
+        path: "items.inventoryId",
+        select: "name category unit pricePerUnit",
+      },
+    ]);
+
+    return {
+      success: true,
+      message: "Transaction completed successfully and locked on blockchain",
+      request,
+    };
+  }
+
+  /**
+   * ✅ NEW: Get request history from blockchain
+   */
+  async getRequestHistory(requestId, userId, userRole) {
+    try {
+      // Get request from MongoDB
+      const request = await VendorRequest.findById(requestId);
+
+      if (!request) {
+        throw new Error("Request not found");
+      }
+
+      // Check authorization
+      if (userRole === "vendor" && request.vendorId.toString() !== userId) {
+        throw new Error("Unauthorized - not your request");
+      }
+
+      if (userRole === "supplier" && request.supplierId.toString() !== userId) {
+        throw new Error("Unauthorized - not your request");
+      }
+
+      // Get blockchain history
+      let blockchainHistory = [];
+      try {
+        blockchainHistory =
+          await fabricService.getVendorRequestHistory(requestId);
+        console.log(
+          `✅ Retrieved ${blockchainHistory.length} blockchain history records`
+        );
+      } catch (blockchainError) {
+        console.error("⚠️ Failed to get blockchain history:", blockchainError);
+        // Continue with empty history
+      }
+
+      return {
+        success: true,
+        request: {
+          id: request._id,
+          requestNumber: request.requestNumber,
+          status: request.status,
+          total: request.total,
+          createdAt: request.createdAt,
+          blockchainVerified: request.blockchainVerified,
+          blockchainTxId: request.blockchainTxId,
+        },
+        blockchainHistory: blockchainHistory,
+      };
+    } catch (error) {
+      console.error("❌ Get request history error:", error);
       throw error;
     }
   }

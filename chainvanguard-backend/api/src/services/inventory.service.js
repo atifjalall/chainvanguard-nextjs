@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Inventory from "../models/Inventory.js";
 import Notification from "../models/Notifications.js";
 import User from "../models/User.js";
-import FabricService from "./fabric.service.js";
+import fabricService from "./fabric.service.js";
 import ipfsService from "./ipfs.service.js";
 import cloudinaryService from "./cloudinary.service.js";
 import qrService from "./qr.service.js";
@@ -13,10 +13,6 @@ import logger from "../utils/logger.js";
 // INVENTORY SERVICE
 // ========================================
 class InventoryService {
-  constructor() {
-    this.fabricService = new FabricService();
-  }
-
   // ========================================
   // CREATE INVENTORY ITEM
   // ========================================
@@ -112,7 +108,7 @@ class InventoryService {
 
       // NEW:
       try {
-        const blockchainResult = await this.fabricService.invoke(
+        const blockchainResult = await fabricService.invoke(
           "inventory",
           "createInventoryItem",
           JSON.stringify(blockchainData)
@@ -392,7 +388,7 @@ class InventoryService {
         updatedAt: new Date().toISOString(),
       };
 
-      await this.fabricService.invoke(
+      await fabricService.invoke(
         "inventory",
         "updateInventoryItem",
         JSON.stringify(blockchainData)
@@ -439,7 +435,7 @@ class InventoryService {
       await inventory.save();
 
       // Update blockchain
-      await this.fabricService.invoke(
+      await fabricService.invoke(
         "inventory",
         "deleteInventoryItem",
         inventoryId
@@ -489,7 +485,7 @@ class InventoryService {
       await inventory.save();
 
       // Update blockchain
-      await this.fabricService.invoke(
+      await fabricService.invoke(
         "inventory",
         "addStock",
         inventoryId,
@@ -550,7 +546,7 @@ class InventoryService {
       await inventory.save();
 
       // Update blockchain
-      await this.fabricService.invoke(
+      await fabricService.invoke(
         "inventory",
         "reduceStock",
         inventoryId,
@@ -628,7 +624,7 @@ class InventoryService {
         timestamp: new Date().toISOString(),
       };
 
-      await this.fabricService.invoke(
+      await fabricService.invoke(
         "inventory",
         "transferInventory",
         JSON.stringify(txData)
@@ -815,7 +811,7 @@ class InventoryService {
   // ========================================
   async getInventoryHistory(inventoryId) {
     try {
-      const history = await this.fabricService.evaluate(
+      const history = await fabricService.evaluate(
         "inventory",
         "getInventoryHistory",
         inventoryId
@@ -1187,7 +1183,7 @@ class InventoryService {
 
       // Log to blockchain (optional - don't block on failure)
       try {
-        await this.fabricService.invoke(
+        await fabricService.invoke(
           "inventory",
           "recordInventoryScan",
           JSON.stringify({
@@ -1255,7 +1251,7 @@ class InventoryService {
       // Get blockchain history (optional - don't fail if unavailable)
       let blockchainHistory = [];
       try {
-        const bcHistory = await this.fabricService.query(
+        const bcHistory = await fabricService.query(
           "inventory",
           "getInventoryHistory",
           inventory._id.toString()

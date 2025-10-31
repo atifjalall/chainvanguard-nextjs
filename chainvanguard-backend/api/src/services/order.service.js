@@ -3,18 +3,13 @@ import Product from "../models/Product.js";
 import User from "../models/User.js";
 import Cart from "../models/Cart.js";
 import mongoose from "mongoose";
-import redisService from "./redis.service.js";
-import FabricService from "./fabric.service.js";
+import fabricService from "./fabric.service.js";
 import { buildPaginationResponse } from "../utils/helpers.js";
 import walletBalanceService from "./wallet-balance.service.js";
 import logger from "../utils/logger.js";
 import loyaltyService from "./loyalty.service.js";
 
 class OrderService {
-  constructor() {
-    this.fabricService = new FabricService();
-  }
-
   // ========================================
   // CREATE ORDER
   // ========================================
@@ -430,7 +425,7 @@ class OrderService {
     try {
       console.log(`📝 Recording order on blockchain: ${order.orderNumber}`);
 
-      await this.fabricService.connect();
+      await fabricService.connect();
 
       const blockchainData = {
         orderId: order._id.toString(),
@@ -457,7 +452,7 @@ class OrderService {
       };
 
       // Call blockchain (assuming you have createOrder method in chaincode)
-      const result = await this.fabricService.createOrder(blockchainData);
+      const result = await fabricService.createOrder(blockchainData);
 
       // Update order with blockchain info
       await Order.findByIdAndUpdate(order._id, {
@@ -471,7 +466,7 @@ class OrderService {
       console.error("❌ Blockchain recording error:", error);
       // Don't throw - order should succeed even if blockchain fails
     } finally {
-      await this.fabricService.disconnect();
+      await fabricService.disconnect();
     }
   }
 
@@ -484,7 +479,7 @@ class OrderService {
         `📝 Transferring product ownership for order: ${order.orderNumber}`
       );
 
-      await this.fabricService.connect();
+      await fabricService.connect();
 
       const transferPromises = order.items.map(async (item) => {
         const product = await Product.findById(item.productId);
@@ -509,7 +504,7 @@ class OrderService {
         };
 
         try {
-          const result = await this.fabricService.transferProduct(
+          const result = await fabricService.transferProduct(
             product.blockchainProductId,
             transferData
           );
@@ -548,7 +543,7 @@ class OrderService {
       console.error("❌ Product ownership transfer error:", error);
       // Don't throw - order should succeed even if transfers fail
     } finally {
-      await this.fabricService.disconnect();
+      await fabricService.disconnect();
     }
   }
 
@@ -569,11 +564,11 @@ class OrderService {
 
       try {
         // Try to get from blockchain
-        await this.fabricService.connect();
-        const history = await this.fabricService.getOrderHistory(
+        await fabricService.connect();
+        const history = await fabricService.getOrderHistory(
           order.blockchainOrderId
         );
-        await this.fabricService.disconnect();
+        await fabricService.disconnect();
 
         return {
           success: true,

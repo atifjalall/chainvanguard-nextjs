@@ -1,7 +1,7 @@
 // api/src/services/auth.service.js
 import User from "../models/User.js";
 import WalletService from "./wallet.service.js";
-import FabricService from "./fabric.service.js";
+import fabricService from "./fabric.service.js";
 import sessionService from "./session.service.js";
 import pkg from "jsonwebtoken";
 const { sign } = pkg;
@@ -11,7 +11,6 @@ import logger from "../utils/logger.js";
 class AuthService {
   constructor() {
     this.walletService = new WalletService();
-    this.fabricService = new FabricService();
     this.JWT_SECRET =
       process.env.JWT_SECRET || "your-secret-key-change-in-production";
     this.JWT_EXPIRES_IN = "7d";
@@ -120,7 +119,7 @@ class AuthService {
 
   async registerOnBlockchain(user) {
     try {
-      await this.fabricService.connect();
+      await fabricService.connect();
 
       const fabricUserData = {
         walletAddress: user.walletAddress,
@@ -133,7 +132,7 @@ class AuthService {
         businessType: user.businessType || "",
       };
 
-      const result = await this.fabricService.registerUser(fabricUserData);
+      const result = await fabricService.registerUser(fabricUserData);
 
       user.fabricRegistered = true;
       user.fabricUserId = user.walletAddress;
@@ -146,7 +145,7 @@ class AuthService {
       throw error;
     } finally {
       // Always disconnect from Fabric after operation
-      await this.fabricService.disconnect();
+      await fabricService.disconnect();
     }
   }
 
@@ -229,13 +228,13 @@ class AuthService {
   async recordLoginOnBlockchain(walletAddress) {
     try {
       // ✅ FIX #2: Changed from connectToNetwork() to connect()
-      await this.fabricService.connect();
-      await this.fabricService.recordLogin(walletAddress);
+      await fabricService.connect();
+      await fabricService.recordLogin(walletAddress);
       console.log(`✅ Login recorded on blockchain for: ${walletAddress}`);
     } catch (error) {
       console.error("❌ Failed to record login on blockchain:", error);
     } finally {
-      await this.fabricService.disconnect();
+      await fabricService.disconnect();
     }
   }
 

@@ -1,13 +1,10 @@
 import Product from "../models/Product.js";
 import Order from "../models/Order.js";
-import User from "../models/User.js";
 import BlockchainLog from "../models/BlockchainLog.js";
-import FabricService from "./fabric.service.js";
+import fabricService from "./fabric.service.js";
 
 class BlockchainService {
-  constructor() {
-    this.fabricService = new FabricService();
-  }
+
 
   /**
    * 📦 Get Product Blockchain History
@@ -40,9 +37,9 @@ class BlockchainService {
       // Query Hyperledger Fabric for on-chain data
       let fabricHistory = [];
       try {
-        await this.fabricService.connect();
+        await fabricService.connect();
         const contract =
-          this.fabricService.network.getContract("ProductContract");
+          fabricService.network.getContract("ProductContract");
         const historyResult = await contract.evaluateTransaction(
           "getProductHistory",
           productId
@@ -185,9 +182,9 @@ class BlockchainService {
       // Query Hyperledger Fabric
       let fabricHistory = [];
       try {
-        await this.fabricService.connect();
+        await fabricService.connect();
         const contract =
-          this.fabricService.network.getContract("OrderContract");
+          fabricService.network.getContract("OrderContract");
         const historyResult = await contract.evaluateTransaction(
           "getOrderHistory",
           orderId
@@ -352,10 +349,10 @@ class BlockchainService {
       // Try to verify on Hyperledger Fabric
       let fabricVerification = null;
       try {
-        await this.fabricService.connect();
+        await fabricService.connect();
 
         // Query the appropriate contract
-        const contract = this.fabricService.network.getContract(
+        const contract = fabricService.network.getContract(
           log.chaincodeName || "ProductContract"
         );
 
@@ -371,7 +368,7 @@ class BlockchainService {
           };
         } else if (log.entityType === "order" && log.entityId) {
           const orderContract =
-            this.fabricService.network.getContract("OrderContract");
+            fabricService.network.getContract("OrderContract");
           const result = await orderContract.evaluateTransaction(
             "getOrder",
             log.entityId
@@ -492,7 +489,7 @@ class BlockchainService {
       let fabricStatus = "unknown";
       let fabricDetails = null;
       try {
-        await this.fabricService.connect();
+        await fabricService.connect();
         fabricStatus = "connected";
         fabricDetails = {
           channelName: "mychannel",

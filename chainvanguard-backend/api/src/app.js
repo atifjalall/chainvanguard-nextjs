@@ -26,6 +26,7 @@ import vendorCustomerRoutes from "./routes/vendor.customer.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import returnRoutes from "./routes/return.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
+import supplierVendorRoutes from "./routes/supplier.vendor.routes.js";
 
 dotenv.config();
 
@@ -169,6 +170,7 @@ app.use("/api/vendor/customers", vendorCustomerRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/returns", returnRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/vendor-customers", supplierVendorRoutes);
 
 // ========================================
 // API INFO ENDPOINT

@@ -108,15 +108,70 @@ const vendorRequestSchema = new mongoose.Schema(
       ref: "Order",
     },
 
+    isCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    completedAt: {
+      type: Date,
+    },
+
     // Blockchain tracking
     blockchainTxId: {
       type: String,
       sparse: true,
+      index: true,
     },
     blockchainVerified: {
       type: Boolean,
       default: false,
+      index: true,
     },
+    blockchainRequestId: {
+      type: String,
+      default: "",
+      sparse: true,
+    },
+
+    blockchainLastSynced: {
+      type: Date,
+      default: null,
+    },
+
+    blockchainSyncAttempts: {
+      type: Number,
+      default: 0,
+    },
+
+    blockchainSyncError: {
+      type: String,
+      default: "",
+    },
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: ["pending", "approved", "rejected", "cancelled", "completed"],
+          required: true,
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+        changedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        changedByRole: {
+          type: String,
+          enum: ["vendor", "supplier"],
+        },
+        notes: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
   },
   {
     timestamps: true,
@@ -129,6 +184,11 @@ vendorRequestSchema.index({ supplierId: 1, status: 1 });
 vendorRequestSchema.index({ requestNumber: 1 });
 vendorRequestSchema.index({ createdAt: -1 });
 vendorRequestSchema.index({ status: 1, createdAt: -1 });
+
+vendorRequestSchema.index({ blockchainVerified: 1, status: 1 });
+vendorRequestSchema.index({ blockchainTxId: 1 }, { sparse: true });
+vendorRequestSchema.index({ vendorId: 1, blockchainVerified: 1 });
+vendorRequestSchema.index({ supplierId: 1, blockchainVerified: 1 });
 
 // Auto-generate request number before saving
 vendorRequestSchema.pre("save", async function (next) {
@@ -196,5 +256,98 @@ vendorRequestSchema.statics.getStatsBySupplier = async function (
 
   return stats;
 };
+
+// ============================================
+// METHODS - Add instance methods for blockchain sync
+// ============================================
+
+/**
+ * Mark request as verified on blockchain
+ */
+vendorRequestSchema.methods.markBlockchainVerified = function (txId) {
+  this.blockchainVerified = true;
+  this.blockchainTxId = txId;
+  this.blockchainLastSynced = new Date();
+  this.blockchainSyncError = "";
+  return this.save();
+};
+
+/**
+ * Mark blockchain sync failed
+ */
+vendorRequestSchema.methods.markBlockchainSyncFailed = function (error) {
+  this.blockchainSyncAttempts = (this.blockchainSyncAttempts || 0) + 1;
+  this.blockchainSyncError = error.message || error.toString();
+  this.blockchainLastSynced = new Date();
+  return this.save();
+};
+
+/**
+ * Check if request needs blockchain sync
+ */
+vendorRequestSchema.methods.needsBlockchainSync = function () {
+  // Needs sync if not verified or if sync failed less than 5 times
+  return !this.blockchainVerified && (this.blockchainSyncAttempts || 0) < 5;
+};
+
+// ============================================
+// STATICS - Add static methods for bulk operations
+// ============================================
+
+/**
+ * Find all requests that need blockchain sync
+ */
+vendorRequestSchema.statics.findNeedingBlockchainSync = function () {
+  return this.find({
+    blockchainVerified: false,
+    blockchainSyncAttempts: { $lt: 5 },
+  }).limit(100);
+};
+
+/**
+ * Get blockchain verification stats
+ */
+vendorRequestSchema.statics.getBlockchainStats = async function () {
+  const total = await this.countDocuments();
+  const verified = await this.countDocuments({ blockchainVerified: true });
+  const needsSync = await this.countDocuments({
+    blockchainVerified: false,
+    blockchainSyncAttempts: { $lt: 5 },
+  });
+  const failed = await this.countDocuments({
+    blockchainVerified: false,
+    blockchainSyncAttempts: { $gte: 5 },
+  });
+
+  return {
+    total,
+    verified,
+    needsSync,
+    failed,
+    verificationRate: total > 0 ? ((verified / total) * 100).toFixed(2) : 0,
+  };
+};
+
+// ============================================
+// PRE-SAVE HOOK - Add status history tracking
+// ============================================
+
+vendorRequestSchema.pre("save", function (next) {
+  // Track status changes in statusHistory
+  if (this.isModified("status") && !this.isNew) {
+    if (!this.statusHistory) {
+      this.statusHistory = [];
+    }
+
+    this.statusHistory.push({
+      status: this.status,
+      timestamp: new Date(),
+      changedBy: this.reviewedBy || this.vendorId,
+      notes: this.supplierNotes || `Status changed to ${this.status}`,
+    });
+  }
+
+  next();
+});
 
 export default mongoose.model("VendorRequest", vendorRequestSchema);

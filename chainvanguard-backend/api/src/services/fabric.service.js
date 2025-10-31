@@ -1656,6 +1656,481 @@ class FabricService {
         throw new Error(`Unknown contract type: ${contractType}`);
     }
   }
+
+  /**
+   * ========================================
+   * VENDOR REQUEST CONTRACT METHODS
+   * Add these methods to the FabricService class
+   * ========================================
+   */
+
+  /**
+   * Initialize vendor request contract
+   */
+  async initVendorRequestContract() {
+    try {
+      if (!this.gateway) {
+        await this.connect();
+      }
+
+      const network = await this.gateway.getNetwork("supply-chain-channel");
+      this.vendorRequestContract = network.getContract(
+        "vendor-request",
+        "vendorRequest"
+      );
+
+      console.log("✅ Vendor Request Contract initialized");
+      return this.vendorRequestContract;
+    } catch (error) {
+      console.error("❌ Error initializing vendor request contract:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create vendor request on blockchain
+   */
+  async createVendorRequest(requestData) {
+    try {
+      console.log(
+        `📝 Creating vendor request on blockchain: ${requestData.requestNumber}`
+      );
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "createVendorRequest",
+        JSON.stringify(requestData)
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const parsedResult = JSON.parse(resultStr);
+      console.log("✅ Vendor request created on blockchain:", parsedResult);
+
+      return parsedResult;
+    } catch (error) {
+      console.error("❌ Blockchain createVendorRequest error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve vendor request on blockchain
+   */
+  async approveVendorRequest(requestId, approverId, timestamp, notes = "") {
+    try {
+      console.log(`✅ Approving vendor request ${requestId} on blockchain`);
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "approveVendorRequest",
+        requestId,
+        approverId,
+        timestamp || new Date().toISOString()
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const parsedResult = JSON.parse(resultStr);
+      console.log("✅ Vendor request approved on blockchain:", parsedResult);
+
+      return parsedResult;
+    } catch (error) {
+      console.error("❌ Blockchain approveVendorRequest error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reject vendor request on blockchain
+   */
+  async rejectVendorRequest(requestId, rejecterId, timestamp, reason) {
+    try {
+      console.log(`❌ Rejecting vendor request ${requestId} on blockchain`);
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      if (!reason || reason.trim() === "") {
+        throw new Error("Rejection reason is required");
+      }
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "rejectVendorRequest",
+        requestId,
+        rejecterId,
+        timestamp || new Date().toISOString()
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const parsedResult = JSON.parse(resultStr);
+      console.log("✅ Vendor request rejected on blockchain:", parsedResult);
+
+      return parsedResult;
+    } catch (error) {
+      console.error("❌ Blockchain rejectVendorRequest error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel vendor request on blockchain (by vendor)
+   */
+  async cancelVendorRequest(requestId, vendorId, timestamp, notes = "") {
+    try {
+      console.log(`🚫 Cancelling vendor request ${requestId} on blockchain`);
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "cancelVendorRequest",
+        requestId,
+        vendorId,
+        timestamp || new Date().toISOString()
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const parsedResult = JSON.parse(resultStr);
+      console.log("✅ Vendor request cancelled on blockchain:", parsedResult);
+
+      return parsedResult;
+    } catch (error) {
+      console.error("❌ Blockchain cancelVendorRequest error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update vendor request status on blockchain
+   */
+  async updateVendorRequestStatus(
+    requestId,
+    newStatus,
+    updatedBy,
+    timestamp,
+    notes = ""
+  ) {
+    try {
+      console.log(
+        `🔄 Updating vendor request ${requestId} status to ${newStatus} on blockchain`
+      );
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "updateVendorRequestStatus",
+        requestId,
+        newStatus,
+        updatedBy,
+        timestamp || new Date().toISOString(),
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const parsedResult = JSON.parse(resultStr);
+      console.log(
+        "✅ Vendor request status updated on blockchain:",
+        parsedResult
+      );
+
+      return parsedResult;
+    } catch (error) {
+      console.error("❌ Blockchain updateVendorRequestStatus error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Complete and lock vendor request on blockchain
+   */
+  async completeVendorRequest(requestId, completedBy, timestamp, notes = "") {
+    try {
+      console.log(
+        `🔒 Completing and locking vendor request ${requestId} on blockchain`
+      );
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "completeVendorRequest",
+        requestId,
+        completedBy,
+        timestamp || new Date().toISOString(),
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const parsedResult = JSON.parse(resultStr);
+      console.log(
+        "✅ Vendor request completed and locked on blockchain:",
+        parsedResult
+      );
+
+      return parsedResult;
+    } catch (error) {
+      console.error("❌ Blockchain completeVendorRequest error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get vendor request from blockchain
+   */
+  async getVendorRequest(requestId) {
+    try {
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const result = await this.vendorRequestContract.evaluateTransaction(
+        "getVendorRequest",
+        requestId
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain getVendorRequest error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get vendor request history from blockchain (audit trail)
+   */
+  async getVendorRequestHistory(requestId) {
+    try {
+      console.log(
+        `📜 Getting vendor request ${requestId} history from blockchain`
+      );
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const result = await this.vendorRequestContract.evaluateTransaction(
+        "getVendorRequestHistory",
+        requestId
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const history = JSON.parse(resultStr);
+      console.log(
+        `✅ Retrieved ${history.length} history records from blockchain`
+      );
+
+      return history;
+    } catch (error) {
+      console.error("❌ Blockchain getVendorRequestHistory error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Query vendor requests by supplier
+   */
+  async queryVendorRequestsBySupplier(supplierId) {
+    try {
+      console.log(
+        `🔍 Querying vendor requests for supplier ${supplierId} from blockchain`
+      );
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const result = await this.vendorRequestContract.evaluateTransaction(
+        "getVendorRequestsBySupplier",
+        supplierId
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const requests = JSON.parse(resultStr);
+      console.log(
+        `✅ Found ${requests.length} vendor requests from blockchain`
+      );
+
+      return requests;
+    } catch (error) {
+      console.error(
+        "❌ Blockchain queryVendorRequestsBySupplier error:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Query vendor requests by vendor
+   */
+  async queryVendorRequestsByVendor(vendorId) {
+    try {
+      console.log(
+        `🔍 Querying vendor requests for vendor ${vendorId} from blockchain`
+      );
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const result = await this.vendorRequestContract.evaluateTransaction(
+        "getVendorRequestsByVendor",
+        vendorId
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const requests = JSON.parse(resultStr);
+      console.log(
+        `✅ Found ${requests.length} vendor requests from blockchain`
+      );
+
+      return requests;
+    } catch (error) {
+      console.error("❌ Blockchain queryVendorRequestsByVendor error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Query vendor requests by status
+   */
+  async queryVendorRequestsByStatus(supplierId, status) {
+    try {
+      console.log(
+        `🔍 Querying ${status} vendor requests for supplier ${supplierId} from blockchain`
+      );
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const result = await this.vendorRequestContract.evaluateTransaction(
+        "getVendorRequestsByStatus",
+        supplierId,
+        status
+      );
+
+      // Parse result
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const requests = JSON.parse(resultStr);
+      console.log(
+        `✅ Found ${requests.length} ${status} vendor requests from blockchain`
+      );
+
+      return requests;
+    } catch (error) {
+      console.error("❌ Blockchain queryVendorRequestsByStatus error:", error);
+      throw error;
+    }
+  }
 }
 
-export default FabricService;
+// Export a singleton instance
+export default new FabricService();

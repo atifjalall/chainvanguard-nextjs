@@ -3,7 +3,7 @@ import User from "../models/User.js";
 import redisService from "./redis.service.js";
 import cloudinaryService from "./cloudinary.service.js";
 import ipfsService from "./ipfs.service.js";
-import FabricService from "./fabric.service.js";
+import fabricService from "./fabric.service.js";
 import { buildPaginationResponse, generateSKU } from "../utils/helpers.js";
 import {
   validateCategorySubcategory,
@@ -13,9 +13,7 @@ import qrService from "./qr.service.js";
 import logger from "../utils/logger.js";
 
 class ProductService {
-  constructor() {
-    this.fabricService = new FabricService();
-  }
+
 
   // ========================================
   // CREATE PRODUCT
@@ -1140,11 +1138,11 @@ class ProductService {
       }
 
       // Get from blockchain
-      await this.fabricService.connect();
-      const historyJSON = await this.fabricService.getProductHistory(
+      await fabricService.connect();
+      const historyJSON = await fabricService.getProductHistory(
         product.blockchainProductId
       );
-      this.fabricService.disconnect();
+      fabricService.disconnect();
 
       const history = JSON.parse(historyJSON);
 
@@ -1172,7 +1170,7 @@ class ProductService {
     try {
       console.log(`📝 Recording product on blockchain: ${product._id}`);
 
-      await this.fabricService.connect();
+      await fabricService.connect();
 
       // ✅ FIX: Ensure productId is a string and never undefined
       const productId = String(product._id || product.id || "");
@@ -1260,7 +1258,7 @@ class ProductService {
       });
 
       // Submit to blockchain
-      const result = await this.fabricService.createProduct(blockchainData);
+      const result = await fabricService.createProduct(blockchainData);
 
       console.log("✅ Product recorded on blockchain:", result);
 
@@ -1284,7 +1282,7 @@ class ProductService {
 
       throw error;
     } finally {
-      await this.fabricService.disconnect();
+      await fabricService.disconnect();
     }
   }
 
@@ -1301,7 +1299,7 @@ class ProductService {
 
       console.log(`📝 Updating product on blockchain: ${product._id}`);
 
-      await this.fabricService.connect();
+      await fabricService.connect();
 
       const updateData = {
         status: product.status || "active",
@@ -1325,7 +1323,7 @@ class ProductService {
         product.blockchainProductId
       );
 
-      await this.fabricService.updateProduct(
+      await fabricService.updateProduct(
         product.blockchainProductId,
         updateData
       );
@@ -1335,7 +1333,7 @@ class ProductService {
       console.error("❌ Blockchain update error:", error.message);
       // Don't throw - update should succeed even if blockchain fails
     } finally {
-      await this.fabricService.disconnect();
+      await fabricService.disconnect();
     }
   }
 
@@ -1353,7 +1351,7 @@ class ProductService {
 
       console.log(`✅ Verifying product on blockchain: ${product._id}`);
 
-      await this.fabricService.connect();
+      await fabricService.connect();
 
       const verificationData = {
         verifiedBy: expertId.toString(),
@@ -1361,7 +1359,7 @@ class ProductService {
         notes: "Product verified and authenticated",
       };
 
-      await this.fabricService.verifyProduct(
+      await fabricService.verifyProduct(
         product.blockchainProductId,
         JSON.stringify(verificationData)
       );
@@ -1371,7 +1369,7 @@ class ProductService {
       console.error("❌ Blockchain verification error:", error);
       throw error;
     } finally {
-      this.fabricService.disconnect();
+      fabricService.disconnect();
     }
   }
 

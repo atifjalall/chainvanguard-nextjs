@@ -2,12 +2,9 @@ import User from "../models/User.js";
 import Product from "../models/Product.js";
 import Order from "../models/Order.js";
 import BlockchainLog from "../models/BlockchainLog.js";
-import FabricService from "./fabric.service.js";
 
 class ExpertService {
-  constructor() {
-    this.fabricService = new FabricService();
-  }
+
 
   /**
    * 📊 Get Expert Dashboard Statistics
