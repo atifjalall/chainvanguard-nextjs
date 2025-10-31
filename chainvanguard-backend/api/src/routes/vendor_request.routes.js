@@ -1,6 +1,8 @@
 import express from "express";
 import vendorRequestService from "../services/vendor_request.service.js";
 import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
+import fabricService from "../services/fabric.service.js";
+import VendorRequest from "../models/VendorRequest.js";
 
 const router = express.Router();
 
@@ -105,12 +107,12 @@ router.get(
 );
 
 /**
- * DELETE /api/vendor-requests/:id
+ * POST /api/vendor-requests/:id/cancel
  * Cancel request
  * Access: Vendor only
  */
-router.delete(
-  "/:id",
+router.post(
+  "/:id/cancel",
   authenticate,
   authorizeRoles("vendor"),
   async (req, res) => {
@@ -119,13 +121,12 @@ router.delete(
         req.params.id,
         req.userId
       );
-
       res.json(result);
     } catch (error) {
-      console.error("❌ DELETE /api/vendor-requests/:id error:", error);
+      console.error("❌ POST /api/vendor-requests/:id/cancel error:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "Failed to cancel request",
+        message: error.message,
       });
     }
   }
@@ -178,6 +179,41 @@ router.get(
 );
 
 /**
+ * GET /api/vendor-requests/supplier/transactions
+ * Get all transactions (alias for supplier requests list)
+ */
+router.get(
+  "/supplier/transactions",
+  authenticate,
+  authorizeRoles("supplier"),
+  async (req, res) => {
+    try {
+      const filters = {
+        status: req.query.status,
+        page: req.query.page,
+        limit: req.query.limit,
+        sortBy: req.query.sortBy || "createdAt",
+        sortOrder: req.query.sortOrder || "desc",
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+      };
+
+      const result = await vendorRequestService.getSupplierRequests(
+        req.userId,
+        filters
+      );
+
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
  * GET /api/vendor-requests/supplier/stats
  * Get supplier's request statistics
  * Access: Supplier only
@@ -188,10 +224,7 @@ router.get(
   authorizeRoles("supplier"),
   async (req, res) => {
     try {
-      const result = await vendorRequestService.getRequestStats(
-        req.userId,
-        "supplier"
-      );
+      const result = await vendorRequestService.getSupplierStats(req.userId);
 
       res.json(result);
     } catch (error) {
@@ -272,24 +305,99 @@ router.post(
 );
 
 /**
- * POST /api/vendor-requests/:id/cancel
- * Cancel request
- * Access: Vendor only
+ * PATCH /api/vendor-requests/:id/status
+ * Update transaction status
+ * Access: Supplier only
  */
-
-router.post(
-  "/:id/cancel",
+router.patch(
+  "/:id/status",
   authenticate,
-  authorizeRoles("vendor"),
+  authorizeRoles("supplier"),
   async (req, res) => {
     try {
-      const result = await vendorRequestService.cancelRequest(
+      const { status, notes } = req.body;
+
+      if (!status) {
+        return res.status(400).json({
+          success: false,
+          message: "Status is required",
+        });
+      }
+
+      const result = await vendorRequestService.updateRequestStatus(
         req.params.id,
-        req.userId
+        req.userId,
+        status,
+        notes
       );
+
       res.json(result);
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      console.error("❌ PATCH /api/vendor-requests/:id/status error:", error);
+
+      if (error.message === "Request not found") {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes("Unauthorized")) {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to update status",
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/vendor-requests/:id/complete
+ * Mark transaction as complete and lock
+ * Access: Supplier only
+ */
+router.post(
+  "/:id/complete",
+  authenticate,
+  authorizeRoles("supplier"),
+  async (req, res) => {
+    try {
+      const { notes } = req.body;
+
+      const result = await vendorRequestService.completeTransaction(
+        req.params.id,
+        req.userId,
+        notes
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("❌ POST /api/vendor-requests/:id/complete error:", error);
+
+      if (error.message === "Request not found") {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes("Unauthorized")) {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to complete transaction",
+      });
     }
   }
 );
@@ -421,6 +529,124 @@ router.patch(
 );
 
 // ========================================
+// BLOCKCHAIN ENDPOINTS (NEW)
+// ========================================
+
+/**
+ * ✅ NEW: GET /api/vendor-requests/:id/history
+ * Get blockchain history for request (audit trail)
+ * Access: Supplier, Vendor (own request)
+ */
+router.get(
+  "/:id/history",
+  authenticate,
+  authorizeRoles("supplier", "vendor"),
+  async (req, res) => {
+    try {
+      const requestId = req.params.id;
+
+      const result = await vendorRequestService.getRequestHistory(
+        requestId,
+        req.userId,
+        req.userRole
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("❌ GET /api/vendor-requests/:id/history error:", error);
+      res.status(error.message.includes("Unauthorized") ? 403 : 500).json({
+        success: false,
+        message: error.message || "Failed to get request history",
+      });
+    }
+  }
+);
+
+/**
+ * ✅ NEW: GET /api/vendor-requests/blockchain/verify/:id
+ * Verify if request exists on blockchain
+ * Access: Supplier, Vendor (own request)
+ */
+router.get(
+  "/blockchain/verify/:id",
+  authenticate,
+  authorizeRoles("supplier", "vendor"),
+  async (req, res) => {
+    try {
+      const requestId = req.params.id;
+
+      // Get from MongoDB
+      const request = await VendorRequest.findById(requestId);
+
+      if (!request) {
+        return res.status(404).json({
+          success: false,
+          message: "Request not found",
+        });
+      }
+
+      // Check authorization
+      if (
+        req.userRole === "vendor" &&
+        request.vendorId.toString() !== req.userId
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      if (
+        req.userRole === "supplier" &&
+        request.supplierId.toString() !== req.userId
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      // Try to get from blockchain
+      let blockchainData = null;
+      let onBlockchain = false;
+
+      try {
+        blockchainData = await fabricService.getVendorRequest(requestId);
+        onBlockchain = true;
+      } catch (error) {
+        console.error("Request not on blockchain:", error.message);
+      }
+
+      res.json({
+        success: true,
+        mongoData: {
+          id: request._id,
+          requestNumber: request.requestNumber,
+          status: request.status,
+          total: request.total,
+          blockchainVerified: request.blockchainVerified,
+          blockchainTxId: request.blockchainTxId,
+        },
+        blockchain: {
+          onBlockchain: onBlockchain,
+          data: blockchainData,
+        },
+        synced: onBlockchain && request.blockchainVerified,
+      });
+    } catch (error) {
+      console.error(
+        "❌ GET /api/vendor-requests/blockchain/verify/:id error:",
+        error
+      );
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to verify blockchain status",
+      });
+    }
+  }
+);
+
+// ========================================
 // SHARED ENDPOINTS (Vendor + Supplier)
 // ========================================
 
@@ -487,9 +713,6 @@ router.get(
       if (status) query.status = status;
 
       const skip = (page - 1) * limit;
-
-      const VendorRequest = (await import("../models/VendorRequest.js"))
-        .default;
 
       const [requests, total] = await Promise.all([
         VendorRequest.find(query)

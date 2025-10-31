@@ -1,7 +1,5 @@
 import BlockchainLog from "../models/BlockchainLog.js";
-import FabricService from "../services/fabric.service.js";
-
-const fabricService = new FabricService();
+import fabricService from "../services/fabric.service.js";
 
 class Logger {
   /**

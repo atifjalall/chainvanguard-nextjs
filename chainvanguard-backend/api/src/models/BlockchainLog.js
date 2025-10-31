@@ -100,6 +100,7 @@ const blockchainLogSchema = new Schema(
         "vendor_request_rejected",
         "vendor_request_cancelled",
         "vendor_request_fulfilled",
+        "vendor_request_completed",
         "vendor_request_status_changed",
       ],
       required: true,

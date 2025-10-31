@@ -100,6 +100,7 @@ const notificationSchema = new Schema(
         "vendor_request_cancelled",
         "vendor_request_updated",
         "vendor_request_fulfilled",
+        "vendor_request_completed",
       ],
       required: true,
       index: true,
