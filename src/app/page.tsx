@@ -46,45 +46,31 @@ import {
   Clock,
   CreditCard,
   Smartphone,
-  Layers,
   Box,
   Play,
+  Check,
+  X,
+  ChevronDown,
+  Bell,
+  Headphones,
+  RefreshCw,
+  MapPin,
+  Download,
+  QrCode,
+  PhoneCall,
+  HelpCircle,
+  FileText,
+  DollarSign,
+  Percent,
+  ShieldCheck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import PixelBlast from "@/components/PixelBlast";
-import { motion, useScroll, useTransform, AnimatePresence, useSpring } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useInView } from "framer-motion";
 
-// Enhanced motion component with 3D effects
-const FocusMotionDiv = ({ children, className = "", ...props }: any) => {
-  const [isFocused, setIsFocused] = useState(false);
-
-  return (
-    <motion.div
-      className={className}
-      tabIndex={0}
-      onFocus={() => setIsFocused(true)}
-      onBlur={() => setIsFocused(false)}
-      animate={{
-        scale: isFocused ? 1.02 : 1,
-        boxShadow: isFocused
-          ? "0 0 0 3px rgba(59, 130, 246, 0.3)"
-          : "0 0 0 0px rgba(59, 130, 246, 0)",
-      }}
-      transition={{
-        type: "spring",
-        stiffness: 300,
-        damping: 20,
-      }}
-      {...props}
-    >
-      {children}
-    </motion.div>
-  );
-};
-
-// Animated product card with 3D hover effect
+// Animated product card
 const ProductCard = ({ product, index }: any) => {
   const [isHovered, setIsHovered] = useState(false);
   const ref = useRef(null);
@@ -93,70 +79,70 @@ const ProductCard = ({ product, index }: any) => {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 30 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-      transition={{ duration: 0.4, delay: index * 0.08 }}
+      initial={{ opacity: 0, y: 30, rotateX: -10 }}
+      animate={isInView ? { opacity: 1, y: 0, rotateX: 0 } : { opacity: 0, y: 30, rotateX: -10 }}
+      transition={{ duration: 0.5, delay: index * 0.08, type: "spring" }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      whileHover={{ y: -8 }}
+      whileHover={{ y: -12, scale: 1.02 }}
       className="group"
     >
-      <Card className="relative overflow-hidden border border-gray-200/60 dark:border-gray-700/40 shadow-sm hover:shadow-xl transition-all duration-500 bg-white dark:bg-gray-900 h-full">
-        {/* Animated gradient overlay */}
+      <Card className="relative overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-2xl transition-all duration-500 bg-white dark:bg-gray-900 h-full">
         <motion.div
-          className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-cyan-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:via-cyan-500/5 group-hover:to-purple-500/5"
-          animate={{
-            opacity: isHovered ? 1 : 0,
-          }}
+          className="absolute inset-0 bg-blue-500/5"
+          animate={{ opacity: isHovered ? 1 : 0 }}
           transition={{ duration: 0.3 }}
         />
 
-        {/* Product badge */}
         <div className="absolute top-3 left-3 z-10 flex gap-1.5">
           {product.isNew && (
-            <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0 text-[10px] px-2 py-0.5">
-              <Sparkles className="h-2.5 w-2.5 mr-1" />
-              New
-            </Badge>
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+              <Badge className="bg-pink-500 text-white border-0 text-[10px] px-2 py-0.5">
+                <Sparkles className="h-2.5 w-2.5 mr-1" />
+                New
+              </Badge>
+            </motion.div>
           )}
           {product.discount && (
-            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 text-[10px] px-2 py-0.5">
-              <Flame className="h-2.5 w-2.5 mr-1" />
-              {product.discount}% OFF
-            </Badge>
+            <motion.div
+              animate={{ rotate: [0, -5, 5, -5, 0] }}
+              transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
+            >
+              <Badge className="bg-red-500 text-white border-0 text-[10px] px-2 py-0.5">
+                <Percent className="h-2.5 w-2.5 mr-1" />
+                {product.discount}% OFF
+              </Badge>
+            </motion.div>
           )}
         </div>
 
-        {/* Wishlist button */}
         <motion.button
           className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm border border-gray-200 dark:border-gray-700"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.2, rotate: 15 }}
+          whileTap={{ scale: 0.8 }}
         >
           <Heart className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-red-500 transition-colors" />
         </motion.button>
 
-        {/* Product image with parallax effect */}
-        <div className="relative h-48 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700">
+        <div className="relative h-48 overflow-hidden bg-gray-50 dark:bg-gray-800">
           <motion.div
             className="absolute inset-0 flex items-center justify-center"
             animate={{
-              scale: isHovered ? 1.08 : 1,
-              rotateZ: isHovered ? 2 : 0,
+              scale: isHovered ? 1.15 : 1,
+              rotateZ: isHovered ? 3 : 0,
             }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.4, type: "spring", stiffness: 300 }}
           >
-            <product.icon className="h-24 w-24 text-blue-500/20 dark:text-blue-400/20" />
+            <product.icon className="h-24 w-24 text-blue-500/20" />
           </motion.div>
 
-          {/* Quick view button */}
           <motion.div
             className="absolute bottom-3 left-1/2 transform -translate-x-1/2"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 10 }}
             transition={{ duration: 0.2 }}
           >
-            <Button size="sm" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-md text-xs h-8">
+            <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700 shadow-md text-xs h-8">
               <Eye className="h-3 w-3 mr-1.5" />
               Quick View
             </Button>
@@ -165,15 +151,18 @@ const ProductCard = ({ product, index }: any) => {
 
         <CardHeader className="relative z-10 pb-2 px-4 pt-4">
           <div className="flex items-start justify-between mb-1.5">
-            <Badge variant="outline" className="text-[10px] px-2 py-0">
+            <Badge variant="outline" className="text-[10px] px-2 py-0 border-blue-500 text-blue-600">
               {product.category}
             </Badge>
-            <div className="flex items-center gap-0.5">
+            <motion.div
+              className="flex items-center gap-0.5"
+              whileHover={{ scale: 1.1 }}
+            >
               <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
               <span className="text-xs font-semibold">{product.rating}</span>
-            </div>
+            </motion.div>
           </div>
-          <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-1">
+          <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 transition-colors line-clamp-2 mb-1">
             {product.name}
           </CardTitle>
           <CardDescription className="text-xs line-clamp-2 leading-relaxed">
@@ -184,17 +173,25 @@ const ProductCard = ({ product, index }: any) => {
         <CardContent className="relative z-10 space-y-2.5 px-4 pb-4">
           <div className="flex items-center gap-2">
             {product.originalPrice && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 line-through">
+              <motion.span
+                className="text-xs text-gray-500 line-through"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
                 ${product.originalPrice}
-              </span>
+              </motion.span>
             )}
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+            <motion.span
+              className="text-xl font-bold text-blue-600"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+            >
               ${product.price}
-            </span>
+            </motion.span>
           </div>
 
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-sm text-xs h-9">
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm text-xs h-9">
               <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
               Add to Cart
             </Button>
@@ -233,99 +230,94 @@ const AnimatedCounter = ({ value, suffix = "" }: { value: string; suffix?: strin
   }, [isInView, target]);
 
   return (
-    <span ref={ref} className="text-2xl font-bold text-white">
+    <motion.span
+      ref={ref}
+      className="text-2xl font-bold text-white"
+      initial={{ scale: 0 }}
+      animate={isInView ? { scale: 1 } : { scale: 0 }}
+      transition={{ type: "spring", stiffness: 200 }}
+    >
       {isInView ? (target ? count.toLocaleString() : value) : "0"}{suffix}
-    </span>
+    </motion.span>
   );
 };
 
-// Animated Feature Card
-const FeatureCard = ({ feature, index }: any) => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
-
+// Live notification
+const LiveNotification = ({ notification, index }: any) => {
   return (
     <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 30 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
+      initial={{ opacity: 0, x: -50, scale: 0.8 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 50, scale: 0.8 }}
+      transition={{ duration: 0.3, delay: index * 0.1 }}
+      className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
     >
-      <Card className="group relative overflow-hidden border border-gray-200/60 dark:border-gray-700/40 hover:border-blue-500/50 dark:hover:border-blue-500/50 shadow-sm hover:shadow-lg transition-all duration-500 bg-white dark:bg-gray-900 h-full">
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-cyan-500/0 group-hover:from-blue-500/5 group-hover:to-cyan-500/5"
-          transition={{ duration: 0.3 }}
-        />
-        <CardContent className="p-6 relative z-10">
-          <motion.div
-            className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4 shadow-md"
-            whileHover={{ scale: 1.1, rotate: 5 }}
-          >
-            <feature.icon className="h-6 w-6 text-white" />
-          </motion.div>
-          <h3 className="text-base font-semibold mb-2 text-gray-900 dark:text-gray-100">
-            {feature.title}
-          </h3>
-          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-            {feature.description}
-          </p>
-        </CardContent>
-      </Card>
+      <motion.div
+        animate={{ scale: [1, 1.2, 1], rotate: [0, 10, 0] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0"
+      >
+        <ShoppingCart className="h-5 w-5 text-blue-600" />
+      </motion.div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+          {notification.user}
+        </p>
+        <p className="text-[10px] text-gray-600 dark:text-gray-400 truncate">
+          purchased {notification.product}
+        </p>
+      </div>
+      <span className="text-[10px] text-gray-500">{notification.time}</span>
     </motion.div>
   );
 };
 
-// Animated Process Step
-const ProcessStep = ({ step, index }: any) => {
+// FAQ Item
+const FAQItem = ({ faq, index }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true });
 
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
-      transition={{ duration: 0.5, delay: index * 0.2 }}
-      className="relative"
+      initial={{ opacity: 0, y: 20 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      transition={{ duration: 0.4, delay: index * 0.1 }}
     >
-      <div className="flex flex-col items-center text-center">
-        <motion.div
-          className="relative"
-          whileHover={{ scale: 1.05 }}
+      <motion.div
+        className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900"
+        whileHover={{ scale: 1.01 }}
+      >
+        <motion.button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          whileTap={{ scale: 0.99 }}
         >
+          <span className="font-medium text-sm">{faq.question}</span>
           <motion.div
-            className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full blur-xl opacity-50"
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.5, 0.7, 0.5],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-          <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-xl">
-            <step.icon className="h-10 w-10 text-white" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-white dark:bg-gray-900 border-2 border-blue-500 flex items-center justify-center font-bold text-blue-600 text-xs">
-            {index + 1}
-          </div>
-        </motion.div>
-        <h3 className="text-base font-semibold mt-4 mb-2">{step.title}</h3>
-        <p className="text-xs text-gray-600 dark:text-gray-400 max-w-xs leading-relaxed">
-          {step.description}
-        </p>
-      </div>
-      {index < 2 && (
-        <motion.div
-          className="hidden lg:block absolute top-10 left-[60%] w-full h-0.5 bg-gradient-to-r from-blue-500 to-cyan-500"
-          initial={{ scaleX: 0 }}
-          animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-          transition={{ duration: 0.8, delay: index * 0.2 + 0.5 }}
-          style={{ transformOrigin: "left" }}
-        />
-      )}
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ChevronDown className="h-5 w-5 text-gray-500" />
+          </motion.div>
+        </motion.button>
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden"
+            >
+              <div className="px-4 pb-4 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                {faq.answer}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </motion.div>
   );
 };
@@ -335,28 +327,12 @@ export default function LandingPage() {
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 23,
-    minutes: 59,
-    seconds: 45,
-  });
-
-  // Countdown timer
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        }
-        return prev;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [liveNotifications, setLiveNotifications] = useState([
+    { user: "John D.", product: "Security Suite", time: "2m ago" },
+    { user: "Sarah M.", product: "Analytics Pro", time: "5m ago" },
+    { user: "Mike K.", product: "Blockchain Tool", time: "8m ago" },
+  ]);
 
   const featuredProducts = [
     {
@@ -419,61 +395,17 @@ export default function LandingPage() {
   ];
 
   const categories = [
-    { name: "Electronics", icon: Zap, count: "2,500+", color: "from-blue-500 to-cyan-500" },
-    { name: "Security", icon: Shield, count: "1,200+", color: "from-green-500 to-emerald-500" },
-    { name: "Analytics", icon: BarChart3, count: "850+", color: "from-purple-500 to-pink-500" },
-    { name: "Blockchain", icon: Package, count: "3,000+", color: "from-orange-500 to-red-500" },
+    { id: "all", name: "All Products", icon: Package, count: "10,000+" },
+    { id: "electronics", name: "Electronics", icon: Zap, count: "2,500+" },
+    { id: "security", name: "Security", icon: Shield, count: "1,200+" },
+    { id: "analytics", name: "Analytics", icon: BarChart3, count: "850+" },
   ];
 
   const features = [
-    {
-      icon: Shield,
-      title: "Bank-Level Security",
-      description: "End-to-end encryption with military-grade security protocols to protect your data.",
-    },
-    {
-      icon: Zap,
-      title: "Lightning Fast",
-      description: "Blazing fast performance with real-time updates and instant synchronization.",
-    },
-    {
-      icon: Globe,
-      title: "Global Network",
-      description: "Connected to a worldwide network of verified suppliers and distributors.",
-    },
-    {
-      icon: Cpu,
-      title: "AI-Powered",
-      description: "Advanced machine learning algorithms for predictive analytics and automation.",
-    },
-    {
-      icon: Database,
-      title: "Blockchain Storage",
-      description: "Immutable records stored on distributed blockchain network for transparency.",
-    },
-    {
-      icon: CreditCard,
-      title: "Easy Payments",
-      description: "Accept all major payment methods with instant settlement and low fees.",
-    },
-  ];
-
-  const process = [
-    {
-      icon: Smartphone,
-      title: "Sign Up & Connect",
-      description: "Create your account and connect your wallet in under 2 minutes.",
-    },
-    {
-      icon: Box,
-      title: "Add Products",
-      description: "Upload your products with blockchain-verified authenticity certificates.",
-    },
-    {
-      icon: TrendingUp,
-      title: "Start Selling",
-      description: "Reach millions of customers and grow your business with confidence.",
-    },
+    { icon: ShieldCheck, title: "Secure Transactions", description: "Bank-level encryption for all payments" },
+    { icon: Truck, title: "Free Shipping", description: "On orders over $100 worldwide" },
+    { icon: RefreshCw, title: "30-Day Returns", description: "Money-back guarantee" },
+    { icon: Headphones, title: "24/7 Support", description: "Expert help anytime" },
   ];
 
   const testimonials = [
@@ -503,8 +435,36 @@ export default function LandingPage() {
     },
   ];
 
-  const brands = [
-    "TechCorp", "GlobalTrade", "SecureChain", "DataFlow", "SmartLogistics", "BlockVentures"
+  const faqs = [
+    {
+      question: "How do I track my order?",
+      answer: "You can track your order in real-time using the tracking number sent to your email. Simply enter it in the tracking section or log in to your account to see live updates.",
+    },
+    {
+      question: "What payment methods do you accept?",
+      answer: "We accept all major credit cards (Visa, Mastercard, American Express), PayPal, Apple Pay, Google Pay, and cryptocurrency payments including Bitcoin and Ethereum.",
+    },
+    {
+      question: "Can I return a product?",
+      answer: "Yes! We offer a 30-day money-back guarantee. If you're not satisfied with your purchase, you can return it within 30 days for a full refund, no questions asked.",
+    },
+    {
+      question: "Do you ship internationally?",
+      answer: "Yes, we ship to over 150 countries worldwide. Shipping times vary by location, but typically take 5-10 business days. Free shipping is available on orders over $100.",
+    },
+    {
+      question: "Is my data secure?",
+      answer: "Absolutely. We use military-grade encryption and blockchain technology to ensure your data is completely secure. All transactions are protected and your information is never shared with third parties.",
+    },
+  ];
+
+  const paymentMethods = [
+    { name: "Visa", icon: CreditCard },
+    { name: "Mastercard", icon: CreditCard },
+    { name: "PayPal", icon: DollarSign },
+    { name: "Apple Pay", icon: Smartphone },
+    { name: "Google Pay", icon: Smartphone },
+    { name: "Crypto", icon: Database },
   ];
 
   // Auto-rotate testimonials
@@ -515,14 +475,27 @@ export default function LandingPage() {
     return () => clearInterval(timer);
   }, [testimonials.length]);
 
+  // Simulate live notifications
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const newNotif = {
+        user: ["Alex T.", "Emma W.", "Chris P.", "Lisa M."][Math.floor(Math.random() * 4)],
+        product: ["Security Suite", "Analytics Pro", "Blockchain Tool", "Inventory Manager"][Math.floor(Math.random() * 4)],
+        time: "Just now",
+      };
+      setLiveNotifications((prev) => [newNotif, ...prev.slice(0, 2)]);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="relative min-h-screen w-full">
       {/* Animated PixelBlast background */}
-      <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-20">
         <PixelBlast
           variant="circle"
           pixelSize={16}
-          color="#2563eb"
+          color="#3b82f6"
           patternScale={2.2}
           patternDensity={0.3}
           pixelSizeJitter={0.08}
@@ -542,91 +515,76 @@ export default function LandingPage() {
 
       {/* Main content */}
       <div className="relative z-10">
-        <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950/30 relative overflow-hidden">
+        <div className="min-h-screen bg-white dark:bg-gray-950 relative overflow-hidden">
 
-          {/* Animated background elements - more subtle */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <motion.div
-              className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl"
-              animate={{
-                scale: [1, 1.1, 1],
-                rotate: [0, 45, 0],
-              }}
-              transition={{
-                duration: 20,
-                repeat: Infinity,
-                ease: "linear",
-              }}
-            />
-            <motion.div
-              className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"
-              animate={{
-                scale: [1.1, 1, 1.1],
-                rotate: [0, -45, 0],
-              }}
-              transition={{
-                duration: 15,
-                repeat: Infinity,
-                ease: "linear",
-              }}
-            />
-          </div>
-
-          {/* Header with glassmorphism */}
+          {/* Header */}
           <motion.header
-            className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/30 sticky top-0 z-50 shadow-sm"
+            className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 shadow-sm"
             initial={{ y: -100 }}
             animate={{ y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.5, type: "spring" }}
           >
             <div className="container mx-auto px-6 flex h-14 items-center justify-between">
-              <FocusMotionDiv className="flex items-center space-x-2.5 cursor-pointer rounded-lg outline-none">
+              <motion.div
+                className="flex items-center space-x-2.5 cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
                 <motion.div
-                  className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-md"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  whileTap={{ scale: 0.95 }}
+                  className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-md"
+                  animate={{ rotate: [0, 10, 0, -10, 0] }}
+                  transition={{ duration: 5, repeat: Infinity }}
                 >
                   <Package className="h-4.5 w-4.5 text-white" />
                 </motion.div>
-                <span className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
                   ChainVanguard
                 </span>
-              </FocusMotionDiv>
+              </motion.div>
 
               {/* Search bar */}
               <div className="hidden md:flex flex-1 max-w-md mx-8">
-                <div className="relative w-full">
+                <motion.div
+                  className="relative w-full"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ type: "spring", stiffness: 400 }}
+                >
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search products..."
-                    className="w-full pl-9 pr-4 py-2 text-sm rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                    className="w-full pl-9 pr-4 py-2 text-sm rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
-                </div>
+                </motion.div>
               </div>
 
               <nav className="flex items-center space-x-3">
-                <FocusMotionDiv className="rounded-lg outline-none">
-                  <ThemeToggle />
-                </FocusMotionDiv>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <ThemeToggle />
+                <motion.button
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  whileTap={{ scale: 0.9 }}
+                >
                   <div className="relative">
                     <ShoppingCart className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                    <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-semibold">
+                    <motion.span
+                      className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-semibold"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
                       3
-                    </span>
+                    </motion.span>
                   </div>
                 </motion.button>
                 <Link href="/login">
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button variant="ghost" className="hover:bg-gray-100 dark:hover:bg-gray-800/50 text-sm h-9 px-3">
+                    <Button variant="ghost" className="text-sm h-9 px-3">
                       Login
                     </Button>
                   </motion.div>
                 </Link>
                 <Link href="/register">
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-sm text-sm h-9 px-4">
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm text-sm h-9 px-4">
                       Get Started
                     </Button>
                   </motion.div>
@@ -635,11 +593,10 @@ export default function LandingPage() {
             </div>
           </motion.header>
 
-          {/* Hero Section with parallax */}
-          <section className="py-16 relative overflow-hidden">
+          {/* Hero Section */}
+          <section className="py-16 relative overflow-hidden bg-blue-50 dark:bg-blue-950/20">
             <motion.div style={{ opacity, scale }} className="container mx-auto px-6">
               <div className="grid lg:grid-cols-2 gap-10 items-center">
-                {/* Left content */}
                 <motion.div
                   initial={{ opacity: 0, x: -50 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -651,23 +608,26 @@ export default function LandingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                   >
-                    <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0 text-xs px-3 py-1">
+                    <Badge className="bg-pink-500 text-white border-0 text-xs px-3 py-1">
                       <Sparkles className="h-3 w-3 mr-1" />
                       Limited Time Offer - Up to 30% OFF
                     </Badge>
                   </motion.div>
 
                   <motion.h1
-                    className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight"
+                    className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-gray-900 dark:text-gray-100"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
                   >
-                    <span className="bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                    <motion.span
+                      animate={{ opacity: [1, 0.7, 1] }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                    >
                       Future of
-                    </span>
+                    </motion.span>
                     <br />
-                    <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-purple-600 bg-clip-text text-transparent">
+                    <span className="text-blue-600">
                       E-Commerce
                     </span>
                   </motion.h1>
@@ -688,15 +648,23 @@ export default function LandingPage() {
                     transition={{ duration: 0.5, delay: 0.5 }}
                   >
                     <Link href="/register">
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button size="lg" className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white h-11 px-6 text-sm font-semibold shadow-lg">
+                      <motion.div
+                        whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(59, 130, 246, 0.3)" }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white h-11 px-6 text-sm font-semibold shadow-lg">
                           Shop Now
-                          <ArrowRight className="ml-2 h-4 w-4" />
+                          <motion.div
+                            animate={{ x: [0, 5, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          >
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </motion.div>
                         </Button>
                       </motion.div>
                     </Link>
                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button size="lg" variant="outline" className="h-11 px-6 text-sm font-semibold border hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <Button size="lg" variant="outline" className="h-11 px-6 text-sm font-semibold border-2 border-blue-600 text-blue-600 hover:bg-blue-50">
                         <Play className="mr-2 h-4 w-4" />
                         Watch Demo
                       </Button>
@@ -718,10 +686,11 @@ export default function LandingPage() {
                       <motion.div
                         key={idx}
                         className="flex items-center gap-2"
-                        whileHover={{ scale: 1.05 }}
+                        whileHover={{ scale: 1.1, y: -2 }}
+                        transition={{ type: "spring", stiffness: 300 }}
                       >
-                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 flex items-center justify-center">
-                          <item.icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                          <item.icon className="h-4 w-4 text-blue-600" />
                         </div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                           {item.text}
@@ -731,7 +700,7 @@ export default function LandingPage() {
                   </motion.div>
                 </motion.div>
 
-                {/* Right content - Floating product showcase */}
+                {/* Right content */}
                 <motion.div
                   initial={{ opacity: 0, x: 50 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -739,150 +708,88 @@ export default function LandingPage() {
                   className="relative"
                 >
                   <motion.div
-                    animate={{
-                      y: [0, -15, 0],
-                    }}
-                    transition={{
-                      duration: 4,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
+                    animate={{ y: [0, -15, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                     className="relative z-10"
                   >
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-2xl opacity-20" />
-                      <Card className="relative border border-gray-200 dark:border-gray-700/40 shadow-xl bg-white dark:bg-gray-900 overflow-hidden">
-                        <div className="h-72 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 flex items-center justify-center relative">
-                          <Package className="h-32 w-32 text-blue-500/30 dark:text-blue-400/30" />
-                          <div className="absolute top-3 right-3">
-                            <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0 text-xs px-2.5 py-1">
-                              <Flame className="h-3 w-3 mr-1" />
-                              HOT DEAL
-                            </Badge>
-                          </div>
+                    <Card className="relative border border-gray-200 dark:border-gray-700 shadow-xl bg-white dark:bg-gray-900 overflow-hidden">
+                      <div className="h-72 bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center relative">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                        >
+                          <Package className="h-32 w-32 text-blue-500/30" />
+                        </motion.div>
+                        <div className="absolute top-3 right-3">
+                          <Badge className="bg-pink-500 text-white border-0 text-xs px-2.5 py-1">
+                            <Flame className="h-3 w-3 mr-1" />
+                            HOT DEAL
+                          </Badge>
                         </div>
-                        <CardContent className="p-5">
-                          <h3 className="text-lg font-bold mb-1.5">Featured Product</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                            Premium blockchain tracking system with real-time analytics
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="text-xs text-gray-500 line-through">$599</span>
-                              <span className="text-2xl font-bold text-blue-600 ml-2">$399</span>
-                            </div>
-                            <Button size="sm" className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white text-xs h-9">
+                      </div>
+                      <CardContent className="p-5">
+                        <h3 className="text-lg font-bold mb-1.5">Featured Product</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                          Premium blockchain tracking system with real-time analytics
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs text-gray-500 line-through">$599</span>
+                            <span className="text-2xl font-bold text-blue-600 ml-2">$399</span>
+                          </div>
+                          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9">
                               <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
                               Add to Cart
                             </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
+                          </motion.div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </motion.div>
-
-                  {/* Floating elements - more subtle */}
-                  <motion.div
-                    animate={{
-                      y: [0, -20, 0],
-                      x: [0, 15, 0],
-                    }}
-                    transition={{
-                      duration: 5,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    className="absolute -top-8 -right-8 h-24 w-24 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-xl"
-                  />
-                  <motion.div
-                    animate={{
-                      y: [0, 20, 0],
-                      x: [0, -15, 0],
-                    }}
-                    transition={{
-                      duration: 6,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    className="absolute -bottom-8 -left-8 h-32 w-32 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-full blur-xl"
-                  />
                 </motion.div>
               </div>
             </motion.div>
           </section>
 
-          {/* Flash Sale Section with Countdown */}
-          <section className="py-12 relative">
+          {/* Live Activity Section */}
+          <section className="py-8 bg-gray-50 dark:bg-gray-900/50 border-y border-gray-200 dark:border-gray-800">
             <div className="container mx-auto px-6">
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
+                className="flex items-center justify-between mb-4"
               >
-                <Card className="border-0 shadow-xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 overflow-hidden relative">
-                  <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-                  <CardContent className="p-8 relative z-10">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="flex-1 text-white">
-                        <motion.div
-                          initial={{ opacity: 0, x: -20 }}
-                          whileInView={{ opacity: 1, x: 0 }}
-                          viewport={{ once: true }}
-                        >
-                          <Badge className="bg-white/20 text-white border-0 mb-3 text-xs">
-                            <Flame className="h-3 w-3 mr-1" />
-                            Flash Sale
-                          </Badge>
-                          <h2 className="text-2xl md:text-3xl font-bold mb-2">
-                            Limited Time Deals!
-                          </h2>
-                          <p className="text-sm text-white/90">
-                            Don't miss out on our biggest sale of the season
-                          </p>
-                        </motion.div>
-                      </div>
-                      <div className="flex gap-3">
-                        {[
-                          { label: "Hours", value: timeLeft.hours },
-                          { label: "Minutes", value: timeLeft.minutes },
-                          { label: "Seconds", value: timeLeft.seconds },
-                        ].map((item, idx) => (
-                          <motion.div
-                            key={idx}
-                            className="flex flex-col items-center"
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: idx * 0.1 }}
-                          >
-                            <div className="h-16 w-16 rounded-lg bg-white dark:bg-gray-900 flex items-center justify-center shadow-lg">
-                              <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-                                {String(item.value).padStart(2, "0")}
-                              </span>
-                            </div>
-                            <span className="text-xs text-white/80 mt-1.5 font-medium">
-                              {item.label}
-                            </span>
-                          </motion.div>
-                        ))}
-                      </div>
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <Button size="lg" className="bg-white text-red-600 hover:bg-gray-100 font-semibold shadow-lg">
-                          Shop Now
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </motion.div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="flex items-center gap-2">
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Bell className="h-5 w-5 text-blue-600" />
+                  </motion.div>
+                  <h3 className="text-sm font-semibold">Live Activity</h3>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  <motion.div
+                    className="h-2 w-2 rounded-full bg-green-500 mr-2"
+                    animate={{ opacity: [1, 0.3, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  Live
+                </Badge>
               </motion.div>
+              <div className="grid md:grid-cols-3 gap-3">
+                <AnimatePresence mode="popLayout">
+                  {liveNotifications.map((notif, idx) => (
+                    <LiveNotification key={`${notif.user}-${idx}`} notification={notif} index={idx} />
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
           </section>
 
-          {/* Categories Section */}
+          {/* Categories with filter */}
           <section className="py-12 relative">
             <div className="container mx-auto px-6">
               <motion.div
@@ -891,7 +798,7 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 className="text-center mb-8"
               >
-                <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">
                   Shop by Category
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -899,40 +806,38 @@ export default function LandingPage() {
                 </p>
               </motion.div>
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="flex flex-wrap justify-center gap-3 mb-8">
                 {categories.map((category, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, scale: 0.95 }}
+                  <motion.button
+                    key={category.id}
+                    onClick={() => setActiveCategory(category.id)}
+                    initial={{ opacity: 0, scale: 0.8 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: idx * 0.08 }}
-                    whileHover={{ y: -4 }}
+                    transition={{ duration: 0.3, delay: idx * 0.1 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
+                      activeCategory === category.id
+                        ? "bg-blue-600 text-white shadow-lg"
+                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-500"
+                    }`}
                   >
-                    <Card className="group cursor-pointer border border-gray-200/60 dark:border-gray-700/40 shadow-sm hover:shadow-lg transition-all duration-500 bg-white dark:bg-gray-900 overflow-hidden">
-                      <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
-                      <CardContent className="p-6 text-center relative z-10">
-                        <motion.div
-                          className={`h-14 w-14 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mx-auto mb-3 shadow-md`}
-                          whileHover={{ scale: 1.08, rotate: 3 }}
-                        >
-                          <category.icon className="h-7 w-7 text-white" />
-                        </motion.div>
-                        <h3 className="text-base font-semibold mb-1">{category.name}</h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{category.count} Products</p>
-                        <div className="flex items-center justify-center text-blue-600 dark:text-blue-400 font-medium text-xs">
-                          Explore <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                    <div className="flex items-center gap-2">
+                      <category.icon className="h-4 w-4" />
+                      {category.name}
+                      <Badge variant="secondary" className="text-[10px]">
+                        {category.count}
+                      </Badge>
+                    </div>
+                  </motion.button>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Featured Products Section */}
-          <section className="py-14 relative">
+          {/* Featured Products */}
+          <section className="py-14 relative bg-gray-50 dark:bg-gray-900/50">
             <div className="container mx-auto px-6">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -941,17 +846,19 @@ export default function LandingPage() {
                 className="flex justify-between items-center mb-8"
               >
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">
                     Featured Products
                   </h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Our best-selling blockchain solutions
                   </p>
                 </div>
-                <Button variant="outline" size="sm" className="hidden md:flex text-xs h-9">
-                  View All
-                  <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button variant="outline" size="sm" className="hidden md:flex text-xs h-9">
+                    View All
+                    <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Button>
+                </motion.div>
               </motion.div>
 
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -962,8 +869,71 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* Features Section */}
-          <section className="py-14 relative bg-gradient-to-br from-blue-50/50 to-cyan-50/50 dark:from-blue-950/20 dark:to-cyan-950/20">
+          {/* Features Grid */}
+          <section className="py-14 relative">
+            <div className="container mx-auto px-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {features.map((feature, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: idx * 0.1 }}
+                    whileHover={{ y: -5 }}
+                  >
+                    <Card className="text-center p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all bg-white dark:bg-gray-900">
+                      <motion.div
+                        className="h-14 w-14 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-4"
+                        whileHover={{ scale: 1.1, rotate: 360 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <feature.icon className="h-7 w-7 text-blue-600" />
+                      </motion.div>
+                      <h3 className="text-base font-semibold mb-2">{feature.title}</h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{feature.description}</p>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Stats Section */}
+          <section className="py-12 relative bg-blue-600">
+            <div className="container mx-auto px-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center text-white">
+                {[
+                  { value: "10M+", label: "Products Sold", icon: Package },
+                  { value: "500K+", label: "Happy Customers", icon: Users },
+                  { value: "99.9%", label: "Satisfaction", icon: Star },
+                  { value: "24/7", label: "Support", icon: MessageCircle },
+                ].map((stat, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: idx * 0.08 }}
+                    className="space-y-2"
+                    whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
+                  >
+                    <motion.div
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
+                    >
+                      <stat.icon className="h-8 w-8 mx-auto text-white/90" />
+                    </motion.div>
+                    <AnimatedCounter value={stat.value} />
+                    <div className="text-xs font-medium text-white/90">{stat.label}</div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* FAQ Section */}
+          <section className="py-14 relative">
             <div className="container mx-auto px-6">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -971,88 +941,28 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 className="text-center mb-10"
               >
-                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 mb-4 text-xs">
-                  Why Choose Us
-                </Badge>
-                <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-                  Powerful Features for Your Business
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                  Everything you need to run a successful blockchain-powered e-commerce business
-                </p>
-              </motion.div>
-
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {features.map((feature, idx) => (
-                  <FeatureCard key={idx} feature={feature} index={idx} />
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* How It Works Section */}
-          <section className="py-14 relative">
-            <div className="container mx-auto px-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="text-center mb-12"
-              >
                 <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 mb-4 text-xs">
-                  How It Works
+                  <HelpCircle className="h-3 w-3 mr-1" />
+                  FAQ
                 </Badge>
-                <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-                  Get Started in 3 Easy Steps
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">
+                  Frequently Asked Questions
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                  Join thousands of businesses already using ChainVanguard
+                  Find answers to common questions about our platform
                 </p>
               </motion.div>
 
-              <div className="grid lg:grid-cols-3 gap-12 lg:gap-8 max-w-5xl mx-auto">
-                {process.map((step, idx) => (
-                  <ProcessStep key={idx} step={step} index={idx} />
+              <div className="max-w-3xl mx-auto space-y-3">
+                {faqs.map((faq, idx) => (
+                  <FAQItem key={idx} faq={faq} index={idx} />
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Stats Section with animated counters */}
-          <section className="py-12 relative">
-            <div className="container mx-auto px-6">
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-600 to-cyan-600 overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-cyan-500/30" />
-                <CardContent className="p-8 relative z-10">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center text-white">
-                    {[
-                      { value: "10M+", label: "Products Sold", icon: Package },
-                      { value: "500K+", label: "Happy Customers", icon: Users },
-                      { value: "99.9%", label: "Satisfaction", icon: Star },
-                      { value: "24/7", label: "Support", icon: MessageCircle },
-                    ].map((stat, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.4, delay: idx * 0.08 }}
-                        className="space-y-2"
-                        whileHover={{ scale: 1.05 }}
-                      >
-                        <stat.icon className="h-8 w-8 mx-auto text-white/90" />
-                        <AnimatedCounter value={stat.value} />
-                        <div className="text-xs font-medium text-white/90">{stat.label}</div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-
-          {/* Brand Trust Section */}
-          <section className="py-12 relative">
+          {/* Payment Methods */}
+          <section className="py-12 relative bg-gray-50 dark:bg-gray-900/50">
             <div className="container mx-auto px-6">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -1060,21 +970,19 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 className="text-center mb-8"
               >
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                  Trusted by leading companies worldwide
-                </p>
-                <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
-                  {brands.map((brand, idx) => (
+                <h3 className="text-lg font-semibold mb-4">Accepted Payment Methods</h3>
+                <div className="flex flex-wrap justify-center items-center gap-6">
+                  {paymentMethods.map((method, idx) => (
                     <motion.div
                       key={idx}
-                      initial={{ opacity: 0, scale: 0.8 }}
+                      initial={{ opacity: 0, scale: 0.5 }}
                       whileInView={{ opacity: 1, scale: 1 }}
                       viewport={{ once: true }}
-                      transition={{ duration: 0.4, delay: idx * 0.1 }}
-                      whileHover={{ scale: 1.1 }}
-                      className="text-gray-400 dark:text-gray-600 font-semibold text-lg hover:text-gray-600 dark:hover:text-gray-400 transition-colors cursor-pointer"
+                      transition={{ duration: 0.3, delay: idx * 0.1 }}
+                      whileHover={{ scale: 1.2, rotate: [0, -5, 5, 0] }}
+                      className="h-12 w-12 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-sm"
                     >
-                      {brand}
+                      <method.icon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                     </motion.div>
                   ))}
                 </div>
@@ -1082,7 +990,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* Testimonials Carousel */}
+          {/* Testimonials */}
           <section className="py-14 relative">
             <div className="container mx-auto px-6">
               <motion.div
@@ -1091,7 +999,7 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 className="text-center mb-8"
               >
-                <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">
                   What Our Customers Say
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -1103,23 +1011,35 @@ export default function LandingPage() {
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentSlide}
-                    initial={{ opacity: 0, x: 30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -30 }}
-                    transition={{ duration: 0.4 }}
+                    initial={{ opacity: 0, x: 30, rotateY: 90 }}
+                    animate={{ opacity: 1, x: 0, rotateY: 0 }}
+                    exit={{ opacity: 0, x: -30, rotateY: -90 }}
+                    transition={{ duration: 0.5 }}
                   >
-                    <Card className="border border-gray-200/60 dark:border-gray-700/40 shadow-lg bg-white dark:bg-gray-900">
+                    <Card className="border border-gray-200 dark:border-gray-700 shadow-lg bg-white dark:bg-gray-900">
                       <CardContent className="p-8 text-center">
-                        <div className="flex justify-center mb-4">
+                        <motion.div
+                          className="flex justify-center mb-4"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.2, type: "spring" }}
+                        >
                           {[...Array(testimonials[currentSlide].rating)].map((_, i) => (
-                            <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, y: -20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.3 + i * 0.1 }}
+                            >
+                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            </motion.div>
                           ))}
-                        </div>
+                        </motion.div>
                         <p className="text-base text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
                           "{testimonials[currentSlide].content}"
                         </p>
                         <div className="flex items-center justify-center gap-3">
-                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                          <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
                             {(() => {
                               const AvatarIcon = testimonials[currentSlide].avatar;
                               return <AvatarIcon className="h-6 w-6 text-white" />;
@@ -1137,10 +1057,9 @@ export default function LandingPage() {
                   </motion.div>
                 </AnimatePresence>
 
-                {/* Dots */}
                 <div className="flex justify-center gap-2 mt-6">
                   {testimonials.map((_, idx) => (
-                    <button
+                    <motion.button
                       key={idx}
                       onClick={() => setCurrentSlide(idx)}
                       className={`h-2 w-2 rounded-full transition-all duration-300 ${
@@ -1148,6 +1067,8 @@ export default function LandingPage() {
                           ? "bg-blue-600 w-6"
                           : "bg-gray-300 dark:bg-gray-600"
                       }`}
+                      whileHover={{ scale: 1.5 }}
+                      whileTap={{ scale: 0.8 }}
                     />
                   ))}
                 </div>
@@ -1156,59 +1077,54 @@ export default function LandingPage() {
           </section>
 
           {/* Newsletter Section */}
-          <section className="py-12 relative">
+          <section className="py-12 relative bg-purple-600">
             <div className="container mx-auto px-6">
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-600 via-pink-600 to-rose-600 overflow-hidden relative">
-                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-                <CardContent className="p-8 text-center relative z-10">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="max-w-xl mx-auto"
-                  >
-                    <motion.div
-                      className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4"
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                    >
-                      <Mail className="h-7 w-7 text-white" />
-                    </motion.div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                      Join Our Newsletter
-                    </h2>
-                    <p className="text-sm text-white/90 mb-6">
-                      Get exclusive deals, new product launches, and insider tips
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                      <input
-                        type="email"
-                        placeholder="Enter your email"
-                        className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-white/90 backdrop-blur-sm border-0 focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-900"
-                      />
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button size="sm" className="bg-white text-purple-600 hover:bg-gray-100 h-10 px-5 text-sm font-semibold">
-                          Subscribe
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </motion.div>
-                    </div>
-                    <p className="text-xs text-white/70 mt-3">
-                      Get 10% off your first order when you subscribe
-                    </p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="max-w-xl mx-auto text-center"
+              >
+                <motion.div
+                  className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4"
+                  whileHover={{ scale: 1.1, rotate: 360 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Mail className="h-7 w-7 text-white" />
+                </motion.div>
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                  Join Our Newsletter
+                </h2>
+                <p className="text-sm text-white/90 mb-6">
+                  Get exclusive deals, new product launches, and insider tips
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-white/90 border-0 focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-900"
+                  />
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button size="sm" className="bg-white text-purple-600 hover:bg-gray-100 h-10 px-5 text-sm font-semibold">
+                      Subscribe
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
                   </motion.div>
-                </CardContent>
-              </Card>
+                </div>
+                <p className="text-xs text-white/70 mt-3">
+                  Get 10% off your first order when you subscribe
+                </p>
+              </motion.div>
             </div>
           </section>
 
           {/* Footer */}
-          <footer className="border-t border-gray-200/60 dark:border-gray-700/40 py-10 bg-white/50 dark:bg-gray-950/50 backdrop-blur-xl">
+          <footer className="border-t border-gray-200 dark:border-gray-700 py-10 bg-white dark:bg-gray-950">
             <div className="container mx-auto px-6">
               <div className="grid md:grid-cols-4 gap-8 mb-8">
-                {/* Company */}
                 <div>
                   <div className="flex items-center gap-2.5 mb-3">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center">
+                    <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
                       <Package className="h-4.5 w-4.5 text-white" />
                     </div>
                     <span className="text-base font-bold">ChainVanguard</span>
@@ -1220,8 +1136,9 @@ export default function LandingPage() {
                     {[Facebook, Twitter, Instagram, Linkedin].map((Icon, idx) => (
                       <motion.button
                         key={idx}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
+                        whileHover={{ scale: 1.2, rotate: 360 }}
+                        whileTap={{ scale: 0.8 }}
+                        transition={{ duration: 0.3 }}
                         className="h-8 w-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
                       >
                         <Icon className="h-4 w-4" />
@@ -1230,36 +1147,36 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Shop */}
                 <div>
                   <h3 className="font-semibold mb-3 text-sm">Shop</h3>
                   <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">All Products</Link></li>
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Categories</Link></li>
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">New Arrivals</Link></li>
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Best Sellers</Link></li>
+                    {["All Products", "Categories", "New Arrivals", "Best Sellers"].map((item, idx) => (
+                      <motion.li key={idx} whileHover={{ x: 5 }} transition={{ type: "spring", stiffness: 300 }}>
+                        <Link href="#" className="hover:text-blue-600 transition-colors">{item}</Link>
+                      </motion.li>
+                    ))}
                   </ul>
                 </div>
 
-                {/* Company */}
                 <div>
                   <h3 className="font-semibold mb-3 text-sm">Company</h3>
                   <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">About Us</Link></li>
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Careers</Link></li>
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Press</Link></li>
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Contact</Link></li>
+                    {["About Us", "Careers", "Press", "Contact"].map((item, idx) => (
+                      <motion.li key={idx} whileHover={{ x: 5 }} transition={{ type: "spring", stiffness: 300 }}>
+                        <Link href="#" className="hover:text-blue-600 transition-colors">{item}</Link>
+                      </motion.li>
+                    ))}
                   </ul>
                 </div>
 
-                {/* Support */}
                 <div>
                   <h3 className="font-semibold mb-3 text-sm">Support</h3>
                   <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Help Center</Link></li>
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Shipping Info</Link></li>
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Returns</Link></li>
-                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Track Order</Link></li>
+                    {["Help Center", "Shipping Info", "Returns", "Track Order"].map((item, idx) => (
+                      <motion.li key={idx} whileHover={{ x: 5 }} transition={{ type: "spring", stiffness: 300 }}>
+                        <Link href="#" className="hover:text-blue-600 transition-colors">{item}</Link>
+                      </motion.li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -1267,9 +1184,11 @@ export default function LandingPage() {
               <div className="border-t border-gray-200 dark:border-gray-800 pt-6 text-center">
                 <div className="flex flex-wrap justify-center gap-2 mb-3">
                   {["Next.js", "TypeScript", "Hyperledger Fabric", "IPFS", "Web3"].map((tech, idx) => (
-                    <Badge key={idx} variant="outline" className="text-[10px] px-2 py-0.5">
-                      {tech}
-                    </Badge>
+                    <motion.div key={idx} whileHover={{ scale: 1.1, y: -2 }}>
+                      <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                        {tech}
+                      </Badge>
+                    </motion.div>
                   ))}
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
