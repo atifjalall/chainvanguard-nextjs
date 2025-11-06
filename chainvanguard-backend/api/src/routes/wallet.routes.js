@@ -1,5 +1,5 @@
 import express from "express";
-import walletBalanceService from "../services/wallet-balance.service.js";
+import walletBalanceService from "../services/wallet.balance.service.js";
 import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
 
 const router = express.Router();

@@ -12,6 +12,12 @@ const orderItemSchema = new Schema({
   productName: { type: String, required: true },
   sku: { type: String, default: "" },
 
+  inventoryId: {
+    type: Schema.Types.ObjectId,
+    ref: "Inventory",
+    index: true,
+  },
+
   quantity: { type: Number, required: true, min: 1 },
   price: { type: Number, required: true, min: 0 },
   subtotal: { type: Number, required: true, min: 0 },

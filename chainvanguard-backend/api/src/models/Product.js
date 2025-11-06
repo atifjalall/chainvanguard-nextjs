@@ -574,6 +574,18 @@ productSchema.virtual("url").get(function () {
 // MIDDLEWARE
 // ========================================
 
+// Generate SKU before save
+productSchema.pre("save", function (next) {
+  if (!this.sku && this.isNew) {
+    // Generate SKU format: CAT-TIMESTAMP-RANDOM
+    const categoryPrefix = this.category.substring(0, 3).toUpperCase();
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    this.sku = `${categoryPrefix}-${timestamp}-${random}`;
+  }
+  next();
+});
+
 // Generate slug before save
 productSchema.pre("save", function (next) {
   if (!this.slug && this.name) {

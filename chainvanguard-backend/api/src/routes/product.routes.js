@@ -330,26 +330,23 @@ router.get("/:id", async (req, res) => {
 router.get("/:id/history", async (req, res) => {
   try {
     const { id } = req.params;
-    const history = await productService.getProductHistory(id);
+    const result = await productService.getProductHistory(id);
 
-    res.json({
-      success: true,
-      productId: id,
-      ...history,
-    });
+    // Check if we got a response (success or failure)
+    if (result.success === false && result.message === "Product not found") {
+      return res.status(404).json(result);
+    }
+
+    // Return the result (success: true with history, or success: false with error)
+    const statusCode = result.success ? 200 : 500;
+    res.status(statusCode).json(result);
   } catch (error) {
     console.error("GET /api/products/:id/history error:", error);
 
-    if (error.message === "Product not found") {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
-    }
-
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to retrieve product history",
+      error: error.message,
     });
   }
 });

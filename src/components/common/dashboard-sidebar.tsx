@@ -96,7 +96,12 @@ export function DashboardSidebar() {
             label: "My Inventory",
             icon: Warehouse,
           },
-          { href: "/vendor/cart", label: "My Cart", icon: ShoppingCart },
+          { href: "/vendor/my-requests", label: "My Requests", icon: Inbox },
+          {
+            href: "/vendor/transactions",
+            label: "Transactions",
+            icon: CreditCard,
+          },
           {
             href: "/vendor/add-product",
             label: "Add Product",

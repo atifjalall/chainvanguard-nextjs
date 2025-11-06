@@ -21,7 +21,7 @@ fi
 BASE_URL="http://localhost:3001/api"
 
 # Use existing inventory ID from database
-EXISTING_INVENTORY_ID="6904b9f90fe53207490b3f26"
+EXISTING_INVENTORY_ID="6905d105ed55f26209ca605d"
 
 # Color codes
 RED='\033[0;31m'

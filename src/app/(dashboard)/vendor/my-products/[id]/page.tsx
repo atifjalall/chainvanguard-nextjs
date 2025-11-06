@@ -255,13 +255,13 @@ export default function VendorProductDetailPage() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
-          className="mb-8"
+          className="mb-6"
         >
           <div className="flex items-center justify-between mb-4">
             <Button
               variant="ghost"
               onClick={() => router.push("/vendor/my-products")}
-              className="gap-2"
+              className="gap-2 text-sm"
             >
               <ChevronLeft className="h-4 w-4" />
               Back to Products
@@ -270,33 +270,33 @@ export default function VendorProductDetailPage() {
             <div className="flex gap-2">
               <button
                 onClick={loadProduct}
-                className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium transition-colors cursor-pointer"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className="h-3.5 w-3.5" />
                 Refresh
               </button>
               <button
                 onClick={() =>
                   router.push(`/vendor/my-products/${product._id}/edit`)
                 }
-                className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium transition-colors cursor-pointer"
               >
-                <Edit className="h-4 w-4" />
+                <Edit className="h-3.5 w-3.5" />
                 Edit
               </button>
               <button
                 onClick={() => setIsDeleteModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-sm text-white font-medium transition-colors cursor-pointer shadow-lg hover:shadow-xl"
+                className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-xs text-white font-medium transition-colors cursor-pointer shadow-md hover:shadow-lg"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
                 Delete
               </button>
             </div>
           </div>
 
-          <div className="flex items-start justify-between gap-6 mb-6">
+          <div className="flex items-start justify-between gap-6 mb-4">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                 {product.name}
               </h1>
               <div className="flex items-center gap-3 flex-wrap">
@@ -306,11 +306,11 @@ export default function VendorProductDetailPage() {
                 >
                   {product.category}
                 </Badge>
-                <span className="text-sm text-muted-foreground">•</span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground">
                   SKU: {product.sku}
                 </span>
-                <span className="text-sm text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground">•</span>
                 <Badge
                   className={`text-xs ${stockStatus.bg + " " + stockStatus.color}`}
                 >
@@ -320,7 +320,7 @@ export default function VendorProductDetailPage() {
             </div>
 
             <div className="flex flex-col items-end gap-2">
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 ${product.price.toFixed(2)}
               </div>
               {product.costPrice && product.costPrice > 0 && (
@@ -335,7 +335,7 @@ export default function VendorProductDetailPage() {
           </div>
 
           {/* Feature Badges */}
-          <div className="flex items-center gap-2 mb-6 flex-wrap">
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             {product.isFeatured && (
               <Badge className="text-xs bg-purple-100/80 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 shadow-sm backdrop-blur-sm">
                 <Sparkles className="h-3 w-3 mr-1" />
@@ -370,20 +370,20 @@ export default function VendorProductDetailPage() {
 
         {/* Main Content Grid */}
         <motion.div
-          className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           {/* Left Column - Images & Details */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6">
             {/* Image Gallery */}
             <motion.div
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
-              <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden">
                 <CardContent className="p-0">
                   {/* Main Image */}
                   <div className="relative max-w-md mx-auto aspect-square bg-gray-100 dark:bg-gray-800">
@@ -464,29 +464,29 @@ export default function VendorProductDetailPage() {
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <Tabs defaultValue="details" className="w-full">
                   <CardHeader>
-                    <TabsList className="w-full grid grid-cols-3 bg-transparent h-12 gap-2">
+                    <TabsList className="w-full grid grid-cols-3 bg-transparent h-10 gap-2">
                       <TabsTrigger
                         value="details"
                         className="text-xs font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all duration-200 py-2"
                       >
-                        <FileText className="h-3.5 w-3.5 mr-1.5" />
+                        <FileText className="h-3 w-3 mr-1.5" />
                         Details
                       </TabsTrigger>
                       <TabsTrigger
                         value="analytics"
                         className="text-xs font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all duration-200 py-2"
                       >
-                        <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+                        <BarChart3 className="h-3 w-3 mr-1.5" />
                         Analytics
                       </TabsTrigger>
                       <TabsTrigger
                         value="history"
                         className="text-xs font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all duration-200 py-2"
                       >
-                        <History className="h-3.5 w-3.5 mr-1.5" />
+                        <History className="h-3 w-3 mr-1.5" />
                         History
                       </TabsTrigger>
                     </TabsList>
@@ -494,7 +494,7 @@ export default function VendorProductDetailPage() {
 
                   <CardContent className="relative overflow-hidden p-6">
                     {/* Details Tab */}
-                    <TabsContent value="details" className="space-y-8 mt-0">
+                    <TabsContent value="details" className="space-y-6 mt-0">
                       <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -504,10 +504,10 @@ export default function VendorProductDetailPage() {
                       >
                         {/* Description */}
                         <div>
-                          <h3 className="text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100">
+                          <h3 className="text-xs font-semibold mb-2 text-gray-900 dark:text-gray-100">
                             Description
                           </h3>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                          <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
                             {product.description}
                           </p>
                         </div>
@@ -516,60 +516,60 @@ export default function VendorProductDetailPage() {
 
                         {/* Apparel Details */}
                         <div>
-                          <h3 className="text-sm font-semibold mb-5 text-gray-900 dark:text-gray-100">
+                          <h3 className="text-xs font-semibold mb-3 text-gray-900 dark:text-gray-100">
                             Apparel Details
                           </h3>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             <div>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                 Size
                               </p>
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                 {product.apparelDetails?.size || "N/A"}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                 Color
                               </p>
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                 {product.apparelDetails?.color || "N/A"}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                 Material
                               </p>
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                 {product.apparelDetails?.material || "N/A"}
                               </p>
                             </div>
                             {product.apparelDetails?.fit && (
                               <div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   Fit
                                 </p>
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.apparelDetails.fit}
                                 </p>
                               </div>
                             )}
                             {product.apparelDetails?.pattern && (
                               <div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   Pattern
                                 </p>
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.apparelDetails.pattern}
                                 </p>
                               </div>
                             )}
                             {product.apparelDetails?.fabricType && (
                               <div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   Fabric
                                 </p>
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.apparelDetails.fabricType}
                                 </p>
                               </div>
@@ -581,66 +581,66 @@ export default function VendorProductDetailPage() {
 
                         {/* Additional Info */}
                         <div>
-                          <h3 className="text-sm font-semibold mb-5 text-gray-900 dark:text-gray-100">
+                          <h3 className="text-xs font-semibold mb-5 text-gray-900 dark:text-gray-100">
                             Additional Information
                           </h3>
-                          <div className="grid grid-cols-2 gap-5">
+                          <div className="grid grid-cols-2 gap-4">
                             {product.brand && (
                               <div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   Brand
                                 </p>
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.brand}
                                 </p>
                               </div>
                             )}
                             {product.season && (
                               <div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   Season
                                 </p>
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.season}
                                 </p>
                               </div>
                             )}
                             {product.manufacturer && (
                               <div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   Manufacturer
                                 </p>
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.manufacturer}
                                 </p>
                               </div>
                             )}
                             {product.countryOfOrigin && (
                               <div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   Origin
                                 </p>
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.countryOfOrigin}
                                 </p>
                               </div>
                             )}
                             {product.weight && (
                               <div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   Weight
                                 </p>
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.weight} kg
                                 </p>
                               </div>
                             )}
                             {product.dimensions && (
                               <div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   Dimensions
                                 </p>
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.dimensions}
                                 </p>
                               </div>
@@ -653,7 +653,7 @@ export default function VendorProductDetailPage() {
                           <>
                             <Separator className="my-4" />
                             <div>
-                              <h3 className="text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100">
+                              <h3 className="text-xs font-semibold mb-3 text-gray-900 dark:text-gray-100">
                                 Tags
                               </h3>
                               <div className="flex flex-wrap gap-2">
@@ -674,7 +674,7 @@ export default function VendorProductDetailPage() {
                             <>
                               <Separator className="my-4" />
                               <div>
-                                <h3 className="text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100">
+                                <h3 className="text-xs font-semibold mb-3 text-gray-900 dark:text-gray-100">
                                   Certifications
                                 </h3>
                                 <div className="flex flex-wrap gap-2">
@@ -696,7 +696,7 @@ export default function VendorProductDetailPage() {
                     </TabsContent>
 
                     {/* Analytics Tab */}
-                    <TabsContent value="analytics" className="space-y-8 mt-0">
+                    <TabsContent value="analytics" className="space-y-6 mt-0">
                       <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -742,22 +742,22 @@ export default function VendorProductDetailPage() {
                                   delay: index * 0.1,
                                 }}
                               >
-                                <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl hover:shadow-2xl transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:scale-[1.02]">
-                                  <CardContent className="p-6">
+                                <Card className="border border-white/20 dark:border-gray-700/30 shadow-md hover:shadow-lg transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:scale-[1.02]">
+                                  <CardContent className="p-4">
                                     <div className="flex items-center justify-between">
                                       <div>
-                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                                           {stat.label}
                                         </p>
-                                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                                        <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
                                           {stat.value}
                                         </p>
                                       </div>
                                       <div
-                                        className={`h-12 w-12 rounded-full flex items-center justify-center shadow-md ${stat.color.includes("blue") ? "bg-blue-100 dark:bg-blue-900/30" : stat.color.includes("green") ? "bg-green-100 dark:bg-green-900/30" : stat.color.includes("yellow") ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-purple-100 dark:bg-purple-900/30"}`}
+                                        className={`h-10 w-10 rounded-full flex items-center justify-center shadow-md ${stat.color.includes("blue") ? "bg-blue-100 dark:bg-blue-900/30" : stat.color.includes("green") ? "bg-green-100 dark:bg-green-900/30" : stat.color.includes("yellow") ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-purple-100 dark:bg-purple-900/30"}`}
                                       >
                                         <Icon
-                                          className={`h-6 w-6 ${stat.color}`}
+                                          className={`h-5 w-5 ${stat.color}`}
                                         />
                                       </div>
                                     </div>
@@ -771,7 +771,7 @@ export default function VendorProductDetailPage() {
                         <Separator className="my-4" />
 
                         <div>
-                          <h3 className="text-sm font-semibold mb-5 text-gray-900 dark:text-gray-100">
+                          <h3 className="text-xs font-semibold mb-5 text-gray-900 dark:text-gray-100">
                             Performance Insights
                           </h3>
                           <div className="space-y-4">
@@ -819,7 +819,7 @@ export default function VendorProductDetailPage() {
                     </TabsContent>
 
                     {/* History Tab */}
-                    <TabsContent value="history" className="space-y-8 mt-0">
+                    <TabsContent value="history" className="space-y-6 mt-0">
                       <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -967,21 +967,21 @@ export default function VendorProductDetailPage() {
           </div>
 
           {/* Right Column - Quick Info & Actions */}
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Quick Stats */}
             <motion.div
               initial={{ x: 30, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
-              <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <BarChart3 className="h-4 w-4 text-blue-600" />
                     Quick Stats
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-5">
+                <CardContent className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-800/30 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Box className="h-4 w-4 text-gray-600 dark:text-gray-400" />
@@ -1077,10 +1077,10 @@ export default function VendorProductDetailPage() {
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.6 }}
             >
-              <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Package className="h-4 w-4 text-blue-600" />
                     Product Status
                   </CardTitle>
                 </CardHeader>
@@ -1133,10 +1133,10 @@ export default function VendorProductDetailPage() {
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.7 }}
             >
-              <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Sparkles className="h-4 w-4 text-blue-600" />
                     Quick Actions
                   </CardTitle>
                 </CardHeader>
@@ -1215,10 +1215,10 @@ export default function VendorProductDetailPage() {
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.8 }}
             >
-              <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Info className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Info className="h-4 w-4 text-blue-600" />
                     Product Info
                   </CardTitle>
                 </CardHeader>

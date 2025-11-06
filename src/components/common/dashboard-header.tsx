@@ -183,15 +183,15 @@ export function DashboardHeader() {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent
-              className="w-64 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50"
+              className="w-56 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50"
               align="end"
               forceMount
             >
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-2">
+              <DropdownMenuLabel className="font-normal py-2">
+                <div className="flex flex-col space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-5 w-5">
-                      <AvatarFallback className="bg-blue-600 text-white text-xs">
+                    <Avatar className="h-4 w-4">
+                      <AvatarFallback className="bg-blue-600 text-white text-[10px]">
                         {getUserInitials()}
                       </AvatarFallback>
                     </Avatar>
@@ -204,7 +204,7 @@ export function DashboardHeader() {
                   </p>
                   <Badge
                     variant="outline"
-                    className={`text-xs w-fit ${getRoleColor(user?.role)}`}
+                    className={`text-[10px] w-fit py-0 px-1.5 ${getRoleColor(user?.role)}`}
                   >
                     {getRoleDisplayName(user?.role)}
                   </Badge>
@@ -214,12 +214,12 @@ export function DashboardHeader() {
               {currentWallet && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  <DropdownMenuLabel className="font-normal py-2">
+                    <div className="flex flex-col space-y-0.5">
+                      <p className="text-[10px] font-medium text-gray-600 dark:text-gray-400">
                         Wallet
                       </p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                         {currentWallet.name}
                       </p>
                       <p className="text-xs font-mono text-gray-600 dark:text-gray-400">
@@ -234,24 +234,24 @@ export function DashboardHeader() {
               )}
 
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4 cursor-pointer" />
+              <DropdownMenuItem className="text-xs py-1 h-7 cursor-pointer">
+                <User className="mr-2 h-3.5 w-3.5" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Wallet className="mr-2 h-4 w-4 cursor-pointer" />
-                <span>Wallet Settings</span>
+              <DropdownMenuItem className="text-xs py-1 h-7 cursor-pointer">
+                <Wallet className="mr-2 h-3.5 w-3.5" />
+                <span>Wallet</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4 cursor-pointer" />
+              <DropdownMenuItem className="text-xs py-1 h-7 cursor-pointer">
+                <Settings className="mr-2 h-3.5 w-3.5" />
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                className="text-xs py-1 h-7 cursor-pointer text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
               >
-                <LogOut className="mr-2 h-4 w-4 cursor-pointer" />
+                <LogOut className="mr-2 h-3.5 w-3.5" />
                 <span>Disconnect & Logout</span>
               </DropdownMenuItem>
             </DropdownMenuContent>

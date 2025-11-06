@@ -225,7 +225,7 @@ export default function VendorDashboardPage() {
         ></div>
       </div>
 
-      <div className="relative z-10 p-6 space-y-4">
+      <div className="relative z-10 p-6 space-y-6">
         {/* Header */}
         <div
           className={`transform transition-all duration-700 ${
@@ -234,18 +234,26 @@ export default function VendorDashboardPage() {
         >
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Vendor Dashboard
               </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400">
+              <p className="text-base text-gray-600 dark:text-gray-400">
                 Welcome back, {user?.name || "Vendor"}! 👋
               </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge className="bg-green-100/80 text-green-700 dark:bg-green-900/30 dark:text-green-400 shadow-sm backdrop-blur-sm text-xs">
+                  {stats?.totalProducts || 0} Products
+                </Badge>
+                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm backdrop-blur-sm text-xs">
+                  {stats?.activeProducts || 0} Active
+                </Badge>
+              </div>
             </div>
             <button
               onClick={() => router.push("/vendor/add-product")}
               className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer shadow-lg hover:shadow-xl"
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-4 w-4" />
               Add New Product
             </button>
           </div>
@@ -263,10 +271,10 @@ export default function VendorDashboardPage() {
               return (
                 <Card
                   key={index}
-                  className="border border-white/20 dark:border-gray-700/30 shadow-xl hover:shadow-2xl transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:scale-[1.02]"
+                  className="border border-white/20 dark:border-gray-700/30 shadow-md hover:shadow-lg transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:scale-[1.02]"
                 >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
                       {stat.title}
                     </CardTitle>
                     <div
@@ -276,7 +284,7 @@ export default function VendorDashboardPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
                       {stat.value}
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -295,20 +303,20 @@ export default function VendorDashboardPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-2xl transition-all duration-300">
+          <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
             <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-xl">
+              <CardTitle className="flex items-center gap-3 text-base">
                 <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
                   <Sparkles className="h-4 w-4 text-indigo-600" />
                 </div>
                 Quick Actions
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs">
                 Manage your products and business efficiently
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {quickActions.map((action, index) => {
                   const Icon = action.icon;
                   return (
@@ -323,7 +331,7 @@ export default function VendorDashboardPage() {
                         <Icon className={`h-6 w-6 ${action.iconColor}`} />
                       </div>
                       <div className="text-center">
-                        <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                        <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
                           {action.label}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -346,9 +354,9 @@ export default function VendorDashboardPage() {
         >
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Inventory Overview */}
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-2xl transition-all duration-300">
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
               <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-xl">
+                <CardTitle className="flex items-center gap-3 text-base">
                   <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
                     <Box className="h-4 w-4 text-purple-600" />
                   </div>
@@ -358,42 +366,42 @@ export default function VendorDashboardPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-green-50/80 dark:bg-green-950/30 backdrop-blur-sm rounded-lg border border-green-100/50 dark:border-green-900/30 hover:shadow-md transition-shadow">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
                       In Stock
                     </p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-lg font-bold text-green-600">
                       {stats?.activeProducts || 0}
                     </p>
                   </div>
-                  <Badge className="bg-green-100/80 text-green-700 dark:bg-green-900/30 dark:text-green-400 shadow-sm backdrop-blur-sm">
+                  <Badge className="bg-green-100/80 text-green-700 dark:bg-green-900/30 dark:text-green-400 shadow-sm backdrop-blur-sm text-xs">
                     Active
                   </Badge>
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-amber-50/80 dark:bg-amber-950/30 backdrop-blur-sm rounded-lg border border-amber-100/50 dark:border-amber-900/30 hover:shadow-md transition-shadow">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
                       Low Stock
                     </p>
-                    <p className="text-2xl font-bold text-amber-600">
+                    <p className="text-lg font-bold text-amber-600">
                       {stats?.lowStock || 0}
                     </p>
                   </div>
-                  <Badge className="bg-amber-100/80 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 shadow-sm backdrop-blur-sm">
+                  <Badge className="bg-amber-100/80 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 shadow-sm backdrop-blur-sm text-xs">
                     Warning
                   </Badge>
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-red-50/80 dark:bg-red-950/30 backdrop-blur-sm rounded-lg border border-red-100/50 dark:border-red-900/30 hover:shadow-md transition-shadow">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
                       Out of Stock
                     </p>
-                    <p className="text-2xl font-bold text-red-600">
+                    <p className="text-lg font-bold text-red-600">
                       {stats?.outOfStock || 0}
                     </p>
                   </div>
-                  <Badge className="bg-red-100/80 text-red-700 dark:bg-red-900/30 dark:text-red-400 shadow-sm backdrop-blur-sm">
+                  <Badge className="bg-red-100/80 text-red-700 dark:bg-red-900/30 dark:text-red-400 shadow-sm backdrop-blur-sm text-xs">
                     Critical
                   </Badge>
                 </div>
@@ -401,10 +409,10 @@ export default function VendorDashboardPage() {
             </Card>
 
             {/* Recent Products */}
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl lg:col-span-2 hover:shadow-2xl transition-all duration-300">
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl lg:col-span-2 hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-3 text-xl">
+                  <CardTitle className="flex items-center gap-3 text-base">
                     <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                       <Package className="h-4 w-4 text-blue-600" />
                     </div>
@@ -414,12 +422,15 @@ export default function VendorDashboardPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => router.push("/vendor/my-products")}
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/20 text-xs"
                   >
                     View All
-                    <ArrowUpRight className="h-4 w-4 ml-1" />
+                    <ArrowUpRight className="h-3 w-3 ml-1" />
                   </Button>
                 </div>
+                <CardDescription className="text-xs">
+                  Your latest product listings
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {recentProducts.length === 0 ? (
@@ -427,14 +438,14 @@ export default function VendorDashboardPage() {
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50/80 dark:bg-blue-950/30 backdrop-blur-sm mb-4">
                       <Package className="h-8 w-8 text-blue-400" />
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
                       No products yet. Add your first product!
                     </p>
                     <button
                       onClick={() => router.push("/vendor/add-product")}
-                      className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer mx-auto shadow-lg hover:shadow-xl"
+                      className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium transition-colors cursor-pointer mx-auto shadow-lg hover:shadow-xl"
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="h-3 w-3" />
                       Add Product
                     </button>
                   </div>
@@ -447,20 +458,24 @@ export default function VendorDashboardPage() {
                         onClick={() =>
                           router.push(`/vendor/my-products/${product._id}`)
                         }
+                        style={{
+                          minHeight: "90px",
+                          alignItems: "center",
+                        }}
                       >
                         {product.images?.[0]?.url ? (
                           <img
                             src={product.images[0].url}
                             alt={product.name}
-                            className="w-16 h-16 object-cover rounded-lg shadow-md"
+                            className="w-12 h-12 object-cover rounded-lg shadow-md"
                           />
                         ) : (
-                          <div className="w-16 h-16 bg-gray-200/80 dark:bg-gray-700/60 backdrop-blur-sm rounded-lg flex items-center justify-center shadow-md">
-                            <Package className="h-8 w-8 text-gray-400" />
+                          <div className="w-12 h-12 bg-gray-200/80 dark:bg-gray-700/60 backdrop-blur-sm rounded-lg flex items-center justify-center shadow-md">
+                            <Package className="h-6 w-6 text-gray-400" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate text-sm">
                             {product.name}
                           </h4>
                           <div className="flex items-center gap-2 mt-1">
@@ -472,22 +487,22 @@ export default function VendorDashboardPage() {
                               }
                               className={
                                 product.status === "active"
-                                  ? "bg-green-100/80 text-green-700 dark:bg-green-900/30 dark:text-green-400 backdrop-blur-sm"
-                                  : ""
+                                  ? "bg-green-100/80 text-green-700 dark:bg-green-900/30 dark:text-green-400 backdrop-blur-sm text-xs"
+                                  : "text-xs"
                               }
                             >
                               {product.status}
                             </Badge>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
                               SKU: {product.sku}
                             </span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-lg text-gray-900 dark:text-gray-100">
+                          <p className="font-bold text-sm text-gray-900 dark:text-gray-100">
                             ${product.price}
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             Stock: {product.quantity}
                           </p>
                         </div>
@@ -509,9 +524,9 @@ export default function VendorDashboardPage() {
                 : "translate-y-4 opacity-0"
             }`}
           >
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-2xl transition-all duration-300">
+            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
               <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-xl">
+                <CardTitle className="flex items-center gap-3 text-base">
                   <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center animate-pulse">
                     <AlertCircle className="h-4 w-4 text-amber-600" />
                   </div>
@@ -519,7 +534,7 @@ export default function VendorDashboardPage() {
                     Low Stock Alert
                   </span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs">
                   These products are running low on stock. Restock soon to avoid
                   out-of-stock situations.
                 </CardDescription>
@@ -544,11 +559,11 @@ export default function VendorDashboardPage() {
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate text-sm">
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate text-xs">
                             {product.name}
                           </h4>
                           <div className="flex items-center gap-2 mt-1">
-                            <p className="font-semibold text-amber-600 text-sm">
+                            <p className="font-semibold text-amber-600 text-xs">
                               {product.quantity} left
                             </p>
                             <span className="text-xs text-gray-500">

@@ -14,18 +14,42 @@ echo "======================="
 # --- CONFIG ---
 CHANNEL_NAME="supply-chain-channel"
 CC_NAME="product-chaincode"
-CC_VERSION="1.0"
-CC_SEQUENCE="1"
-CC_LABEL="product_${CC_VERSION}"
 CC_SRC_PATH=~/Desktop/chainvanguard-nextjs/chainvanguard-backend/chaincode
-CC_PACKAGE_FILE=~/Desktop/chainvanguard-nextjs/chainvanguard-backend/${CC_NAME}-v${CC_VERSION}.tar.gz
 TEST_NETWORK_PATH=~/Desktop/fabric-samples/test-network
+
+# ---------------------------------------------------------------
+# Step 0: Determine version and sequence automatically
+# ---------------------------------------------------------------
+echo "🔍 Checking for existing chaincode installations..."
+cd $TEST_NETWORK_PATH
+
+export CORE_PEER_LOCALMSPID="Org1MSP"
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+export CORE_PEER_ADDRESS=localhost:7051
+
+# Query committed chaincode to get current sequence
+CURRENT_SEQUENCE=$(peer lifecycle chaincode querycommitted -C ${CHANNEL_NAME} --name ${CC_NAME} 2>/dev/null | grep "Sequence:" | awk '{print $2}' | tr -d ',' || echo "0")
+
+# Increment version and sequence
+CC_SEQUENCE=$((CURRENT_SEQUENCE + 1))
+CC_VERSION="1.${CC_SEQUENCE}"
+CC_LABEL="product_${CC_VERSION}"
+CC_PACKAGE_FILE=~/Desktop/chainvanguard-nextjs/chainvanguard-backend/${CC_NAME}-v${CC_VERSION}.tar.gz
+
+echo "📊 Current Sequence: ${CURRENT_SEQUENCE}"
+echo "📊 New Version: ${CC_VERSION}"
+echo "📊 New Sequence: ${CC_SEQUENCE}"
 
 # ---------------------------------------------------------------
 # Step 1: Package the chaincode
 # ---------------------------------------------------------------
 echo "📦 Packaging product chaincode..."
 cd $CC_SRC_PATH/..
+
+# Remove old package if exists
+rm -f ${CC_PACKAGE_FILE}
+
 peer lifecycle chaincode package ${CC_PACKAGE_FILE} \
   --path ./chaincode \
   --lang node \
@@ -66,7 +90,7 @@ export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.examp
 export CORE_PEER_ADDRESS=localhost:7051
 
 peer lifecycle chaincode queryinstalled > installed.txt
-CC_PACKAGE_ID=$(grep "${CC_LABEL}" installed.txt | awk -F "[, ]+" '{print $3}' | sed 's/,$//' | sed 's/Label://' | sed 's/Package//g' | tr -d '\r')
+CC_PACKAGE_ID=$(grep "${CC_LABEL}" installed.txt | awk -F "[, ]+" '{print $3}')
 
 echo "✅ Detected Package ID: ${CC_PACKAGE_ID}"
 

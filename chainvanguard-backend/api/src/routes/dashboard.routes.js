@@ -1,10 +1,10 @@
-import express from 'express';
-import { authenticate, authorizeRoles } from '../middleware/auth.middleware.js';
-import Order from '../models/Order.js';
-import VendorRequest from '../models/VendorRequest.js';
-import Inventory from '../models/Inventory.js';
-import Product from '../models/Product.js';
-import User from '../models/User.js';
+import express from "express";
+import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
+import Order from "../models/Order.js";
+import VendorRequest from "../models/VendorRequest.js";
+import Inventory from "../models/Inventory.js";
+import Product from "../models/Product.js";
+import User from "../models/User.js";
 
 const router = express.Router();
 
@@ -24,15 +24,15 @@ const router = express.Router();
  * - Recent transactions (last 5)
  */
 router.get(
-  '/supplier/stats',
+  "/supplier/stats",
   authenticate,
-  authorizeRoles('supplier'),
+  authorizeRoles("supplier"),
   async (req, res) => {
     try {
       const supplierId = req.userId;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
 
@@ -45,85 +45,87 @@ router.get(
         recentTransactions,
         totalVendors,
         totalInventoryItems,
-        activeOrders
+        activeOrders,
       ] = await Promise.all([
         // Pending vendor requests
         VendorRequest.countDocuments({
           supplierId,
-          status: 'pending'
+          status: "pending",
         }),
-        
+
         // Low stock items (quantity < 10)
         Inventory.countDocuments({
           supplierId,
           quantity: { $lt: 10 },
-          status: 'active'
+          status: "active",
         }),
-        
+
         // Today's revenue
         Order.aggregate([
           {
             $match: {
               sellerId: supplierId,
               createdAt: { $gte: today },
-              status: { $in: ['delivered', 'completed'] }
-            }
+              status: { $in: ["delivered", "completed"] },
+            },
           },
           {
             $group: {
               _id: null,
-              total: { $sum: '$totalAmount' }
-            }
-          }
+              total: { $sum: "$totalAmount" },
+            },
+          },
         ]),
-        
+
         // This week's orders
         Order.countDocuments({
           sellerId: supplierId,
-          createdAt: { $gte: weekAgo }
+          createdAt: { $gte: weekAgo },
         }),
-        
+
         // Recent transactions (last 5 orders)
         Order.find({
-          sellerId: supplierId
+          sellerId: supplierId,
         })
-          .populate('buyerId', 'name email companyName')
+          .populate("buyerId", "name email companyName")
           .sort({ createdAt: -1 })
           .limit(5)
-          .select('orderNumber totalAmount status createdAt buyerId items'),
-        
+          .select("orderNumber totalAmount status createdAt buyerId items"),
+
         // Total unique active vendors (who have placed orders)
-        Order.distinct('buyerId', {
-          sellerId: supplierId
-        }).then(ids => ids.length),
-        
+        Order.distinct("buyerId", {
+          sellerId: supplierId,
+        }).then((ids) => ids.length),
+
         // Total inventory items
         Inventory.countDocuments({
           supplierId,
-          status: 'active'
+          status: "active",
         }),
-        
+
         // Active orders (pending + processing)
         Order.countDocuments({
           sellerId: supplierId,
-          status: { $in: ['pending', 'processing'] }
-        })
+          status: { $in: ["pending", "processing"] },
+        }),
       ]);
 
       // Format recent transactions
-      const formattedTransactions = recentTransactions.map(order => ({
+      const formattedTransactions = recentTransactions.map((order) => ({
         id: order._id,
         orderNumber: order.orderNumber,
-        vendor: order.buyerId ? {
-          id: order.buyerId._id,
-          name: order.buyerId.name,
-          email: order.buyerId.email,
-          companyName: order.buyerId.companyName
-        } : null,
+        vendor: order.buyerId
+          ? {
+              id: order.buyerId._id,
+              name: order.buyerId.name,
+              email: order.buyerId.email,
+              companyName: order.buyerId.companyName,
+            }
+          : null,
         amount: order.totalAmount,
         status: order.status,
         itemCount: order.items?.length || 0,
-        date: order.createdAt
+        date: order.createdAt,
       }));
 
       res.json({
@@ -136,15 +138,15 @@ router.get(
           totalVendors,
           totalInventoryItems,
           activeOrders,
-          recentTransactions: formattedTransactions
+          recentTransactions: formattedTransactions,
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error) {
-      console.error('❌ GET /api/dashboard/supplier/stats error:', error);
+      console.error("❌ GET /api/dashboard/supplier/stats error:", error);
       res.status(500).json({
         success: false,
-        message: error.message || 'Failed to get dashboard stats'
+        message: error.message || "Failed to get dashboard stats",
       });
     }
   }
@@ -156,24 +158,24 @@ router.get(
  * Query params: timeframe (week, month, year)
  */
 router.get(
-  '/supplier/revenue',
+  "/supplier/revenue",
   authenticate,
-  authorizeRoles('supplier'),
+  authorizeRoles("supplier"),
   async (req, res) => {
     try {
       const supplierId = req.userId;
-      const { timeframe = 'month' } = req.query;
-      
+      const { timeframe = "month" } = req.query;
+
       let startDate = new Date();
-      
+
       switch (timeframe) {
-        case 'week':
+        case "week":
           startDate.setDate(startDate.getDate() - 7);
           break;
-        case 'month':
+        case "month":
           startDate.setMonth(startDate.getMonth() - 1);
           break;
-        case 'year':
+        case "year":
           startDate.setFullYear(startDate.getFullYear() - 1);
           break;
         default:
@@ -185,35 +187,35 @@ router.get(
           $match: {
             sellerId: supplierId,
             createdAt: { $gte: startDate },
-            status: { $in: ['delivered', 'completed'] }
-          }
+            status: { $in: ["delivered", "completed"] },
+          },
         },
         {
           $group: {
             _id: {
-              year: { $year: '$createdAt' },
-              month: { $month: '$createdAt' },
-              day: { $dayOfMonth: '$createdAt' }
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+              day: { $dayOfMonth: "$createdAt" },
             },
-            revenue: { $sum: '$totalAmount' },
-            orderCount: { $sum: 1 }
-          }
+            revenue: { $sum: "$totalAmount" },
+            orderCount: { $sum: 1 },
+          },
         },
         {
-          $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 }
-        }
+          $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 },
+        },
       ]);
 
       res.json({
         success: true,
         timeframe,
-        revenueData
+        revenueData,
       });
     } catch (error) {
-      console.error('❌ GET /api/dashboard/supplier/revenue error:', error);
+      console.error("❌ GET /api/dashboard/supplier/revenue error:", error);
       res.status(500).json({
         success: false,
-        message: error.message || 'Failed to get revenue data'
+        message: error.message || "Failed to get revenue data",
       });
     }
   }
@@ -235,15 +237,15 @@ router.get(
  * - Recent sales (last 5)
  */
 router.get(
-  '/vendor/stats',
+  "/vendor/stats",
   authenticate,
-  authorizeRoles('vendor'),
+  authorizeRoles("vendor"),
   async (req, res) => {
     try {
       const vendorId = req.userId;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
 
@@ -256,7 +258,7 @@ router.get(
         approvedRequests,
         totalProducts,
         totalCustomers,
-        processingOrders
+        processingOrders,
       ] = await Promise.all([
         // Today's sales revenue
         Order.aggregate([
@@ -264,83 +266,85 @@ router.get(
             $match: {
               sellerId: vendorId,
               createdAt: { $gte: today },
-              status: { $in: ['delivered', 'completed'] }
-            }
+              status: { $in: ["delivered", "completed"] },
+            },
           },
           {
             $group: {
               _id: null,
-              total: { $sum: '$totalAmount' }
-            }
-          }
+              total: { $sum: "$totalAmount" },
+            },
+          },
         ]),
-        
+
         // Pending orders (as seller)
         Order.countDocuments({
           sellerId: vendorId,
-          status: 'pending'
+          status: "pending",
         }),
-        
+
         // Low stock products (stock < 10)
         Product.countDocuments({
           vendorId,
           stock: { $lt: 10 },
-          status: 'active'
+          status: "active",
         }),
-        
+
         // New customer orders (this week)
         Order.countDocuments({
           sellerId: vendorId,
           createdAt: { $gte: weekAgo },
-          status: 'pending'
+          status: "pending",
         }),
-        
+
         // Recent sales (last 5)
         Order.find({
-          sellerId: vendorId
+          sellerId: vendorId,
         })
-          .populate('buyerId', 'name email')
+          .populate("buyerId", "name email")
           .sort({ createdAt: -1 })
           .limit(5)
-          .select('orderNumber totalAmount status createdAt buyerId items'),
-        
+          .select("orderNumber totalAmount status createdAt buyerId items"),
+
         // Approved purchase requests (ready for checkout)
         VendorRequest.countDocuments({
           vendorId,
-          status: 'approved'
+          status: "approved",
         }),
-        
+
         // Total active products
         Product.countDocuments({
           vendorId,
-          status: 'active'
+          status: "active",
         }),
-        
+
         // Total unique customers
-        Order.distinct('buyerId', {
-          sellerId: vendorId
-        }).then(ids => ids.length),
-        
+        Order.distinct("buyerId", {
+          sellerId: vendorId,
+        }).then((ids) => ids.length),
+
         // Processing orders
         Order.countDocuments({
           sellerId: vendorId,
-          status: 'processing'
-        })
+          status: "processing",
+        }),
       ]);
 
       // Format recent sales
-      const formattedSales = recentSales.map(order => ({
+      const formattedSales = recentSales.map((order) => ({
         id: order._id,
         orderNumber: order.orderNumber,
-        customer: order.buyerId ? {
-          id: order.buyerId._id,
-          name: order.buyerId.name,
-          email: order.buyerId.email
-        } : null,
+        customer: order.buyerId
+          ? {
+              id: order.buyerId._id,
+              name: order.buyerId.name,
+              email: order.buyerId.email,
+            }
+          : null,
         amount: order.totalAmount,
         status: order.status,
         itemCount: order.items?.length || 0,
-        date: order.createdAt
+        date: order.createdAt,
       }));
 
       res.json({
@@ -354,15 +358,15 @@ router.get(
           approvedRequests,
           totalProducts,
           totalCustomers,
-          recentSales: formattedSales
+          recentSales: formattedSales,
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error) {
-      console.error('❌ GET /api/dashboard/vendor/stats error:', error);
+      console.error("❌ GET /api/dashboard/vendor/stats error:", error);
       res.status(500).json({
         success: false,
-        message: error.message || 'Failed to get dashboard stats'
+        message: error.message || "Failed to get dashboard stats",
       });
     }
   }
@@ -374,24 +378,24 @@ router.get(
  * Query params: timeframe (week, month, year)
  */
 router.get(
-  '/vendor/sales',
+  "/vendor/sales",
   authenticate,
-  authorizeRoles('vendor'),
+  authorizeRoles("vendor"),
   async (req, res) => {
     try {
       const vendorId = req.userId;
-      const { timeframe = 'month' } = req.query;
-      
+      const { timeframe = "month" } = req.query;
+
       let startDate = new Date();
-      
+
       switch (timeframe) {
-        case 'week':
+        case "week":
           startDate.setDate(startDate.getDate() - 7);
           break;
-        case 'month':
+        case "month":
           startDate.setMonth(startDate.getMonth() - 1);
           break;
-        case 'year':
+        case "year":
           startDate.setFullYear(startDate.getFullYear() - 1);
           break;
         default:
@@ -403,35 +407,35 @@ router.get(
           $match: {
             sellerId: vendorId,
             createdAt: { $gte: startDate },
-            status: { $in: ['delivered', 'completed'] }
-          }
+            status: { $in: ["delivered", "completed"] },
+          },
         },
         {
           $group: {
             _id: {
-              year: { $year: '$createdAt' },
-              month: { $month: '$createdAt' },
-              day: { $dayOfMonth: '$createdAt' }
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+              day: { $dayOfMonth: "$createdAt" },
             },
-            sales: { $sum: '$totalAmount' },
-            orderCount: { $sum: 1 }
-          }
+            sales: { $sum: "$totalAmount" },
+            orderCount: { $sum: 1 },
+          },
         },
         {
-          $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 }
-        }
+          $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 },
+        },
       ]);
 
       res.json({
         success: true,
         timeframe,
-        salesData
+        salesData,
       });
     } catch (error) {
-      console.error('❌ GET /api/dashboard/vendor/sales error:', error);
+      console.error("❌ GET /api/dashboard/vendor/sales error:", error);
       res.status(500).json({
         success: false,
-        message: error.message || 'Failed to get sales data'
+        message: error.message || "Failed to get sales data",
       });
     }
   }
@@ -442,9 +446,9 @@ router.get(
  * Get vendor's inventory summary (purchased from suppliers)
  */
 router.get(
-  '/vendor/inventory-summary',
+  "/vendor/inventory-summary",
   authenticate,
-  authorizeRoles('vendor'),
+  authorizeRoles("vendor"),
   async (req, res) => {
     try {
       const vendorId = req.userId;
@@ -452,18 +456,18 @@ router.get(
       // Get all delivered orders where vendor was buyer
       const inventoryOrders = await Order.find({
         buyerId: vendorId,
-        status: { $in: ['delivered', 'completed'] }
-      }).populate('items.inventoryId');
+        status: { $in: ["delivered", "completed"] },
+      }).populate("items.inventoryId");
 
       // Calculate summary
       let totalItemsReceived = 0;
       let totalSpent = 0;
       const suppliers = new Set();
 
-      inventoryOrders.forEach(order => {
+      inventoryOrders.forEach((order) => {
         totalSpent += order.totalAmount;
         suppliers.add(order.sellerId.toString());
-        order.items.forEach(item => {
+        order.items.forEach((item) => {
           totalItemsReceived += item.quantity;
         });
       });
@@ -474,14 +478,17 @@ router.get(
           totalItemsReceived,
           totalSpent,
           totalSuppliers: suppliers.size,
-          totalOrders: inventoryOrders.length
-        }
+          totalOrders: inventoryOrders.length,
+        },
       });
     } catch (error) {
-      console.error('❌ GET /api/dashboard/vendor/inventory-summary error:', error);
+      console.error(
+        "❌ GET /api/dashboard/vendor/inventory-summary error:",
+        error
+      );
       res.status(500).json({
         success: false,
-        message: error.message || 'Failed to get inventory summary'
+        message: error.message || "Failed to get inventory summary",
       });
     }
   }

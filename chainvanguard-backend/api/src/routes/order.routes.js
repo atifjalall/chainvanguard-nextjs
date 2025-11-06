@@ -9,7 +9,7 @@ import {
   authorizeRoles,
 } from "../middleware/auth.middleware.js";
 import Order from "../models/Order.js";
-import walletBalanceService from "../services/wallet-balance.service.js";
+import walletBalanceService from "../services/wallet.balance.service.js";
 
 const router = express.Router();
 
