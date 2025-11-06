@@ -5,9 +5,10 @@ import Cart from "../models/Cart.js";
 import mongoose from "mongoose";
 import fabricService from "./fabric.service.js";
 import { buildPaginationResponse } from "../utils/helpers.js";
-import walletBalanceService from "./wallet-balance.service.js";
+import walletBalanceService from "./wallet.balance.service.js";
 import logger from "../utils/logger.js";
 import loyaltyService from "./loyalty.service.js";
+import vendorInventoryService from "./vendor.inventory.service.js";
 
 class OrderService {
   // ========================================
@@ -883,6 +884,26 @@ class OrderService {
       // Add status history
       order.addStatusHistory(newStatus, userId, userRole, notes);
 
+      // After order is marked as delivered and saved, auto-create vendor inventory
+      if (newStatus === "delivered" && order.sellerRole === "supplier") {
+        await order.save(); // Save first so inventory creation can read the delivered order
+
+        // Auto-create vendor inventory
+        try {
+          const vendorInventoryService = (
+            await import("./vendor.inventory.service.js")
+          ).default;
+          await vendorInventoryService.createFromDeliveredOrder(
+            orderId,
+            order.customerId
+          );
+          logger.info("✅ Vendor inventory auto-created from delivered order");
+        } catch (error) {
+          logger.error("❌ Failed to create vendor inventory:", error);
+          // Continue even if inventory creation fails
+        }
+      }
+
       // Add supply chain event
       order.addSupplyChainEvent({
         stage: newStatus,
@@ -908,18 +929,20 @@ class OrderService {
       // Award loyalty points when order is delivered
       if (newStatus === "delivered" || newStatus === "completed") {
         try {
-          // Check if buyer is a vendor and seller is a supplier
+          // Award loyalty points ONLY to customers (not B2B vendor-supplier transactions)
           const buyer = await User.findById(order.customerId);
           const seller = await User.findById(order.sellerId);
 
+          // Only award loyalty points to customers buying from vendors/suppliers
+          // NOT for B2B transactions (vendor buying from supplier)
           if (
             buyer &&
-            buyer.role === "vendor" &&
+            buyer.role === "customer" &&
             seller &&
-            seller.role === "supplier"
+            (seller.role === "vendor" || seller.role === "supplier")
           ) {
             await loyaltyService.awardPoints(buyer._id, order._id);
-            console.log(`✅ Awarded loyalty points to vendor ${buyer.name}`);
+            console.log(`✅ Awarded loyalty points to customer ${buyer.name}`);
           }
         } catch (error) {
           console.error("❌ Failed to award loyalty points:", error);

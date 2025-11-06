@@ -2,7 +2,7 @@ import Return from "../models/Return.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
-import walletBalanceService from "./wallet-balance.service.js";
+import walletBalanceService from "./wallet.balance.service.js";
 import notificationService from "./notification.service.js";
 import blockchainService from "./blockchain.service.js";
 import mongoose from "mongoose";

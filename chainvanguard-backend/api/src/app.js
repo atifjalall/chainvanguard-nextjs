@@ -18,7 +18,7 @@ import ministryRoutes from "./routes/ministry.routes.js";
 import walletRoutes from "./routes/wallet.routes.js";
 import inventoryRoutes from "./routes/inventory.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
-import vendorRequestRoutes from "./routes/vendor_request.routes.js";
+import vendorRequestRoutes from "./routes/vendor.request.routes.js";
 import wishlistRoutes from "./routes/wishlist.routes.js";
 import loyaltyRoutes from "./routes/loyalty.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
@@ -27,6 +27,9 @@ import reviewRoutes from "./routes/review.routes.js";
 import returnRoutes from "./routes/return.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import supplierVendorRoutes from "./routes/supplier.vendor.routes.js";
+import vendorInventoryRoutes from "./routes/vendor.inventory.routes.js";
+import inventoryBrowseRoutes from "./routes/inventory.browse.routes.js";
+import checkoutRoutes from "./routes/checkout.routes.js";
 
 dotenv.config();
 
@@ -155,11 +158,16 @@ app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/checkout", checkoutRoutes);
 app.use("/api/qr", qrRoutes);
 app.use("/api/expert", expertRoutes);
 app.use("/api/blockchain", blockchainRoutes);
 app.use("/api/ministry", ministryRoutes);
 app.use("/api/wallet", walletRoutes);
+// IMPORTANT: More specific routes MUST come BEFORE general routes
+// inventoryBrowseRoutes has /browse, /search, etc.
+// inventoryRoutes has a catch-all GET / route that must come last
+app.use("/api/inventory", inventoryBrowseRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/vendor-requests", vendorRequestRoutes);
@@ -171,6 +179,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/returns", returnRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/vendor-customers", supplierVendorRoutes);
+app.use("/api/vendor/inventory", vendorInventoryRoutes);
 
 // ========================================
 // API INFO ENDPOINT

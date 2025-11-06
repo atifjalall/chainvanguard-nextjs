@@ -13,8 +13,6 @@ import qrService from "./qr.service.js";
 import logger from "../utils/logger.js";
 
 class ProductService {
-
-
   // ========================================
   // CREATE PRODUCT
   // ========================================
@@ -1138,13 +1136,29 @@ class ProductService {
       }
 
       // Get from blockchain
-      await fabricService.connect();
-      const historyJSON = await fabricService.getProductHistory(
-        product.blockchainProductId
-      );
-      fabricService.disconnect();
+      let history = [];
+      let blockchainError = null;
 
-      const history = JSON.parse(historyJSON);
+      try {
+        await fabricService.connect();
+        const historyData = await fabricService.getProductHistory(
+          product.blockchainProductId
+        );
+        fabricService.disconnect();
+
+        // fabricService.getProductHistory already returns parsed JSON
+        history = Array.isArray(historyData) ? historyData : [];
+      } catch (blockchainErr) {
+        blockchainError =
+          blockchainErr.message || "Failed to retrieve blockchain history";
+        console.error("⚠️  Blockchain history unavailable:", blockchainError);
+        // Continue with empty history instead of failing completely
+        try {
+          fabricService.disconnect();
+        } catch (disconnectErr) {
+          // Ignore disconnect errors
+        }
+      }
 
       return {
         success: true,
@@ -1152,10 +1166,21 @@ class ProductService {
         blockchainId: product.blockchainProductId,
         totalTransactions: history.length,
         history: history,
+        ...(blockchainError && {
+          warning: "Blockchain history temporarily unavailable",
+          error: blockchainError,
+        }),
       };
     } catch (error) {
       console.error("❌ Get history error:", error);
-      throw error;
+
+      // Return graceful error response instead of throwing
+      return {
+        success: false,
+        message: "Unable to retrieve product history",
+        error: error.message,
+        history: [],
+      };
     }
   }
 

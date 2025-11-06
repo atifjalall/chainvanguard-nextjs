@@ -863,6 +863,80 @@ echo "EXPERT_ID=$EXPERT_ID"
 echo ""
 
 # ============================================
+# 📝 UPDATE .ENV FILE WITH CREDENTIALS
+# ============================================
+echo ""
+echo "=============================================="
+echo "📝 Updating .env file with test credentials"
+echo "=============================================="
+echo ""
+
+# Path to .env file
+ENV_FILE="/Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env"
+
+# Function to update or add env variable
+update_env() {
+    local key=$1
+    local value=$2
+    
+    if grep -q "^${key}=" "$ENV_FILE"; then
+        # Key exists, update it
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            sed -i '' "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+        else
+            # Linux
+            sed -i "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+        fi
+    else
+        # Key doesn't exist, append it
+        echo "${key}=${value}" >> "$ENV_FILE"
+    fi
+}
+
+# Extract names from registration responses
+SUPPLIER_NAME=$(echo "$SUP_PROFILE" | jq -r '.data.name // .data.user.name // empty')
+VENDOR_NAME=$(echo "$VENDOR_PROFILE" | jq -r '.data.name // .data.user.name // empty')
+CUSTOMER_NAME=$(echo "$CUSTOMER_PROFILE" | jq -r '.data.name // .data.user.name // empty')
+EXPERT_NAME=$(echo "$EXPERT_PROFILE" | jq -r '.data.name // .data.user.name // empty')
+
+# Update Supplier credentials
+echo "Updating SUPPLIER credentials..."
+update_env "SUPPLIER_TOKEN" "$SUPPLIER_TOKEN"
+update_env "SUPPLIER_USER_ID" "$SUPPLIER_USER_ID"
+update_env "SUPPLIER_WALLET" "$SUPPLIER_WALLET"
+update_env "SUPPLIER_ID" "$SUPPLIER_USER_ID"
+update_env "SUPPLIER_NAME" "\"$SUPPLIER_NAME\""
+
+# Update Vendor credentials
+echo "Updating VENDOR credentials..."
+update_env "VENDOR_TOKEN" "$VENDOR_TOKEN"
+update_env "VENDOR_USER_ID" "$VENDOR_USER_ID"
+update_env "VENDOR_WALLET" "$VENDOR_WALLET"
+update_env "VENDOR_ID" "$VENDOR_USER_ID"
+update_env "VENDOR_NAME" "\"$VENDOR_NAME\""
+
+# Update Customer credentials
+echo "Updating CUSTOMER credentials..."
+update_env "CUSTOMER_TOKEN" "$CUSTOMER_TOKEN"
+update_env "CUSTOMER_USER_ID" "$CUSTOMER_USER_ID"
+update_env "CUSTOMER_WALLET" "$CUSTOMER_WALLET"
+update_env "CUSTOMER_ID" "$CUSTOMER_USER_ID"
+update_env "CUSTOMER_NAME" "\"$CUSTOMER_NAME\""
+
+# Update Expert credentials
+echo "Updating EXPERT credentials..."
+update_env "EXPERT_TOKEN" "$EXPERT_TOKEN"
+update_env "EXPERT_USER_ID" "$EXPERT_USER_ID"
+update_env "EXPERT_WALLET" "$EXPERT_WALLET"
+update_env "EXPERT_ID" "$EXPERT_USER_ID"
+update_env "EXPERT_NAME" "\"$EXPERT_NAME\""
+
+echo ""
+echo -e "${GREEN}✅ .env file updated successfully!${NC}"
+echo ""
+
+# ============================================
 # 📊 TEST SUMMARY
 # ============================================
 echo ""

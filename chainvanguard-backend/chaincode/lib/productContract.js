@@ -609,16 +609,45 @@ class ProductContract extends Contract {
 
     let result = await iterator.next();
     while (!result.done) {
+      // Safely parse timestamp
+      let timestamp;
+      try {
+        if (result.value.timestamp) {
+          // Handle different timestamp formats
+          const seconds =
+            result.value.timestamp.seconds?.low ||
+            result.value.timestamp.seconds ||
+            0;
+          const nanos = result.value.timestamp.nanos || 0;
+
+          if (seconds > 0) {
+            timestamp = new Date(
+              seconds * 1000 + nanos / 1000000
+            ).toISOString();
+          } else {
+            timestamp = new Date().toISOString(); // Fallback to current time
+          }
+        } else {
+          timestamp = new Date().toISOString(); // Fallback to current time
+        }
+      } catch (err) {
+        console.error("Error parsing timestamp:", err);
+        timestamp = new Date().toISOString(); // Fallback to current time
+      }
+
       const jsonRes = {
         txId: result.value.txId,
-        timestamp: new Date(
-          result.value.timestamp.seconds.low * 1000
-        ).toISOString(),
+        timestamp: timestamp,
         isDelete: result.value.isDelete,
       };
 
       if (!result.value.isDelete && result.value.value) {
-        jsonRes.value = JSON.parse(result.value.value.toString("utf8"));
+        try {
+          jsonRes.value = JSON.parse(result.value.value.toString("utf8"));
+        } catch (err) {
+          console.error("Error parsing value:", err);
+          jsonRes.value = null;
+        }
       }
 
       allResults.push(jsonRes);
