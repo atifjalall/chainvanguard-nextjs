@@ -24,19 +24,32 @@ import {
   Eye,
   BarChart3,
   Warehouse,
-  Clock,
+  ShoppingCart,
+  Heart,
+  Truck,
   Award,
-  Lock,
-  Cpu,
-  Database,
-  Network,
+  Sparkles,
+  Gift,
+  Tag,
+  Flame,
+  Clock,
+  ArrowUpRight,
+  ChevronRight,
+  Mail,
+  Facebook,
+  Twitter,
+  Instagram,
+  Linkedin,
+  MessageCircle,
+  Search,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import PixelBlast from "@/components/PixelBlast";
-import { motion } from "framer-motion";
-import { useState } from "react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { useInView } from "framer-motion";
 
-// Custom motion component wrapper for focus animations
+// Enhanced motion component with 3D effects
 const FocusMotionDiv = ({ children, className = "", ...props }: any) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -64,7 +77,269 @@ const FocusMotionDiv = ({ children, className = "", ...props }: any) => {
   );
 };
 
+// Animated product card with 3D hover effect
+const ProductCard = ({ product, index }: any) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 50 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      whileHover={{ y: -10 }}
+      className="group"
+    >
+      <Card className="relative overflow-hidden border border-white/20 dark:border-gray-700/30 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl h-full">
+        {/* Animated gradient overlay */}
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-cyan-500/0 to-purple-500/0 group-hover:from-blue-500/10 group-hover:via-cyan-500/10 group-hover:to-purple-500/10"
+          animate={{
+            opacity: isHovered ? 1 : 0,
+          }}
+          transition={{ duration: 0.3 }}
+        />
+
+        {/* Product badge */}
+        <div className="absolute top-4 left-4 z-10 flex gap-2">
+          {product.isNew && (
+            <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0">
+              <Sparkles className="h-3 w-3 mr-1" />
+              New
+            </Badge>
+          )}
+          {product.discount && (
+            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0">
+              <Flame className="h-3 w-3 mr-1" />
+              {product.discount}% OFF
+            </Badge>
+          )}
+        </div>
+
+        {/* Wishlist button */}
+        <motion.button
+          className="absolute top-4 right-4 z-10 h-10 w-10 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center justify-center shadow-lg"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+        >
+          <Heart className="h-5 w-5 text-gray-600 dark:text-gray-300 group-hover:text-red-500 transition-colors" />
+        </motion.button>
+
+        {/* Product image with parallax effect */}
+        <div className="relative h-64 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700">
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center"
+            animate={{
+              scale: isHovered ? 1.1 : 1,
+              rotateZ: isHovered ? 3 : 0,
+            }}
+            transition={{ duration: 0.4 }}
+          >
+            <product.icon className="h-32 w-32 text-blue-500/30 dark:text-blue-400/30" />
+          </motion.div>
+
+          {/* Quick view button */}
+          <motion.div
+            className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 20 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Button size="sm" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-xl">
+              <Eye className="h-4 w-4 mr-2" />
+              Quick View
+            </Button>
+          </motion.div>
+        </div>
+
+        <CardHeader className="relative z-10 pb-3">
+          <div className="flex items-start justify-between mb-2">
+            <Badge variant="outline" className="text-xs">
+              {product.category}
+            </Badge>
+            <div className="flex items-center gap-1">
+              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              <span className="text-sm font-semibold">{product.rating}</span>
+            </div>
+          </div>
+          <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+            {product.name}
+          </CardTitle>
+          <CardDescription className="text-sm line-clamp-2">
+            {product.description}
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="relative z-10 space-y-3">
+          <div className="flex items-center gap-2">
+            {product.originalPrice && (
+              <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                ${product.originalPrice}
+              </span>
+            )}
+            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+              ${product.price}
+            </span>
+          </div>
+
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg">
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Add to Cart
+            </Button>
+          </motion.div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
+
+// Animated stats counter
+const AnimatedCounter = ({ value, suffix = "" }: { value: string; suffix?: string }) => {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+  const target = parseInt(value.replace(/\D/g, ""));
+
+  useEffect(() => {
+    if (isInView && target) {
+      let start = 0;
+      const duration = 2000;
+      const increment = target / (duration / 16);
+
+      const timer = setInterval(() => {
+        start += increment;
+        if (start >= target) {
+          setCount(target);
+          clearInterval(timer);
+        } else {
+          setCount(Math.floor(start));
+        }
+      }, 16);
+
+      return () => clearInterval(timer);
+    }
+  }, [isInView, target]);
+
+  return (
+    <span ref={ref} className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+      {isInView ? (target ? count.toLocaleString() : value) : "0"}{suffix}
+    </span>
+  );
+};
+
 export default function LandingPage() {
+  const { scrollYProgress } = useScroll();
+  const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.8]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const featuredProducts = [
+    {
+      name: "Premium Supply Chain Tracker",
+      description: "Real-time tracking with blockchain verification and instant alerts",
+      category: "Electronics",
+      price: "299",
+      originalPrice: "399",
+      discount: 25,
+      rating: "4.9",
+      isNew: true,
+      icon: Package,
+    },
+    {
+      name: "Smart Inventory Manager",
+      description: "AI-powered inventory management with predictive analytics",
+      category: "Software",
+      price: "199",
+      rating: "4.8",
+      isNew: true,
+      icon: Warehouse,
+    },
+    {
+      name: "Enterprise Security Suite",
+      description: "Military-grade security with end-to-end encryption",
+      category: "Security",
+      price: "499",
+      originalPrice: "699",
+      discount: 30,
+      rating: "5.0",
+      icon: Shield,
+    },
+    {
+      name: "Analytics Dashboard Pro",
+      description: "Comprehensive analytics with real-time insights and reporting",
+      category: "Analytics",
+      price: "349",
+      rating: "4.7",
+      icon: BarChart3,
+    },
+    {
+      name: "Blockchain Validator",
+      description: "Advanced validation system with consensus protocols",
+      category: "Blockchain",
+      price: "599",
+      originalPrice: "799",
+      discount: 25,
+      rating: "4.9",
+      icon: CheckCircle,
+    },
+    {
+      name: "Supply Chain Optimizer",
+      description: "Optimize your supply chain with AI-driven recommendations",
+      category: "Optimization",
+      price: "449",
+      rating: "4.8",
+      isNew: true,
+      icon: TrendingUp,
+    },
+  ];
+
+  const categories = [
+    { name: "Electronics", icon: Zap, count: "2,500+", color: "from-blue-500 to-cyan-500" },
+    { name: "Security", icon: Shield, count: "1,200+", color: "from-green-500 to-emerald-500" },
+    { name: "Analytics", icon: BarChart3, count: "850+", color: "from-purple-500 to-pink-500" },
+    { name: "Blockchain", icon: Package, count: "3,000+", color: "from-orange-500 to-red-500" },
+  ];
+
+  const testimonials = [
+    {
+      name: "Sarah Johnson",
+      role: "Supply Chain Director",
+      company: "Global Corp",
+      content: "ChainVanguard transformed our supply chain operations. The transparency and efficiency gains have been remarkable.",
+      rating: 5,
+      avatar: Users,
+    },
+    {
+      name: "Michael Chen",
+      role: "CTO",
+      company: "TechVentures Inc",
+      content: "The blockchain integration is seamless. We've seen a 40% reduction in processing time and zero disputes.",
+      rating: 5,
+      avatar: Users,
+    },
+    {
+      name: "Emily Rodriguez",
+      role: "Operations Manager",
+      company: "RetailMax",
+      content: "Best investment we've made. The real-time tracking and analytics have revolutionized our inventory management.",
+      rating: 5,
+      avatar: Users,
+    },
+  ];
+
+  // Auto-rotate testimonials
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [testimonials.length]);
+
   return (
     <div className="relative min-h-screen w-full">
       {/* Animated PixelBlast background */}
@@ -90,806 +365,574 @@ export default function LandingPage() {
         />
       </div>
 
-      {/* Main content overlays the animation */}
+      {/* Main content */}
       <div className="relative z-10">
-        <div className="min-h-screen bg-gradient-to-br from-slate-50/80 via-blue-50/80 to-cyan-50/80 dark:from-slate-950/80 dark:via-blue-950/80 dark:to-cyan-950/80 relative overflow-hidden">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50/90 via-blue-50/90 to-cyan-50/90 dark:from-slate-950/90 dark:via-blue-950/90 dark:to-cyan-950/90 relative overflow-hidden">
+
+          {/* Animated background elements */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Floating geometric shapes */}
-            <div
-              className="absolute top-32 left-16 w-8 h-8 border border-blue-300/20 dark:border-blue-600/20 rotate-45 animate-spin"
-              style={{ animationDuration: "20s" }}
-            ></div>
-            <div
-              className="absolute top-96 right-32 w-6 h-6 border border-cyan-300/30 dark:border-cyan-600/30 rotate-12 animate-pulse"
-              style={{ animationDelay: "2s" }}
-            ></div>
-            <div
-              className="absolute bottom-64 left-24 w-4 h-8 bg-gradient-to-t from-blue-400/10 to-transparent animate-bounce"
-              style={{ animationDelay: "1s", animationDuration: "3s" }}
-            ></div>
-
-            {/* Animated lines and connections */}
-            <svg
-              className="absolute inset-0 w-full h-full"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <linearGradient
-                  id="lineGradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <stop
-                    offset="0%"
-                    stopColor="rgb(59, 130, 246)"
-                    stopOpacity="0.1"
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor="rgb(6, 182, 212)"
-                    stopOpacity="0.05"
-                  />
-                </linearGradient>
-              </defs>
-              <line
-                x1="10%"
-                y1="20%"
-                x2="30%"
-                y2="40%"
-                stroke="url(#lineGradient)"
-                strokeWidth="1"
-                className="animate-pulse"
-              />
-              <line
-                x1="70%"
-                y1="10%"
-                x2="90%"
-                y2="30%"
-                stroke="url(#lineGradient)"
-                strokeWidth="1"
-                className="animate-pulse"
-                style={{ animationDelay: "1s" }}
-              />
-              <line
-                x1="20%"
-                y1="80%"
-                x2="40%"
-                y2="60%"
-                stroke="url(#lineGradient)"
-                strokeWidth="1"
-                className="animate-pulse"
-                style={{ animationDelay: "2s" }}
-              />
-              <circle
-                cx="15%"
-                cy="30%"
-                r="2"
-                fill="rgb(59, 130, 246)"
-                fillOpacity="0.1"
-                className="animate-ping"
-                style={{ animationDelay: "0.5s" }}
-              />
-              <circle
-                cx="85%"
-                cy="20%"
-                r="1.5"
-                fill="rgb(6, 182, 212)"
-                fillOpacity="0.15"
-                className="animate-ping"
-                style={{ animationDelay: "1.5s" }}
-              />
-              <circle
-                cx="25%"
-                cy="70%"
-                r="1"
-                fill="rgb(59, 130, 246)"
-                fillOpacity="0.2"
-                className="animate-ping"
-                style={{ animationDelay: "2.5s" }}
-              />
-            </svg>
-
-            {/* Morphing abstract shapes */}
-            <div className="absolute top-1/4 right-1/4 w-32 h-32 opacity-5 dark:opacity-10">
-              <div
-                className="w-full h-full bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full animate-pulse transform rotate-12"
-                style={{ animationDuration: "4s" }}
-              ></div>
-            </div>
-            <div className="absolute bottom-1/3 left-1/5 w-24 h-24 opacity-5 dark:opacity-10">
-              <div
-                className="w-full h-full bg-gradient-to-tr from-cyan-500 to-blue-500 transform rotate-45 animate-spin"
-                style={{ animationDuration: "15s" }}
-              ></div>
-            </div>
-
-            {/* Hexagonal pattern */}
-            <div className="absolute top-1/2 left-1/3 transform -translate-x-1/2 -translate-y-1/2">
-              <div className="relative">
-                <div
-                  className="w-16 h-16 border border-blue-200/10 dark:border-blue-700/20 transform rotate-30 animate-spin"
-                  style={{
-                    clipPath:
-                      "polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)",
-                    animationDuration: "25s",
-                  }}
-                ></div>
-                <div
-                  className="absolute inset-2 w-12 h-12 border border-cyan-200/15 dark:border-cyan-700/25 transform -rotate-30 animate-spin"
-                  style={{
-                    clipPath:
-                      "polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)",
-                    animationDuration: "20s",
-                  }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Floating triangular elements */}
-            <div
-              className="absolute top-20 right-1/4 w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-blue-300/20 dark:border-b-blue-600/30 animate-bounce"
-              style={{ animationDelay: "3s", animationDuration: "4s" }}
-            ></div>
-            <div
-              className="absolute bottom-32 right-16 w-0 h-0 border-l-3 border-r-3 border-b-6 border-l-transparent border-r-transparent border-b-cyan-300/25 dark:border-b-cyan-600/35 animate-pulse"
-              style={{ animationDelay: "1s" }}
-            ></div>
-
-            {/* Network nodes animation */}
-            <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2">
-              <div className="relative">
-                <div className="w-2 h-2 bg-blue-400/30 rounded-full animate-ping"></div>
-                <div
-                  className="absolute top-8 left-6 w-1 h-1 bg-cyan-400/40 rounded-full animate-ping"
-                  style={{ animationDelay: "0.5s" }}
-                ></div>
-                <div
-                  className="absolute -top-4 -left-8 w-1.5 h-1.5 bg-blue-500/35 rounded-full animate-ping"
-                  style={{ animationDelay: "1s" }}
-                ></div>
-                <svg
-                  className="absolute -inset-8 w-16 h-16"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <line
-                    x1="8"
-                    y1="8"
-                    x2="14"
-                    y2="16"
-                    stroke="rgb(59, 130, 246)"
-                    strokeOpacity="0.1"
-                    strokeWidth="0.5"
-                    className="animate-pulse"
-                  />
-                  <line
-                    x1="8"
-                    y1="8"
-                    x2="0"
-                    y2="4"
-                    stroke="rgb(6, 182, 212)"
-                    strokeOpacity="0.1"
-                    strokeWidth="0.5"
-                    className="animate-pulse"
-                    style={{ animationDelay: "0.5s" }}
-                  />
-                </svg>
-              </div>
-            </div>
-
-            {/* Enhanced gradient orbs with movement */}
-            <div
-              className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl animate-pulse transform translate-x-4 translate-y-4"
-              style={{ animation: "float 6s ease-in-out infinite" }}
-            ></div>
-            <div
-              className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-cyan-400/10 to-blue-400/10 rounded-full blur-3xl animate-pulse transform -translate-x-4 -translate-y-4"
-              style={{
-                animation: "float 8s ease-in-out infinite reverse",
-                animationDelay: "2s",
+            <motion.div
+              className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl"
+              animate={{
+                scale: [1, 1.2, 1],
+                rotate: [0, 90, 0],
               }}
-            ></div>
-            <div
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-blue-300/5 to-cyan-300/5 rounded-full blur-2xl animate-pulse"
-              style={{
-                animation: "float 10s ease-in-out infinite",
-                animationDelay: "1s",
+              transition={{
+                duration: 20,
+                repeat: Infinity,
+                ease: "linear",
               }}
-            ></div>
-
-            {/* Existing floating particles enhanced */}
-            <div className="absolute top-20 left-10 w-2 h-2 bg-blue-400/30 rounded-full animate-pulse"></div>
-            <div
-              className="absolute top-40 right-20 w-3 h-3 bg-cyan-400/20 rounded-full animate-bounce"
-              style={{ animationDelay: "1s" }}
-            ></div>
-            <div
-              className="absolute top-60 left-1/4 w-1 h-1 bg-blue-500/40 rounded-full animate-ping"
-              style={{ animationDelay: "2s" }}
-            ></div>
-            <div
-              className="absolute bottom-40 right-1/3 w-2 h-2 bg-cyan-300/30 rounded-full animate-pulse"
-              style={{ animationDelay: "3s" }}
-            ></div>
-            <div
-              className="absolute bottom-20 left-1/2 w-1 h-1 bg-blue-400/50 rounded-full animate-bounce"
-              style={{ animationDelay: "4s" }}
-            ></div>
+            />
+            <motion.div
+              className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"
+              animate={{
+                scale: [1.2, 1, 1.2],
+                rotate: [0, -90, 0],
+              }}
+              transition={{
+                duration: 15,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+            />
           </div>
 
-          <style jsx>{`
-            @keyframes float {
-              0%,
-              100% {
-                transform: translateY(0px) translateX(0px);
-              }
-              25% {
-                transform: translateY(-10px) translateX(5px);
-              }
-              50% {
-                transform: translateY(-5px) translateX(-5px);
-              }
-              75% {
-                transform: translateY(-15px) translateX(3px);
-              }
-            }
-          `}</style>
-
-          {/* Header - Glassmorphism */}
-          <header className="bg-transparent dark:bg-transparent backdrop-blur-2xl border-b-0 sticky top-0 z-50 shadow-none">
+          {/* Header with glassmorphism */}
+          <motion.header
+            className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border-b border-white/20 dark:border-gray-700/30 sticky top-0 z-50 shadow-lg"
+            initial={{ y: -100 }}
+            animate={{ y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
             <div className="container mx-auto px-6 flex h-16 items-center justify-between">
               <FocusMotionDiv className="flex items-center space-x-3 cursor-pointer rounded-lg outline-none">
                 <motion.div
-                  className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg"
+                  className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg"
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Package className="h-5 w-5 text-white" />
+                  <Package className="h-6 w-6 text-white" />
                 </motion.div>
                 <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
                   ChainVanguard
                 </span>
               </FocusMotionDiv>
+
+              {/* Search bar */}
+              <div className="hidden md:flex flex-1 max-w-md mx-8">
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    className="w-full pl-10 pr-4 py-2 rounded-lg bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+
               <nav className="flex items-center space-x-4">
                 <FocusMotionDiv className="rounded-lg outline-none">
                   <ThemeToggle />
                 </FocusMotionDiv>
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <div className="relative">
+                    <ShoppingCart className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+                    <span className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                      3
+                    </span>
+                  </div>
+                </motion.button>
                 <Link href="/login">
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <FocusMotionDiv className="outline-none rounded-lg">
-                      <Button
-                        variant="ghost"
-                        className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50 cursor-pointer transition-all duration-300 backdrop-blur-md"
-                      >
-                        Login
-                      </Button>
-                    </FocusMotionDiv>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button variant="ghost" className="hover:bg-white/50 dark:hover:bg-gray-800/50">
+                      Login
+                    </Button>
                   </motion.div>
                 </Link>
                 <Link href="/register">
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <FocusMotionDiv className="outline-none rounded-lg">
-                      <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
-                        Get Started
-                      </Button>
-                    </FocusMotionDiv>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg">
+                      Get Started
+                    </Button>
                   </motion.div>
                 </Link>
               </nav>
             </div>
-          </header>
+          </motion.header>
 
-          {/* Hero Section */}
-          <section className="py-24 text-center relative">
-            <div className="container mx-auto px-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-              >
-                <div className="mt-40" />
-                <FocusMotionDiv className="inline-block mb-6 outline-none rounded-full">
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-50/50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-300/50 dark:border-blue-700 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-                  >
-                    <Zap className="h-3 w-3 mr-1" />
-                    Powered by Hyperledger Fabric & IPFS
-                  </Badge>
-                </FocusMotionDiv>
-
-                <motion.h1
-                  className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent mb-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                >
-                  Blockchain Supply Chain{" "}
-                  <span className="text-blue-600 dark:text-blue-400">
-                    Management
-                  </span>
-                </motion.h1>
-
-                <motion.p
-                  className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed mb-10"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                >
-                  Transparent, secure, and efficient supply chain management
-                  powered by cutting-edge blockchain technology. Track products
-                  from origin to consumer with complete transparency and
-                  immutable records.
-                </motion.p>
-
+          {/* Hero Section with parallax */}
+          <section className="py-24 relative overflow-hidden">
+            <motion.div style={{ opacity, scale }} className="container mx-auto px-6">
+              <div className="grid lg:grid-cols-2 gap-12 items-center">
+                {/* Left content */}
                 <motion.div
-                  className="flex flex-col sm:flex-row justify-center gap-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8 }}
+                  className="space-y-8"
                 >
-                  <Link href="/register">
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <FocusMotionDiv className="outline-none rounded-lg">
-                        <Button
-                          size="lg"
-                          className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-8 font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer"
-                        >
-                          Start Your Journey
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0 mb-6">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Limited Time Offer - Up to 30% OFF
+                    </Badge>
+                  </motion.div>
+
+                  <motion.h1
+                    className="text-5xl md:text-7xl font-extrabold leading-tight"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <span className="bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                      Future of
+                    </span>
+                    <br />
+                    <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-purple-600 bg-clip-text text-transparent">
+                      E-Commerce
+                    </span>
+                  </motion.h1>
+
+                  <motion.p
+                    className="text-xl text-gray-600 dark:text-gray-400 leading-relaxed"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                  >
+                    Experience the next generation of supply chain management with blockchain-powered transparency, AI-driven insights, and military-grade security.
+                  </motion.p>
+
+                  <motion.div
+                    className="flex flex-col sm:flex-row gap-4"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.5 }}
+                  >
+                    <Link href="/register">
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button size="lg" className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white h-14 px-8 text-lg font-semibold shadow-2xl">
+                          Shop Now
                           <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
-                      </FocusMotionDiv>
+                      </motion.div>
+                    </Link>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold border-2 hover:bg-white/50 dark:hover:bg-gray-800/50">
+                        <Gift className="mr-2 h-5 w-5" />
+                        View Deals
+                      </Button>
                     </motion.div>
-                  </Link>
-                  <Link href="/login">
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <FocusMotionDiv className="outline-none rounded-lg">
-                        <Button
-                          variant="outline"
-                          size="lg"
-                          className="h-12 px-8 font-semibold border-gray-200 dark:border-gray-700 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all duration-300 cursor-pointer"
-                        >
-                          Sign In
-                        </Button>
-                      </FocusMotionDiv>
-                    </motion.div>
-                  </Link>
+                  </motion.div>
+
+                  {/* Trust badges */}
+                  <motion.div
+                    className="flex flex-wrap gap-6 pt-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.6 }}
+                  >
+                    {[
+                      { icon: Truck, text: "Free Shipping" },
+                      { icon: Shield, text: "Secure Payment" },
+                      { icon: Award, text: "Top Quality" },
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 flex items-center justify-center">
+                          <item.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
+                          {item.text}
+                        </span>
+                      </div>
+                    ))}
+                  </motion.div>
                 </motion.div>
-              </motion.div>
-            </div>
+
+                {/* Right content - Floating product showcase */}
+                <motion.div
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8 }}
+                  className="relative"
+                >
+                  <motion.div
+                    animate={{
+                      y: [0, -20, 0],
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    className="relative z-10"
+                  >
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-3xl blur-3xl opacity-30" />
+                      <Card className="relative border border-white/20 dark:border-gray-700/30 shadow-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl overflow-hidden">
+                        <div className="h-96 bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 flex items-center justify-center relative">
+                          <Package className="h-48 w-48 text-blue-500/50 dark:text-blue-400/50" />
+                          <div className="absolute top-4 right-4">
+                            <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0">
+                              <Flame className="h-3 w-3 mr-1" />
+                              HOT DEAL
+                            </Badge>
+                          </div>
+                        </div>
+                        <CardContent className="p-6">
+                          <h3 className="text-2xl font-bold mb-2">Featured Product</h3>
+                          <p className="text-gray-600 dark:text-gray-400 mb-4">
+                            Premium blockchain tracking system with real-time analytics
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-sm text-gray-500 line-through">$599</span>
+                              <span className="text-3xl font-bold text-blue-600 ml-2">$399</span>
+                            </div>
+                            <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white">
+                              <ShoppingCart className="h-4 w-4 mr-2" />
+                              Add to Cart
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </motion.div>
+
+                  {/* Floating elements */}
+                  <motion.div
+                    animate={{
+                      y: [0, -30, 0],
+                      x: [0, 20, 0],
+                    }}
+                    transition={{
+                      duration: 5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    className="absolute -top-10 -right-10 h-32 w-32 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-2xl"
+                  />
+                  <motion.div
+                    animate={{
+                      y: [0, 30, 0],
+                      x: [0, -20, 0],
+                    }}
+                    transition={{
+                      duration: 6,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    className="absolute -bottom-10 -left-10 h-40 w-40 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-2xl"
+                  />
+                </motion.div>
+              </div>
+            </motion.div>
           </section>
 
-          {/* Features Section - Glassmorphism Cards */}
-          <section className="py-24 relative">
+          {/* Categories Section */}
+          <section className="py-16 relative">
             <div className="container mx-auto px-6">
               <motion.div
-                className="text-center mb-16"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
+                className="text-center mb-12"
               >
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                  Powerful Features
+                <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                  Shop by Category
                 </h2>
-                <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                  Everything you need for modern, secure supply chain management
+                <p className="text-lg text-gray-600 dark:text-gray-400">
+                  Explore our wide range of products
                 </p>
               </motion.div>
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[
-                  {
-                    icon: Shield,
-                    title: "Military-Grade Security",
-                    desc: "End-to-end encryption with immutable blockchain records. Zero-trust architecture ensures complete data integrity and protection against tampering.",
-                    color:
-                      "bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 text-green-600 dark:text-green-400",
-                    metrics: "99.99% Security Rating",
-                    badge: "SOC 2 Type II",
-                  },
-                  {
-                    icon: Zap,
-                    title: "Real-Time Intelligence",
-                    desc: "AI-powered analytics with instant tracking across global supply chains. Machine learning algorithms predict and prevent disruptions before they occur.",
-                    color:
-                      "bg-gradient-to-br from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 text-yellow-600 dark:text-yellow-400",
-                    metrics: "<100ms Response Time",
-                    badge: "AI-Powered",
-                  },
-                  {
-                    icon: Database,
-                    title: "Distributed Architecture",
-                    desc: "IPFS-powered decentralized storage with automatic redundancy. Your data is distributed across multiple nodes for maximum availability and resilience.",
-                    color:
-                      "bg-gradient-to-br from-purple-100 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30 text-purple-600 dark:text-purple-400",
-                    metrics: "99.9% Uptime SLA",
-                    badge: "Decentralized",
-                  },
-                  {
-                    icon: Users,
-                    title: "Multi-Stakeholder Platform",
-                    desc: "Unified ecosystem supporting suppliers, manufacturers, distributors, retailers, and consumers with role-based access controls and custom workflows.",
-                    color:
-                      "bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 text-blue-600 dark:text-blue-400",
-                    metrics: "Unlimited Users",
-                    badge: "Enterprise Ready",
-                  },
-                  {
-                    icon: Cpu,
-                    title: "Smart Contract Automation",
-                    desc: "Hyperledger Fabric smart contracts automate compliance, payments, and quality assurance. Reduce manual processes by up to 90%.",
-                    color:
-                      "bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900/30 dark:to-red-900/30 text-orange-600 dark:text-orange-400",
-                    metrics: "90% Process Automation",
-                    badge: "Smart Contracts",
-                  },
-                  {
-                    icon: BarChart3,
-                    title: "Advanced Analytics Suite",
-                    desc: "Comprehensive dashboards with predictive analytics, compliance reporting, and performance optimization insights for data-driven decisions.",
-                    color:
-                      "bg-gradient-to-br from-pink-100 to-rose-100 dark:from-pink-900/30 dark:to-rose-900/30 text-pink-600 dark:text-pink-400",
-                    metrics: "Real-Time Insights",
-                    badge: "Business Intelligence",
-                  },
-                ].map((feature, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  >
-                    <FocusMotionDiv className="h-full outline-none rounded-xl">
-                      <motion.div whileHover={{ y: -5 }}>
-                        <Card className="h-full group border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] hover:shadow-[0_8px_32px_0_rgba(31,38,135,0.25)] transition-all duration-500 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl cursor-pointer relative overflow-hidden">
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                          <CardHeader className="pb-4 relative z-10">
-                            <div className="flex items-center justify-between mb-4">
-                              <motion.div
-                                className={`h-16 w-16 rounded-2xl ${feature.color} flex items-center justify-center shadow-lg`}
-                                whileHover={{ scale: 1.1, rotate: 5 }}
-                              >
-                                <feature.icon className="h-8 w-8" />
-                              </motion.div>
-                              <Badge
-                                variant="secondary"
-                                className="text-xs font-medium bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
-                              >
-                                {feature.badge}
-                              </Badge>
-                            </div>
-                            <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                              {feature.title}
-                            </CardTitle>
-                            <CardDescription className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm mb-4">
-                              {feature.desc}
-                            </CardDescription>
-                            <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                              <TrendingUp className="h-3 w-3" />
-                              {feature.metrics}
-                            </div>
-                          </CardHeader>
-                        </Card>
-                      </motion.div>
-                    </FocusMotionDiv>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Statistics Section - Glassmorphism Cards */}
-          <section className="py-24 relative">
-            <div className="container mx-auto px-6">
-              <div className="grid md:grid-cols-4 gap-8">
-                {[
-                  {
-                    number: "10M+",
-                    label: "Products Tracked",
-                    icon: Package,
-                    desc: "Across global supply chains",
-                  },
-                  {
-                    number: "500+",
-                    label: "Enterprise Clients",
-                    icon: Users,
-                    desc: "Fortune 500 companies",
-                  },
-                  {
-                    number: "99.99%",
-                    label: "System Uptime",
-                    icon: CheckCircle,
-                    desc: "Enterprise SLA guarantee",
-                  },
-                  {
-                    number: "24/7",
-                    label: "Expert Support",
-                    icon: Shield,
-                    desc: "Global support coverage",
-                  },
-                ].map((stat, idx) => (
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {categories.map((category, idx) => (
                   <motion.div
                     key={idx}
                     initial={{ opacity: 0, scale: 0.9 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: idx * 0.1 }}
+                    whileHover={{ y: -5 }}
                   >
-                    <FocusMotionDiv className="outline-none rounded-xl">
-                      <motion.div whileHover={{ y: -5 }}>
-                        <Card className="text-center border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl group cursor-pointer">
-                          <CardContent className="p-8">
-                            <motion.div
-                              className="h-16 w-16 bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
-                              whileHover={{ scale: 1.1, rotate: 5 }}
-                            >
-                              <stat.icon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                            </motion.div>
-                            <div className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent mb-2">
-                              {stat.number}
-                            </div>
-                            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                              {stat.label}
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              {stat.desc}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    </FocusMotionDiv>
+                    <Card className="group cursor-pointer border border-white/20 dark:border-gray-700/30 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl overflow-hidden">
+                      <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+                      <CardContent className="p-8 text-center relative z-10">
+                        <motion.div
+                          className={`h-20 w-20 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center mx-auto mb-4 shadow-lg`}
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                        >
+                          <category.icon className="h-10 w-10 text-white" />
+                        </motion.div>
+                        <h3 className="text-xl font-bold mb-2">{category.name}</h3>
+                        <p className="text-gray-600 dark:text-gray-400">{category.count} Products</p>
+                        <div className="mt-4 flex items-center justify-center text-blue-600 dark:text-blue-400 font-semibold">
+                          Explore <ChevronRight className="h-4 w-4 ml-1" />
+                        </div>
+                      </CardContent>
+                    </Card>
                   </motion.div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* User Roles Section - Glassmorphism Cards */}
-          <section className="py-24">
+          {/* Featured Products Section */}
+          <section className="py-20 relative">
             <div className="container mx-auto px-6">
               <motion.div
-                className="text-center mb-16"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
+                className="flex justify-between items-center mb-12"
               >
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                  Choose Your Role
+                <div>
+                  <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                    Featured Products
+                  </h2>
+                  <p className="text-lg text-gray-600 dark:text-gray-400">
+                    Our best-selling blockchain solutions
+                  </p>
+                </div>
+                <Button variant="outline" size="lg" className="hidden md:flex">
+                  View All
+                  <ArrowUpRight className="ml-2 h-5 w-5" />
+                </Button>
+              </motion.div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {featuredProducts.map((product, idx) => (
+                  <ProductCard key={idx} product={product} index={idx} />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Stats Section with animated counters */}
+          <section className="py-20 relative">
+            <div className="container mx-auto px-6">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-2xl bg-gradient-to-br from-blue-600 to-cyan-600 backdrop-blur-xl overflow-hidden relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/50 to-cyan-500/50" />
+                <CardContent className="p-12 relative z-10">
+                  <div className="grid md:grid-cols-4 gap-8 text-center text-white">
+                    {[
+                      { value: "10M+", label: "Products Sold", icon: Package },
+                      { value: "500K+", label: "Happy Customers", icon: Users },
+                      { value: "99.9%", label: "Satisfaction Rate", icon: Star },
+                      { value: "24/7", label: "Support", icon: MessageCircle },
+                    ].map((stat, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5, delay: idx * 0.1 }}
+                        className="space-y-3"
+                      >
+                        <stat.icon className="h-12 w-12 mx-auto text-white/90" />
+                        <AnimatedCounter value={stat.value} />
+                        <div className="text-lg font-semibold text-white/90">{stat.label}</div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* Testimonials Carousel */}
+          <section className="py-20 relative">
+            <div className="container mx-auto px-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-center mb-12"
+              >
+                <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                  What Our Customers Say
                 </h2>
-                <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                  Tailored interfaces for different stakeholders in the supply
-                  chain ecosystem
+                <p className="text-lg text-gray-600 dark:text-gray-400">
+                  Trusted by thousands of businesses worldwide
                 </p>
               </motion.div>
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  {
-                    title: "Supplier/Ministry",
-                    desc: "Manage inventory, buy from vendors, sell to vendors, view full product history and compliance",
-                    badge: "Read & Write",
-                    icon: Warehouse,
-                    color: "bg-blue-500",
-                    badgeColor:
-                      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-                  },
-                  {
-                    title: "Vendor",
-                    desc: "Add products, sell to customers, view transaction history and comprehensive analytics",
-                    badge: "Write Access",
-                    icon: Package,
-                    color: "bg-green-500",
-                    badgeColor:
-                      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                  },
-                  {
-                    title: "Customer",
-                    desc: "Browse products, add to cart, purchase items, track orders with real-time updates",
-                    badge: "Read Only",
-                    icon: Eye,
-                    color: "bg-purple-500",
-                    badgeColor:
-                      "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-                  },
-                  {
-                    title: "Blockchain Expert",
-                    desc: "View all transactions, manage consensus, security settings, and fault tolerance systems",
-                    badge: "Admin Access",
-                    icon: BarChart3,
-                    color: "bg-orange-500",
-                    badgeColor:
-                      "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-                  },
-                ].map((role, idx) => (
+              <div className="max-w-4xl mx-auto relative">
+                <AnimatePresence mode="wait">
                   <motion.div
-                    key={idx}
+                    key={currentSlide}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Card className="border border-white/20 dark:border-gray-700/30 shadow-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl">
+                      <CardContent className="p-12 text-center">
+                        <div className="flex justify-center mb-6">
+                          {[...Array(testimonials[currentSlide].rating)].map((_, i) => (
+                            <Star key={i} className="h-6 w-6 fill-yellow-400 text-yellow-400" />
+                          ))}
+                        </div>
+                        <p className="text-xl text-gray-700 dark:text-gray-300 mb-8 leading-relaxed">
+                          "{testimonials[currentSlide].content}"
+                        </p>
+                        <div className="flex items-center justify-center gap-4">
+                          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                            {(() => {
+                              const AvatarIcon = testimonials[currentSlide].avatar;
+                              return <AvatarIcon className="h-8 w-8 text-white" />;
+                            })()}
+                          </div>
+                          <div className="text-left">
+                            <div className="font-bold text-lg">{testimonials[currentSlide].name}</div>
+                            <div className="text-gray-600 dark:text-gray-400">
+                              {testimonials[currentSlide].role} at {testimonials[currentSlide].company}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Dots */}
+                <div className="flex justify-center gap-2 mt-8">
+                  {testimonials.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentSlide(idx)}
+                      className={`h-3 w-3 rounded-full transition-all duration-300 ${
+                        idx === currentSlide
+                          ? "bg-blue-600 w-8"
+                          : "bg-gray-300 dark:bg-gray-600"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Newsletter Section */}
+          <section className="py-20 relative">
+            <div className="container mx-auto px-6">
+              <Card className="border border-white/20 dark:border-gray-700/30 shadow-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-rose-600 backdrop-blur-xl overflow-hidden relative">
+                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+                <CardContent className="p-12 text-center relative z-10">
+                  <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: idx * 0.1 }}
+                    className="max-w-2xl mx-auto"
                   >
-                    <FocusMotionDiv className="h-full outline-none rounded-xl">
-                      <motion.div whileHover={{ y: -5 }}>
-                        <Card className="h-full group text-center border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] hover:shadow-[0_8px_32px_0_rgba(31,38,135,0.25)] transition-all duration-500 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl cursor-pointer">
-                          <CardHeader className="pb-4">
-                            <motion.div
-                              className={`h-16 w-16 ${role.color} rounded-xl flex items-center justify-center mx-auto mb-4`}
-                              whileHover={{ scale: 1.1, rotate: 5 }}
-                            >
-                              <role.icon className="h-8 w-8 text-white" />
-                            </motion.div>
-                            <CardTitle className="text-lg text-gray-900 dark:text-gray-100 mb-2">
-                              {role.title}
-                            </CardTitle>
-                            <CardDescription className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                              {role.desc}
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <Badge className={`${role.badgeColor} font-medium`}>
-                              {role.badge}
-                            </Badge>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    </FocusMotionDiv>
+                    <div className="h-20 w-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6">
+                      <Mail className="h-10 w-10 text-white" />
+                    </div>
+                    <h2 className="text-4xl font-bold text-white mb-4">
+                      Join Our Newsletter
+                    </h2>
+                    <p className="text-xl text-white/90 mb-8">
+                      Get exclusive deals, new product launches, and insider tips
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+                      <input
+                        type="email"
+                        placeholder="Enter your email"
+                        className="flex-1 px-6 py-3 rounded-lg bg-white/90 backdrop-blur-sm border-0 focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-900"
+                      />
+                      <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100">
+                        Subscribe
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-white/70 mt-4">
+                      🎁 Get 10% off your first order when you subscribe
+                    </p>
                   </motion.div>
-                ))}
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* Footer */}
+          <footer className="border-t border-white/20 dark:border-gray-700/30 py-12 bg-white/50 dark:bg-gray-950/50 backdrop-blur-xl">
+            <div className="container mx-auto px-6">
+              <div className="grid md:grid-cols-4 gap-8 mb-8">
+                {/* Company */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center">
+                      <Package className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-xl font-bold">ChainVanguard</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Revolutionizing e-commerce with blockchain technology
+                  </p>
+                  <div className="flex gap-3">
+                    {[Facebook, Twitter, Instagram, Linkedin].map((Icon, idx) => (
+                      <motion.button
+                        key={idx}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
+                      >
+                        <Icon className="h-5 w-5" />
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Shop */}
+                <div>
+                  <h3 className="font-bold mb-4">Shop</h3>
+                  <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">All Products</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Categories</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">New Arrivals</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Best Sellers</Link></li>
+                  </ul>
+                </div>
+
+                {/* Company */}
+                <div>
+                  <h3 className="font-bold mb-4">Company</h3>
+                  <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">About Us</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Careers</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Press</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Contact</Link></li>
+                  </ul>
+                </div>
+
+                {/* Support */}
+                <div>
+                  <h3 className="font-bold mb-4">Support</h3>
+                  <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Help Center</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Shipping Info</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Returns</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition-colors">Track Order</Link></li>
+                  </ul>
+                </div>
               </div>
-            </div>
-          </section>
 
-          {/* Call to Action Section - Glassmorphism Card */}
-          <section className="py-24 relative">
-            <div className="container mx-auto px-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <FocusMotionDiv className="outline-none rounded-xl">
-                  <Card className="border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.2)] bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 animate-pulse"></div>
-
-                    <CardContent className="p-16 text-center relative z-10">
-                      <motion.div
-                        className="h-20 w-20 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl"
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                      >
-                        <Star className="h-10 w-10 text-white" />
-                      </motion.div>
-                      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-                        <p className="text-balance">
-                          Ready to{" "}
-                          <Highlighter action="underline" color="#FF9800">
-                            Transform
-                          </Highlighter>{" "}
-                          Your{" "}
-                          <Highlighter action="highlight" color="#87CEFA">
-                            Supply Chain
-                          </Highlighter>{" "}
-                          ?
-                        </p>
-                      </h2>
-                      <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
-                        Join thousands of businesses already using ChainVanguard
-                        to create transparent, secure, and efficient supply
-                        chain operations.
-                      </p>
-                      <div className="flex flex-col sm:flex-row justify-center gap-4">
-                        <Link href="/register">
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <FocusMotionDiv className="outline-none rounded-lg">
-                              <Button
-                                size="lg"
-                                className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-8 font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer"
-                              >
-                                Get Started Now
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                              </Button>
-                            </FocusMotionDiv>
-                          </motion.div>
-                        </Link>
-                        <Link href="/login">
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <FocusMotionDiv className="outline-none rounded-lg">
-                              <Button
-                                variant="outline"
-                                size="lg"
-                                className="h-12 px-8 font-semibold border-white/30 dark:border-gray-700/30 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all duration-300 cursor-pointer backdrop-blur-sm"
-                              >
-                                View Demo
-                              </Button>
-                            </FocusMotionDiv>
-                          </motion.div>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </FocusMotionDiv>
-              </motion.div>
-            </div>
-          </section>
-
-          {/* Footer - Glassmorphism */}
-          <footer className="border-t border-white/20 dark:border-gray-700/30 py-16 bg-white/50 dark:bg-gray-950/50 backdrop-blur-xl">
-            <div className="container mx-auto px-6">
-              <motion.div
-                className="text-center space-y-6"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <FocusMotionDiv className="inline-flex items-center justify-center space-x-3 cursor-pointer outline-none rounded-lg p-2">
-                  <motion.div
-                    className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                  >
-                    <Package className="h-5 w-5 text-white" />
-                  </motion.div>
-                  <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    ChainVanguard
-                  </span>
-                </FocusMotionDiv>
-                <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                  Revolutionizing supply chain management through blockchain
-                  technology, ensuring transparency, security, and efficiency
-                  for all stakeholders.
-                </p>
-                <div className="flex justify-center space-x-6">
-                  {[
-                    { text: "Next.js", color: "blue" },
-                    { text: "TypeScript", color: "green" },
-                    { text: "Hyperledger Fabric", color: "purple" },
-                  ].map((tech, idx) => (
-                    <FocusMotionDiv
-                      key={idx}
-                      className="outline-none rounded-full"
-                    >
-                      <Badge
-                        className={`${
-                          tech.color === "blue"
-                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                            : tech.color === "green"
-                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                        } cursor-pointer`}
-                      >
-                        {tech.text}
-                      </Badge>
-                    </FocusMotionDiv>
+              <div className="border-t border-gray-200 dark:border-gray-800 pt-8 text-center">
+                <div className="flex flex-wrap justify-center gap-4 mb-4">
+                  {["Next.js", "TypeScript", "Hyperledger Fabric", "IPFS", "Web3"].map((tech, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {tech}
+                    </Badge>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-500">
-                  © {new Date().getFullYear()} ChainVanguard. All rights
-                  reserved.
+                <p className="text-gray-600 dark:text-gray-400">
+                  © {new Date().getFullYear()} ChainVanguard. All rights reserved.
                 </p>
-              </motion.div>
+              </div>
             </div>
           </footer>
         </div>
