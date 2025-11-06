@@ -39,10 +39,20 @@ import {
   Linkedin,
   MessageCircle,
   Search,
+  Cpu,
+  Globe,
+  Lock,
+  Database,
+  Clock,
+  CreditCard,
+  Smartphone,
+  Layers,
+  Box,
+  Play,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import PixelBlast from "@/components/PixelBlast";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence, useSpring } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useInView } from "framer-motion";
 
@@ -229,11 +239,124 @@ const AnimatedCounter = ({ value, suffix = "" }: { value: string; suffix?: strin
   );
 };
 
+// Animated Feature Card
+const FeatureCard = ({ feature, index }: any) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 30 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+    >
+      <Card className="group relative overflow-hidden border border-gray-200/60 dark:border-gray-700/40 hover:border-blue-500/50 dark:hover:border-blue-500/50 shadow-sm hover:shadow-lg transition-all duration-500 bg-white dark:bg-gray-900 h-full">
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-cyan-500/0 group-hover:from-blue-500/5 group-hover:to-cyan-500/5"
+          transition={{ duration: 0.3 }}
+        />
+        <CardContent className="p-6 relative z-10">
+          <motion.div
+            className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4 shadow-md"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+          >
+            <feature.icon className="h-6 w-6 text-white" />
+          </motion.div>
+          <h3 className="text-base font-semibold mb-2 text-gray-900 dark:text-gray-100">
+            {feature.title}
+          </h3>
+          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+            {feature.description}
+          </p>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
+
+// Animated Process Step
+const ProcessStep = ({ step, index }: any) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
+      transition={{ duration: 0.5, delay: index * 0.2 }}
+      className="relative"
+    >
+      <div className="flex flex-col items-center text-center">
+        <motion.div
+          className="relative"
+          whileHover={{ scale: 1.05 }}
+        >
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full blur-xl opacity-50"
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.5, 0.7, 0.5],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+          <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-xl">
+            <step.icon className="h-10 w-10 text-white" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-white dark:bg-gray-900 border-2 border-blue-500 flex items-center justify-center font-bold text-blue-600 text-xs">
+            {index + 1}
+          </div>
+        </motion.div>
+        <h3 className="text-base font-semibold mt-4 mb-2">{step.title}</h3>
+        <p className="text-xs text-gray-600 dark:text-gray-400 max-w-xs leading-relaxed">
+          {step.description}
+        </p>
+      </div>
+      {index < 2 && (
+        <motion.div
+          className="hidden lg:block absolute top-10 left-[60%] w-full h-0.5 bg-gradient-to-r from-blue-500 to-cyan-500"
+          initial={{ scaleX: 0 }}
+          animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
+          transition={{ duration: 0.8, delay: index * 0.2 + 0.5 }}
+          style={{ transformOrigin: "left" }}
+        />
+      )}
+    </motion.div>
+  );
+};
+
 export default function LandingPage() {
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [timeLeft, setTimeLeft] = useState({
+    hours: 23,
+    minutes: 59,
+    seconds: 45,
+  });
+
+  // Countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev.seconds > 0) {
+          return { ...prev, seconds: prev.seconds - 1 };
+        } else if (prev.minutes > 0) {
+          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        } else if (prev.hours > 0) {
+          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        }
+        return prev;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const featuredProducts = [
     {
@@ -302,6 +425,57 @@ export default function LandingPage() {
     { name: "Blockchain", icon: Package, count: "3,000+", color: "from-orange-500 to-red-500" },
   ];
 
+  const features = [
+    {
+      icon: Shield,
+      title: "Bank-Level Security",
+      description: "End-to-end encryption with military-grade security protocols to protect your data.",
+    },
+    {
+      icon: Zap,
+      title: "Lightning Fast",
+      description: "Blazing fast performance with real-time updates and instant synchronization.",
+    },
+    {
+      icon: Globe,
+      title: "Global Network",
+      description: "Connected to a worldwide network of verified suppliers and distributors.",
+    },
+    {
+      icon: Cpu,
+      title: "AI-Powered",
+      description: "Advanced machine learning algorithms for predictive analytics and automation.",
+    },
+    {
+      icon: Database,
+      title: "Blockchain Storage",
+      description: "Immutable records stored on distributed blockchain network for transparency.",
+    },
+    {
+      icon: CreditCard,
+      title: "Easy Payments",
+      description: "Accept all major payment methods with instant settlement and low fees.",
+    },
+  ];
+
+  const process = [
+    {
+      icon: Smartphone,
+      title: "Sign Up & Connect",
+      description: "Create your account and connect your wallet in under 2 minutes.",
+    },
+    {
+      icon: Box,
+      title: "Add Products",
+      description: "Upload your products with blockchain-verified authenticity certificates.",
+    },
+    {
+      icon: TrendingUp,
+      title: "Start Selling",
+      description: "Reach millions of customers and grow your business with confidence.",
+    },
+  ];
+
   const testimonials = [
     {
       name: "Sarah Johnson",
@@ -327,6 +501,10 @@ export default function LandingPage() {
       rating: 5,
       avatar: Users,
     },
+  ];
+
+  const brands = [
+    "TechCorp", "GlobalTrade", "SecureChain", "DataFlow", "SmartLogistics", "BlockVentures"
   ];
 
   // Auto-rotate testimonials
@@ -519,8 +697,8 @@ export default function LandingPage() {
                     </Link>
                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       <Button size="lg" variant="outline" className="h-11 px-6 text-sm font-semibold border hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <Gift className="mr-2 h-4 w-4" />
-                        View Deals
+                        <Play className="mr-2 h-4 w-4" />
+                        Watch Demo
                       </Button>
                     </motion.div>
                   </motion.div>
@@ -537,14 +715,18 @@ export default function LandingPage() {
                       { icon: Shield, text: "Secure Payment" },
                       { icon: Award, text: "Top Quality" },
                     ].map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
+                      <motion.div
+                        key={idx}
+                        className="flex items-center gap-2"
+                        whileHover={{ scale: 1.05 }}
+                      >
                         <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 flex items-center justify-center">
                           <item.icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                           {item.text}
                         </span>
-                      </div>
+                      </motion.div>
                     ))}
                   </motion.div>
                 </motion.div>
@@ -629,6 +811,77 @@ export default function LandingPage() {
             </motion.div>
           </section>
 
+          {/* Flash Sale Section with Countdown */}
+          <section className="py-12 relative">
+            <div className="container mx-auto px-6">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+              >
+                <Card className="border-0 shadow-xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+                  <CardContent className="p-8 relative z-10">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="flex-1 text-white">
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                        >
+                          <Badge className="bg-white/20 text-white border-0 mb-3 text-xs">
+                            <Flame className="h-3 w-3 mr-1" />
+                            Flash Sale
+                          </Badge>
+                          <h2 className="text-2xl md:text-3xl font-bold mb-2">
+                            Limited Time Deals!
+                          </h2>
+                          <p className="text-sm text-white/90">
+                            Don't miss out on our biggest sale of the season
+                          </p>
+                        </motion.div>
+                      </div>
+                      <div className="flex gap-3">
+                        {[
+                          { label: "Hours", value: timeLeft.hours },
+                          { label: "Minutes", value: timeLeft.minutes },
+                          { label: "Seconds", value: timeLeft.seconds },
+                        ].map((item, idx) => (
+                          <motion.div
+                            key={idx}
+                            className="flex flex-col items-center"
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: idx * 0.1 }}
+                          >
+                            <div className="h-16 w-16 rounded-lg bg-white dark:bg-gray-900 flex items-center justify-center shadow-lg">
+                              <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+                                {String(item.value).padStart(2, "0")}
+                              </span>
+                            </div>
+                            <span className="text-xs text-white/80 mt-1.5 font-medium">
+                              {item.label}
+                            </span>
+                          </motion.div>
+                        ))}
+                      </div>
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button size="lg" className="bg-white text-red-600 hover:bg-gray-100 font-semibold shadow-lg">
+                          Shop Now
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </motion.div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+          </section>
+
           {/* Categories Section */}
           <section className="py-12 relative">
             <div className="container mx-auto px-6">
@@ -709,6 +962,62 @@ export default function LandingPage() {
             </div>
           </section>
 
+          {/* Features Section */}
+          <section className="py-14 relative bg-gradient-to-br from-blue-50/50 to-cyan-50/50 dark:from-blue-950/20 dark:to-cyan-950/20">
+            <div className="container mx-auto px-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-center mb-10"
+              >
+                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 mb-4 text-xs">
+                  Why Choose Us
+                </Badge>
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                  Powerful Features for Your Business
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                  Everything you need to run a successful blockchain-powered e-commerce business
+                </p>
+              </motion.div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {features.map((feature, idx) => (
+                  <FeatureCard key={idx} feature={feature} index={idx} />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* How It Works Section */}
+          <section className="py-14 relative">
+            <div className="container mx-auto px-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-center mb-12"
+              >
+                <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 mb-4 text-xs">
+                  How It Works
+                </Badge>
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                  Get Started in 3 Easy Steps
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                  Join thousands of businesses already using ChainVanguard
+                </p>
+              </motion.div>
+
+              <div className="grid lg:grid-cols-3 gap-12 lg:gap-8 max-w-5xl mx-auto">
+                {process.map((step, idx) => (
+                  <ProcessStep key={idx} step={step} index={idx} />
+                ))}
+              </div>
+            </div>
+          </section>
+
           {/* Stats Section with animated counters */}
           <section className="py-12 relative">
             <div className="container mx-auto px-6">
@@ -729,6 +1038,7 @@ export default function LandingPage() {
                         viewport={{ once: true }}
                         transition={{ duration: 0.4, delay: idx * 0.08 }}
                         className="space-y-2"
+                        whileHover={{ scale: 1.05 }}
                       >
                         <stat.icon className="h-8 w-8 mx-auto text-white/90" />
                         <AnimatedCounter value={stat.value} />
@@ -738,6 +1048,37 @@ export default function LandingPage() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </section>
+
+          {/* Brand Trust Section */}
+          <section className="py-12 relative">
+            <div className="container mx-auto px-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-center mb-8"
+              >
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                  Trusted by leading companies worldwide
+                </p>
+                <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
+                  {brands.map((brand, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: idx * 0.1 }}
+                      whileHover={{ scale: 1.1 }}
+                      className="text-gray-400 dark:text-gray-600 font-semibold text-lg hover:text-gray-600 dark:hover:text-gray-400 transition-colors cursor-pointer"
+                    >
+                      {brand}
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
             </div>
           </section>
 
@@ -826,9 +1167,12 @@ export default function LandingPage() {
                     viewport={{ once: true }}
                     className="max-w-xl mx-auto"
                   >
-                    <div className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4">
+                    <motion.div
+                      className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4"
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                    >
                       <Mail className="h-7 w-7 text-white" />
-                    </div>
+                    </motion.div>
                     <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
                       Join Our Newsletter
                     </h2>
@@ -841,10 +1185,12 @@ export default function LandingPage() {
                         placeholder="Enter your email"
                         className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-white/90 backdrop-blur-sm border-0 focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-900"
                       />
-                      <Button size="sm" className="bg-white text-purple-600 hover:bg-gray-100 h-10 px-5 text-sm">
-                        Subscribe
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button size="sm" className="bg-white text-purple-600 hover:bg-gray-100 h-10 px-5 text-sm font-semibold">
+                          Subscribe
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </motion.div>
                     </div>
                     <p className="text-xs text-white/70 mt-3">
                       Get 10% off your first order when you subscribe
