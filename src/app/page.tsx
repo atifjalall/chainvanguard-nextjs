@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Highlighter } from "@/components/magicui/highlighter";
 import {
   Card,
   CardContent,
@@ -30,9 +29,7 @@ import {
   Award,
   Sparkles,
   Gift,
-  Tag,
   Flame,
-  Clock,
   ArrowUpRight,
   ChevronRight,
   Mail,
@@ -60,9 +57,9 @@ const FocusMotionDiv = ({ children, className = "", ...props }: any) => {
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
       animate={{
-        scale: isFocused ? 1.05 : 1,
+        scale: isFocused ? 1.02 : 1,
         boxShadow: isFocused
-          ? "0 0 0 4px rgba(59, 130, 246, 0.5)"
+          ? "0 0 0 3px rgba(59, 130, 246, 0.3)"
           : "0 0 0 0px rgba(59, 130, 246, 0)",
       }}
       transition={{
@@ -86,18 +83,18 @@ const ProductCard = ({ product, index }: any) => {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 50 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
+      initial={{ opacity: 0, y: 30 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+      transition={{ duration: 0.4, delay: index * 0.08 }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      whileHover={{ y: -10 }}
+      whileHover={{ y: -8 }}
       className="group"
     >
-      <Card className="relative overflow-hidden border border-white/20 dark:border-gray-700/30 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl h-full">
+      <Card className="relative overflow-hidden border border-gray-200/60 dark:border-gray-700/40 shadow-sm hover:shadow-xl transition-all duration-500 bg-white dark:bg-gray-900 h-full">
         {/* Animated gradient overlay */}
         <motion.div
-          className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-cyan-500/0 to-purple-500/0 group-hover:from-blue-500/10 group-hover:via-cyan-500/10 group-hover:to-purple-500/10"
+          className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-cyan-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:via-cyan-500/5 group-hover:to-purple-500/5"
           animate={{
             opacity: isHovered ? 1 : 0,
           }}
@@ -105,16 +102,16 @@ const ProductCard = ({ product, index }: any) => {
         />
 
         {/* Product badge */}
-        <div className="absolute top-4 left-4 z-10 flex gap-2">
+        <div className="absolute top-3 left-3 z-10 flex gap-1.5">
           {product.isNew && (
-            <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0">
-              <Sparkles className="h-3 w-3 mr-1" />
+            <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0 text-[10px] px-2 py-0.5">
+              <Sparkles className="h-2.5 w-2.5 mr-1" />
               New
             </Badge>
           )}
           {product.discount && (
-            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0">
-              <Flame className="h-3 w-3 mr-1" />
+            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 text-[10px] px-2 py-0.5">
+              <Flame className="h-2.5 w-2.5 mr-1" />
               {product.discount}% OFF
             </Badge>
           )}
@@ -122,73 +119,73 @@ const ProductCard = ({ product, index }: any) => {
 
         {/* Wishlist button */}
         <motion.button
-          className="absolute top-4 right-4 z-10 h-10 w-10 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center justify-center shadow-lg"
+          className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm border border-gray-200 dark:border-gray-700"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
-          <Heart className="h-5 w-5 text-gray-600 dark:text-gray-300 group-hover:text-red-500 transition-colors" />
+          <Heart className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-red-500 transition-colors" />
         </motion.button>
 
         {/* Product image with parallax effect */}
-        <div className="relative h-64 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700">
+        <div className="relative h-48 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700">
           <motion.div
             className="absolute inset-0 flex items-center justify-center"
             animate={{
-              scale: isHovered ? 1.1 : 1,
-              rotateZ: isHovered ? 3 : 0,
+              scale: isHovered ? 1.08 : 1,
+              rotateZ: isHovered ? 2 : 0,
             }}
             transition={{ duration: 0.4 }}
           >
-            <product.icon className="h-32 w-32 text-blue-500/30 dark:text-blue-400/30" />
+            <product.icon className="h-24 w-24 text-blue-500/20 dark:text-blue-400/20" />
           </motion.div>
 
           {/* Quick view button */}
           <motion.div
-            className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 20 }}
+            className="absolute bottom-3 left-1/2 transform -translate-x-1/2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 10 }}
             transition={{ duration: 0.2 }}
           >
-            <Button size="sm" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-xl">
-              <Eye className="h-4 w-4 mr-2" />
+            <Button size="sm" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-md text-xs h-8">
+              <Eye className="h-3 w-3 mr-1.5" />
               Quick View
             </Button>
           </motion.div>
         </div>
 
-        <CardHeader className="relative z-10 pb-3">
-          <div className="flex items-start justify-between mb-2">
-            <Badge variant="outline" className="text-xs">
+        <CardHeader className="relative z-10 pb-2 px-4 pt-4">
+          <div className="flex items-start justify-between mb-1.5">
+            <Badge variant="outline" className="text-[10px] px-2 py-0">
               {product.category}
             </Badge>
-            <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              <span className="text-sm font-semibold">{product.rating}</span>
+            <div className="flex items-center gap-0.5">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              <span className="text-xs font-semibold">{product.rating}</span>
             </div>
           </div>
-          <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+          <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-1">
             {product.name}
           </CardTitle>
-          <CardDescription className="text-sm line-clamp-2">
+          <CardDescription className="text-xs line-clamp-2 leading-relaxed">
             {product.description}
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="relative z-10 space-y-3">
+        <CardContent className="relative z-10 space-y-2.5 px-4 pb-4">
           <div className="flex items-center gap-2">
             {product.originalPrice && (
-              <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
+              <span className="text-xs text-gray-500 dark:text-gray-400 line-through">
                 ${product.originalPrice}
               </span>
             )}
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
               ${product.price}
             </span>
           </div>
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg">
-              <ShoppingCart className="h-4 w-4 mr-2" />
+            <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-sm text-xs h-9">
+              <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
               Add to Cart
             </Button>
           </motion.div>
@@ -226,7 +223,7 @@ const AnimatedCounter = ({ value, suffix = "" }: { value: string; suffix?: strin
   }, [isInView, target]);
 
   return (
-    <span ref={ref} className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+    <span ref={ref} className="text-2xl font-bold text-white">
       {isInView ? (target ? count.toLocaleString() : value) : "0"}{suffix}
     </span>
   );
@@ -235,7 +232,7 @@ const AnimatedCounter = ({ value, suffix = "" }: { value: string; suffix?: strin
 export default function LandingPage() {
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.8]);
+  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const featuredProducts = [
@@ -343,20 +340,20 @@ export default function LandingPage() {
   return (
     <div className="relative min-h-screen w-full">
       {/* Animated PixelBlast background */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
         <PixelBlast
           variant="circle"
           pixelSize={16}
           color="#2563eb"
           patternScale={2.2}
-          patternDensity={0.5}
+          patternDensity={0.3}
           pixelSizeJitter={0.08}
           enableRipples
           rippleSpeed={0.18}
           rippleThickness={0.09}
-          rippleIntensityScale={0.7}
+          rippleIntensityScale={0.5}
           liquid
-          liquidStrength={0.07}
+          liquidStrength={0.05}
           liquidRadius={1.1}
           liquidWobbleSpeed={2.2}
           speed={0.22}
@@ -367,15 +364,15 @@ export default function LandingPage() {
 
       {/* Main content */}
       <div className="relative z-10">
-        <div className="min-h-screen bg-gradient-to-br from-slate-50/90 via-blue-50/90 to-cyan-50/90 dark:from-slate-950/90 dark:via-blue-950/90 dark:to-cyan-950/90 relative overflow-hidden">
+        <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950/30 relative overflow-hidden">
 
-          {/* Animated background elements */}
+          {/* Animated background elements - more subtle */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <motion.div
-              className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl"
+              className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl"
               animate={{
-                scale: [1, 1.2, 1],
-                rotate: [0, 90, 0],
+                scale: [1, 1.1, 1],
+                rotate: [0, 45, 0],
               }}
               transition={{
                 duration: 20,
@@ -384,10 +381,10 @@ export default function LandingPage() {
               }}
             />
             <motion.div
-              className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"
+              className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"
               animate={{
-                scale: [1.2, 1, 1.2],
-                rotate: [0, -90, 0],
+                scale: [1.1, 1, 1.1],
+                rotate: [0, -45, 0],
               }}
               transition={{
                 duration: 15,
@@ -399,21 +396,21 @@ export default function LandingPage() {
 
           {/* Header with glassmorphism */}
           <motion.header
-            className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border-b border-white/20 dark:border-gray-700/30 sticky top-0 z-50 shadow-lg"
+            className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/30 sticky top-0 z-50 shadow-sm"
             initial={{ y: -100 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="container mx-auto px-6 flex h-16 items-center justify-between">
-              <FocusMotionDiv className="flex items-center space-x-3 cursor-pointer rounded-lg outline-none">
+            <div className="container mx-auto px-6 flex h-14 items-center justify-between">
+              <FocusMotionDiv className="flex items-center space-x-2.5 cursor-pointer rounded-lg outline-none">
                 <motion.div
-                  className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg"
+                  className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-md"
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Package className="h-6 w-6 text-white" />
+                  <Package className="h-4.5 w-4.5 text-white" />
                 </motion.div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                <span className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
                   ChainVanguard
                 </span>
               </FocusMotionDiv>
@@ -421,37 +418,37 @@ export default function LandingPage() {
               {/* Search bar */}
               <div className="hidden md:flex flex-1 max-w-md mx-8">
                 <div className="relative w-full">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search products..."
-                    className="w-full pl-10 pr-4 py-2 rounded-lg bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full pl-9 pr-4 py-2 text-sm rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                   />
                 </div>
               </div>
 
-              <nav className="flex items-center space-x-4">
+              <nav className="flex items-center space-x-3">
                 <FocusMotionDiv className="rounded-lg outline-none">
                   <ThemeToggle />
                 </FocusMotionDiv>
                 <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <div className="relative">
-                    <ShoppingCart className="h-6 w-6 text-gray-700 dark:text-gray-300" />
-                    <span className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    <ShoppingCart className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                    <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-semibold">
                       3
                     </span>
                   </div>
                 </motion.button>
                 <Link href="/login">
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button variant="ghost" className="hover:bg-white/50 dark:hover:bg-gray-800/50">
+                    <Button variant="ghost" className="hover:bg-gray-100 dark:hover:bg-gray-800/50 text-sm h-9 px-3">
                       Login
                     </Button>
                   </motion.div>
                 </Link>
                 <Link href="/register">
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg">
+                    <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-sm text-sm h-9 px-4">
                       Get Started
                     </Button>
                   </motion.div>
@@ -461,29 +458,29 @@ export default function LandingPage() {
           </motion.header>
 
           {/* Hero Section with parallax */}
-          <section className="py-24 relative overflow-hidden">
+          <section className="py-16 relative overflow-hidden">
             <motion.div style={{ opacity, scale }} className="container mx-auto px-6">
-              <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="grid lg:grid-cols-2 gap-10 items-center">
                 {/* Left content */}
                 <motion.div
                   initial={{ opacity: 0, x: -50 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.8 }}
-                  className="space-y-8"
+                  className="space-y-6"
                 >
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                   >
-                    <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0 mb-6">
+                    <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0 text-xs px-3 py-1">
                       <Sparkles className="h-3 w-3 mr-1" />
                       Limited Time Offer - Up to 30% OFF
                     </Badge>
                   </motion.div>
 
                   <motion.h1
-                    className="text-5xl md:text-7xl font-extrabold leading-tight"
+                    className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
@@ -498,7 +495,7 @@ export default function LandingPage() {
                   </motion.h1>
 
                   <motion.p
-                    className="text-xl text-gray-600 dark:text-gray-400 leading-relaxed"
+                    className="text-base text-gray-600 dark:text-gray-400 leading-relaxed max-w-xl"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
@@ -507,22 +504,22 @@ export default function LandingPage() {
                   </motion.p>
 
                   <motion.div
-                    className="flex flex-col sm:flex-row gap-4"
+                    className="flex flex-col sm:flex-row gap-3"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.5 }}
                   >
                     <Link href="/register">
                       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button size="lg" className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white h-14 px-8 text-lg font-semibold shadow-2xl">
+                        <Button size="lg" className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white h-11 px-6 text-sm font-semibold shadow-lg">
                           Shop Now
-                          <ArrowRight className="ml-2 h-5 w-5" />
+                          <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                       </motion.div>
                     </Link>
                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold border-2 hover:bg-white/50 dark:hover:bg-gray-800/50">
-                        <Gift className="mr-2 h-5 w-5" />
+                      <Button size="lg" variant="outline" className="h-11 px-6 text-sm font-semibold border hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <Gift className="mr-2 h-4 w-4" />
                         View Deals
                       </Button>
                     </motion.div>
@@ -530,7 +527,7 @@ export default function LandingPage() {
 
                   {/* Trust badges */}
                   <motion.div
-                    className="flex flex-wrap gap-6 pt-4"
+                    className="flex flex-wrap gap-4 pt-2"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.5, delay: 0.6 }}
@@ -541,10 +538,10 @@ export default function LandingPage() {
                       { icon: Award, text: "Top Quality" },
                     ].map((item, idx) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 flex items-center justify-center">
-                          <item.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 flex items-center justify-center">
+                          <item.icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                           {item.text}
                         </span>
                       </div>
@@ -561,7 +558,7 @@ export default function LandingPage() {
                 >
                   <motion.div
                     animate={{
-                      y: [0, -20, 0],
+                      y: [0, -15, 0],
                     }}
                     transition={{
                       duration: 4,
@@ -571,29 +568,29 @@ export default function LandingPage() {
                     className="relative z-10"
                   >
                     <div className="relative">
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-3xl blur-3xl opacity-30" />
-                      <Card className="relative border border-white/20 dark:border-gray-700/30 shadow-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl overflow-hidden">
-                        <div className="h-96 bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 flex items-center justify-center relative">
-                          <Package className="h-48 w-48 text-blue-500/50 dark:text-blue-400/50" />
-                          <div className="absolute top-4 right-4">
-                            <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0">
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-2xl opacity-20" />
+                      <Card className="relative border border-gray-200 dark:border-gray-700/40 shadow-xl bg-white dark:bg-gray-900 overflow-hidden">
+                        <div className="h-72 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 flex items-center justify-center relative">
+                          <Package className="h-32 w-32 text-blue-500/30 dark:text-blue-400/30" />
+                          <div className="absolute top-3 right-3">
+                            <Badge className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-0 text-xs px-2.5 py-1">
                               <Flame className="h-3 w-3 mr-1" />
                               HOT DEAL
                             </Badge>
                           </div>
                         </div>
-                        <CardContent className="p-6">
-                          <h3 className="text-2xl font-bold mb-2">Featured Product</h3>
-                          <p className="text-gray-600 dark:text-gray-400 mb-4">
+                        <CardContent className="p-5">
+                          <h3 className="text-lg font-bold mb-1.5">Featured Product</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                             Premium blockchain tracking system with real-time analytics
                           </p>
                           <div className="flex items-center justify-between">
                             <div>
-                              <span className="text-sm text-gray-500 line-through">$599</span>
-                              <span className="text-3xl font-bold text-blue-600 ml-2">$399</span>
+                              <span className="text-xs text-gray-500 line-through">$599</span>
+                              <span className="text-2xl font-bold text-blue-600 ml-2">$399</span>
                             </div>
-                            <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white">
-                              <ShoppingCart className="h-4 w-4 mr-2" />
+                            <Button size="sm" className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white text-xs h-9">
+                              <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
                               Add to Cart
                             </Button>
                           </div>
@@ -602,30 +599,30 @@ export default function LandingPage() {
                     </div>
                   </motion.div>
 
-                  {/* Floating elements */}
+                  {/* Floating elements - more subtle */}
                   <motion.div
                     animate={{
-                      y: [0, -30, 0],
-                      x: [0, 20, 0],
+                      y: [0, -20, 0],
+                      x: [0, 15, 0],
                     }}
                     transition={{
                       duration: 5,
                       repeat: Infinity,
                       ease: "easeInOut",
                     }}
-                    className="absolute -top-10 -right-10 h-32 w-32 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-2xl"
+                    className="absolute -top-8 -right-8 h-24 w-24 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-xl"
                   />
                   <motion.div
                     animate={{
-                      y: [0, 30, 0],
-                      x: [0, -20, 0],
+                      y: [0, 20, 0],
+                      x: [0, -15, 0],
                     }}
                     transition={{
                       duration: 6,
                       repeat: Infinity,
                       ease: "easeInOut",
                     }}
-                    className="absolute -bottom-10 -left-10 h-40 w-40 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-2xl"
+                    className="absolute -bottom-8 -left-8 h-32 w-32 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-full blur-xl"
                   />
                 </motion.div>
               </div>
@@ -633,45 +630,45 @@ export default function LandingPage() {
           </section>
 
           {/* Categories Section */}
-          <section className="py-16 relative">
+          <section className="py-12 relative">
             <div className="container mx-auto px-6">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="text-center mb-12"
+                className="text-center mb-8"
               >
-                <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
                   Shop by Category
                 </h2>
-                <p className="text-lg text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Explore our wide range of products
                 </p>
               </motion.div>
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
                 {categories.map((category, idx) => (
                   <motion.div
                     key={idx}
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: idx * 0.1 }}
-                    whileHover={{ y: -5 }}
+                    transition={{ duration: 0.4, delay: idx * 0.08 }}
+                    whileHover={{ y: -4 }}
                   >
-                    <Card className="group cursor-pointer border border-white/20 dark:border-gray-700/30 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl overflow-hidden">
-                      <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
-                      <CardContent className="p-8 text-center relative z-10">
+                    <Card className="group cursor-pointer border border-gray-200/60 dark:border-gray-700/40 shadow-sm hover:shadow-lg transition-all duration-500 bg-white dark:bg-gray-900 overflow-hidden">
+                      <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+                      <CardContent className="p-6 text-center relative z-10">
                         <motion.div
-                          className={`h-20 w-20 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center mx-auto mb-4 shadow-lg`}
-                          whileHover={{ scale: 1.1, rotate: 5 }}
+                          className={`h-14 w-14 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mx-auto mb-3 shadow-md`}
+                          whileHover={{ scale: 1.08, rotate: 3 }}
                         >
-                          <category.icon className="h-10 w-10 text-white" />
+                          <category.icon className="h-7 w-7 text-white" />
                         </motion.div>
-                        <h3 className="text-xl font-bold mb-2">{category.name}</h3>
-                        <p className="text-gray-600 dark:text-gray-400">{category.count} Products</p>
-                        <div className="mt-4 flex items-center justify-center text-blue-600 dark:text-blue-400 font-semibold">
-                          Explore <ChevronRight className="h-4 w-4 ml-1" />
+                        <h3 className="text-base font-semibold mb-1">{category.name}</h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{category.count} Products</p>
+                        <div className="flex items-center justify-center text-blue-600 dark:text-blue-400 font-medium text-xs">
+                          Explore <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
                         </div>
                       </CardContent>
                     </Card>
@@ -682,29 +679,29 @@ export default function LandingPage() {
           </section>
 
           {/* Featured Products Section */}
-          <section className="py-20 relative">
+          <section className="py-14 relative">
             <div className="container mx-auto px-6">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="flex justify-between items-center mb-12"
+                className="flex justify-between items-center mb-8"
               >
                 <div>
-                  <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
                     Featured Products
                   </h2>
-                  <p className="text-lg text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     Our best-selling blockchain solutions
                   </p>
                 </div>
-                <Button variant="outline" size="lg" className="hidden md:flex">
+                <Button variant="outline" size="sm" className="hidden md:flex text-xs h-9">
                   View All
-                  <ArrowUpRight className="ml-2 h-5 w-5" />
+                  <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
                 </Button>
               </motion.div>
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {featuredProducts.map((product, idx) => (
                   <ProductCard key={idx} product={product} index={idx} />
                 ))}
@@ -713,16 +710,16 @@ export default function LandingPage() {
           </section>
 
           {/* Stats Section with animated counters */}
-          <section className="py-20 relative">
+          <section className="py-12 relative">
             <div className="container mx-auto px-6">
-              <Card className="border border-white/20 dark:border-gray-700/30 shadow-2xl bg-gradient-to-br from-blue-600 to-cyan-600 backdrop-blur-xl overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/50 to-cyan-500/50" />
-                <CardContent className="p-12 relative z-10">
-                  <div className="grid md:grid-cols-4 gap-8 text-center text-white">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-600 to-cyan-600 overflow-hidden relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-cyan-500/30" />
+                <CardContent className="p-8 relative z-10">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center text-white">
                     {[
                       { value: "10M+", label: "Products Sold", icon: Package },
                       { value: "500K+", label: "Happy Customers", icon: Users },
-                      { value: "99.9%", label: "Satisfaction Rate", icon: Star },
+                      { value: "99.9%", label: "Satisfaction", icon: Star },
                       { value: "24/7", label: "Support", icon: MessageCircle },
                     ].map((stat, idx) => (
                       <motion.div
@@ -730,12 +727,12 @@ export default function LandingPage() {
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        transition={{ duration: 0.5, delay: idx * 0.1 }}
-                        className="space-y-3"
+                        transition={{ duration: 0.4, delay: idx * 0.08 }}
+                        className="space-y-2"
                       >
-                        <stat.icon className="h-12 w-12 mx-auto text-white/90" />
+                        <stat.icon className="h-8 w-8 mx-auto text-white/90" />
                         <AnimatedCounter value={stat.value} />
-                        <div className="text-lg font-semibold text-white/90">{stat.label}</div>
+                        <div className="text-xs font-medium text-white/90">{stat.label}</div>
                       </motion.div>
                     ))}
                   </div>
@@ -745,51 +742,51 @@ export default function LandingPage() {
           </section>
 
           {/* Testimonials Carousel */}
-          <section className="py-20 relative">
+          <section className="py-14 relative">
             <div className="container mx-auto px-6">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="text-center mb-12"
+                className="text-center mb-8"
               >
-                <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
                   What Our Customers Say
                 </h2>
-                <p className="text-lg text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Trusted by thousands of businesses worldwide
                 </p>
               </motion.div>
 
-              <div className="max-w-4xl mx-auto relative">
+              <div className="max-w-3xl mx-auto relative">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentSlide}
-                    initial={{ opacity: 0, x: 50 }}
+                    initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -50 }}
-                    transition={{ duration: 0.5 }}
+                    exit={{ opacity: 0, x: -30 }}
+                    transition={{ duration: 0.4 }}
                   >
-                    <Card className="border border-white/20 dark:border-gray-700/30 shadow-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl">
-                      <CardContent className="p-12 text-center">
-                        <div className="flex justify-center mb-6">
+                    <Card className="border border-gray-200/60 dark:border-gray-700/40 shadow-lg bg-white dark:bg-gray-900">
+                      <CardContent className="p-8 text-center">
+                        <div className="flex justify-center mb-4">
                           {[...Array(testimonials[currentSlide].rating)].map((_, i) => (
-                            <Star key={i} className="h-6 w-6 fill-yellow-400 text-yellow-400" />
+                            <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                           ))}
                         </div>
-                        <p className="text-xl text-gray-700 dark:text-gray-300 mb-8 leading-relaxed">
+                        <p className="text-base text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
                           "{testimonials[currentSlide].content}"
                         </p>
-                        <div className="flex items-center justify-center gap-4">
-                          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                             {(() => {
                               const AvatarIcon = testimonials[currentSlide].avatar;
-                              return <AvatarIcon className="h-8 w-8 text-white" />;
+                              return <AvatarIcon className="h-6 w-6 text-white" />;
                             })()}
                           </div>
                           <div className="text-left">
-                            <div className="font-bold text-lg">{testimonials[currentSlide].name}</div>
-                            <div className="text-gray-600 dark:text-gray-400">
+                            <div className="font-semibold text-sm">{testimonials[currentSlide].name}</div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
                               {testimonials[currentSlide].role} at {testimonials[currentSlide].company}
                             </div>
                           </div>
@@ -800,14 +797,14 @@ export default function LandingPage() {
                 </AnimatePresence>
 
                 {/* Dots */}
-                <div className="flex justify-center gap-2 mt-8">
+                <div className="flex justify-center gap-2 mt-6">
                   {testimonials.map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => setCurrentSlide(idx)}
-                      className={`h-3 w-3 rounded-full transition-all duration-300 ${
+                      className={`h-2 w-2 rounded-full transition-all duration-300 ${
                         idx === currentSlide
-                          ? "bg-blue-600 w-8"
+                          ? "bg-blue-600 w-6"
                           : "bg-gray-300 dark:bg-gray-600"
                       }`}
                     />
@@ -818,39 +815,39 @@ export default function LandingPage() {
           </section>
 
           {/* Newsletter Section */}
-          <section className="py-20 relative">
+          <section className="py-12 relative">
             <div className="container mx-auto px-6">
-              <Card className="border border-white/20 dark:border-gray-700/30 shadow-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-rose-600 backdrop-blur-xl overflow-hidden relative">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-600 via-pink-600 to-rose-600 overflow-hidden relative">
                 <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-                <CardContent className="p-12 text-center relative z-10">
+                <CardContent className="p-8 text-center relative z-10">
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="max-w-2xl mx-auto"
+                    className="max-w-xl mx-auto"
                   >
-                    <div className="h-20 w-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6">
-                      <Mail className="h-10 w-10 text-white" />
+                    <div className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4">
+                      <Mail className="h-7 w-7 text-white" />
                     </div>
-                    <h2 className="text-4xl font-bold text-white mb-4">
+                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
                       Join Our Newsletter
                     </h2>
-                    <p className="text-xl text-white/90 mb-8">
+                    <p className="text-sm text-white/90 mb-6">
                       Get exclusive deals, new product launches, and insider tips
                     </p>
-                    <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+                    <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
                       <input
                         type="email"
                         placeholder="Enter your email"
-                        className="flex-1 px-6 py-3 rounded-lg bg-white/90 backdrop-blur-sm border-0 focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-900"
+                        className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-white/90 backdrop-blur-sm border-0 focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-900"
                       />
-                      <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100">
+                      <Button size="sm" className="bg-white text-purple-600 hover:bg-gray-100 h-10 px-5 text-sm">
                         Subscribe
-                        <ArrowRight className="ml-2 h-5 w-5" />
+                        <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </div>
-                    <p className="text-sm text-white/70 mt-4">
-                      🎁 Get 10% off your first order when you subscribe
+                    <p className="text-xs text-white/70 mt-3">
+                      Get 10% off your first order when you subscribe
                     </p>
                   </motion.div>
                 </CardContent>
@@ -859,29 +856,29 @@ export default function LandingPage() {
           </section>
 
           {/* Footer */}
-          <footer className="border-t border-white/20 dark:border-gray-700/30 py-12 bg-white/50 dark:bg-gray-950/50 backdrop-blur-xl">
+          <footer className="border-t border-gray-200/60 dark:border-gray-700/40 py-10 bg-white/50 dark:bg-gray-950/50 backdrop-blur-xl">
             <div className="container mx-auto px-6">
               <div className="grid md:grid-cols-4 gap-8 mb-8">
                 {/* Company */}
                 <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center">
-                      <Package className="h-6 w-6 text-white" />
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center">
+                      <Package className="h-4.5 w-4.5 text-white" />
                     </div>
-                    <span className="text-xl font-bold">ChainVanguard</span>
+                    <span className="text-base font-bold">ChainVanguard</span>
                   </div>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
                     Revolutionizing e-commerce with blockchain technology
                   </p>
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
                     {[Facebook, Twitter, Instagram, Linkedin].map((Icon, idx) => (
                       <motion.button
                         key={idx}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
+                        className="h-8 w-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
                       >
-                        <Icon className="h-5 w-5" />
+                        <Icon className="h-4 w-4" />
                       </motion.button>
                     ))}
                   </div>
@@ -889,8 +886,8 @@ export default function LandingPage() {
 
                 {/* Shop */}
                 <div>
-                  <h3 className="font-bold mb-4">Shop</h3>
-                  <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+                  <h3 className="font-semibold mb-3 text-sm">Shop</h3>
+                  <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
                     <li><Link href="#" className="hover:text-blue-600 transition-colors">All Products</Link></li>
                     <li><Link href="#" className="hover:text-blue-600 transition-colors">Categories</Link></li>
                     <li><Link href="#" className="hover:text-blue-600 transition-colors">New Arrivals</Link></li>
@@ -900,8 +897,8 @@ export default function LandingPage() {
 
                 {/* Company */}
                 <div>
-                  <h3 className="font-bold mb-4">Company</h3>
-                  <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+                  <h3 className="font-semibold mb-3 text-sm">Company</h3>
+                  <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
                     <li><Link href="#" className="hover:text-blue-600 transition-colors">About Us</Link></li>
                     <li><Link href="#" className="hover:text-blue-600 transition-colors">Careers</Link></li>
                     <li><Link href="#" className="hover:text-blue-600 transition-colors">Press</Link></li>
@@ -911,8 +908,8 @@ export default function LandingPage() {
 
                 {/* Support */}
                 <div>
-                  <h3 className="font-bold mb-4">Support</h3>
-                  <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+                  <h3 className="font-semibold mb-3 text-sm">Support</h3>
+                  <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
                     <li><Link href="#" className="hover:text-blue-600 transition-colors">Help Center</Link></li>
                     <li><Link href="#" className="hover:text-blue-600 transition-colors">Shipping Info</Link></li>
                     <li><Link href="#" className="hover:text-blue-600 transition-colors">Returns</Link></li>
@@ -921,15 +918,15 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="border-t border-gray-200 dark:border-gray-800 pt-8 text-center">
-                <div className="flex flex-wrap justify-center gap-4 mb-4">
+              <div className="border-t border-gray-200 dark:border-gray-800 pt-6 text-center">
+                <div className="flex flex-wrap justify-center gap-2 mb-3">
                   {["Next.js", "TypeScript", "Hyperledger Fabric", "IPFS", "Web3"].map((tech, idx) => (
-                    <Badge key={idx} variant="outline" className="text-xs">
+                    <Badge key={idx} variant="outline" className="text-[10px] px-2 py-0.5">
                       {tech}
                     </Badge>
                   ))}
                 </div>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   © {new Date().getFullYear()} ChainVanguard. All rights reserved.
                 </p>
               </div>
