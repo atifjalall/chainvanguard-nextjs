@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/_ui/skeleton";
+import { Card, CardContent } from "@/components/_ui/card";
 import { Loader2 } from "lucide-react";
 
 interface AuthRouteGuardProps {

@@ -6,24 +6,24 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/_ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/_ui/card";
+import { Input } from "@/components/_ui/input";
+import { Label } from "@/components/_ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@/components/_ui/select";
+import { Alert, AlertDescription } from "@/components/_ui/alert";
 import { toast } from "sonner";
 import {
   Package,
@@ -43,7 +43,7 @@ import {
   Search,
   HelpCircle,
   Edit3,
-  Check
+  Check,
 } from "lucide-react";
 import { WalletData } from "@/types/web3";
 import { motion, AnimatePresence, easeOut, easeInOut } from "framer-motion";
@@ -858,7 +858,7 @@ export default function ForgotPasswordPage() {
             <Card className="relative overflow-hidden border-0 shadow-2xl bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
 
-              <CardHeader className="relative z-10 text-center pb-6">
+              <CardHeader className="relative z-10 text-center pb-4">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentStep}
@@ -867,13 +867,13 @@ export default function ForgotPasswordPage() {
                     animate={isVisible ? "visible" : "hidden"}
                     exit="exit"
                   >
-                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 text-white mb-4 shadow-lg">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 text-white mb-3 shadow-lg">
                       {getStepIcon()}
                     </div>
-                    <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                    <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
                       {getStepTitle()}
                     </CardTitle>
-                    <CardDescription className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                    <CardDescription className="text-xs text-gray-600 dark:text-gray-400 max-w-md mx-auto">
                       {getStepDescription()}
                     </CardDescription>
                   </motion.div>
@@ -969,37 +969,37 @@ export default function ForgotPasswordPage() {
 
                     {/* Known Wallet Flow - Step 1: Select Wallet */}
                     {recoveryMode === "known-wallet" && currentStep === 1 && (
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
-                          <Shield className="h-4 w-4 text-blue-600" />
-                          <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+                          <Shield className="h-3.5 w-3.5 text-blue-600" />
+                          <AlertDescription className="text-xs text-blue-800 dark:text-blue-200">
                             Have your 12-word recovery phrase ready before
                             continuing
                           </AlertDescription>
                         </Alert>
 
                         {/* Wallet Input Mode Toggle */}
-                        <div className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-1.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
                           <button
                             onClick={() => setWalletInputMode("select")}
-                            className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                            className={`flex-1 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all ${
                               walletInputMode === "select"
                                 ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
                                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                             }`}
                           >
-                            <Wallet className="h-4 w-4 inline mr-1.5" />
+                            <Wallet className="h-3.5 w-3.5 inline mr-1.5" />
                             Select Wallet
                           </button>
                           <button
                             onClick={() => setWalletInputMode("manual")}
-                            className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                            className={`flex-1 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all ${
                               walletInputMode === "manual"
                                 ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
                                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                             }`}
                           >
-                            <Edit3 className="h-4 w-4 inline mr-1.5" />
+                            <Edit3 className="h-3.5 w-3.5 inline mr-1.5" />
                             Enter Manually
                           </button>
                         </div>
@@ -1012,13 +1012,13 @@ export default function ForgotPasswordPage() {
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -10 }}
                               transition={{ duration: 0.3 }}
-                              className="space-y-2"
+                              className="space-y-1.5"
                             >
                               <Label
                                 htmlFor="wallet-select"
-                                className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                                className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                               >
-                                <Wallet className="h-4 w-4" />
+                                <Wallet className="h-3.5 w-3.5" />
                                 Select Your Wallet
                               </Label>
                               <Select
@@ -1030,7 +1030,7 @@ export default function ForgotPasswordPage() {
                               >
                                 <SelectTrigger
                                   size="sm"
-                                  className="!h-10 w-full border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-colors cursor-pointer bg-white/50 dark:bg-gray-800/50"
+                                  className="!h-9 w-full border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-colors cursor-pointer bg-white/50 dark:bg-gray-800/50 text-xs"
                                 >
                                   <SelectValue placeholder="Choose your wallet" />
                                 </SelectTrigger>
@@ -1039,17 +1039,17 @@ export default function ForgotPasswordPage() {
                                     <SelectItem
                                       key={wallet.id}
                                       value={wallet.id}
-                                      className="cursor-pointer py-3"
+                                      className="cursor-pointer py-2.5 px-2.5"
                                     >
-                                      <div className="flex items-center gap-3">
-                                        <div className="p-1.5 bg-blue-100 dark:bg-blue-900 rounded">
-                                          <Wallet className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="p-1 bg-blue-100 dark:bg-blue-900 rounded">
+                                          <Wallet className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                                         </div>
                                         <div>
-                                          <div className="text-sm font-medium">
+                                          <div className="text-xs font-medium">
                                             {wallet.name}
                                           </div>
-                                          <div className="text-xs text-gray-500">
+                                          <div className="text-xs text-gray-500 font-mono">
                                             {formatAddress(wallet.address)}
                                           </div>
                                         </div>
@@ -1058,7 +1058,7 @@ export default function ForgotPasswordPage() {
                                   ))}
                                   {availableWallets.length === 0 && (
                                     <SelectItem value="no-wallet" disabled>
-                                      <span className="text-sm">
+                                      <span className="text-xs">
                                         No wallets found
                                       </span>
                                     </SelectItem>
@@ -1073,13 +1073,13 @@ export default function ForgotPasswordPage() {
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -10 }}
                               transition={{ duration: 0.3 }}
-                              className="space-y-2"
+                              className="space-y-1.5"
                             >
                               <Label
                                 htmlFor="manual-address"
-                                className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                                className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                               >
-                                <Edit3 className="h-4 w-4" />
+                                <Edit3 className="h-3.5 w-3.5" />
                                 Enter Wallet Address
                               </Label>
                               <Input
@@ -1091,7 +1091,7 @@ export default function ForgotPasswordPage() {
                                   setManualWalletAddress(e.target.value);
                                   if (walletError) setWalletError("");
                                 }}
-                                className="!h-10 border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50 font-mono text-sm placeholder:text-sm"
+                                className="!h-9 border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50 font-mono text-xs placeholder:text-xs"
                               />
                             </motion.div>
                           )}
@@ -1118,14 +1118,14 @@ export default function ForgotPasswordPage() {
                               transition={{ duration: 0.4 }}
                               className="overflow-hidden"
                             >
-                              <div className="p-4 bg-cyan-50/50 dark:bg-cyan-950/20 rounded-xl border border-cyan-200 dark:border-cyan-800">
-                                <div className="flex items-start gap-3">
-                                  <BadgeCheck className="h-4 w-4 text-cyan-600 flex-shrink-0 mt-0.5" />
+                              <div className="p-3 bg-cyan-50/50 dark:bg-cyan-950/20 rounded-xl border border-cyan-200 dark:border-cyan-800">
+                                <div className="flex items-start gap-2.5">
+                                  <BadgeCheck className="h-3.5 w-3.5 text-cyan-600 flex-shrink-0 mt-0.5" />
                                   <div>
-                                    <h4 className="text-sm font-semibold text-cyan-900 dark:text-cyan-100 mb-1.5">
+                                    <h4 className="text-xs font-semibold text-cyan-900 dark:text-cyan-100 mb-1">
                                       Next Step
                                     </h4>
-                                    <ul className="text-sm text-cyan-800 dark:text-cyan-200 space-y-1 leading-relaxed">
+                                    <ul className="text-xs text-cyan-800 dark:text-cyan-200 space-y-0.5 leading-relaxed">
                                       <li>
                                         • Enter your 12-word recovery phrase
                                       </li>
@@ -1634,14 +1634,14 @@ export default function ForgotPasswordPage() {
                 </AnimatePresence>
 
                 {/* Navigation Buttons */}
-                <div className="flex items-center justify-between pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                   {currentStep === 0 ? (
                     <Link href="/login">
                       <Button
                         variant="outline"
-                        className="flex items-center gap-2 cursor-pointer border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm h-11"
+                        className="flex items-center gap-1.5 cursor-pointer border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs h-9 px-3"
                       >
-                        <ArrowLeft className="h-4 w-4" />
+                        <ArrowLeft className="h-3.5 w-3.5" />
                         Back to Login
                       </Button>
                     </Link>
@@ -1651,9 +1651,9 @@ export default function ForgotPasswordPage() {
                       variant="outline"
                       onClick={prevStep}
                       disabled={isLoading || isRecoveringWallet}
-                      className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed h-9"
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="h-3.5 w-3.5" />
                       {currentStep === 1 ? "Change Method" : "Previous"}
                     </Button>
                   )}
@@ -1665,11 +1665,11 @@ export default function ForgotPasswordPage() {
                       type="button"
                       onClick={handleContinue}
                       disabled={isRecoveringWallet || isLoading}
-                      className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-9"
                     >
                       {isRecoveringWallet || isLoading ? (
                         <>
-                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                           {isRecoveringWallet
                             ? "Finding Wallet..."
                             : "Verifying..."}
@@ -1679,13 +1679,13 @@ export default function ForgotPasswordPage() {
                           {recoveryMode === "forgot-wallet" &&
                           currentStep === 1 ? (
                             <>
-                              <Search className="h-4 w-4" />
+                              <Search className="h-3.5 w-3.5" />
                               Find My Wallet
                             </>
                           ) : (
                             <>
                               Continue
-                              <ChevronRight className="h-4 w-4" />
+                              <ChevronRight className="h-3.5 w-3.5" />
                             </>
                           )}
                         </>
@@ -1696,16 +1696,16 @@ export default function ForgotPasswordPage() {
                       type="button"
                       onClick={handleResetPassword}
                       disabled={!isStepValid(totalSteps) || isLoading}
-                      className="flex items-center gap-2 px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-sm text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-600 hover:bg-green-700 text-xs text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-9"
                     >
                       {isLoading ? (
                         <>
-                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                           Resetting...
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 className="h-4 w-4" />
+                          <CheckCircle2 className="h-3.5 w-3.5" />
                           Reset Password
                         </>
                       )}
@@ -1720,9 +1720,9 @@ export default function ForgotPasswordPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="mt-6 text-center space-y-2"
+              className="mt-4 text-center space-y-1.5"
             >
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 Remember your password?{" "}
                 <Link
                   href="/login"
@@ -1731,7 +1731,7 @@ export default function ForgotPasswordPage() {
                   Sign In
                 </Link>
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 Don&apos;t have a wallet?{" "}
                 <Link
                   href="/register"

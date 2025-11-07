@@ -2,17 +2,22 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Input } from "@/components/_ui/input";
+import { Badge } from "@/components/_ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/_ui/select";
 import {
   Search,
   Calendar,
@@ -252,7 +257,8 @@ export default function OrderHistoryPage() {
     switch (status) {
       case "delivered":
         return {
-          color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+          color:
+            "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
           icon: CheckCircle,
           label: "Delivered",
         };
@@ -264,13 +270,15 @@ export default function OrderHistoryPage() {
         };
       case "returned":
         return {
-          color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+          color:
+            "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
           icon: RotateCcw,
           label: "Returned",
         };
       default:
         return {
-          color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+          color:
+            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
           icon: Package,
           label: "Unknown",
         };
@@ -367,9 +375,7 @@ export default function OrderHistoryPage() {
                 <span className="text-sm text-green-700 dark:text-green-400">
                   Delivered {formatDate(order.deliveryDate)}
                 </span>
-                {order.rating && (
-                  <div>{renderStarRating(order.rating)}</div>
-                )}
+                {order.rating && <div>{renderStarRating(order.rating)}</div>}
               </div>
             </div>
           )}
@@ -621,14 +627,18 @@ export default function OrderHistoryPage() {
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-500" />
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {filteredAndSortedOrders.length} of {mockOrderHistory.length} orders
+                  {filteredAndSortedOrders.length} of {mockOrderHistory.length}{" "}
+                  orders
                 </p>
               </div>
 
               {/* Active Filters */}
               <div className="flex gap-2">
                 {searchTerm && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                  >
                     <Search className="h-3 w-3 mr-1" />
                     {searchTerm}
                     <button
@@ -640,7 +650,10 @@ export default function OrderHistoryPage() {
                   </Badge>
                 )}
                 {statusFilter !== "All Status" && (
-                  <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                  >
                     <Filter className="h-3 w-3 mr-1" />
                     {statusFilter}
                     <button
@@ -679,7 +692,8 @@ export default function OrderHistoryPage() {
                 No orders found
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
-                Try adjusting your search terms or filters to find what you&apos;re looking for
+                Try adjusting your search terms or filters to find what
+                you&apos;re looking for
               </p>
               <Button
                 variant="outline"

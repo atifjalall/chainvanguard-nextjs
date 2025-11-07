@@ -4,7 +4,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/_ui/button";
 import {
   Home,
   Package,
@@ -115,22 +115,14 @@ export function DashboardSidebar() {
           { href: "/vendor/orders", label: "Orders", icon: ClipboardList },
           { href: "/vendor/customers", label: "Customers", icon: Users },
           { href: "/vendor/insights", label: "Insights", icon: TrendingUp },
-          { href: "/vendor/history", label: "Sales History", icon: History },
           { href: "/wallet", label: "Wallet", icon: Wallet },
         ];
 
-      // 3. Customer
+      // Customer - No sidebar (uses e-commerce header instead)
       case "customer":
-        return [
-          { href: "/customer", label: "Dashboard", icon: Home },
-          { href: "/customer/browse", label: "Browse Products", icon: Package },
-          { href: "/customer/cart", label: "My Cart", icon: ShoppingCart },
-          { href: "/customer/orders", label: "My Orders", icon: ClipboardList },
-          { href: "/customer/history", label: "Order History", icon: History },
-          { href: "/wallet", label: "Wallet", icon: Wallet },
-        ];
+        return [];
 
-      // 4. Blockchain Expert
+      // 3. Blockchain Expert
       case "expert":
         return [
           { href: "/blockchain-expert", label: "Dashboard", icon: Home },
@@ -173,6 +165,11 @@ export function DashboardSidebar() {
   };
 
   const navigationItems = getNavigationItems();
+
+  // Don't render sidebar for customers (they use e-commerce header)
+  if (user?.role === "customer" || navigationItems.length === 0) {
+    return null;
+  }
 
   // Mobile toggle button
   const MobileToggle = () => (

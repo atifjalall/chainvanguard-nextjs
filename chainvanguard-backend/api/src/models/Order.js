@@ -296,7 +296,7 @@ const orderSchema = new Schema(
     trackingUrl: { type: String, default: "" },
     courierName: {
       type: String,
-      enum: ["FedEx", "UPS", "USPS", "DHL", "Local", "Other"],
+      enum: ["FedEx", "UPS", "USPS", "DHL", "Local", "Other", "TCS", "Leopard", ""],
       default: "",
     },
 

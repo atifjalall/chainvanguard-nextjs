@@ -9,11 +9,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Badge } from "@/components/_ui/badge";
+import { Separator } from "@/components/_ui/separator";
+import { Progress } from "@/components/_ui/progress";
 import {
   Package,
   Truck,

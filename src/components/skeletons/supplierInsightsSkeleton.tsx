@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/_ui/skeleton";
 
 const skeletonClass = "bg-gray-300 dark:bg-gray-700";
 

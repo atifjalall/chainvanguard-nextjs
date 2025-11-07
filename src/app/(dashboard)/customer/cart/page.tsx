@@ -1,11 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Input } from "@/components/_ui/input";
+import { Badge } from "@/components/_ui/badge";
+import { Separator } from "@/components/_ui/separator";
 import Link from "next/link";
 import {
   ShoppingCart,
@@ -116,7 +121,10 @@ export default function ShoppingCartPage() {
           }`}
         >
           <Link href="/customer/browse">
-            <Button variant="ghost" className="text-gray-700 dark:text-gray-300">
+            <Button
+              variant="ghost"
+              className="text-gray-700 dark:text-gray-300"
+            >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Continue Shopping
             </Button>
@@ -138,7 +146,8 @@ export default function ShoppingCartPage() {
                 Your cart is empty
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
-                Add some products to your cart to get started with blockchain checkout
+                Add some products to your cart to get started with blockchain
+                checkout
               </p>
               <Link href="/customer/browse">
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3">
@@ -162,13 +171,16 @@ export default function ShoppingCartPage() {
       >
         <div className="flex items-center gap-6 mb-2">
           <Link href="/customer/browse">
-            <Button variant="ghost" className="text-gray-700 dark:text-gray-300">
+            <Button
+              variant="ghost"
+              className="text-gray-700 dark:text-gray-300"
+            >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Continue Shopping
             </Button>
           </Link>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
             <ShoppingCart className="h-5 w-5 text-white" />
@@ -225,7 +237,7 @@ export default function ShoppingCartPage() {
                             by {item.vendor}
                           </p>
                         </div>
-                        
+
                         <div className="text-right">
                           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                             ${item.price}
@@ -245,7 +257,9 @@ export default function ShoppingCartPage() {
                               variant="ghost"
                               size="sm"
                               className="h-10 w-10 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              onClick={() =>
+                                updateQuantity(item.id, item.quantity - 1)
+                              }
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
@@ -256,7 +270,9 @@ export default function ShoppingCartPage() {
                               variant="ghost"
                               size="sm"
                               className="h-10 w-10 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() =>
+                                updateQuantity(item.id, item.quantity + 1)
+                              }
                               disabled={item.quantity >= item.inStock}
                             >
                               <Plus className="h-4 w-4" />
@@ -310,7 +326,9 @@ export default function ShoppingCartPage() {
                 {/* Subtotal */}
                 <div className="flex justify-between text-base">
                   <span className="text-gray-600 dark:text-gray-400">
-                    Subtotal ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} items)
+                    Subtotal (
+                    {cartItems.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+                    items)
                   </span>
                   <span className="font-medium text-gray-900 dark:text-gray-100">
                     ${subtotal.toFixed(2)}
@@ -319,7 +337,9 @@ export default function ShoppingCartPage() {
 
                 {/* Shipping */}
                 <div className="flex justify-between text-base">
-                  <span className="text-gray-600 dark:text-gray-400">Shipping</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Shipping
+                  </span>
                   <span className="font-medium text-gray-900 dark:text-gray-100">
                     {shipping === 0 ? (
                       <span className="text-green-600">Free</span>
@@ -361,7 +381,9 @@ export default function ShoppingCartPage() {
 
                 {/* Total */}
                 <div className="flex justify-between text-xl font-bold">
-                  <span className="text-gray-900 dark:text-gray-100">Total</span>
+                  <span className="text-gray-900 dark:text-gray-100">
+                    Total
+                  </span>
                   <span className="text-gray-900 dark:text-gray-100">
                     ${total.toFixed(2)}
                   </span>

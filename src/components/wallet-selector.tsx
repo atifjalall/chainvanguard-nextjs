@@ -1,75 +1,93 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Wallet, Clock, Shield, ChevronRight, Trash2 } from 'lucide-react'
-import { useWallet } from '@/components/providers/wallet-provider'
-import { toast } from 'sonner'
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Badge } from "@/components/_ui/badge";
+import { Avatar, AvatarFallback } from "@/components/_ui/avatar";
+import { Wallet, Clock, Shield, ChevronRight, Trash2 } from "lucide-react";
+import { useWallet } from "@/components/providers/wallet-provider";
+import { toast } from "sonner";
 
 interface WalletData {
-  id: string
-  name: string
-  address: string
-  createdAt: string
-  encryptedPrivateKey: string
+  id: string;
+  name: string;
+  address: string;
+  createdAt: string;
+  encryptedPrivateKey: string;
 }
 
 interface WalletSelectorProps {
-  onWalletSelect: (wallet: WalletData) => void
-  selectedWalletId?: string
+  onWalletSelect: (wallet: WalletData) => void;
+  selectedWalletId?: string;
 }
 
-export default function WalletSelector({ onWalletSelect, selectedWalletId }: WalletSelectorProps) {
-  const { getAllWallets } = useWallet()
-  const [wallets] = useState<WalletData[]>(getAllWallets())
+export default function WalletSelector({
+  onWalletSelect,
+  selectedWalletId,
+}: WalletSelectorProps) {
+  const { getAllWallets } = useWallet();
+  const [wallets] = useState<WalletData[]>(getAllWallets());
 
   const formatAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`
-  }
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   const getWalletInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   const deleteWallet = (walletId: string, walletName: string) => {
-    if (confirm(`Are you sure you want to delete "${walletName}"? This action cannot be undone.`)) {
+    if (
+      confirm(
+        `Are you sure you want to delete "${walletName}"? This action cannot be undone.`
+      )
+    ) {
       try {
         // Remove from wallets list
-        const updatedWallets = wallets.filter(w => w.id !== walletId)
-        localStorage.setItem('chainvanguard_wallets', JSON.stringify(updatedWallets))
-        
+        const updatedWallets = wallets.filter((w) => w.id !== walletId);
+        localStorage.setItem(
+          "chainvanguard_wallets",
+          JSON.stringify(updatedWallets)
+        );
+
         // Remove wallet-specific data
-        localStorage.removeItem(`wallet_${walletId}_password`)
-        localStorage.removeItem(`wallet_${walletId}_recovery`)
-        localStorage.removeItem(`wallet_${walletId}_balance`)
-        localStorage.removeItem(`wallet_${walletId}_transactions`)
-        localStorage.removeItem(`profile_${wallets.find(w => w.id === walletId)?.address}`)
-        
+        localStorage.removeItem(`wallet_${walletId}_password`);
+        localStorage.removeItem(`wallet_${walletId}_recovery`);
+        localStorage.removeItem(`wallet_${walletId}_balance`);
+        localStorage.removeItem(`wallet_${walletId}_transactions`);
+        localStorage.removeItem(
+          `profile_${wallets.find((w) => w.id === walletId)?.address}`
+        );
+
         // Refresh component (in real app, use state management)
-        window.location.reload()
-        
-        toast.success(`Wallet "${walletName}" deleted successfully`)
+        window.location.reload();
+
+        toast.success(`Wallet "${walletName}" deleted successfully`);
       } catch (error) {
-        toast.error('Failed to delete wallet')
+        toast.error("Failed to delete wallet");
       }
     }
-  }
+  };
 
   if (wallets.length === 0) {
     return (
@@ -80,15 +98,16 @@ export default function WalletSelector({ onWalletSelect, selectedWalletId }: Wal
           </div>
           <h3 className="text-lg font-semibold mb-2">No Wallets Found</h3>
           <p className="text-muted-foreground text-center mb-6">
-            You havent created any wallets yet. Create your first wallet to get started with ChainVanguard.
+            You havent created any wallets yet. Create your first wallet to get
+            started with ChainVanguard.
           </p>
-          <Button onClick={() => window.location.href = '/register'}>
+          <Button onClick={() => (window.location.href = "/register")}>
             <Wallet className="mr-2 h-4 w-4" />
             Create Your First Wallet
           </Button>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -98,15 +117,15 @@ export default function WalletSelector({ onWalletSelect, selectedWalletId }: Wal
           Available Wallets ({wallets.length})
         </h3>
       </div>
-      
+
       <div className="space-y-2 max-h-64 overflow-y-auto">
         {wallets.map((wallet) => (
-          <Card 
+          <Card
             key={wallet.id}
             className={`cursor-pointer transition-all hover:shadow-md ${
-              selectedWalletId === wallet.id 
-                ? 'ring-2 ring-primary border-primary' 
-                : 'hover:border-muted-foreground/50'
+              selectedWalletId === wallet.id
+                ? "ring-2 ring-primary border-primary"
+                : "hover:border-muted-foreground/50"
             }`}
             onClick={() => onWalletSelect(wallet)}
           >
@@ -118,7 +137,7 @@ export default function WalletSelector({ onWalletSelect, selectedWalletId }: Wal
                       {getWalletInitials(wallet.name)}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium truncate">{wallet.name}</h4>
@@ -128,7 +147,7 @@ export default function WalletSelector({ onWalletSelect, selectedWalletId }: Wal
                         </Badge>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Wallet className="h-3 w-3" />
@@ -136,7 +155,7 @@ export default function WalletSelector({ onWalletSelect, selectedWalletId }: Wal
                           {formatAddress(wallet.address)}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         <span className="text-xs">
@@ -146,24 +165,24 @@ export default function WalletSelector({ onWalletSelect, selectedWalletId }: Wal
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                     onClick={(e) => {
-                      e.stopPropagation()
-                      deleteWallet(wallet.id, wallet.name)
+                      e.stopPropagation();
+                      deleteWallet(wallet.id, wallet.name);
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                  
+
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
-              
+
               {selectedWalletId === wallet.id && (
                 <div className="mt-3 pt-3 border-t">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -176,18 +195,18 @@ export default function WalletSelector({ onWalletSelect, selectedWalletId }: Wal
           </Card>
         ))}
       </div>
-      
+
       <div className="pt-2 border-t">
-        <Button 
-          variant="outline" 
-          className="w-full" 
+        <Button
+          variant="outline"
+          className="w-full"
           size="sm"
-          onClick={() => window.location.href = '/register'}
+          onClick={() => (window.location.href = "/register")}
         >
           <Wallet className="mr-2 h-4 w-4" />
           Create New Wallet
         </Button>
       </div>
     </div>
-  )
+  );
 }

@@ -9,9 +9,9 @@ import {
   CardContent,
   CardFooter,
   CardHeader,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "@/components/_ui/card";
+import { Badge } from "@/components/_ui/badge";
+import { Button } from "@/components/_ui/button";
 import {
   Heart,
   ShoppingCart,

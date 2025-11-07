@@ -24,7 +24,7 @@ router.get("/", authenticate, authorizeRoles("vendor"), async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Get unique customer IDs from orders
-    const customerIds = await Order.distinct("buyerId", {
+    const customerIds = await Order.distinct("customerId", {
       sellerId: req.userId,
     });
 
@@ -58,7 +58,9 @@ router.get("/", authenticate, authorizeRoles("vendor"), async (req, res) => {
     // Get customers
     const [customers, total] = await Promise.all([
       User.find(query)
-        .select("name email phone address city state country createdAt")
+        .select(
+          "name email phone address city state country createdAt loyaltyPoints"
+        )
         .skip(skip)
         .limit(parseInt(limit)),
       User.countDocuments(query),
@@ -70,21 +72,21 @@ router.get("/", authenticate, authorizeRoles("vendor"), async (req, res) => {
         const [orders, orderStats] = await Promise.all([
           Order.find({
             sellerId: req.userId,
-            buyerId: customer._id,
+            customerId: customer._id,
           }).sort({ createdAt: -1 }),
           Order.aggregate([
             {
               $match: {
                 sellerId: new mongoose.Types.ObjectId(req.userId),
-                buyerId: new mongoose.Types.ObjectId(customer._id),
+                customerId: new mongoose.Types.ObjectId(customer._id),
               },
             },
             {
               $group: {
                 _id: null,
                 totalOrders: { $sum: 1 },
-                totalSpent: { $sum: "$totalAmount" },
-                avgOrderValue: { $avg: "$totalAmount" },
+                totalSpent: { $sum: "$total" },
+                avgOrderValue: { $avg: "$total" },
               },
             },
           ]),
@@ -106,6 +108,7 @@ router.get("/", authenticate, authorizeRoles("vendor"), async (req, res) => {
           state: customer.state,
           country: customer.country,
           memberSince: customer.createdAt,
+          loyaltyPoints: customer.loyaltyPoints || 0,
           stats: {
             totalOrders: stats.totalOrders,
             totalSpent: stats.totalSpent,
@@ -121,6 +124,12 @@ router.get("/", authenticate, authorizeRoles("vendor"), async (req, res) => {
       customersWithStats.sort((a, b) => {
         const aValue = a.stats[sortBy] || 0;
         const bValue = b.stats[sortBy] || 0;
+        return sortOrder === "desc" ? bValue - aValue : aValue - bValue;
+      });
+    } else if (sortBy === "loyaltyPoints") {
+      customersWithStats.sort((a, b) => {
+        const aValue = a.loyaltyPoints || 0;
+        const bValue = b.loyaltyPoints || 0;
         return sortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
@@ -159,7 +168,7 @@ router.get(
       // Verify customer exists and has orders with this vendor
       const customerOrders = await Order.countDocuments({
         sellerId: req.userId,
-        buyerId: customerId,
+        customerId: customerId,
       });
 
       if (customerOrders === 0) {
@@ -171,7 +180,7 @@ router.get(
 
       // Get customer details
       const customer = await User.findById(customerId).select(
-        "name email phone address city state country postalCode createdAt"
+        "name email phone address city state country postalCode createdAt loyaltyPoints"
       );
 
       if (!customer) {
@@ -184,15 +193,12 @@ router.get(
       // Get all orders from this customer
       const orders = await Order.find({
         sellerId: req.userId,
-        buyerId: customerId,
+        customerId: customerId,
       }).sort({ createdAt: -1 });
 
       // Calculate statistics
       const totalOrders = orders.length;
-      const totalSpent = orders.reduce(
-        (sum, order) => sum + order.totalAmount,
-        0
-      );
+      const totalSpent = orders.reduce((sum, order) => sum + order.total, 0);
       const avgOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0;
 
       // Order status breakdown
@@ -205,7 +211,7 @@ router.get(
       const recentOrders = orders.slice(0, 10).map((order) => ({
         id: order._id,
         orderNumber: order.orderNumber,
-        amount: order.totalAmount,
+        amount: order.total,
         status: order.status,
         itemCount: order.items?.length || 0,
         date: order.createdAt,
@@ -226,6 +232,7 @@ router.get(
             postalCode: customer.postalCode,
           },
           memberSince: customer.createdAt,
+          loyaltyPoints: customer.loyaltyPoints || 0,
         },
         statistics: {
           totalOrders,
@@ -266,7 +273,7 @@ router.get(
       // Build query
       const query = {
         sellerId: req.userId,
-        buyerId: customerId,
+        customerId: customerId,
       };
 
       if (status) {
@@ -288,7 +295,7 @@ router.get(
         orders: orders.map((order) => ({
           id: order._id,
           orderNumber: order.orderNumber,
-          amount: order.totalAmount,
+          amount: order.total,
           status: order.status,
           itemCount: order.items?.length || 0,
           orderDate: order.createdAt,
@@ -325,7 +332,7 @@ router.get(
   async (req, res) => {
     try {
       // Get unique customer count
-      const customerIds = await Order.distinct("buyerId", {
+      const customerIds = await Order.distinct("customerId", {
         sellerId: req.userId,
       });
 
@@ -354,7 +361,7 @@ router.get(
         {
           $group: {
             _id: null,
-            totalRevenue: { $sum: "$totalAmount" },
+            totalRevenue: { $sum: "$total" },
           },
         },
       ]);
@@ -367,7 +374,7 @@ router.get(
       const monthAgo = new Date();
       monthAgo.setMonth(monthAgo.getMonth() - 1);
 
-      const newCustomersThisMonth = await Order.distinct("buyerId", {
+      const newCustomersThisMonth = await Order.distinct("customerId", {
         sellerId: req.userId,
         createdAt: { $gte: monthAgo },
       }).then((ids) => ids.length);
@@ -406,7 +413,7 @@ router.get(
       // Verify this is the vendor's customer
       const hasOrders = await Order.exists({
         sellerId: req.userId,
-        buyerId: customerId,
+        customerId: customerId,
       });
 
       if (!hasOrders) {

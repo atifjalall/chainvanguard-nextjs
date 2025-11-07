@@ -8,13 +8,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Badge } from "@/components/_ui/badge";
+import { Input } from "@/components/_ui/input";
+import { Label } from "@/components/_ui/label";
+import { Separator } from "@/components/_ui/separator";
+import { Avatar, AvatarFallback } from "@/components/_ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -23,14 +23,14 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "@/components/ui/dialog";
+} from "@/components/_ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/_ui/select";
 import {
   BarChart3,
   Wallet,

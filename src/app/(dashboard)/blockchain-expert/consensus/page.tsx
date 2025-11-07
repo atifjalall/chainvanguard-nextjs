@@ -1,19 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Badge } from "@/components/_ui/badge";
+import { Input } from "@/components/_ui/input";
+import { Label } from "@/components/_ui/label";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { 
+} from "@/components/_ui/select";
+import {
   Users,
   CheckCircle,
   Clock,
@@ -24,20 +30,20 @@ import {
   Play,
   Pause,
   RotateCcw,
-  TrendingUp
-} from 'lucide-react';
+  TrendingUp,
+} from "lucide-react";
 
 interface Node {
   id: string;
   name: string;
-  status: 'online' | 'offline' | 'syncing';
-  role: 'peer' | 'orderer';
+  status: "online" | "offline" | "syncing";
+  role: "peer" | "orderer";
   lastSeen: string;
   blockHeight: number;
 }
 
 interface ConsensusSettings {
-  algorithm: 'PBFT' | 'Raft' | 'PoW' | 'PoS';
+  algorithm: "PBFT" | "Raft" | "PoW" | "PoS";
   blockTime: number;
   batchSize: number;
   timeout: number;
@@ -47,94 +53,101 @@ interface ConsensusSettings {
 const ConsensusPage = () => {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [settings, setSettings] = useState<ConsensusSettings>({
-    algorithm: 'PBFT',
+    algorithm: "PBFT",
     blockTime: 5,
     batchSize: 100,
     timeout: 30,
-    minNodes: 4
+    minNodes: 4,
   });
-  const [consensusStatus, setConsensusStatus] = useState<'active' | 'paused' | 'syncing'>('active');
+  const [consensusStatus, setConsensusStatus] = useState<
+    "active" | "paused" | "syncing"
+  >("active");
   const [isLoading, setIsLoading] = useState(false);
 
   // Generate mock nodes
   useEffect(() => {
     const mockNodes: Node[] = [
       {
-        id: 'peer-0',
-        name: 'Peer Node 0',
-        status: 'online',
-        role: 'peer',
+        id: "peer-0",
+        name: "Peer Node 0",
+        status: "online",
+        role: "peer",
         lastSeen: new Date().toISOString(),
-        blockHeight: 15847
+        blockHeight: 15847,
       },
       {
-        id: 'peer-1', 
-        name: 'Peer Node 1',
-        status: 'online',
-        role: 'peer',
+        id: "peer-1",
+        name: "Peer Node 1",
+        status: "online",
+        role: "peer",
         lastSeen: new Date(Date.now() - 30000).toISOString(),
-        blockHeight: 15847
+        blockHeight: 15847,
       },
       {
-        id: 'orderer-0',
-        name: 'Orderer Node 0',
-        status: 'online',
-        role: 'orderer',
+        id: "orderer-0",
+        name: "Orderer Node 0",
+        status: "online",
+        role: "orderer",
         lastSeen: new Date(Date.now() - 10000).toISOString(),
-        blockHeight: 15847
+        blockHeight: 15847,
       },
       {
-        id: 'peer-2',
-        name: 'Peer Node 2',
-        status: 'syncing',
-        role: 'peer',
+        id: "peer-2",
+        name: "Peer Node 2",
+        status: "syncing",
+        role: "peer",
         lastSeen: new Date(Date.now() - 120000).toISOString(),
-        blockHeight: 15845
+        blockHeight: 15845,
       },
       {
-        id: 'orderer-1',
-        name: 'Orderer Node 1',
-        status: 'offline',
-        role: 'orderer',
+        id: "orderer-1",
+        name: "Orderer Node 1",
+        status: "offline",
+        role: "orderer",
         lastSeen: new Date(Date.now() - 300000).toISOString(),
-        blockHeight: 15840
-      }
+        blockHeight: 15840,
+      },
     ];
     setNodes(mockNodes);
   }, []);
 
   const getNodeCounts = () => {
-    const online = nodes.filter(n => n.status === 'online').length;
-    const offline = nodes.filter(n => n.status === 'offline').length;
-    const syncing = nodes.filter(n => n.status === 'syncing').length;
+    const online = nodes.filter((n) => n.status === "online").length;
+    const offline = nodes.filter((n) => n.status === "offline").length;
+    const syncing = nodes.filter((n) => n.status === "syncing").length;
     return { online, offline, syncing, total: nodes.length };
   };
 
-  const getStatusBadge = (status: Node['status']) => {
+  const getStatusBadge = (status: Node["status"]) => {
     const variants = {
-      online: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300',
-      offline: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300',
-      syncing: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300'
+      online:
+        "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300",
+      offline:
+        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300",
+      syncing:
+        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300",
     };
 
     const icons = {
       online: CheckCircle,
       offline: AlertCircle,
-      syncing: Clock
+      syncing: Clock,
     };
 
     const Icon = icons[status];
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[status]}`}>
+      <span
+        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[status]}`}
+      >
         <Icon className="w-3 h-3 mr-1" />
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
   };
 
-  const getRoleBadge = (role: Node['role']) => {
-    const variant = role === 'orderer' ? 'default' : 'secondary';
+  const getRoleBadge = (role: Node["role"]) => {
+    const variant = role === "orderer" ? "default" : "secondary";
     return <Badge variant={variant}>{role}</Badge>;
   };
 
@@ -145,7 +158,7 @@ const ConsensusPage = () => {
 
     if (hours > 0) return `${hours}h ago`;
     if (minutes > 0) return `${minutes}m ago`;
-    return 'Just now';
+    return "Just now";
   };
 
   const handleSettingsUpdate = () => {
@@ -156,19 +169,19 @@ const ConsensusPage = () => {
     }, 1500);
   };
 
-  const handleConsensusAction = (action: 'start' | 'pause' | 'restart') => {
+  const handleConsensusAction = (action: "start" | "pause" | "restart") => {
     setIsLoading(true);
     setTimeout(() => {
       switch (action) {
-        case 'start':
-          setConsensusStatus('active');
+        case "start":
+          setConsensusStatus("active");
           break;
-        case 'pause':
-          setConsensusStatus('paused');
+        case "pause":
+          setConsensusStatus("paused");
           break;
-        case 'restart':
-          setConsensusStatus('syncing');
-          setTimeout(() => setConsensusStatus('active'), 2000);
+        case "restart":
+          setConsensusStatus("syncing");
+          setTimeout(() => setConsensusStatus("active"), 2000);
           break;
       }
       setIsLoading(false);
@@ -189,11 +202,18 @@ const ConsensusPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className={`w-3 h-3 rounded-full ${
-            consensusStatus === 'active' ? 'bg-green-500' : 
-            consensusStatus === 'paused' ? 'bg-yellow-500' : 'bg-blue-500'
-          } animate-pulse`}></div>
-          <span className="text-sm font-medium capitalize">{consensusStatus}</span>
+          <div
+            className={`w-3 h-3 rounded-full ${
+              consensusStatus === "active"
+                ? "bg-green-500"
+                : consensusStatus === "paused"
+                  ? "bg-yellow-500"
+                  : "bg-blue-500"
+            } animate-pulse`}
+          ></div>
+          <span className="text-sm font-medium capitalize">
+            {consensusStatus}
+          </span>
         </div>
       </div>
 
@@ -203,7 +223,9 @@ const ConsensusPage = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Consensus Health</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Consensus Health
+                </p>
                 <p className="text-2xl font-bold">{consensusHealth}%</p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-600" />
@@ -215,8 +237,12 @@ const ConsensusPage = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Online Nodes</p>
-                <p className="text-2xl font-bold text-green-600">{counts.online}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Online Nodes
+                </p>
+                <p className="text-2xl font-bold text-green-600">
+                  {counts.online}
+                </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
@@ -227,7 +253,9 @@ const ConsensusPage = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Block Time</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Block Time
+                </p>
                 <p className="text-2xl font-bold">{settings.blockTime}s</p>
               </div>
               <Clock className="h-8 w-8 text-blue-600" />
@@ -239,7 +267,9 @@ const ConsensusPage = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Algorithm</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Algorithm
+                </p>
                 <p className="text-2xl font-bold">{settings.algorithm}</p>
               </div>
               <Shield className="h-8 w-8 text-purple-600" />
@@ -262,26 +292,26 @@ const ConsensusPage = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
-              <Button 
-                onClick={() => handleConsensusAction('start')}
-                disabled={consensusStatus === 'active' || isLoading}
+              <Button
+                onClick={() => handleConsensusAction("start")}
+                disabled={consensusStatus === "active" || isLoading}
                 className="flex-1"
               >
                 <Play className="w-4 h-4 mr-2" />
                 Start
               </Button>
-              <Button 
+              <Button
                 variant="outline"
-                onClick={() => handleConsensusAction('pause')}
-                disabled={consensusStatus === 'paused' || isLoading}
+                onClick={() => handleConsensusAction("pause")}
+                disabled={consensusStatus === "paused" || isLoading}
                 className="flex-1"
               >
                 <Pause className="w-4 h-4 mr-2" />
                 Pause
               </Button>
-              <Button 
+              <Button
                 variant="outline"
-                onClick={() => handleConsensusAction('restart')}
+                onClick={() => handleConsensusAction("restart")}
                 disabled={isLoading}
                 className="flex-1"
               >
@@ -294,11 +324,15 @@ const ConsensusPage = () => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
-                  <span className="font-medium capitalize">{consensusStatus}</span>
+                  <span className="font-medium capitalize">
+                    {consensusStatus}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Nodes:</span>
-                  <span className="font-medium">{counts.online}/{counts.total}</span>
+                  <span className="font-medium">
+                    {counts.online}/{counts.total}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Min Required:</span>
@@ -324,14 +358,19 @@ const ConsensusPage = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="algorithm">Consensus Algorithm</Label>
-              <Select value={settings.algorithm} onValueChange={(value: ConsensusSettings['algorithm']) => 
-                setSettings(prev => ({ ...prev, algorithm: value }))
-              }>
+              <Select
+                value={settings.algorithm}
+                onValueChange={(value: ConsensusSettings["algorithm"]) =>
+                  setSettings((prev) => ({ ...prev, algorithm: value }))
+                }
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PBFT">PBFT (Practical Byzantine Fault Tolerance)</SelectItem>
+                  <SelectItem value="PBFT">
+                    PBFT (Practical Byzantine Fault Tolerance)
+                  </SelectItem>
                   <SelectItem value="Raft">Raft</SelectItem>
                   <SelectItem value="PoW">Proof of Work</SelectItem>
                   <SelectItem value="PoS">Proof of Stake</SelectItem>
@@ -346,7 +385,12 @@ const ConsensusPage = () => {
                   id="blockTime"
                   type="number"
                   value={settings.blockTime}
-                  onChange={(e) => setSettings(prev => ({ ...prev, blockTime: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      blockTime: Number(e.target.value),
+                    }))
+                  }
                   min="1"
                   max="60"
                 />
@@ -358,7 +402,12 @@ const ConsensusPage = () => {
                   id="batchSize"
                   type="number"
                   value={settings.batchSize}
-                  onChange={(e) => setSettings(prev => ({ ...prev, batchSize: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      batchSize: Number(e.target.value),
+                    }))
+                  }
                   min="10"
                   max="1000"
                 />
@@ -372,7 +421,12 @@ const ConsensusPage = () => {
                   id="timeout"
                   type="number"
                   value={settings.timeout}
-                  onChange={(e) => setSettings(prev => ({ ...prev, timeout: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      timeout: Number(e.target.value),
+                    }))
+                  }
                   min="5"
                   max="120"
                 />
@@ -384,19 +438,24 @@ const ConsensusPage = () => {
                   id="minNodes"
                   type="number"
                   value={settings.minNodes}
-                  onChange={(e) => setSettings(prev => ({ ...prev, minNodes: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      minNodes: Number(e.target.value),
+                    }))
+                  }
                   min="3"
                   max="10"
                 />
               </div>
             </div>
 
-            <Button 
-              onClick={handleSettingsUpdate} 
+            <Button
+              onClick={handleSettingsUpdate}
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? 'Updating...' : 'Apply Changes'}
+              {isLoading ? "Updating..." : "Apply Changes"}
             </Button>
           </CardContent>
         </Card>
@@ -426,13 +485,17 @@ const ConsensusPage = () => {
                       <span className="font-medium">{node.name}</span>
                       {getRoleBadge(node.role)}
                     </div>
-                    <span className="text-sm text-muted-foreground">{node.id}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {node.id}
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className="text-sm font-medium">Block #{node.blockHeight}</div>
+                    <div className="text-sm font-medium">
+                      Block #{node.blockHeight}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       {formatTimeAgo(node.lastSeen)}
                     </div>
@@ -458,7 +521,9 @@ const ConsensusPage = () => {
             <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
               <CheckCircle className="w-8 h-8 text-green-600" />
               <div>
-                <p className="font-medium text-green-900 dark:text-green-100">Network Healthy</p>
+                <p className="font-medium text-green-900 dark:text-green-100">
+                  Network Healthy
+                </p>
                 <p className="text-sm text-green-700 dark:text-green-300">
                   {counts.online} of {counts.total} nodes online
                 </p>
@@ -468,7 +533,9 @@ const ConsensusPage = () => {
             <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
               <Shield className="w-8 h-8 text-blue-600" />
               <div>
-                <p className="font-medium text-blue-900 dark:text-blue-100">Byzantine Fault Tolerance</p>
+                <p className="font-medium text-blue-900 dark:text-blue-100">
+                  Byzantine Fault Tolerance
+                </p>
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   Can tolerate {Math.floor((counts.total - 1) / 3)} faulty nodes
                 </p>
@@ -478,7 +545,9 @@ const ConsensusPage = () => {
             <div className="flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
               <Clock className="w-8 h-8 text-purple-600" />
               <div>
-                <p className="font-medium text-purple-900 dark:text-purple-100">Block Production</p>
+                <p className="font-medium text-purple-900 dark:text-purple-100">
+                  Block Production
+                </p>
                 <p className="text-sm text-purple-700 dark:text-purple-300">
                   Avg {settings.blockTime}s per block
                 </p>

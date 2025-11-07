@@ -30,6 +30,7 @@ import supplierVendorRoutes from "./routes/supplier.vendor.routes.js";
 import vendorInventoryRoutes from "./routes/vendor.inventory.routes.js";
 import inventoryBrowseRoutes from "./routes/inventory.browse.routes.js";
 import checkoutRoutes from "./routes/checkout.routes.js";
+import vendorTransactionRoutes from "./routes/vendor.transaction.routes.js";
 
 dotenv.config();
 
@@ -164,9 +165,6 @@ app.use("/api/expert", expertRoutes);
 app.use("/api/blockchain", blockchainRoutes);
 app.use("/api/ministry", ministryRoutes);
 app.use("/api/wallet", walletRoutes);
-// IMPORTANT: More specific routes MUST come BEFORE general routes
-// inventoryBrowseRoutes has /browse, /search, etc.
-// inventoryRoutes has a catch-all GET / route that must come last
 app.use("/api/inventory", inventoryBrowseRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/notifications", notificationRoutes);
@@ -180,6 +178,8 @@ app.use("/api/returns", returnRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/vendor-customers", supplierVendorRoutes);
 app.use("/api/vendor/inventory", vendorInventoryRoutes);
+app.use("/api/vendor", vendorTransactionRoutes);
+
 
 // ========================================
 // API INFO ENDPOINT

@@ -2,9 +2,9 @@
 
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWallet } from "@/components/providers/wallet-provider";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/_ui/button";
+import { Avatar, AvatarFallback } from "@/components/_ui/avatar";
+import { Badge } from "@/components/_ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/_ui/dropdown-menu";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Package, LogOut, Settings, User, Wallet, X, Menu } from "lucide-react";
 import { Heart, Bell, ShoppingCart } from "lucide-react";

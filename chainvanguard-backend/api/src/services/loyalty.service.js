@@ -3,7 +3,58 @@ import Order from "../models/Order.js";
 
 class LoyaltyService {
   /**
-   * Award points to vendor after successful order
+   * Award points to customer after successful order delivery
+   * Called when order status = 'delivered'
+   * B2C: Customer gets points when buying from vendor
+   * Rule: 1 point per $1 spent, 1000 points = 10% discount
+   */
+  async awardPointsToCustomer(customerId, orderId) {
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      const customer = await User.findById(customerId);
+      if (!customer) {
+        throw new Error("Customer not found");
+      }
+
+      // Award 1 point per dollar spent (rounded down)
+      const pointsEarned = Math.floor(order.total);
+
+      customer.loyaltyPoints = (customer.loyaltyPoints || 0) + pointsEarned;
+      customer.totalSpent = (customer.totalSpent || 0) + order.total;
+
+      // Check if customer reached 1000 points for 10% discount
+      if (customer.loyaltyPoints >= 1000) {
+        customer.discountEligible = true;
+      }
+
+      await customer.save();
+
+      console.log(
+        `✅ Awarded ${pointsEarned} loyalty points to customer ${customer.name}`
+      );
+
+      return {
+        success: true,
+        pointsEarned,
+        totalPoints: customer.loyaltyPoints,
+        discountEligible: customer.discountEligible,
+        message:
+          customer.discountEligible && customer.loyaltyPoints >= 1000
+            ? "🎉 Congratulations! You're eligible for 10% discount on your next order!"
+            : `${1000 - customer.loyaltyPoints} more points until 10% discount!`,
+      };
+    } catch (error) {
+      console.error("❌ Award points to customer error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Award points to vendor after successful order (B2B)
    * Called when order status = 'delivered' or 'completed'
    */
   async awardPoints(vendorId, orderId) {
@@ -48,6 +99,118 @@ class LoyaltyService {
       };
     } catch (error) {
       console.error("❌ Award points error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate discount for customer based on loyalty points
+   * Customer gets 10% discount when they have 1000+ points
+   * Points are redeemed after discount is applied
+   */
+  async calculateCustomerDiscount(customerId, orderAmount) {
+    try {
+      const customer = await User.findById(customerId);
+      if (!customer) {
+        throw new Error("Customer not found");
+      }
+
+      // Check if customer is eligible for discount (1000+ points)
+      if (!customer.discountEligible || customer.loyaltyPoints < 1000) {
+        return {
+          discount: 0,
+          finalAmount: orderAmount,
+          discountPercentage: 0,
+          eligible: false,
+          currentPoints: customer.loyaltyPoints || 0,
+          pointsNeeded: Math.max(0, 1000 - (customer.loyaltyPoints || 0)),
+        };
+      }
+
+      const discountPercentage = 10; // 10% discount
+      const discount = orderAmount * (discountPercentage / 100);
+
+      return {
+        discount,
+        finalAmount: orderAmount - discount,
+        discountPercentage,
+        eligible: true,
+        currentPoints: customer.loyaltyPoints,
+        pointsToRedeem: 1000, // Will be deducted after order completion
+      };
+    } catch (error) {
+      console.error("❌ Calculate customer discount error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Redeem loyalty points after discount is applied
+   * Called after order with loyalty discount is completed
+   */
+  async redeemCustomerPoints(customerId, pointsToRedeem = 1000) {
+    try {
+      const customer = await User.findById(customerId);
+      if (!customer) {
+        throw new Error("Customer not found");
+      }
+
+      if (customer.loyaltyPoints < pointsToRedeem) {
+        throw new Error("Insufficient loyalty points");
+      }
+
+      customer.loyaltyPoints -= pointsToRedeem;
+
+      // Check if still eligible for discount
+      customer.discountEligible = customer.loyaltyPoints >= 1000;
+
+      await customer.save();
+
+      console.log(
+        `✅ Redeemed ${pointsToRedeem} points for customer ${customer.name}`
+      );
+
+      return {
+        success: true,
+        pointsRedeemed: pointsToRedeem,
+        remainingPoints: customer.loyaltyPoints,
+        stillEligible: customer.discountEligible,
+      };
+    } catch (error) {
+      console.error("❌ Redeem customer points error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get customer loyalty status
+   */
+  async getCustomerLoyaltyStatus(customerId) {
+    try {
+      const customer = await User.findById(customerId);
+      if (!customer) {
+        throw new Error("Customer not found");
+      }
+
+      const currentPoints = customer.loyaltyPoints || 0;
+      const pointsNeeded = Math.max(0, 1000 - currentPoints);
+      const discountEligible = currentPoints >= 1000;
+
+      return {
+        success: true,
+        loyaltyStatus: {
+          currentPoints,
+          pointsNeeded,
+          discountEligible,
+          discountPercentage: discountEligible ? 10 : 0,
+          totalSpent: customer.totalSpent || 0,
+          message: discountEligible
+            ? "🎉 You're eligible for 10% discount!"
+            : `Earn ${pointsNeeded} more points for 10% discount!`,
+        },
+      };
+    } catch (error) {
+      console.error("❌ Get customer loyalty status error:", error);
       throw error;
     }
   }
