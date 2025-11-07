@@ -49,10 +49,44 @@ class OrderService {
         discount: 0,
         finalAmount: pricing.total,
         discountPercentage: 0,
+        pointsRedeemed: 0,
       };
 
-      // Check if this is a vendor buying from supplier
-      if (customer.role === "vendor" && validatedItems.length > 0) {
+      // Check for B2C customer loyalty discount (Customer buying from Vendor)
+      if (customer.role === "customer") {
+        const seller =
+          validatedItems.length > 0
+            ? await User.findById(validatedItems[0].sellerId)
+            : null;
+
+        if (
+          seller &&
+          (seller.role === "vendor" || seller.role === "supplier")
+        ) {
+          try {
+            // Check if customer is eligible for loyalty discount
+            const loyaltyResult =
+              await loyaltyService.calculateCustomerDiscount(
+                customer._id,
+                pricing.total
+              );
+
+            if (loyaltyResult.eligible) {
+              loyaltyDiscount = loyaltyResult;
+              console.log(
+                `🎁 Customer loyalty discount applied: ${loyaltyDiscount.discountPercentage}% off ($${loyaltyDiscount.discount})`
+              );
+            }
+          } catch (error) {
+            console.error(
+              "Failed to calculate customer loyalty discount:",
+              error
+            );
+          }
+        }
+      }
+      // Check for B2B vendor loyalty discount (Vendor buying from Supplier)
+      else if (customer.role === "vendor" && validatedItems.length > 0) {
         const seller = await User.findById(validatedItems[0].sellerId);
         if (seller && seller.role === "supplier") {
           try {
@@ -207,6 +241,25 @@ class OrderService {
       );
 
       await session.commitTransaction();
+
+      // Redeem loyalty points if discount was applied (after transaction commits)
+      if (
+        loyaltyDiscount.pointsToRedeem &&
+        loyaltyDiscount.pointsToRedeem > 0
+      ) {
+        try {
+          await loyaltyService.redeemCustomerPoints(
+            customerId,
+            loyaltyDiscount.pointsToRedeem
+          );
+          console.log(
+            `✅ Redeemed ${loyaltyDiscount.pointsToRedeem} loyalty points from customer`
+          );
+        } catch (error) {
+          console.error("⚠️ Failed to redeem loyalty points:", error);
+          // Don't fail the order if redemption fails
+        }
+      }
 
       // 12. Record on blockchain (async - don't wait)
       this.recordOrderOnBlockchain(order, validatedItems, customer).catch(
@@ -929,20 +982,37 @@ class OrderService {
       // Award loyalty points when order is delivered
       if (newStatus === "delivered" || newStatus === "completed") {
         try {
-          // Award loyalty points ONLY to customers (not B2B vendor-supplier transactions)
+          // Award loyalty points to customers (B2C transactions)
           const buyer = await User.findById(order.customerId);
           const seller = await User.findById(order.sellerId);
 
-          // Only award loyalty points to customers buying from vendors/suppliers
-          // NOT for B2B transactions (vendor buying from supplier)
+          // Award points to customers buying from vendors
           if (
             buyer &&
             buyer.role === "customer" &&
             seller &&
             (seller.role === "vendor" || seller.role === "supplier")
           ) {
+            const pointsResult = await loyaltyService.awardPointsToCustomer(
+              buyer._id,
+              order._id
+            );
+            console.log(
+              `✅ Awarded ${pointsResult.pointsEarned} loyalty points to customer ${buyer.name}`
+            );
+            console.log(
+              `💎 Total Points: ${pointsResult.totalPoints} | ${pointsResult.message}`
+            );
+          }
+          // Award points for B2B transactions (vendor buying from supplier)
+          else if (
+            buyer &&
+            buyer.role === "vendor" &&
+            seller &&
+            seller.role === "supplier"
+          ) {
             await loyaltyService.awardPoints(buyer._id, order._id);
-            console.log(`✅ Awarded loyalty points to customer ${buyer.name}`);
+            console.log(`✅ Awarded loyalty points to vendor ${buyer.name}`);
           }
         } catch (error) {
           console.error("❌ Failed to award loyalty points:", error);

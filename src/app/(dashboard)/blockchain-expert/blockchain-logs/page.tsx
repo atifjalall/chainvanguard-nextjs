@@ -1,18 +1,24 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Input } from "@/components/_ui/input";
+import { Badge } from "@/components/_ui/badge";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { 
+} from "@/components/_ui/select";
+import {
   Search,
   Download,
   RefreshCw,
@@ -24,13 +30,13 @@ import {
   Clock,
   Database,
   Shield,
-  Settings
-} from 'lucide-react';
+  Settings,
+} from "lucide-react";
 
 interface LogEntry {
   id: string;
   timestamp: string;
-  level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+  level: "INFO" | "WARN" | "ERROR" | "DEBUG";
   component: string;
   message: string;
   details?: string;
@@ -39,9 +45,9 @@ interface LogEntry {
 const BlockchainLogsPage = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState('all');
-  const [selectedComponent, setSelectedComponent] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState("all");
+  const [selectedComponent, setSelectedComponent] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
 
   // Generate mock logs
@@ -50,54 +56,65 @@ const BlockchainLogsPage = () => {
   }, []);
 
   const generateMockLogs = () => {
-    const levels: LogEntry['level'][] = ['INFO', 'WARN', 'ERROR', 'DEBUG'];
-    const components = ['peer', 'orderer', 'chaincode', 'consensus', 'network', 'security'];
-    
+    const levels: LogEntry["level"][] = ["INFO", "WARN", "ERROR", "DEBUG"];
+    const components = [
+      "peer",
+      "orderer",
+      "chaincode",
+      "consensus",
+      "network",
+      "security",
+    ];
+
     const logMessages = {
       INFO: [
-        'New block committed to ledger',
-        'Transaction endorsed successfully',
-        'Peer connected to network',
-        'Channel joined successfully',
-        'Smart contract deployed',
-        'Node synchronized with network'
+        "New block committed to ledger",
+        "Transaction endorsed successfully",
+        "Peer connected to network",
+        "Channel joined successfully",
+        "Smart contract deployed",
+        "Node synchronized with network",
       ],
       WARN: [
-        'High transaction volume detected',
-        'Peer connection timeout',
-        'Channel capacity approaching limit',
-        'Endorsement policy mismatch',
-        'Network latency increased'
+        "High transaction volume detected",
+        "Peer connection timeout",
+        "Channel capacity approaching limit",
+        "Endorsement policy mismatch",
+        "Network latency increased",
       ],
       ERROR: [
-        'Failed to commit transaction',
-        'Peer disconnected from network',
-        'Chaincode invocation failed',
-        'Consensus timeout',
-        'Invalid transaction signature'
+        "Failed to commit transaction",
+        "Peer disconnected from network",
+        "Chaincode invocation failed",
+        "Consensus timeout",
+        "Invalid transaction signature",
       ],
       DEBUG: [
-        'Processing endorsement request',
-        'Validating transaction proposal',
-        'Checking access control policies',
-        'Updating world state',
-        'Broadcasting block to peers'
-      ]
+        "Processing endorsement request",
+        "Validating transaction proposal",
+        "Checking access control policies",
+        "Updating world state",
+        "Broadcasting block to peers",
+      ],
     };
 
     const mockLogs: LogEntry[] = Array.from({ length: 100 }, (_, index) => {
       const level = levels[Math.floor(Math.random() * levels.length)];
-      const component = components[Math.floor(Math.random() * components.length)];
+      const component =
+        components[Math.floor(Math.random() * components.length)];
       const messages = logMessages[level];
       const message = messages[Math.floor(Math.random() * messages.length)];
-      
+
       return {
-        id: `log_${(100 - index).toString().padStart(6, '0')}`,
+        id: `log_${(100 - index).toString().padStart(6, "0")}`,
         timestamp: new Date(Date.now() - index * 30000).toISOString(), // 30 seconds apart
         level,
         component,
         message,
-        details: Math.random() > 0.7 ? `Additional context for ${component} component` : undefined
+        details:
+          Math.random() > 0.7
+            ? `Additional context for ${component} component`
+            : undefined,
       };
     });
 
@@ -110,19 +127,20 @@ const BlockchainLogsPage = () => {
     let filtered = logs;
 
     if (searchTerm) {
-      filtered = filtered.filter(log =>
-        log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.component.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.details?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (log) =>
+          log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          log.component.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          log.details?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    if (selectedLevel !== 'all') {
-      filtered = filtered.filter(log => log.level === selectedLevel);
+    if (selectedLevel !== "all") {
+      filtered = filtered.filter((log) => log.level === selectedLevel);
     }
 
-    if (selectedComponent !== 'all') {
-      filtered = filtered.filter(log => log.component === selectedComponent);
+    if (selectedComponent !== "all") {
+      filtered = filtered.filter((log) => log.component === selectedComponent);
     }
 
     setFilteredLogs(filtered);
@@ -138,44 +156,50 @@ const BlockchainLogsPage = () => {
 
   const exportLogs = () => {
     const csv = [
-      ['Timestamp', 'Level', 'Component', 'Message', 'Details'],
-      ...filteredLogs.map(log => [
+      ["Timestamp", "Level", "Component", "Message", "Details"],
+      ...filteredLogs.map((log) => [
         log.timestamp,
         log.level,
         log.component,
         log.message,
-        log.details || ''
-      ])
-    ].map(row => row.join(',')).join('\n');
+        log.details || "",
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `blockchain_logs_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `blockchain_logs_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
-  const getLevelBadge = (level: LogEntry['level']) => {
+  const getLevelBadge = (level: LogEntry["level"]) => {
     const variants = {
-      INFO: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300',
-      WARN: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300',
-      ERROR: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300',
-      DEBUG: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-300'
+      INFO: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300",
+      WARN: "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300",
+      ERROR:
+        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300",
+      DEBUG:
+        "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-300",
     };
 
     const icons = {
       INFO: Info,
       WARN: AlertTriangle,
       ERROR: AlertCircle,
-      DEBUG: Settings
+      DEBUG: Settings,
     };
 
     const Icon = icons[level];
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[level]}`}>
+      <span
+        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[level]}`}
+      >
         <Icon className="w-3 h-3 mr-1" />
         {level}
       </span>
@@ -189,7 +213,7 @@ const BlockchainLogsPage = () => {
       chaincode: FileText,
       consensus: CheckCircle,
       network: Settings,
-      security: Shield
+      security: Shield,
     };
 
     const Icon = icons[component] || FileText;
@@ -203,10 +227,10 @@ const BlockchainLogsPage = () => {
   const getLogCounts = () => {
     return {
       total: filteredLogs.length,
-      info: filteredLogs.filter(log => log.level === 'INFO').length,
-      warn: filteredLogs.filter(log => log.level === 'WARN').length,
-      error: filteredLogs.filter(log => log.level === 'ERROR').length,
-      debug: filteredLogs.filter(log => log.level === 'DEBUG').length
+      info: filteredLogs.filter((log) => log.level === "INFO").length,
+      warn: filteredLogs.filter((log) => log.level === "WARN").length,
+      error: filteredLogs.filter((log) => log.level === "ERROR").length,
+      debug: filteredLogs.filter((log) => log.level === "DEBUG").length,
     };
   };
 
@@ -223,12 +247,14 @@ const BlockchainLogsPage = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button 
+          <Button
             variant="outline"
-            onClick={handleRefresh} 
+            onClick={handleRefresh}
             disabled={isLoading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button onClick={exportLogs}>
@@ -248,25 +274,33 @@ const BlockchainLogsPage = () => {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">{counts.info}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {counts.info}
+            </div>
             <p className="text-xs text-muted-foreground">Info</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-yellow-600">{counts.warn}</div>
+            <div className="text-2xl font-bold text-yellow-600">
+              {counts.warn}
+            </div>
             <p className="text-xs text-muted-foreground">Warnings</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-red-600">{counts.error}</div>
+            <div className="text-2xl font-bold text-red-600">
+              {counts.error}
+            </div>
             <p className="text-xs text-muted-foreground">Errors</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-gray-600">{counts.debug}</div>
+            <div className="text-2xl font-bold text-gray-600">
+              {counts.debug}
+            </div>
             <p className="text-xs text-muted-foreground">Debug</p>
           </CardContent>
         </Card>
@@ -304,7 +338,10 @@ const BlockchainLogsPage = () => {
               </SelectContent>
             </Select>
 
-            <Select value={selectedComponent} onValueChange={setSelectedComponent}>
+            <Select
+              value={selectedComponent}
+              onValueChange={setSelectedComponent}
+            >
               <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Component" />
               </SelectTrigger>
@@ -326,9 +363,7 @@ const BlockchainLogsPage = () => {
       <Card>
         <CardHeader>
           <CardTitle>Recent Logs ({filteredLogs.length})</CardTitle>
-          <CardDescription>
-            Real-time system logs and events
-          </CardDescription>
+          <CardDescription>Real-time system logs and events</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
@@ -344,13 +379,15 @@ const BlockchainLogsPage = () => {
                     <span>{log.component}</span>
                   </div>
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <p className="text-sm font-medium mb-1">{log.message}</p>
                       {log.details && (
-                        <p className="text-xs text-muted-foreground">{log.details}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {log.details}
+                        </p>
                       )}
                     </div>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -379,21 +416,27 @@ const BlockchainLogsPage = () => {
               <Database className="w-5 h-5 text-blue-600" />
               <div>
                 <p className="text-sm font-medium">Network Status</p>
-                <p className="text-xs text-muted-foreground">All nodes online</p>
+                <p className="text-xs text-muted-foreground">
+                  All nodes online
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <Shield className="w-5 h-5 text-green-600" />
               <div>
                 <p className="text-sm font-medium">Security</p>
-                <p className="text-xs text-muted-foreground">No threats detected</p>
+                <p className="text-xs text-muted-foreground">
+                  No threats detected
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <CheckCircle className="w-5 h-5 text-purple-600" />
               <div>
                 <p className="text-sm font-medium">Consensus</p>
-                <p className="text-xs text-muted-foreground">Operating normally</p>
+                <p className="text-xs text-muted-foreground">
+                  Operating normally
+                </p>
               </div>
             </div>
           </div>

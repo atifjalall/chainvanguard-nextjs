@@ -10,18 +10,18 @@ import {
   useWallet,
 } from "@/components/providers/wallet-provider";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/_ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@/components/_ui/card";
+import { Input } from "@/components/_ui/input";
+import { Label } from "@/components/_ui/label";
+import { Checkbox } from "@/components/_ui/checkbox";
+import { Alert, AlertDescription } from "@/components/_ui/alert";
 import { RolePreservation } from "@/utils/role-preservation";
 import {
   Select,
@@ -29,9 +29,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+} from "@/components/_ui/select";
+import { Progress } from "@/components/_ui/progress";
+import { Badge } from "@/components/_ui/badge";
 import { toast } from "sonner";
 import {
   Package,
@@ -64,7 +64,7 @@ import {
 } from "lucide-react";
 import { UserRole, WalletData } from "@/types/web3";
 import { AnimatePresence, motion } from "framer-motion";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/_ui/skeleton";
 import { authAPI, RegisterPayload } from "@/lib/api/auth.api";
 import { AuthRouteGuard } from "@/components/guards/auth-route-guard";
 
@@ -182,7 +182,7 @@ export default function RegisterPage() {
   // STATE INITIALIZATION WITH SAVED DATA
   // ============================================
   const [currentStep, setCurrentStep] = useState(savedData?.currentStep || 1);
-  const totalSteps = 6;
+  const totalSteps = 7; // UPDATED: Changed from 6 to 7
 
   // Animation states
   const [isVisible, setIsVisible] = useState(false);
@@ -259,6 +259,13 @@ export default function RegisterPage() {
   });
   const [passwordFocused, setPasswordFocused] = useState(false);
 
+  // ADD NEW STATE FOR EMAIL VERIFICATION (MISSING)
+  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
+  const [otpError, setOtpError] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
   // ============================================
   // PASSWORD VALIDATION
   // ============================================
@@ -269,6 +276,14 @@ export default function RegisterPage() {
       special: /[^A-Za-z0-9]/.test(password),
     });
   }, [password]);
+
+  // ADD RESEND TIMER EFFECT (MISSING)
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
 
   // ============================================
   // SHOW TOAST IF DATA WAS RESTORED
@@ -412,6 +427,123 @@ export default function RegisterPage() {
   const requiresBusinessInfo =
     selectedRole === "supplier" || selectedRole === "vendor";
 
+  // ADD FUNCTION TO SEND OTP
+  const sendOtpEmail = async () => {
+    try {
+      setIsLoading(true);
+      // TODO: Call your backend API to send OTP
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"}/auth/send-otp`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to send OTP");
+
+      setOtpSent(true);
+      setResendTimer(60);
+      toast.success("Verification code sent to your email!");
+    } catch (error) {
+      console.error("[OTP] Error sending OTP:", error);
+      toast.error("Failed to send verification code. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ADD FUNCTION TO VERIFY OTP
+  const verifyOtp = async () => {
+    const otpValue = otp.join("");
+    if (otpValue.length !== 6) {
+      setOtpError(true);
+      toast.error("Please enter all 6 digits");
+      return;
+    }
+
+    try {
+      setIsVerifyingOtp(true);
+      // TODO: Call your backend API to verify OTP
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"}/auth/verify-otp`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, otp: otpValue }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Invalid verification code");
+      }
+
+      toast.success("Email verified successfully!");
+      nextStep(); // Move to recovery phrase step
+    } catch (error: any) {
+      console.error("[OTP] Verification error:", error);
+      setOtpError(true);
+
+      // Shake animation and clear
+      setTimeout(() => {
+        setOtp(["", "", "", "", "", ""]);
+        setOtpError(false);
+        document.getElementById("otp-0")?.focus();
+      }, 500);
+
+      toast.error(error.message || "Invalid verification code");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  // ADD FUNCTION TO HANDLE OTP INPUT
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return; // Only allow digits
+
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1); // Only take last character
+    setOtp(newOtp);
+    setOtpError(false);
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      document.getElementById(`otp-${index + 1}`)?.focus();
+    }
+  };
+
+  // ADD FUNCTION TO HANDLE OTP PASTE
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
+
+    const newOtp = [...otp];
+    for (let i = 0; i < 6; i++) {
+      newOtp[i] = pastedData[i] || "";
+    }
+    setOtp(newOtp);
+    setOtpError(false);
+
+    // Focus last filled input or first empty
+    const lastFilledIndex = pastedData.length - 1;
+    if (lastFilledIndex >= 0 && lastFilledIndex < 6) {
+      document.getElementById(`otp-${lastFilledIndex}`)?.focus();
+    }
+  };
+
+  // ADD FUNCTION TO HANDLE OTP BACKSPACE
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      document.getElementById(`otp-${index - 1}`)?.focus();
+    }
+  };
+
   // ============================================
   // NEXT BUTTON HANDLER - LOGIN PAGE APPROACH
   // ============================================
@@ -554,7 +686,6 @@ export default function RegisterPage() {
             toast.error("Please enter your business address");
             hasErrors = true;
           } else if (businessAddress.trim().length < 10) {
-            // ADD MINIMUM LENGTH CHECK
             setBusinessAddressError(
               "Business address must be at least 10 characters"
             );
@@ -571,7 +702,6 @@ export default function RegisterPage() {
     }
 
     if (!hasErrors) {
-      // Optional: Show success toast for completing a step
       if (currentStep === 1) {
         toast.success("Step 1 completed!");
       } else if (currentStep === 2) {
@@ -580,6 +710,8 @@ export default function RegisterPage() {
         toast.success("Address information saved!");
       } else if (currentStep === 4) {
         toast.success("Role selection completed!");
+      } else if (currentStep === 5) {
+        toast.success("Review completed!");
       }
       nextStep();
     }
@@ -775,9 +907,12 @@ export default function RegisterPage() {
       }
 
       setIsLoading(false);
+
+      // SEND OTP EMAIL BEFORE MOVING TO NEXT STEP
+      await sendOtpEmail();
       nextStep();
 
-      console.log("[REGISTER] Moving to recovery phrase step");
+      console.log("[REGISTER] Moving to email verification step");
     } catch (error: any) {
       console.error("[REGISTER] ❌ Registration error:", error);
       setIsLoading(false);
@@ -998,25 +1133,25 @@ export default function RegisterPage() {
   // Signup skeleton loader component
   function SignupSkeleton() {
     return (
-      <Card className="relative overflow-hidden border-0 shadow-2xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl animate-pulse">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
-        <CardHeader className="relative z-10 text-center pb-6">
-          <Skeleton className="mx-auto h-8 w-2/3 mb-2" />
-          <Skeleton className="mx-auto h-4 w-1/2" />
+      <Card className="relative overflow-hidden border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl animate-pulse">
+        <CardHeader className="relative z-10 text-center pb-4">
+          <Skeleton className="mx-auto h-12 w-12 rounded-full mb-3" />
+          <Skeleton className="mx-auto h-6 w-2/3 mb-2" />
+          <Skeleton className="mx-auto h-3 w-1/2" />
         </CardHeader>
         <CardContent className="relative z-10">
-          <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Skeleton className="h-24 w-full rounded-lg" />
-              <Skeleton className="h-24 w-full rounded-lg" />
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <Skeleton className="h-9 w-full rounded-md" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Skeleton className="h-9 w-full rounded-md" />
+                <Skeleton className="h-9 w-full rounded-md" />
+              </div>
             </div>
-            <Skeleton className="h-20 w-full rounded-lg" />
-            <Skeleton className="h-20 w-full rounded-lg" />
-            <Skeleton className="h-12 w-1/2 mx-auto rounded-lg" />
           </div>
-          <div className="flex items-center justify-between pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-            <Skeleton className="h-10 w-32 rounded-md" />
-            <Skeleton className="h-10 w-40 rounded-md" />
+          <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+            <Skeleton className="h-9 w-24 rounded-md" />
+            <Skeleton className="h-9 w-32 rounded-md" />
           </div>
         </CardContent>
       </Card>
@@ -1036,7 +1171,7 @@ export default function RegisterPage() {
               <div className="h-8 w-8 rounded-xl bg-blue-600 flex items-center justify-center">
                 <Package className="h-5 w-5 text-white" />
               </div>
-              <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 ChainVanguard
               </span>
             </Link>
@@ -1046,7 +1181,8 @@ export default function RegisterPage() {
               <Link href="/login" className="hidden sm:block">
                 <Button
                   variant="ghost"
-                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50 cursor-pointer"
+                  size="sm"
+                  className="text-xs text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50 cursor-pointer"
                 >
                   Already have an account?
                 </Button>
@@ -1059,15 +1195,15 @@ export default function RegisterPage() {
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="w-full max-w-2xl">
             {/* Progress Bar */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <div className="mb-6">
+              <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
                 <span>
                   Step {currentStep} of {totalSteps}
                 </span>
                 <span>{Math.round(progress)}% Complete</span>
               </div>
               <div className="relative">
-                <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-600 rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${progress}%` }}
@@ -1077,25 +1213,24 @@ export default function RegisterPage() {
             </div>
 
             {/* Form Card or Skeleton */}
-            {isLoading && currentStep === 5 ? (
+            {isLoading && currentStep === 1 ? (
               <SignupSkeleton />
             ) : (
-              <Card className="relative overflow-hidden border-0 shadow-2xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
-
-                <CardHeader className="relative z-10 text-center pb-6">
+              <Card className="relative overflow-hidden border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+                <CardHeader className="relative z-10 text-center pb-4">
                   <div
                     className={`transform transition-all duration-500 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
                   >
-                    <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                    <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
                       {currentStep === 1 && "Create Your Wallet"}
                       {currentStep === 2 && "Personal Information"}
                       {currentStep === 3 && "Address Details"}
                       {currentStep === 4 && "Select Your Role"}
                       {currentStep === 5 && "Review & Confirm"}
-                      {currentStep === 6 && "Secure Your Recovery Phrase"}
+                      {currentStep === 6 && "Verify Your Email"}
+                      {currentStep === 7 && "Secure Your Recovery Phrase"}
                     </CardTitle>
-                    <CardDescription className="text-base text-gray-600 dark:text-gray-400">
+                    <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
                       {currentStep === 1 &&
                         "Set up your secure Hyperledger Fabric wallet"}
                       {currentStep === 2 && "Tell us about yourself"}
@@ -1105,6 +1240,8 @@ export default function RegisterPage() {
                       {currentStep === 5 &&
                         "Review your information and create account"}
                       {currentStep === 6 &&
+                        "Enter the 6-digit code sent to your email"}
+                      {currentStep === 7 &&
                         "Save your 12-word recovery phrase immediately"}
                     </CardDescription>
                   </div>
@@ -1122,23 +1259,23 @@ export default function RegisterPage() {
                   >
                     {/* Step 1: Wallet Setup */}
                     {currentStep === 1 && (
-                      <div className="space-y-6">
-                        <div className="text-center mb-6">
-                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white mb-4">
-                            <Wallet className="h-8 w-8" />
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 mb-3">
+                            <Wallet className="h-6 w-6" />
                           </div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                             Secure Wallet Creation
                           </h3>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                           <div>
                             <Label
                               htmlFor="wallet-name"
-                              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                              className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                             >
-                              <Lock className="h-4 w-4" />
+                              <Lock className="h-3 w-3" />
                               Wallet Name
                             </Label>
                             <Input
@@ -1149,11 +1286,11 @@ export default function RegisterPage() {
                                 setWalletName(e.target.value);
                                 if (walletNameError) setWalletNameError("");
                               }}
-                              className={`mt-1 !h-10 border ${
+                              className={`mt-1 h-9 border ${
                                 walletNameError
                                   ? "border-red-500 dark:border-red-500"
                                   : "border-gray-200 dark:border-gray-700"
-                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm`}
+                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
                             />
                             {walletNameError && (
                               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1163,11 +1300,11 @@ export default function RegisterPage() {
                             )}
                           </div>
 
-                          <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="grid gap-3 sm:grid-cols-2">
                             <div>
                               <Label
                                 htmlFor="password"
-                                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                className="text-xs font-medium text-gray-700 dark:text-gray-300"
                               >
                                 Password
                               </Label>
@@ -1186,23 +1323,23 @@ export default function RegisterPage() {
                                     setPasswordError("");
                                   }}
                                   onBlur={() => setPasswordFocused(false)}
-                                  className={`!h-10 pr-10 border ${
+                                  className={`h-9 pr-9 border ${
                                     passwordError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
-                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm`}
+                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
                                 />
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="absolute right-0 top-0 h-10 w-10 cursor-pointer"
+                                  className="absolute right-0 top-0 h-9 w-9 cursor-pointer"
                                   onClick={() => setShowPassword(!showPassword)}
                                 >
                                   {showPassword ? (
-                                    <EyeOff className="h-4 w-4" />
+                                    <EyeOff className="h-3.5 w-3.5" />
                                   ) : (
-                                    <Eye className="h-4 w-4" />
+                                    <Eye className="h-3.5 w-3.5" />
                                   )}
                                 </Button>
                               </div>
@@ -1214,21 +1351,21 @@ export default function RegisterPage() {
                                     ? {
                                         height: "auto",
                                         opacity: 1,
-                                        marginTop: 16,
+                                        marginTop: 12,
                                       }
                                     : { height: 0, opacity: 0, marginTop: 0 }
                                 }
                                 transition={{
-                                  duration: 0.35,
+                                  duration: 0.3,
                                   ease: "easeInOut",
                                 }}
                                 className="overflow-hidden"
                               >
-                                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/80 shadow-sm px-4 py-3 space-y-2">
+                                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/80 shadow-sm px-3 py-2 space-y-1.5">
                                   <div className="flex items-center gap-1.5 text-xs">
                                     <motion.span
                                       animate={{
-                                        scale: passwordChecks.length ? 1.2 : 1,
+                                        scale: passwordChecks.length ? 1.1 : 1,
                                         color: passwordChecks.length
                                           ? "#22c55e"
                                           : "#ef4444",
@@ -1239,10 +1376,10 @@ export default function RegisterPage() {
                                       }}
                                     >
                                       <Check
-                                        className={`h-4 w-4 ${passwordChecks.length ? "text-green-500" : "text-red-500"}`}
+                                        className={`h-3.5 w-3.5 ${passwordChecks.length ? "text-green-500" : "text-red-500"}`}
                                       />
                                     </motion.span>
-                                    <span className="text-sm font-medium">
+                                    <span className="text-xs font-medium">
                                       At least 8 characters
                                     </span>
                                   </div>
@@ -1250,7 +1387,7 @@ export default function RegisterPage() {
                                     <motion.span
                                       animate={{
                                         scale: passwordChecks.uppercase
-                                          ? 1.2
+                                          ? 1.1
                                           : 1,
                                         color: passwordChecks.uppercase
                                           ? "#22c55e"
@@ -1262,17 +1399,17 @@ export default function RegisterPage() {
                                       }}
                                     >
                                       <Check
-                                        className={`h-4 w-4 ${passwordChecks.uppercase ? "text-green-500" : "text-red-500"}`}
+                                        className={`h-3.5 w-3.5 ${passwordChecks.uppercase ? "text-green-500" : "text-red-500"}`}
                                       />
                                     </motion.span>
-                                    <span className="text-sm font-medium">
+                                    <span className="text-xs font-medium">
                                       One uppercase letter
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-1.5 text-xs">
                                     <motion.span
                                       animate={{
-                                        scale: passwordChecks.special ? 1.2 : 1,
+                                        scale: passwordChecks.special ? 1.1 : 1,
                                         color: passwordChecks.special
                                           ? "#22c55e"
                                           : "#ef4444",
@@ -1283,10 +1420,10 @@ export default function RegisterPage() {
                                       }}
                                     >
                                       <Check
-                                        className={`h-4 w-4 ${passwordChecks.special ? "text-green-500" : "text-red-500"}`}
+                                        className={`h-3.5 w-3.5 ${passwordChecks.special ? "text-green-500" : "text-red-500"}`}
                                       />
                                     </motion.span>
-                                    <span className="text-sm font-medium">
+                                    <span className="text-xs font-medium">
                                       One special character
                                     </span>
                                   </div>
@@ -1303,7 +1440,7 @@ export default function RegisterPage() {
                             <div>
                               <Label
                                 htmlFor="confirm-password"
-                                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                className="text-xs font-medium text-gray-700 dark:text-gray-300"
                               >
                                 Confirm Password
                               </Label>
@@ -1318,25 +1455,25 @@ export default function RegisterPage() {
                                   onChange={(e) =>
                                     setConfirmPassword(e.target.value)
                                   }
-                                  className={`!h-10 pr-10 border ${
+                                  className={`h-9 pr-9 border ${
                                     confirmPasswordError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
-                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm`}
+                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
                                 />
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="absolute right-0 top-0 h-10 w-10 cursor-pointer"
+                                  className="absolute right-0 top-0 h-9 w-9 cursor-pointer"
                                   onClick={() =>
                                     setShowConfirmPassword(!showConfirmPassword)
                                   }
                                 >
                                   {showConfirmPassword ? (
-                                    <EyeOff className="h-4 w-4" />
+                                    <EyeOff className="h-3.5 w-3.5" />
                                   ) : (
-                                    <Eye className="h-4 w-4" />
+                                    <Eye className="h-3.5 w-3.5" />
                                   )}
                                 </Button>
                               </div>
@@ -1354,23 +1491,23 @@ export default function RegisterPage() {
 
                     {/* Step 2: Personal Info */}
                     {currentStep === 2 && (
-                      <div className="space-y-6">
-                        <div className="text-center mb-6">
-                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-600 text-white mb-4">
-                            <User className="h-8 w-8" />
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 mb-3">
+                            <User className="h-6 w-6" />
                           </div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                             Tell Us About You
                           </h3>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                           <div>
                             <Label
                               htmlFor="name"
-                              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                              className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                             >
-                              <User className="h-4 w-4" />
+                              <User className="h-3 w-3" />
                               Full Name
                             </Label>
                             <Input
@@ -1381,11 +1518,11 @@ export default function RegisterPage() {
                                 setName(e.target.value);
                                 if (nameError) setNameError("");
                               }}
-                              className={`mt-1 !h-10 border ${
+                              className={`mt-1 h-9 border ${
                                 nameError
                                   ? "border-red-500 dark:border-red-500"
                                   : "border-gray-200 dark:border-gray-700"
-                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm`}
+                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
                             />
                             {nameError && (
                               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1395,13 +1532,13 @@ export default function RegisterPage() {
                             )}
                           </div>
 
-                          <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="grid gap-3 sm:grid-cols-2">
                             <div>
                               <Label
                                 htmlFor="email"
-                                className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                                className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                               >
-                                <Mail className="h-4 w-4" />
+                                <Mail className="h-3 w-3" />
                                 Email Address
                               </Label>
                               <div className="relative">
@@ -1414,30 +1551,28 @@ export default function RegisterPage() {
                                     setEmail(e.target.value);
                                     if (emailError) setEmailError("");
                                   }}
-                                  className={`mt-1 !h-10 border ${
+                                  className={`mt-1 h-9 border ${
                                     emailError || emailExists
                                       ? "border-red-500 dark:border-red-500"
                                       : email &&
                                           !isCheckingEmail &&
                                           !emailExists
-                                        ? "border-green-500 dark:border-green-500" // GREEN when valid
+                                        ? "border-green-500 dark:border-green-500"
                                         : "border-gray-200 dark:border-gray-700"
-                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm pr-10`}
+                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs pr-9`}
                                 />
-                                {/* SHOW STATUS ICON */}
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5">
+                                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 mt-0.5">
                                   {isCheckingEmail ? (
-                                    <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                                    <RefreshCw className="h-3.5 w-3.5 animate-spin text-blue-500" />
                                   ) : email && emailExists ? (
-                                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                                    <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
                                   ) : email &&
                                     !emailExists &&
                                     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? (
-                                    <Check className="h-4 w-4 text-green-500" />
+                                    <Check className="h-3.5 w-3.5 text-green-500" />
                                   ) : null}
                                 </div>
                               </div>
-                              {/* SHOW STATUS MESSAGE */}
                               {emailError && (
                                 <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
                                   <AlertTriangle className="h-3 w-3" />
@@ -1459,9 +1594,9 @@ export default function RegisterPage() {
                             <div>
                               <Label
                                 htmlFor="phone"
-                                className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                                className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                               >
-                                <Phone className="h-4 w-4" />
+                                <Phone className="h-3 w-3" />
                                 Phone
                               </Label>
                               <Input
@@ -1488,15 +1623,13 @@ export default function RegisterPage() {
                                     .trimEnd();
                                   rest = rest.slice(0, 11);
                                   setPhone("+92 " + rest);
-
-                                  // CLEAR ERROR ON TYPE
                                   if (phoneError) setPhoneError("");
                                 }}
-                                className={`mt-1 !h-10 border ${
+                                className={`mt-1 h-9 border ${
                                   phoneError
                                     ? "border-red-500 dark:border-red-500"
                                     : "border-gray-200 dark:border-gray-700"
-                                } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm`}
+                                } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
                                 placeholder="300 1234567"
                               />
                               {phoneError && (
@@ -1513,25 +1646,25 @@ export default function RegisterPage() {
 
                     {/* Step 3: Address Details - STATE FIRST, THEN CITY */}
                     {currentStep === 3 && (
-                      <div className="space-y-6">
-                        <div className="text-center mb-6">
-                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-600 text-white mb-4">
-                            <MapPin className="h-8 w-8" />
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 mb-3">
+                            <MapPin className="h-6 w-6" />
                           </div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                             Address Details
                           </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                             Provide your address so we can display
                             location-based data.
                           </p>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                           <div>
                             <Label
                               htmlFor="address"
-                              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                              className="text-xs font-medium text-gray-700 dark:text-gray-300"
                             >
                               Full Address
                             </Label>
@@ -1542,15 +1675,13 @@ export default function RegisterPage() {
                               minLength={10}
                               onChange={(e) => {
                                 setAddress(e.target.value);
-
-                                // CLEAR ERROR ON TYPE
                                 if (addressError) setAddressError("");
                               }}
-                              className={`mt-1 !h-10 border ${
+                              className={`mt-1 h-9 border ${
                                 addressError
                                   ? "border-red-500 dark:border-red-500"
                                   : "border-gray-200 dark:border-gray-700"
-                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm`}
+                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
                             />
                             {addressError && (
                               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1560,12 +1691,11 @@ export default function RegisterPage() {
                             )}
                           </div>
 
-                          {/* STATE/PROVINCE FIRST - THEN CITY */}
-                          <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="grid gap-3 sm:grid-cols-2">
                             <div>
                               <Label
                                 htmlFor="province"
-                                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                className="text-xs font-medium text-gray-700 dark:text-gray-300"
                               >
                                 State / Province
                               </Label>
@@ -1578,7 +1708,7 @@ export default function RegisterPage() {
                               >
                                 <SelectTrigger
                                   size="sm"
-                                  className={`mt-1 !h-10 w-full flex items-center gap-2 px-2.5 py-0 text-sm leading-none border ${
+                                  className={`mt-1 !h-9 w-full flex items-center gap-2 px-3 py-0 text-xs leading-none border ${
                                     provinceError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
@@ -1586,7 +1716,7 @@ export default function RegisterPage() {
                                 >
                                   <SelectValue
                                     placeholder="Select province"
-                                    className="w-full flex items-center h-10 text-sm"
+                                    className="w-full flex items-center h-9 text-xs"
                                   />
                                 </SelectTrigger>
                                 <SelectContent className="w-full">
@@ -1594,7 +1724,7 @@ export default function RegisterPage() {
                                     <SelectItem
                                       key={p}
                                       value={p}
-                                      className="cursor-pointer py-2 px-2.5 text-sm"
+                                      className="cursor-pointer py-2 px-2.5 text-xs"
                                     >
                                       {p}
                                     </SelectItem>
@@ -1612,7 +1742,7 @@ export default function RegisterPage() {
                             <div>
                               <Label
                                 htmlFor="city"
-                                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                className="text-xs font-medium text-gray-700 dark:text-gray-300"
                               >
                                 City
                               </Label>
@@ -1626,7 +1756,7 @@ export default function RegisterPage() {
                               >
                                 <SelectTrigger
                                   size="sm"
-                                  className={`mt-1 !h-10 w-full flex items-center gap-2 px-3 py-0 text-sm leading-none border ${
+                                  className={`mt-1 !h-9 w-full flex items-center gap-2 px-3 py-0 text-xs leading-none border ${
                                     cityError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
@@ -1642,7 +1772,7 @@ export default function RegisterPage() {
                                         ? "Select city"
                                         : "Select province first"
                                     }
-                                    className="w-full flex items-center h-10 text-sm"
+                                    className="w-full flex items-center h-9 text-xs"
                                   />
                                 </SelectTrigger>
                                 <SelectContent className="w-full">
@@ -1650,7 +1780,7 @@ export default function RegisterPage() {
                                     <SelectItem
                                       key={c}
                                       value={c}
-                                      className="cursor-pointer py-2 px-2.5 text-sm"
+                                      className="cursor-pointer py-2 px-2.5 text-xs"
                                     >
                                       {c}
                                     </SelectItem>
@@ -1669,7 +1799,7 @@ export default function RegisterPage() {
                           <div>
                             <Label
                               htmlFor="postal-code"
-                              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                              className="text-xs font-medium text-gray-700 dark:text-gray-300"
                             >
                               Postal Code
                             </Label>
@@ -1685,15 +1815,13 @@ export default function RegisterPage() {
                                   .replace(/\D/g, "")
                                   .slice(0, 5);
                                 setPostalCode(digits);
-
-                                // CLEAR ERROR ON TYPE
                                 if (postalCodeError) setPostalCodeError("");
                               }}
-                              className={`mt-1 !h-10 border ${
+                              className={`mt-1 h-9 border ${
                                 postalCodeError
                                   ? "border-red-500 dark:border-red-500"
                                   : "border-gray-200 dark:border-gray-700"
-                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm`}
+                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
                             />
                             {postalCodeError && (
                               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1708,17 +1836,17 @@ export default function RegisterPage() {
 
                     {/* Step 4: Role Selection */}
                     {currentStep === 4 && (
-                      <div className="space-y-6">
-                        <div className="text-center mb-6">
-                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-600 text-white mb-4">
-                            <Shield className="h-8 w-8" />
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 mb-3">
+                            <Shield className="h-6 w-6" />
                           </div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                             Choose Your Role
                           </h3>
                         </div>
 
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid gap-3 sm:grid-cols-2">
                           {roleOptions.map((role) => {
                             const Icon = role.icon;
                             const isSelected = selectedRole === role.value;
@@ -1735,35 +1863,35 @@ export default function RegisterPage() {
                                   setSelectedRole(role.value as UserRole)
                                 }
                               >
-                                <CardHeader className="pb-3">
-                                  <div className="flex items-center gap-3">
+                                <CardHeader className="pb-2">
+                                  <div className="flex items-center gap-2">
                                     <div
-                                      className={`p-2 rounded-lg ${role.color}`}
+                                      className={`p-1.5 rounded-lg ${role.color}`}
                                     >
-                                      <Icon className="h-5 w-5" />
+                                      <Icon className="h-4 w-4" />
                                     </div>
                                     <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <CardTitle className="text-base text-gray-900 dark:text-gray-100">
+                                      <div className="flex items-center gap-1.5">
+                                        <CardTitle className="text-xs font-semibold text-gray-900 dark:text-gray-100">
                                           {role.title}
                                         </CardTitle>
                                         {isSelected && (
-                                          <Check className="h-4 w-4 text-blue-500" />
+                                          <Check className="h-3 w-3 text-blue-500" />
                                         )}
                                       </div>
-                                      <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
+                                      <CardDescription className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                                         {role.description}
                                       </CardDescription>
                                     </div>
                                   </div>
                                 </CardHeader>
-                                <CardContent className="pt-0">
+                                <CardContent className="pt-0 pb-2">
                                   <div className="flex flex-wrap gap-1">
                                     {role.features.map((feature, idx) => (
                                       <Badge
                                         key={idx}
                                         variant="secondary"
-                                        className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-blue-400"
+                                        className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-blue-400"
                                       >
                                         {feature}
                                       </Badge>
@@ -1784,17 +1912,17 @@ export default function RegisterPage() {
 
                         {/* Business Information */}
                         {requiresBusinessInfo && (
-                          <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <h4 className="font-medium flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                              <Building className="h-4 w-4" />
+                          <div className="space-y-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <h4 className="text-xs font-semibold flex items-center gap-1.5 text-gray-900 dark:text-gray-100">
+                              <Building className="h-3.5 w-3.5" />
                               Business Information
                             </h4>
 
-                            <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="grid gap-3 sm:grid-cols-2">
                               <div>
                                 <Label
                                   htmlFor="company-name"
-                                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                  className="text-xs font-medium text-gray-700 dark:text-gray-300"
                                 >
                                   Company Name
                                 </Label>
@@ -1807,11 +1935,11 @@ export default function RegisterPage() {
                                     if (companyNameError)
                                       setCompanyNameError("");
                                   }}
-                                  className={`mt-1 !h-10 border ${
+                                  className={`mt-1 h-9 border ${
                                     companyNameError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
-                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm`}
+                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
                                 />
                                 {companyNameError && (
                                   <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1824,7 +1952,7 @@ export default function RegisterPage() {
                               <div>
                                 <Label
                                   htmlFor="business-type"
-                                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                  className="text-xs font-medium text-gray-700 dark:text-gray-300"
                                 >
                                   Business Type
                                 </Label>
@@ -1837,7 +1965,7 @@ export default function RegisterPage() {
                                 >
                                   <SelectTrigger
                                     size="sm"
-                                    className={`mt-1 !h-10 w-full flex items-center gap-2 px-3 py-0 text-sm leading-none border ${
+                                    className={`mt-1 !h-9 w-full flex items-center gap-2 px-3 py-0 text-xs leading-none border ${
                                       businessTypeError
                                         ? "border-red-500 dark:border-red-500"
                                         : "border-gray-200 dark:border-gray-700"
@@ -1845,7 +1973,7 @@ export default function RegisterPage() {
                                   >
                                     <SelectValue
                                       placeholder="Select type"
-                                      className="cursor-pointer w-full flex items-center h-10 text-sm"
+                                      className="cursor-pointer w-full flex items-center h-9 text-xs"
                                     />
                                   </SelectTrigger>
                                   <SelectContent className="w-full">
@@ -1853,19 +1981,19 @@ export default function RegisterPage() {
                                       <>
                                         <SelectItem
                                           value="manufacturer"
-                                          className="cursor-pointer py-2 px-2.5 text-sm"
+                                          className="cursor-pointer py-2 px-2.5 text-xs"
                                         >
                                           Manufacturer
                                         </SelectItem>
                                         <SelectItem
                                           value="distributor"
-                                          className="cursor-pointer py-2 px-2.5 text-sm"
+                                          className="cursor-pointer py-2 px-2.5 text-xs"
                                         >
                                           Distributor
                                         </SelectItem>
                                         <SelectItem
                                           value="ministry"
-                                          className="cursor-pointer py-2 px-2.5 text-sm"
+                                          className="cursor-pointer py-2 px-2.5 text-xs"
                                         >
                                           Government Ministry
                                         </SelectItem>
@@ -1874,19 +2002,19 @@ export default function RegisterPage() {
                                       <>
                                         <SelectItem
                                           value="retailer"
-                                          className="cursor-pointer py-2 px-2.5 text-sm"
+                                          className="cursor-pointer py-2 px-2.5 text-xs"
                                         >
                                           Retailer
                                         </SelectItem>
                                         <SelectItem
                                           value="wholesaler"
-                                          className="cursor-pointer py-2 px-2.5 text-sm"
+                                          className="cursor-pointer py-2 px-2.5 text-xs"
                                         >
                                           Wholesaler
                                         </SelectItem>
                                         <SelectItem
                                           value="marketplace"
-                                          className="cursor-pointer py-2 px-2.5 text-sm"
+                                          className="cursor-pointer py-2 px-2.5 text-xs"
                                         >
                                           Marketplace
                                         </SelectItem>
@@ -1903,13 +2031,13 @@ export default function RegisterPage() {
                               </div>
                             </div>
 
-                            <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="grid gap-3 sm:grid-cols-2">
                               <div>
                                 <Label
                                   htmlFor="business-address"
-                                  className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                                  className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                                 >
-                                  <MapPin className="h-4 w-4" />
+                                  <MapPin className="h-3 w-3" />
                                   Business Address
                                 </Label>
                                 <Input
@@ -1919,15 +2047,14 @@ export default function RegisterPage() {
                                   minLength={10}
                                   onChange={(e) => {
                                     setBusinessAddress(e.target.value);
-
                                     if (businessAddressError)
                                       setBusinessAddressError("");
                                   }}
-                                  className={`mt-1 !h-10 border ${
+                                  className={`mt-1 h-9 border ${
                                     businessAddressError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
-                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm`}
+                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
                                 />
                                 {businessAddressError && (
                                   <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1940,9 +2067,9 @@ export default function RegisterPage() {
                               <div>
                                 <Label
                                   htmlFor="registration-number"
-                                  className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                                  className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                                 >
-                                  <FileText className="h-4 w-4" />
+                                  <FileText className="h-3 w-3" />
                                   Registration Number (Optional)
                                 </Label>
                                 <Input
@@ -1952,7 +2079,7 @@ export default function RegisterPage() {
                                   onChange={(e) =>
                                     setRegistrationNumber(e.target.value)
                                   }
-                                  className="mt-1 !h-10 border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm"
+                                  className="mt-1 h-9 border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs"
                                 />
                               </div>
                             </div>
@@ -1963,61 +2090,61 @@ export default function RegisterPage() {
 
                     {/* Step 5: Review & Terms */}
                     {currentStep === 5 && (
-                      <div className="space-y-6">
-                        <div className="text-center mb-6">
-                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-600 text-white mb-4">
-                            <CheckCircle2 className="h-8 w-8" />
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 mb-3">
+                            <CheckCircle2 className="h-6 w-6" />
                           </div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                             Review Your Information
                           </h3>
                         </div>
 
                         {/* Review Summary */}
-                        <div className="space-y-4">
-                          <div className="grid gap-4 sm:grid-cols-2">
-                            <Card className="p-4 bg-white/50 dark:bg-gray-800/50">
-                              <h4 className="font-medium text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        <div className="space-y-3">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <Card className="p-3 bg-white/50 dark:bg-gray-800/50">
+                              <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                                 Wallet Details
                               </h4>
-                              <div className="space-y-2">
+                              <div className="space-y-1.5">
                                 <div className="flex justify-between">
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                  <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Name:
                                   </span>
-                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                     {walletName}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                  <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Network:
                                   </span>
-                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                     Hyperledger Fabric
                                   </span>
                                 </div>
                               </div>
                             </Card>
 
-                            <Card className="p-4 bg-white/50 dark:bg-gray-800/50">
-                              <h4 className="font-medium text-sm text-gray-600 dark:text-gray-400 mb-2">
+                            <Card className="p-3 bg-white/50 dark:bg-gray-800/50">
+                              <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                                 Personal Info
                               </h4>
-                              <div className="space-y-2">
+                              <div className="space-y-1.5">
                                 <div className="flex justify-between">
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                  <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Name:
                                   </span>
-                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                     {name}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                  <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Email:
                                   </span>
-                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                     {email || "Not provided"}
                                   </span>
                                 </div>
@@ -2026,51 +2153,51 @@ export default function RegisterPage() {
                           </div>
 
                           {/* Address Summary */}
-                          <Card className="p-4 bg-white/50 dark:bg-gray-800/50">
-                            <h4 className="font-medium text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          <Card className="p-3 bg-white/50 dark:bg-gray-800/50">
+                            <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                               Address
                             </h4>
-                            <div className="grid gap-2 sm:grid-cols-2">
+                            <div className="grid gap-1.5 sm:grid-cols-2">
                               <div className="flex justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-300">
+                                <span className="text-xs text-gray-700 dark:text-gray-300">
                                   Address:
                                 </span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {address}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-300">
+                                <span className="text-xs text-gray-700 dark:text-gray-300">
                                   State:
                                 </span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {province}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-300">
+                                <span className="text-xs text-gray-700 dark:text-gray-300">
                                   City:
                                 </span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {city}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-sm text-gray-700 dark:text-gray-300">
+                                <span className="text-xs text-gray-700 dark:text-gray-300">
                                   Postal:
                                 </span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {postalCode || "N/A"}
                                 </span>
                               </div>
                             </div>
                           </Card>
 
-                          <Card className="p-4 bg-white/50 dark:bg-gray-800/50">
-                            <h4 className="font-medium text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          <Card className="p-3 bg-white/50 dark:bg-gray-800/50">
+                            <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                               Role & Access
                             </h4>
-                            <div className="flex items-center gap-3 mb-3">
+                            <div className="flex items-center gap-2 mb-2">
                               {(() => {
                                 const roleOption = roleOptions.find(
                                   (r) => r.value === selectedRole
@@ -2080,15 +2207,15 @@ export default function RegisterPage() {
                                 return (
                                   <>
                                     <div
-                                      className={`p-2 rounded-lg ${roleOption.color}`}
+                                      className={`p-1.5 rounded-lg ${roleOption.color}`}
                                     >
-                                      <Icon className="h-4 w-4" />
+                                      <Icon className="h-3.5 w-3.5" />
                                     </div>
                                     <div>
-                                      <div className="font-medium text-gray-900 dark:text-gray-100">
+                                      <div className="text-xs font-semibold text-gray-900 dark:text-gray-100">
                                         {roleOption.title}
                                       </div>
-                                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                                      <div className="text-xs text-gray-600 dark:text-gray-400">
                                         {roleOption.description}
                                       </div>
                                     </div>
@@ -2096,7 +2223,7 @@ export default function RegisterPage() {
                                 );
                               })()}
                             </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
                               Organization:{" "}
                               {selectedRole === "supplier"
                                 ? "SupplierMSP"
@@ -2109,32 +2236,32 @@ export default function RegisterPage() {
                           </Card>
 
                           {requiresBusinessInfo && (
-                            <Card className="p-4 bg-white/50 dark:bg-gray-800/50">
-                              <h4 className="font-medium text-sm text-gray-600 dark:text-gray-400 mb-2">
+                            <Card className="p-3 bg-white/50 dark:bg-gray-800/50">
+                              <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                                 Business Information
                               </h4>
-                              <div className="grid gap-2 sm:grid-cols-2">
+                              <div className="grid gap-1.5 sm:grid-cols-2">
                                 <div className="flex justify-between">
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                  <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Company:
                                   </span>
-                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                     {companyName}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                  <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Type:
                                   </span>
-                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                     {businessType}
                                   </span>
                                 </div>
                                 <div className="flex justify-between sm:col-span-2">
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                  <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Address:
                                   </span>
-                                  <span className="text-sm font-medium text-right text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-right text-gray-900 dark:text-gray-100">
                                     {businessAddress}
                                   </span>
                                 </div>
@@ -2144,10 +2271,10 @@ export default function RegisterPage() {
                         </div>
 
                         {/* Terms and Conditions */}
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                           <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20">
-                            <Shield className="h-4 w-4 text-blue-600" />
-                            <AlertDescription className="text-blue-800 dark:text-blue-200">
+                            <Shield className="h-3.5 w-3.5 text-blue-600" />
+                            <AlertDescription className="text-blue-800 dark:text-blue-200 text-xs">
                               Your wallet will be secured with Hyperledger
                               Fabric encryption. You will receive a 12-word
                               recovery phrase - this is the ONLY way to recover
@@ -2162,12 +2289,12 @@ export default function RegisterPage() {
                               onCheckedChange={(checked) =>
                                 setAcceptedTerms(checked as boolean)
                               }
-                              className="mt-1 cursor-pointer"
+                              className="mt-0.5 cursor-pointer"
                             />
-                            <div className="grid gap-1.5 leading-none">
+                            <div className="grid gap-1 leading-none">
                               <label
                                 htmlFor="terms"
-                                className="text-sm font-medium cursor-pointer text-gray-900 dark:text-gray-100"
+                                className="text-xs font-medium cursor-pointer text-gray-900 dark:text-gray-100"
                               >
                                 I accept the terms and conditions
                               </label>
@@ -2200,25 +2327,130 @@ export default function RegisterPage() {
                       </div>
                     )}
 
-                    {/* Step 6: Recovery Phrase */}
+                    {/* Step 6: Email Verification (NEW) */}
                     {currentStep === 6 && (
-                      <div className="space-y-6">
-                        <div className="text-center mb-6">
-                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-600 text-white mb-4">
-                            <KeyRound className="h-8 w-8" />
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 mb-3">
+                            <Mail className="h-6 w-6" />
                           </div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            Verify Your Email
+                          </h3>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                            We&apos;ve sent a 6-digit code to{" "}
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                              {email}
+                            </span>
+                          </p>
+                        </div>
+
+                        {/* OTP Input Boxes */}
+                        <div className="flex justify-center gap-2 sm:gap-3">
+                          {otp.map((digit, index) => (
+                            <input
+                              key={index}
+                              id={`otp-${index}`}
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={1}
+                              value={digit}
+                              onChange={(e) =>
+                                handleOtpChange(index, e.target.value)
+                              }
+                              onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                              onPaste={index === 0 ? handleOtpPaste : undefined}
+                              aria-label={`OTP digit ${index + 1}`}
+                              title={`Enter digit ${index + 1} of verification code`}
+                              className={`w-10 h-10 sm:w-12 sm:h-12 text-center text-lg font-bold rounded-lg border-2 transition-all ${
+                                otpError
+                                  ? "border-red-500 bg-red-50 dark:bg-red-950/20 animate-shake"
+                                  : digit
+                                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Resend Code */}
+                        <div className="text-center">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                            Didn&apos;t receive the code?
+                          </p>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={sendOtpEmail}
+                            disabled={resendTimer > 0 || isLoading}
+                            className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer"
+                          >
+                            {resendTimer > 0 ? (
+                              `Resend code in ${resendTimer}s`
+                            ) : (
+                              <>
+                                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                                Resend Code
+                              </>
+                            )}
+                          </Button>
+                        </div>
+
+                        {/* Verify Button */}
+                        <Button
+                          type="button"
+                          onClick={verifyOtp}
+                          disabled={isVerifyingOtp || otp.some((d) => !d)}
+                          className={`w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white cursor-pointer text-xs h-9 ${
+                            isVerifyingOtp || otp.some((d) => !d)
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
+                        >
+                          {isVerifyingOtp ? (
+                            <>
+                              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                              Verifying...
+                            </>
+                          ) : (
+                            <>
+                              <BadgeCheck className="h-3.5 w-3.5" />
+                              Verify Email
+                            </>
+                          )}
+                        </Button>
+
+                        {/* Security Note */}
+                        <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20">
+                          <Shield className="h-3.5 w-3.5 text-blue-600" />
+                          <AlertDescription className="text-blue-800 dark:text-blue-200 text-xs">
+                            For your security, this code will expire in 10
+                            minutes.
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+                    )}
+
+                    {/* Step 7: Recovery Phrase (UPDATED FROM STEP 6) */}
+                    {currentStep === 7 && (
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 mb-3">
+                            <KeyRound className="h-6 w-6" />
+                          </div>
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                             Your Recovery Phrase
                           </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                             This is your wallet master key. Keep it safe and
                             never share it.
                           </p>
                         </div>
 
                         <Alert className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20">
-                          <AlertTriangle className="h-4 w-4 text-amber-600" />
-                          <AlertDescription className="text-amber-800 dark:text-amber-200">
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                          <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">
                             <strong>CRITICAL:</strong> Write down these 12 words
                             in exact order. Anyone with this phrase can access
                             your wallet and all assets.
@@ -2226,17 +2458,17 @@ export default function RegisterPage() {
                         </Alert>
 
                         {/* Recovery Phrase Display */}
-                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-6 border-2 border-dashed border-gray-300 dark:border-gray-600">
-                          <div className="grid grid-cols-3 gap-3 mb-4">
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border-2 border-dashed border-gray-300 dark:border-gray-600">
+                          <div className="grid grid-cols-3 gap-2 mb-3">
                             {recoveryPhrase.split(" ").map((word, index) => (
                               <div
                                 key={index}
-                                className="flex items-center justify-center p-3 bg-white dark:bg-gray-700 rounded-lg border-2 border-gray-200 dark:border-gray-600 shadow-sm hover:shadow-md transition-shadow"
+                                className="flex items-center justify-center p-2 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm hover:shadow-md transition-shadow"
                               >
-                                <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mr-1.5">
                                   {index + 1}.
                                 </span>
-                                <span className="font-mono font-medium text-sm text-gray-900 dark:text-gray-100">
+                                <span className="font-mono font-medium text-xs text-gray-900 dark:text-gray-100">
                                   {word}
                                 </span>
                               </div>
@@ -2249,9 +2481,9 @@ export default function RegisterPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => copyToClipboard(recoveryPhrase)}
-                              className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/20 border-gray-200 dark:border-gray-700"
+                              className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/20 border-gray-200 dark:border-gray-700 h-8"
                             >
-                              <Copy className="h-4 w-4" />
+                              <Copy className="h-3.5 w-3.5" />
                               Copy Phrase
                             </Button>
                             <Button
@@ -2259,23 +2491,23 @@ export default function RegisterPage() {
                               variant="outline"
                               size="sm"
                               onClick={downloadRecoveryPhrase}
-                              className="flex items-center gap-2 cursor-pointer hover:bg-green-50 dark:hover:bg-green-950/20 border-gray-200 dark:border-gray-700"
+                              className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-green-50 dark:hover:bg-green-950/20 border-gray-200 dark:border-gray-700 h-8"
                             >
-                              <Download className="h-4 w-4" />
+                              <Download className="h-3.5 w-3.5" />
                               Download Backup
                             </Button>
                           </div>
                         </div>
 
                         {/* Security Tips */}
-                        <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                          <div className="flex items-start gap-3">
-                            <BadgeCheck className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <div className="flex items-start gap-2">
+                            <BadgeCheck className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
                             <div>
-                              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                              <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1">
                                 Security Best Practices
                               </h4>
-                              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                              <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-0.5">
                                 <li>
                                   • Write the phrase on paper and store in a
                                   safe place
@@ -2307,12 +2539,12 @@ export default function RegisterPage() {
                             onCheckedChange={(checked) =>
                               setBackupConfirmed(checked as boolean)
                             }
-                            className="mt-1 cursor-pointer"
+                            className="mt-0.5 cursor-pointer"
                           />
-                          <div className="grid gap-1.5 leading-none">
+                          <div className="grid gap-1 leading-none">
                             <label
                               htmlFor="backup-confirmed"
-                              className="text-sm font-medium cursor-pointer text-gray-900 dark:text-gray-100"
+                              className="text-xs font-medium cursor-pointer text-gray-900 dark:text-gray-100"
                             >
                               I have safely backed up my recovery phrase
                             </label>
@@ -2328,25 +2560,27 @@ export default function RegisterPage() {
                   </div>
 
                   {/* Navigation Buttons */}
-                  <div className="flex items-center justify-between pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                     <Button
                       type="button"
                       onClick={prevStep}
                       disabled={currentStep === 1}
                       variant="outline"
-                      className={`flex items-center gap-2 px-4 py-2 text-sm font-medium ${currentStep === 1 ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+                      size="sm"
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ${currentStep === 1 ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"}`}
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="h-3.5 w-3.5" />
                       Previous
                     </Button>
-                    {currentStep < totalSteps - 1 ? (
+                    {currentStep < totalSteps - 2 ? (
                       <Button
                         type="button"
                         onClick={handleNext}
+                        size="sm"
                         disabled={
                           currentStep === 2 && (isCheckingEmail || emailExists)
-                        } // DISABLE ON STEP 2
-                        className={`flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer ${
+                        }
+                        className={`flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium transition-colors cursor-pointer ${
                           currentStep === 2 && (isCheckingEmail || emailExists)
                             ? "opacity-50 cursor-not-allowed"
                             : ""
@@ -2354,54 +2588,56 @@ export default function RegisterPage() {
                       >
                         {currentStep === 2 && isCheckingEmail ? (
                           <>
-                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                             Verifying Email...
                           </>
                         ) : (
                           <>
                             Next Step
-                            <ChevronRight className="h-4 w-4" />
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </>
+                        )}
+                      </Button>
+                    ) : currentStep === totalSteps - 2 ? (
+                      <Button
+                        type="button"
+                        onClick={handleSubmit}
+                        size="sm"
+                        disabled={isLoading || !acceptedTerms}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-xs text-white font-medium transition-colors cursor-pointer ${isLoading || !acceptedTerms ? "opacity-50 cursor-not-allowed" : ""}`}
+                      >
+                        {isLoading ? (
+                          <>
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            Creating Wallet...
+                          </>
+                        ) : (
+                          <>
+                            <Wallet className="h-3.5 w-3.5" />
+                            Create Wallet
                           </>
                         )}
                       </Button>
                     ) : currentStep === totalSteps - 1 ? (
                       <Button
                         type="button"
-                        onClick={handleSubmit}
-                        disabled={isLoading || !acceptedTerms}
-                        className={`flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-sm text-white font-medium transition-colors cursor-pointer ${isLoading || !acceptedTerms ? "opacity-50 cursor-not-allowed" : ""}`}
-                      >
-                        {isLoading ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            Creating Wallet...
-                          </>
-                        ) : (
-                          <>
-                            <Wallet className="h-4 w-4" />
-                            Create Wallet
-                          </>
-                        )}
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
                         onClick={handleComplete}
+                        size="sm"
                         disabled={!backupConfirmed}
-                        className={`flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-sm text-white font-medium transition-colors cursor-pointer ${!backupConfirmed ? "opacity-50 cursor-not-allowed" : ""}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-xs text-white font-medium transition-colors cursor-pointer ${!backupConfirmed ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
-                        <Zap className="h-4 w-4" />
+                        <Zap className="h-3.5 w-3.5" />
                         Complete Setup
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>
             )}
 
             {/* Login Link */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="mt-4 text-center">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 Already have a wallet?{" "}
                 <Link
                   href="/login"
@@ -2413,11 +2649,12 @@ export default function RegisterPage() {
             </div>
 
             {/* Mobile Login Button */}
-            <div className="text-center mt-4 sm:hidden">
+            <div className="text-center mt-3 sm:hidden">
               <Link href="/login">
                 <Button
                   variant="ghost"
-                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
+                  size="sm"
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
                 >
                   Already have an account? Sign in
                 </Button>

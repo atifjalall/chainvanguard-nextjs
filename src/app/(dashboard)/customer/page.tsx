@@ -7,11 +7,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Badge } from "@/components/_ui/badge";
+import { Progress } from "@/components/_ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/_ui/avatar";
 import {
   ShoppingCart,
   Package,
@@ -202,7 +202,7 @@ export default function CustomerDashboard() {
   };
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-8 p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div
         className={`transform transition-all duration-700 ${

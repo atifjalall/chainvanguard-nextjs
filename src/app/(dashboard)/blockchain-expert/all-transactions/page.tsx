@@ -1,32 +1,38 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Input } from "@/components/_ui/input";
+import { Badge } from "@/components/_ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/_ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/_ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { 
+} from "@/components/_ui/select";
+import {
   Search,
   Filter,
   Download,
@@ -48,8 +54,8 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowUpRight,
-  ArrowDownLeft
-} from 'lucide-react';
+  ArrowDownLeft,
+} from "lucide-react";
 
 interface Transaction {
   id: string;
@@ -61,8 +67,13 @@ interface Transaction {
   to: string;
   value: string;
   timestamp: string;
-  type: 'product-creation' | 'product-transfer' | 'payment' | 'consensus' | 'audit';
-  status: 'confirmed' | 'pending' | 'failed';
+  type:
+    | "product-creation"
+    | "product-transfer"
+    | "payment"
+    | "consensus"
+    | "audit";
+  status: "confirmed" | "pending" | "failed";
   productId?: string;
   productName?: string;
   gasUsed?: number;
@@ -71,12 +82,14 @@ interface Transaction {
 
 const AllTransactionsPage = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filteredTransactions, setFilteredTransactions] = useState<
+    Transaction[]
+  >([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
+  const [selectedTimeRange, setSelectedTimeRange] = useState("24h");
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -95,56 +108,86 @@ const AllTransactionsPage = () => {
   }, []);
 
   const generateMockTransactions = () => {
-    const transactionTypes: Transaction['type'][] = [
-      'product-creation',
-      'product-transfer', 
-      'payment',
-      'consensus',
-      'audit',
+    const transactionTypes: Transaction["type"][] = [
+      "product-creation",
+      "product-transfer",
+      "payment",
+      "consensus",
+      "audit",
     ];
-    
-    const statuses: Transaction['status'][] = ['confirmed', 'pending', 'failed'];
-    const roles = ['supplier', 'vendor', 'customer', 'ministry'];
-    const channels = ['supply-chain-channel', 'payment-channel', 'audit-channel'];
-    const chaincodes = ['supply-contract', 'payment-contract', 'audit-contract'];
-    
-    const mockTransactions: Transaction[] = Array.from({ length: 150 }, (_, index) => {
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const type = transactionTypes[Math.floor(Math.random() * transactionTypes.length)];
-      const fromRole = roles[Math.floor(Math.random() * roles.length)];
-      const toRole = roles[Math.floor(Math.random() * roles.length)];
-      
-      return {
-        id: `tx_${(150 - index).toString().padStart(6, '0')}`,
-        txId: `${Math.random().toString(36).substr(2, 16)}${Date.now().toString(36)}`,
-        blockNumber: 15000 + (150 - index),
-        channelName: channels[Math.floor(Math.random() * channels.length)],
-        chaincodeName: chaincodes[Math.floor(Math.random() * chaincodes.length)],
-        type,
-        status,
-        from: `${fromRole}_${Math.random().toString(36).substr(2, 8)}`,
-        to: `${toRole}_${Math.random().toString(36).substr(2, 8)}`,
-        value: (Math.random() * 1000).toFixed(2) + ' HLFC', // Hyperledger Fabric Coins
-        gasUsed: Math.floor(Math.random() * 100000) + 21000,
-        endorsements: Math.floor(Math.random() * 5) + 1,
-        timestamp: new Date(Date.now() - index * 60000).toISOString(),
-        productId: type === 'product-creation' || type === 'product-transfer' 
-          ? `prod_${Math.random().toString(36).substr(2, 8)}` 
-          : undefined,
-        productName: type === 'product-creation' || type === 'product-transfer'
-          ? ['Organic Rice 25kg', 'Fresh Apples 5kg', 'Wheat Flour 50kg', 'Premium Coffee 1kg'][Math.floor(Math.random() * 4)]
-          : undefined,
-      };
-    });
+
+    const statuses: Transaction["status"][] = [
+      "confirmed",
+      "pending",
+      "failed",
+    ];
+    const roles = ["supplier", "vendor", "customer", "ministry"];
+    const channels = [
+      "supply-chain-channel",
+      "payment-channel",
+      "audit-channel",
+    ];
+    const chaincodes = [
+      "supply-contract",
+      "payment-contract",
+      "audit-contract",
+    ];
+
+    const mockTransactions: Transaction[] = Array.from(
+      { length: 150 },
+      (_, index) => {
+        const status = statuses[Math.floor(Math.random() * statuses.length)];
+        const type =
+          transactionTypes[Math.floor(Math.random() * transactionTypes.length)];
+        const fromRole = roles[Math.floor(Math.random() * roles.length)];
+        const toRole = roles[Math.floor(Math.random() * roles.length)];
+
+        return {
+          id: `tx_${(150 - index).toString().padStart(6, "0")}`,
+          txId: `${Math.random().toString(36).substr(2, 16)}${Date.now().toString(36)}`,
+          blockNumber: 15000 + (150 - index),
+          channelName: channels[Math.floor(Math.random() * channels.length)],
+          chaincodeName:
+            chaincodes[Math.floor(Math.random() * chaincodes.length)],
+          type,
+          status,
+          from: `${fromRole}_${Math.random().toString(36).substr(2, 8)}`,
+          to: `${toRole}_${Math.random().toString(36).substr(2, 8)}`,
+          value: (Math.random() * 1000).toFixed(2) + " HLFC", // Hyperledger Fabric Coins
+          gasUsed: Math.floor(Math.random() * 100000) + 21000,
+          endorsements: Math.floor(Math.random() * 5) + 1,
+          timestamp: new Date(Date.now() - index * 60000).toISOString(),
+          productId:
+            type === "product-creation" || type === "product-transfer"
+              ? `prod_${Math.random().toString(36).substr(2, 8)}`
+              : undefined,
+          productName:
+            type === "product-creation" || type === "product-transfer"
+              ? [
+                  "Organic Rice 25kg",
+                  "Fresh Apples 5kg",
+                  "Wheat Flour 50kg",
+                  "Premium Coffee 1kg",
+                ][Math.floor(Math.random() * 4)]
+              : undefined,
+        };
+      }
+    );
 
     setTransactions(mockTransactions);
     setFilteredTransactions(mockTransactions);
-    
+
     // Calculate stats
-    const confirmed = mockTransactions.filter(tx => tx.status === 'confirmed').length;
-    const pending = mockTransactions.filter(tx => tx.status === 'pending').length;
-    const failed = mockTransactions.filter(tx => tx.status === 'failed').length;
-    
+    const confirmed = mockTransactions.filter(
+      (tx) => tx.status === "confirmed"
+    ).length;
+    const pending = mockTransactions.filter(
+      (tx) => tx.status === "pending"
+    ).length;
+    const failed = mockTransactions.filter(
+      (tx) => tx.status === "failed"
+    ).length;
+
     setStats({
       totalTransactions: mockTransactions.length,
       confirmedTransactions: confirmed,
@@ -159,41 +202,42 @@ const AllTransactionsPage = () => {
 
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(tx =>
-        tx.txId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tx.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tx.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tx.to.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tx.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tx.channelName.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (tx) =>
+          tx.txId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          tx.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          tx.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          tx.to.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          tx.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          tx.channelName.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Apply type filter
-    if (filterType !== 'all') {
-      filtered = filtered.filter(tx => tx.type === filterType);
+    if (filterType !== "all") {
+      filtered = filtered.filter((tx) => tx.type === filterType);
     }
 
     // Apply status filter
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(tx => tx.status === filterStatus);
+    if (filterStatus !== "all") {
+      filtered = filtered.filter((tx) => tx.status === filterStatus);
     }
 
     // Apply time range filter
     const now = new Date();
     let timeThreshold: Date | null = null;
-    
+
     switch (selectedTimeRange) {
-      case '1h':
+      case "1h":
         timeThreshold = new Date(now.getTime() - 60 * 60 * 1000);
         break;
-      case '24h':
+      case "24h":
         timeThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
-      case '7d':
+      case "7d":
         timeThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
-      case '30d':
+      case "30d":
         timeThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
       default:
@@ -201,7 +245,9 @@ const AllTransactionsPage = () => {
     }
 
     if (timeThreshold) {
-      filtered = filtered.filter(tx => new Date(tx.timestamp) >= timeThreshold);
+      filtered = filtered.filter(
+        (tx) => new Date(tx.timestamp) >= timeThreshold
+      );
     }
 
     setFilteredTransactions(filtered);
@@ -218,8 +264,20 @@ const AllTransactionsPage = () => {
 
   const exportTransactions = () => {
     const csv = [
-      ['Transaction ID', 'Tx Hash', 'Block', 'Channel', 'Type', 'Status', 'From', 'To', 'Value', 'Endorsements', 'Timestamp'],
-      ...filteredTransactions.map(tx => [
+      [
+        "Transaction ID",
+        "Tx Hash",
+        "Block",
+        "Channel",
+        "Type",
+        "Status",
+        "From",
+        "To",
+        "Value",
+        "Endorsements",
+        "Timestamp",
+      ],
+      ...filteredTransactions.map((tx) => [
         tx.id,
         tx.txId,
         tx.blockNumber,
@@ -230,24 +288,29 @@ const AllTransactionsPage = () => {
         tx.to,
         tx.value,
         tx.endorsements || 0,
-        tx.timestamp
-      ])
-    ].map(row => row.join(',')).join('\n');
+        tx.timestamp,
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `hyperledger_transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `hyperledger_transactions_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
-  const getStatusBadge = (status: Transaction['status']) => {
+  const getStatusBadge = (status: Transaction["status"]) => {
     const colors = {
-      confirmed: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300',
-      pending: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300',
-      failed: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300',
+      confirmed:
+        "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300",
+      pending:
+        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300",
+      failed:
+        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300",
     };
 
     const icons = {
@@ -259,25 +322,27 @@ const AllTransactionsPage = () => {
     const Icon = icons[status];
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${colors[status]}`}>
+      <span
+        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${colors[status]}`}
+      >
         <Icon className="w-3 h-3 mr-1" />
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
   };
 
-  const getTypeIcon = (type: Transaction['type']) => {
+  const getTypeIcon = (type: Transaction["type"]) => {
     const iconClass = "h-4 w-4";
     switch (type) {
-      case 'product-creation':
+      case "product-creation":
         return <Package className={`${iconClass} text-blue-600`} />;
-      case 'product-transfer':
+      case "product-transfer":
         return <ArrowUpRight className={`${iconClass} text-green-600`} />;
-      case 'payment':
+      case "payment":
         return <CreditCard className={`${iconClass} text-purple-600`} />;
-      case 'consensus':
+      case "consensus":
         return <Users className={`${iconClass} text-orange-600`} />;
-      case 'audit':
+      case "audit":
         return <ShieldCheck className={`${iconClass} text-red-600`} />;
       default:
         return <FileText className={`${iconClass} text-gray-600`} />;
@@ -311,12 +376,14 @@ const AllTransactionsPage = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button 
+          <Button
             variant="outline"
-            onClick={handleRefresh} 
+            onClick={handleRefresh}
             disabled={isLoading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button onClick={exportTransactions}>
@@ -330,7 +397,9 @@ const AllTransactionsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Transactions
+            </CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -345,9 +414,15 @@ const AllTransactionsPage = () => {
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.confirmedTransactions}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.confirmedTransactions}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {((stats.confirmedTransactions / stats.totalTransactions) * 100).toFixed(1)}% success rate
+              {(
+                (stats.confirmedTransactions / stats.totalTransactions) *
+                100
+              ).toFixed(1)}
+              % success rate
             </p>
           </CardContent>
         </Card>
@@ -358,8 +433,12 @@ const AllTransactionsPage = () => {
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendingTransactions}</div>
-            <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
+            <div className="text-2xl font-bold text-yellow-600">
+              {stats.pendingTransactions}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Awaiting confirmation
+            </p>
           </CardContent>
         </Card>
 
@@ -369,9 +448,15 @@ const AllTransactionsPage = () => {
             <Hash className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.failedTransactions}</div>
+            <div className="text-2xl font-bold text-red-600">
+              {stats.failedTransactions}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {((stats.failedTransactions / stats.totalTransactions) * 100).toFixed(1)}% failure rate
+              {(
+                (stats.failedTransactions / stats.totalTransactions) *
+                100
+              ).toFixed(1)}
+              % failure rate
             </p>
           </CardContent>
         </Card>
@@ -390,7 +475,11 @@ const AllTransactionsPage = () => {
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
             >
-              {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {showFilters ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
             </Button>
           </CardTitle>
         </CardHeader>
@@ -414,8 +503,12 @@ const AllTransactionsPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="product-creation">Product Creation</SelectItem>
-                <SelectItem value="product-transfer">Product Transfer</SelectItem>
+                <SelectItem value="product-creation">
+                  Product Creation
+                </SelectItem>
+                <SelectItem value="product-transfer">
+                  Product Transfer
+                </SelectItem>
                 <SelectItem value="payment">Payment</SelectItem>
                 <SelectItem value="consensus">Consensus</SelectItem>
                 <SelectItem value="audit">Audit</SelectItem>
@@ -434,7 +527,10 @@ const AllTransactionsPage = () => {
               </SelectContent>
             </Select>
 
-            <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
+            <Select
+              value={selectedTimeRange}
+              onValueChange={setSelectedTimeRange}
+            >
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Time Range" />
               </SelectTrigger>
@@ -451,10 +547,18 @@ const AllTransactionsPage = () => {
           {showFilters && (
             <div className="border-t pt-4">
               <div className="flex justify-between items-center text-sm text-muted-foreground">
-                <span>Showing {filteredTransactions.length} of {transactions.length} transactions</span>
+                <span>
+                  Showing {filteredTransactions.length} of {transactions.length}{" "}
+                  transactions
+                </span>
                 <span className="flex items-center">
                   <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
-                  Live: {filteredTransactions.filter(tx => tx.status === 'pending').length} pending
+                  Live:{" "}
+                  {
+                    filteredTransactions.filter((tx) => tx.status === "pending")
+                      .length
+                  }{" "}
+                  pending
                 </span>
               </div>
             </div>
@@ -467,7 +571,8 @@ const AllTransactionsPage = () => {
         <CardHeader>
           <CardTitle>Recent Transactions</CardTitle>
           <CardDescription>
-            Page {currentPage} of {totalPages} • {filteredTransactions.length} total results
+            Page {currentPage} of {totalPages} • {filteredTransactions.length}{" "}
+            total results
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -494,7 +599,7 @@ const AllTransactionsPage = () => {
                       <div className="flex items-center space-x-2">
                         {getTypeIcon(transaction.type)}
                         <span className="text-sm capitalize font-medium">
-                          {transaction.type.replace('-', ' ')}
+                          {transaction.type.replace("-", " ")}
                         </span>
                       </div>
                     </TableCell>
@@ -534,7 +639,9 @@ const AllTransactionsPage = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <span className="font-mono text-sm">{transaction.value}</span>
+                      <span className="font-mono text-sm">
+                        {transaction.value}
+                      </span>
                       {transaction.endorsements && (
                         <div className="text-xs text-muted-foreground">
                           {transaction.endorsements} endorsements
@@ -542,7 +649,9 @@ const AllTransactionsPage = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">#{transaction.blockNumber}</Badge>
+                      <Badge variant="outline">
+                        #{transaction.blockNumber}
+                      </Badge>
                     </TableCell>
                     <TableCell>{getStatusBadge(transaction.status)}</TableCell>
                     <TableCell>
@@ -558,7 +667,9 @@ const AllTransactionsPage = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => copyToClipboard(transaction.txId)}>
+                          <DropdownMenuItem
+                            onClick={() => copyToClipboard(transaction.txId)}
+                          >
                             <Copy className="w-4 h-4 mr-2" />
                             Copy Tx Hash
                           </DropdownMenuItem>
@@ -579,21 +690,31 @@ const AllTransactionsPage = () => {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6">
               <div className="text-sm text-muted-foreground">
-                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} results
+                Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                {Math.min(
+                  currentPage * itemsPerPage,
+                  filteredTransactions.length
+                )}{" "}
+                of {filteredTransactions.length} results
               </div>
               <div className="flex space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
                   disabled={currentPage === 1}
                 >
                   Previous
                 </Button>
-                
+
                 {/* Page numbers */}
                 {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                  const page = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4 + i));
+                  const page = Math.max(
+                    1,
+                    Math.min(currentPage - 2 + i, totalPages - 4 + i)
+                  );
                   if (page <= totalPages) {
                     return (
                       <Button
@@ -608,11 +729,13 @@ const AllTransactionsPage = () => {
                   }
                   return null;
                 })}
-                
+
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
                   disabled={currentPage === totalPages}
                 >
                   Next
@@ -630,24 +753,34 @@ const AllTransactionsPage = () => {
             <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
             Live Transaction Stream
           </CardTitle>
-          <CardDescription>Recent Hyperledger Fabric transactions</CardDescription>
+          <CardDescription>
+            Recent Hyperledger Fabric transactions
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {filteredTransactions.slice(0, 5).map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div
+                key={transaction.id}
+                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+              >
                 <div className="flex items-center space-x-3">
                   {getTypeIcon(transaction.type)}
                   <div>
-                    <div className="font-mono text-sm font-medium">{transaction.id}</div>
+                    <div className="font-mono text-sm font-medium">
+                      {transaction.id}
+                    </div>
                     <div className="text-xs text-muted-foreground">
-                      {transaction.channelName} • {transaction.from} → {transaction.to}
+                      {transaction.channelName} • {transaction.from} →{" "}
+                      {transaction.to}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   {getStatusBadge(transaction.status)}
-                  <span className="text-sm font-medium">{transaction.value}</span>
+                  <span className="text-sm font-medium">
+                    {transaction.value}
+                  </span>
                 </div>
               </div>
             ))}

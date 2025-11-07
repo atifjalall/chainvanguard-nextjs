@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/_ui/button";
 import { Highlighter } from "@/components/magicui/highlighter";
 import {
   Card,
@@ -10,8 +10,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+} from "@/components/_ui/card";
+import { Badge } from "@/components/_ui/badge";
 import {
   ArrowRight,
   Shield,

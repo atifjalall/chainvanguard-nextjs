@@ -5,7 +5,34 @@ import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
 const router = express.Router();
 
 // ========================================
-// VENDOR ENDPOINTS
+// CUSTOMER ENDPOINTS (B2C)
+// ========================================
+
+/**
+ * GET /api/loyalty/status
+ * Get customer's loyalty points status
+ * (For customers buying from vendors)
+ */
+router.get(
+  "/status",
+  authenticate,
+  authorizeRoles("customer"),
+  async (req, res) => {
+    try {
+      const result = await loyaltyService.getCustomerLoyaltyStatus(req.userId);
+      res.json(result);
+    } catch (error) {
+      console.error("❌ GET /api/loyalty/status error:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to get loyalty status",
+      });
+    }
+  }
+);
+
+// ========================================
+// VENDOR ENDPOINTS (B2B)
 // ========================================
 
 /**

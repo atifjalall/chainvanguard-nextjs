@@ -1,20 +1,22 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-} from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Badge } from "@/components/_ui/badge";
+import { Progress } from "@/components/_ui/progress";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/_ui/tabs";
 import {
   Shield,
   Network,
@@ -220,31 +222,63 @@ export default function EnhancedBlockchainExpertDashboard() {
   // Helper functions
   const getStatusBadge = (status: StatusType) => {
     const statusConfig = {
-      online: { variant: "default", className: "bg-green-500 hover:bg-green-600", label: "Online" },
-      active: { variant: "default", className: "bg-green-500 hover:bg-green-600", label: "Active" },
-      confirmed: { variant: "default", className: "bg-green-500 hover:bg-green-600", label: "Confirmed" },
-      offline: { variant: "destructive", className: "bg-red-500 hover:bg-red-600", label: "Offline" },
-      failed: { variant: "destructive", className: "bg-red-500 hover:bg-red-600", label: "Failed" },
-      syncing: { variant: "secondary", className: "bg-yellow-500 hover:bg-yellow-600", label: "Syncing" },
-      pending: { variant: "secondary", className: "bg-yellow-500 hover:bg-yellow-600", label: "Pending" },
-      paused: { variant: "outline", className: "bg-gray-500 hover:bg-gray-600", label: "Paused" },
+      online: {
+        variant: "default",
+        className: "bg-green-500 hover:bg-green-600",
+        label: "Online",
+      },
+      active: {
+        variant: "default",
+        className: "bg-green-500 hover:bg-green-600",
+        label: "Active",
+      },
+      confirmed: {
+        variant: "default",
+        className: "bg-green-500 hover:bg-green-600",
+        label: "Confirmed",
+      },
+      offline: {
+        variant: "destructive",
+        className: "bg-red-500 hover:bg-red-600",
+        label: "Offline",
+      },
+      failed: {
+        variant: "destructive",
+        className: "bg-red-500 hover:bg-red-600",
+        label: "Failed",
+      },
+      syncing: {
+        variant: "secondary",
+        className: "bg-yellow-500 hover:bg-yellow-600",
+        label: "Syncing",
+      },
+      pending: {
+        variant: "secondary",
+        className: "bg-yellow-500 hover:bg-yellow-600",
+        label: "Pending",
+      },
+      paused: {
+        variant: "outline",
+        className: "bg-gray-500 hover:bg-gray-600",
+        label: "Paused",
+      },
     };
 
     const config = statusConfig[status] || statusConfig.offline;
-    
-    return (
-      <Badge className={config.className}>
-        {config.label}
-      </Badge>
-    );
+
+    return <Badge className={config.className}>{config.label}</Badge>;
   };
 
   const getTransactionTypeColor = (type: TransactionType) => {
     const colors = {
-      "product-creation": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-      "product-transfer": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-      payment: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
-      consensus: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
+      "product-creation":
+        "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+      "product-transfer":
+        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+      payment:
+        "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+      consensus:
+        "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
       audit: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
     };
     return colors[type];
@@ -258,10 +292,14 @@ export default function EnhancedBlockchainExpertDashboard() {
 
   const getNodeTypeIcon = (type: NodeType) => {
     switch (type) {
-      case "peer": return <Server className="w-4 h-4" />;
-      case "orderer": return <Layers className="w-4 h-4" />;
-      case "ca": return <Key className="w-4 h-4" />;
-      default: return <Server className="w-4 h-4" />;
+      case "peer":
+        return <Server className="w-4 h-4" />;
+      case "orderer":
+        return <Layers className="w-4 h-4" />;
+      case "ca":
+        return <Key className="w-4 h-4" />;
+      default:
+        return <Server className="w-4 h-4" />;
     }
   };
 
@@ -390,7 +428,8 @@ export default function EnhancedBlockchainExpertDashboard() {
                       (dashboardData.networkHealth.onlineNodes /
                         dashboardData.networkHealth.totalNodes) *
                         100
-                    )}% online
+                    )}
+                    % online
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
@@ -398,18 +437,23 @@ export default function EnhancedBlockchainExpertDashboard() {
                 </div>
               </div>
               <div className="flex gap-1 mt-4">
-                {Array.from({ length: dashboardData.networkHealth.totalNodes }, (_, i) => (
-                  <div
-                    key={i}
-                    className={`h-2 flex-1 rounded ${
-                      i < dashboardData.networkHealth.onlineNodes
-                        ? "bg-blue-500"
-                        : i < dashboardData.networkHealth.onlineNodes + dashboardData.networkHealth.syncingNodes
-                        ? "bg-yellow-500"
-                        : "bg-gray-300"
-                    }`}
-                  />
-                ))}
+                {Array.from(
+                  { length: dashboardData.networkHealth.totalNodes },
+                  (_, i) => (
+                    <div
+                      key={i}
+                      className={`h-2 flex-1 rounded ${
+                        i < dashboardData.networkHealth.onlineNodes
+                          ? "bg-blue-500"
+                          : i <
+                              dashboardData.networkHealth.onlineNodes +
+                                dashboardData.networkHealth.syncingNodes
+                            ? "bg-yellow-500"
+                            : "bg-gray-300"
+                      }`}
+                    />
+                  )
+                )}
               </div>
             </CardContent>
           </Card>
@@ -434,7 +478,9 @@ export default function EnhancedBlockchainExpertDashboard() {
               </div>
               <div className="flex items-center gap-2 mt-4">
                 <TrendingUp className="h-4 w-4 text-purple-600" />
-                <span className="text-xs text-purple-600">+15% vs yesterday</span>
+                <span className="text-xs text-purple-600">
+                  +15% vs yesterday
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -459,7 +505,9 @@ export default function EnhancedBlockchainExpertDashboard() {
               </div>
               <div className="flex items-center gap-2 mt-4">
                 <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-xs text-green-600">All systems protected</span>
+                <span className="text-xs text-green-600">
+                  All systems protected
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -498,12 +546,24 @@ export default function EnhancedBlockchainExpertDashboard() {
       >
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
-            <TabsTrigger value="overview" className="rounded-lg">Overview</TabsTrigger>
-            <TabsTrigger value="nodes" className="rounded-lg">Network Nodes</TabsTrigger>
-            <TabsTrigger value="transactions" className="rounded-lg">Transactions</TabsTrigger>
-            <TabsTrigger value="consensus" className="rounded-lg">Consensus</TabsTrigger>
-            <TabsTrigger value="security" className="rounded-lg">Security</TabsTrigger>
-            <TabsTrigger value="system" className="rounded-lg">System Health</TabsTrigger>
+            <TabsTrigger value="overview" className="rounded-lg">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="nodes" className="rounded-lg">
+              Network Nodes
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="rounded-lg">
+              Transactions
+            </TabsTrigger>
+            <TabsTrigger value="consensus" className="rounded-lg">
+              Consensus
+            </TabsTrigger>
+            <TabsTrigger value="security" className="rounded-lg">
+              Security
+            </TabsTrigger>
+            <TabsTrigger value="system" className="rounded-lg">
+              System Health
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -515,30 +575,40 @@ export default function EnhancedBlockchainExpertDashboard() {
                     <Network className="w-5 h-5 text-orange-500" />
                     Network Performance
                   </CardTitle>
-                  <CardDescription>Real-time network metrics and status</CardDescription>
+                  <CardDescription>
+                    Real-time network metrics and status
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-4 rounded-xl">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Throughput</span>
+                        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                          Throughput
+                        </span>
                         <Zap className="w-4 h-4 text-blue-500" />
                       </div>
                       <div className="text-2xl font-bold text-blue-800 dark:text-blue-200 mt-1">
                         {dashboardData.networkHealth.transactionThroughput}
                       </div>
-                      <div className="text-xs text-blue-600 dark:text-blue-400">tx/hour</div>
+                      <div className="text-xs text-blue-600 dark:text-blue-400">
+                        tx/hour
+                      </div>
                     </div>
-                    
+
                     <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-xl">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-green-700 dark:text-green-300">Latency</span>
+                        <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                          Latency
+                        </span>
                         <Clock className="w-4 h-4 text-green-500" />
                       </div>
                       <div className="text-2xl font-bold text-green-800 dark:text-green-200 mt-1">
                         {dashboardData.networkHealth.networkLatency}ms
                       </div>
-                      <div className="text-xs text-green-600 dark:text-green-400">avg response</div>
+                      <div className="text-xs text-green-600 dark:text-green-400">
+                        avg response
+                      </div>
                     </div>
                   </div>
 
@@ -546,17 +616,24 @@ export default function EnhancedBlockchainExpertDashboard() {
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span>Block Time Average</span>
-                        <span className="font-medium">{dashboardData.networkHealth.averageBlockTime}s</span>
+                        <span className="font-medium">
+                          {dashboardData.networkHealth.averageBlockTime}s
+                        </span>
                       </div>
                       <Progress value={70} className="h-2" />
                     </div>
-                    
+
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span>Consensus Health</span>
-                        <span className="font-medium">{dashboardData.networkHealth.consensusHealth}%</span>
+                        <span className="font-medium">
+                          {dashboardData.networkHealth.consensusHealth}%
+                        </span>
                       </div>
-                      <Progress value={dashboardData.networkHealth.consensusHealth} className="h-2" />
+                      <Progress
+                        value={dashboardData.networkHealth.consensusHealth}
+                        className="h-2"
+                      />
                     </div>
                   </div>
                 </CardContent>
@@ -569,7 +646,9 @@ export default function EnhancedBlockchainExpertDashboard() {
                     <Hash className="w-5 h-5 text-orange-500" />
                     Recent Transactions
                   </CardTitle>
-                  <CardDescription>Latest blockchain transactions</CardDescription>
+                  <CardDescription>
+                    Latest blockchain transactions
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-4 gap-4 text-center mb-6">
@@ -614,17 +693,25 @@ export default function EnhancedBlockchainExpertDashboard() {
                       >
                         <div className="flex items-center gap-3 flex-1">
                           <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-orange-400 to-red-400 flex items-center justify-center">
-                            {tx.type === "product-creation" && <Package className="w-5 h-5 text-white" />}
-                            {tx.type === "payment" && <CreditCard className="w-5 h-5 text-white" />}
-                            {tx.type === "product-transfer" && <ArrowUpRight className="w-5 h-5 text-white" />}
+                            {tx.type === "product-creation" && (
+                              <Package className="w-5 h-5 text-white" />
+                            )}
+                            {tx.type === "payment" && (
+                              <CreditCard className="w-5 h-5 text-white" />
+                            )}
+                            {tx.type === "product-transfer" && (
+                              <ArrowUpRight className="w-5 h-5 text-white" />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <code className="text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded font-mono border">
                                 {tx.txId.slice(0, 10)}...{tx.txId.slice(-6)}
                               </code>
-                              <Badge className={getTransactionTypeColor(tx.type)}>
-                                {tx.type.replace('-', ' ')}
+                              <Badge
+                                className={getTransactionTypeColor(tx.type)}
+                              >
+                                {tx.type.replace("-", " ")}
                               </Badge>
                               {getStatusBadge(tx.status)}
                             </div>
@@ -656,7 +743,9 @@ export default function EnhancedBlockchainExpertDashboard() {
                   <Server className="w-5 h-5 text-orange-500" />
                   Network Nodes Status
                 </CardTitle>
-                <CardDescription>Monitor all nodes in your Hyperledger Fabric network</CardDescription>
+                <CardDescription>
+                  Monitor all nodes in your Hyperledger Fabric network
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4">
@@ -708,7 +797,9 @@ export default function EnhancedBlockchainExpertDashboard() {
                   <Hash className="w-5 h-5 text-orange-500" />
                   Transaction Analytics
                 </CardTitle>
-                <CardDescription>Detailed transaction metrics and analysis</CardDescription>
+                <CardDescription>
+                  Detailed transaction metrics and analysis
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -718,7 +809,9 @@ export default function EnhancedBlockchainExpertDashboard() {
                         <TrendingUp className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-blue-800 dark:text-blue-200">Total Volume</h3>
+                        <h3 className="font-semibold text-blue-800 dark:text-blue-200">
+                          Total Volume
+                        </h3>
                         <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
                           {dashboardData.transactions.totalTransactions.toLocaleString()}
                         </p>
@@ -735,7 +828,9 @@ export default function EnhancedBlockchainExpertDashboard() {
                         <Zap className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-purple-800 dark:text-purple-200">Current TPS</h3>
+                        <h3 className="font-semibold text-purple-800 dark:text-purple-200">
+                          Current TPS
+                        </h3>
                         <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                           {dashboardData.transactions.tps}
                         </p>
@@ -752,9 +847,16 @@ export default function EnhancedBlockchainExpertDashboard() {
                         <CheckCircle className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-green-800 dark:text-green-200">Success Rate</h3>
+                        <h3 className="font-semibold text-green-800 dark:text-green-200">
+                          Success Rate
+                        </h3>
                         <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                          {Math.round((dashboardData.transactions.confirmed / dashboardData.transactions.totalTransactions) * 100)}%
+                          {Math.round(
+                            (dashboardData.transactions.confirmed /
+                              dashboardData.transactions.totalTransactions) *
+                              100
+                          )}
+                          %
                         </p>
                       </div>
                     </div>
@@ -765,7 +867,9 @@ export default function EnhancedBlockchainExpertDashboard() {
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="font-semibold text-gray-900 dark:text-gray-100">Recent Transaction Activity</h4>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                    Recent Transaction Activity
+                  </h4>
                   {recentTransactions.map((tx) => (
                     <div
                       key={tx.id}
@@ -781,7 +885,7 @@ export default function EnhancedBlockchainExpertDashboard() {
                               {tx.txId.slice(0, 12)}...{tx.txId.slice(-8)}
                             </code>
                             <Badge className={getTransactionTypeColor(tx.type)}>
-                              {tx.type.replace('-', ' ')}
+                              {tx.type.replace("-", " ")}
                             </Badge>
                           </div>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -807,48 +911,68 @@ export default function EnhancedBlockchainExpertDashboard() {
                   <Users className="w-5 h-5 text-orange-500" />
                   Consensus Mechanism
                 </CardTitle>
-                <CardDescription>Monitor consensus algorithm and validator nodes</CardDescription>
+                <CardDescription>
+                  Monitor consensus algorithm and validator nodes
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-6 rounded-xl">
-                      <h3 className="font-semibold text-orange-800 dark:text-orange-200 mb-4">Algorithm Details</h3>
+                      <h3 className="font-semibold text-orange-800 dark:text-orange-200 mb-4">
+                        Algorithm Details
+                      </h3>
                       <div className="space-y-3">
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Algorithm:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Algorithm:
+                          </span>
                           <Badge className="bg-orange-500 hover:bg-orange-600 text-white">
                             {dashboardData.consensus.algorithm}
                           </Badge>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Status:
+                          </span>
                           {getStatusBadge(dashboardData.consensus.status)}
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Leader Node:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Leader Node:
+                          </span>
                           <code className="text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded">
                             {dashboardData.consensus.leaderNode}
                           </code>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Consensus Time:</span>
-                          <span className="font-medium">{dashboardData.consensus.consensusTime}s</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Consensus Time:
+                          </span>
+                          <span className="font-medium">
+                            {dashboardData.consensus.consensusTime}s
+                          </span>
                         </div>
                       </div>
                     </div>
 
                     <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-6 rounded-xl">
-                      <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-4">Validator Nodes</h3>
+                      <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-4">
+                        Validator Nodes
+                      </h3>
                       <div className="space-y-3">
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Total Validators:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Total Validators:
+                          </span>
                           <span className="font-bold text-blue-800 dark:text-blue-200">
                             {dashboardData.consensus.validatorNodes}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Active Proposals:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Active Proposals:
+                          </span>
                           <span className="font-bold text-blue-800 dark:text-blue-200">
                             {dashboardData.consensus.activeProposals}
                           </span>
@@ -859,27 +983,41 @@ export default function EnhancedBlockchainExpertDashboard() {
 
                   <div className="space-y-6">
                     <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl">
-                      <h3 className="font-semibold text-green-800 dark:text-green-200 mb-4">Performance Metrics</h3>
+                      <h3 className="font-semibold text-green-800 dark:text-green-200 mb-4">
+                        Performance Metrics
+                      </h3>
                       <div className="space-y-4">
                         <div>
                           <div className="flex justify-between text-sm mb-2">
                             <span>Consensus Efficiency</span>
-                            <span className="font-medium">{dashboardData.networkHealth.consensusHealth}%</span>
+                            <span className="font-medium">
+                              {dashboardData.networkHealth.consensusHealth}%
+                            </span>
                           </div>
-                          <Progress value={dashboardData.networkHealth.consensusHealth} className="h-3" />
+                          <Progress
+                            value={dashboardData.networkHealth.consensusHealth}
+                            className="h-3"
+                          />
                         </div>
                         <div>
                           <div className="flex justify-between text-sm mb-2">
                             <span>Fault Tolerance</span>
-                            <span className="font-medium">{dashboardData.networkHealth.faultTolerance}%</span>
+                            <span className="font-medium">
+                              {dashboardData.networkHealth.faultTolerance}%
+                            </span>
                           </div>
-                          <Progress value={dashboardData.networkHealth.faultTolerance} className="h-3" />
+                          <Progress
+                            value={dashboardData.networkHealth.faultTolerance}
+                            className="h-3"
+                          />
                         </div>
                       </div>
                     </div>
 
                     <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 p-6 rounded-xl">
-                      <h3 className="font-semibold text-purple-800 dark:text-purple-200 mb-4">Quick Actions</h3>
+                      <h3 className="font-semibold text-purple-800 dark:text-purple-200 mb-4">
+                        Quick Actions
+                      </h3>
                       <div className="grid grid-cols-2 gap-3">
                         <Button variant="outline" size="sm" className="w-full">
                           <Play className="w-4 h-4 mr-2" />
@@ -912,47 +1050,65 @@ export default function EnhancedBlockchainExpertDashboard() {
                   <Shield className="w-5 h-5 text-orange-500" />
                   Security Overview
                 </CardTitle>
-                <CardDescription>Monitor security status and threat detection</CardDescription>
+                <CardDescription>
+                  Monitor security status and threat detection
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl">
-                      <h3 className="font-semibold text-green-800 dark:text-green-200 mb-4">Security Status</h3>
+                      <h3 className="font-semibold text-green-800 dark:text-green-200 mb-4">
+                        Security Status
+                      </h3>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Overall Status:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Overall Status:
+                          </span>
                           <Badge className="bg-green-500 hover:bg-green-600 text-white">
                             <CheckCircle className="w-3 h-3 mr-1" />
                             Secure
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Threats Detected:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Threats Detected:
+                          </span>
                           <span className="font-bold text-green-600">
                             {dashboardData.security.threatsDetected}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Last Scan:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Last Scan:
+                          </span>
                           <span className="text-sm text-gray-500">
-                            {new Date(dashboardData.security.lastSecurityScan).toLocaleDateString()}
+                            {new Date(
+                              dashboardData.security.lastSecurityScan
+                            ).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-6 rounded-xl">
-                      <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-4">Certificates</h3>
+                      <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-4">
+                        Certificates
+                      </h3>
                       <div className="space-y-3">
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Valid Certificates:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Valid Certificates:
+                          </span>
                           <span className="font-bold text-green-600">
                             {dashboardData.security.certificatesValid}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Expiring Soon:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Expiring Soon:
+                          </span>
                           <span className="font-bold text-yellow-600">
                             {dashboardData.security.certificatesExpiring}
                           </span>
@@ -963,16 +1119,22 @@ export default function EnhancedBlockchainExpertDashboard() {
 
                   <div className="space-y-6">
                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-xl">
-                      <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-4">Encryption & Keys</h3>
+                      <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-4">
+                        Encryption & Keys
+                      </h3>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Encryption:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Encryption:
+                          </span>
                           <Badge variant="outline">
                             {dashboardData.security.encryptionLevel}
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Key Rotation:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Key Rotation:
+                          </span>
                           <Badge
                             className={
                               dashboardData.security.keyRotation
@@ -980,11 +1142,15 @@ export default function EnhancedBlockchainExpertDashboard() {
                                 : "bg-red-500 hover:bg-red-600 text-white"
                             }
                           >
-                            {dashboardData.security.keyRotation ? "Enabled" : "Disabled"}
+                            {dashboardData.security.keyRotation
+                              ? "Enabled"
+                              : "Disabled"}
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Access Control:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Access Control:
+                          </span>
                           <Badge
                             className={
                               dashboardData.security.accessControlActive
@@ -992,14 +1158,18 @@ export default function EnhancedBlockchainExpertDashboard() {
                                 : "bg-red-500 hover:bg-red-600 text-white"
                             }
                           >
-                            {dashboardData.security.accessControlActive ? "Active" : "Inactive"}
+                            {dashboardData.security.accessControlActive
+                              ? "Active"
+                              : "Inactive"}
                           </Badge>
                         </div>
                       </div>
                     </div>
 
                     <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 p-6 rounded-xl">
-                      <h3 className="font-semibold text-purple-800 dark:text-purple-200 mb-4">Security Actions</h3>
+                      <h3 className="font-semibold text-purple-800 dark:text-purple-200 mb-4">
+                        Security Actions
+                      </h3>
                       <div className="grid grid-cols-2 gap-3">
                         <Button variant="outline" size="sm" className="w-full">
                           <Eye className="w-4 h-4 mr-2" />
@@ -1032,7 +1202,9 @@ export default function EnhancedBlockchainExpertDashboard() {
                   <Monitor className="w-5 h-5 text-orange-500" />
                   System Health Monitoring
                 </CardTitle>
-                <CardDescription>Monitor system resources and performance metrics</CardDescription>
+                <CardDescription>
+                  Monitor system resources and performance metrics
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1040,13 +1212,20 @@ export default function EnhancedBlockchainExpertDashboard() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <Cpu className="h-5 w-5 text-blue-500" />
-                        <span className="font-semibold text-blue-800 dark:text-blue-200">CPU Usage</span>
+                        <span className="font-semibold text-blue-800 dark:text-blue-200">
+                          CPU Usage
+                        </span>
                       </div>
-                      <span className={`font-bold text-xl ${getHealthColor(100 - dashboardData.systemHealth.cpuUsage)}`}>
+                      <span
+                        className={`font-bold text-xl ${getHealthColor(100 - dashboardData.systemHealth.cpuUsage)}`}
+                      >
                         {dashboardData.systemHealth.cpuUsage}%
                       </span>
                     </div>
-                    <Progress value={dashboardData.systemHealth.cpuUsage} className="h-3 mb-2" />
+                    <Progress
+                      value={dashboardData.systemHealth.cpuUsage}
+                      className="h-3 mb-2"
+                    />
                     <div className="text-sm text-blue-600 dark:text-blue-400">
                       Normal operating range
                     </div>
@@ -1056,13 +1235,20 @@ export default function EnhancedBlockchainExpertDashboard() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <Database className="h-5 w-5 text-green-500" />
-                        <span className="font-semibold text-green-800 dark:text-green-200">Memory Usage</span>
+                        <span className="font-semibold text-green-800 dark:text-green-200">
+                          Memory Usage
+                        </span>
                       </div>
-                      <span className={`font-bold text-xl ${getHealthColor(100 - dashboardData.systemHealth.memoryUsage)}`}>
+                      <span
+                        className={`font-bold text-xl ${getHealthColor(100 - dashboardData.systemHealth.memoryUsage)}`}
+                      >
                         {dashboardData.systemHealth.memoryUsage}%
                       </span>
                     </div>
-                    <Progress value={dashboardData.systemHealth.memoryUsage} className="h-3 mb-2" />
+                    <Progress
+                      value={dashboardData.systemHealth.memoryUsage}
+                      className="h-3 mb-2"
+                    />
                     <div className="text-sm text-green-600 dark:text-green-400">
                       8.2GB of 12GB used
                     </div>
@@ -1072,13 +1258,20 @@ export default function EnhancedBlockchainExpertDashboard() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <HardDrive className="h-5 w-5 text-purple-500" />
-                        <span className="font-semibold text-purple-800 dark:text-purple-200">Disk Usage</span>
+                        <span className="font-semibold text-purple-800 dark:text-purple-200">
+                          Disk Usage
+                        </span>
                       </div>
-                      <span className={`font-bold text-xl ${getHealthColor(100 - dashboardData.systemHealth.diskUsage)}`}>
+                      <span
+                        className={`font-bold text-xl ${getHealthColor(100 - dashboardData.systemHealth.diskUsage)}`}
+                      >
                         {dashboardData.systemHealth.diskUsage}%
                       </span>
                     </div>
-                    <Progress value={dashboardData.systemHealth.diskUsage} className="h-3 mb-2" />
+                    <Progress
+                      value={dashboardData.systemHealth.diskUsage}
+                      className="h-3 mb-2"
+                    />
                     <div className="text-sm text-purple-600 dark:text-purple-400">
                       64GB of 200GB used
                     </div>
@@ -1088,7 +1281,9 @@ export default function EnhancedBlockchainExpertDashboard() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <Wifi className="h-5 w-5 text-amber-500" />
-                        <span className="font-semibold text-amber-800 dark:text-amber-200">Network I/O</span>
+                        <span className="font-semibold text-amber-800 dark:text-amber-200">
+                          Network I/O
+                        </span>
                       </div>
                       <span className="font-bold text-xl text-amber-800 dark:text-amber-200">
                         {dashboardData.systemHealth.networkIO} MB/s
@@ -1104,7 +1299,9 @@ export default function EnhancedBlockchainExpertDashboard() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <Globe className="h-5 w-5 text-rose-500" />
-                        <span className="font-semibold text-rose-800 dark:text-rose-200">Active Channels</span>
+                        <span className="font-semibold text-rose-800 dark:text-rose-200">
+                          Active Channels
+                        </span>
                       </div>
                       <span className="font-bold text-xl text-rose-800 dark:text-rose-200">
                         {dashboardData.systemHealth.activeChannels}
@@ -1119,7 +1316,9 @@ export default function EnhancedBlockchainExpertDashboard() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <Users className="h-5 w-5 text-teal-500" />
-                        <span className="font-semibold text-teal-800 dark:text-teal-200">Connected Peers</span>
+                        <span className="font-semibold text-teal-800 dark:text-teal-200">
+                          Connected Peers
+                        </span>
                       </div>
                       <span className="font-bold text-xl text-teal-800 dark:text-teal-200">
                         {dashboardData.systemHealth.connectedPeers}
@@ -1148,40 +1347,42 @@ export default function EnhancedBlockchainExpertDashboard() {
               <Target className="w-5 h-5 text-orange-500" />
               Quick Actions
             </CardTitle>
-            <CardDescription>Frequently used blockchain management tools</CardDescription>
+            <CardDescription>
+              Frequently used blockchain management tools
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="h-20 flex flex-col gap-2 bg-white/50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-800 border-orange-200 hover:border-orange-300"
               >
                 <Hash className="h-6 w-6 text-orange-600" />
                 <span className="text-xs font-medium">All Transactions</span>
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="h-20 flex flex-col gap-2 bg-white/50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-800 border-orange-200 hover:border-orange-300"
               >
                 <Shield className="h-6 w-6 text-orange-600" />
                 <span className="text-xs font-medium">Security Scan</span>
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="h-20 flex flex-col gap-2 bg-white/50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-800 border-orange-200 hover:border-orange-300"
               >
                 <Settings className="h-6 w-6 text-orange-600" />
                 <span className="text-xs font-medium">Consensus Config</span>
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="h-20 flex flex-col gap-2 bg-white/50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-800 border-orange-200 hover:border-orange-300"
               >
                 <Download className="h-6 w-6 text-orange-600" />
                 <span className="text-xs font-medium">Export Logs</span>
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="h-20 flex flex-col gap-2 bg-white/50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-800 border-orange-200 hover:border-orange-300"
               >
                 <Activity className="h-6 w-6 text-orange-600" />
@@ -1213,21 +1414,27 @@ export default function EnhancedBlockchainExpertDashboard() {
                   <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                   <div className="absolute inset-0 w-3 h-3 bg-blue-500 rounded-full animate-ping opacity-75"></div>
                 </div>
-                <span className="font-medium">TPS: {dashboardData.transactions.tps}</span>
+                <span className="font-medium">
+                  TPS: {dashboardData.transactions.tps}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
                   <div className="absolute inset-0 w-3 h-3 bg-purple-500 rounded-full animate-ping opacity-75"></div>
                 </div>
-                <span className="font-medium">Latency: {dashboardData.networkHealth.networkLatency}ms</span>
+                <span className="font-medium">
+                  Latency: {dashboardData.networkHealth.networkLatency}ms
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                   <div className="absolute inset-0 w-3 h-3 bg-orange-500 rounded-full animate-ping opacity-75"></div>
                 </div>
-                <span className="font-medium">Health: {dashboardData.systemHealth.overallHealth}%</span>
+                <span className="font-medium">
+                  Health: {dashboardData.systemHealth.overallHealth}%
+                </span>
               </div>
             </div>
           </CardContent>

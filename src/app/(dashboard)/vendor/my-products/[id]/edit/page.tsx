@@ -9,22 +9,22 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Input } from "@/components/_ui/input";
+import { Label } from "@/components/_ui/label";
+import { Textarea } from "@/components/_ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+} from "@/components/_ui/select";
+import { Badge } from "@/components/_ui/badge";
+import { Progress } from "@/components/_ui/progress";
+import { Switch } from "@/components/_ui/switch";
+import { Separator } from "@/components/_ui/separator";
 import {
   Package,
   Upload,

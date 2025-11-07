@@ -2,11 +2,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Badge } from "@/components/_ui/badge";
+import { Progress } from "@/components/_ui/progress";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/_ui/tabs";
 import {
   Package,
   Truck,
@@ -48,13 +58,43 @@ const mockActiveOrders = [
     currentLocation: "Distribution Center - Frankfurt, DE",
     progress: 75,
     trackingSteps: [
-      { step: "Order Confirmed", completed: true, date: "2025-08-15", time: "10:30 AM" },
-      { step: "Payment Processed", completed: true, date: "2025-08-15", time: "10:35 AM" },
-      { step: "Preparing Shipment", completed: true, date: "2025-08-15", time: "2:45 PM" },
+      {
+        step: "Order Confirmed",
+        completed: true,
+        date: "2025-08-15",
+        time: "10:30 AM",
+      },
+      {
+        step: "Payment Processed",
+        completed: true,
+        date: "2025-08-15",
+        time: "10:35 AM",
+      },
+      {
+        step: "Preparing Shipment",
+        completed: true,
+        date: "2025-08-15",
+        time: "2:45 PM",
+      },
       { step: "Shipped", completed: true, date: "2025-08-16", time: "9:15 AM" },
-      { step: "In Transit", completed: true, date: "2025-08-16", time: "11:30 AM" },
-      { step: "Out for Delivery", completed: false, date: "2025-08-18", time: "Expected" },
-      { step: "Delivered", completed: false, date: "2025-08-18", time: "Expected" },
+      {
+        step: "In Transit",
+        completed: true,
+        date: "2025-08-16",
+        time: "11:30 AM",
+      },
+      {
+        step: "Out for Delivery",
+        completed: false,
+        date: "2025-08-18",
+        time: "Expected",
+      },
+      {
+        step: "Delivered",
+        completed: false,
+        date: "2025-08-18",
+        time: "Expected",
+      },
     ],
     vendor: "Multiple Vendors",
     canCancel: false,
@@ -64,7 +104,7 @@ const mockActiveOrders = [
     id: "ORD-2025-008",
     date: "2025-08-16",
     status: "processing",
-    total: 245.50,
+    total: 245.5,
     estimatedDelivery: "2025-08-20",
     trackingId: "TRK-2025-008",
     items: [
@@ -86,13 +126,48 @@ const mockActiveOrders = [
     currentLocation: "Vendor Facility - Processing",
     progress: 25,
     trackingSteps: [
-      { step: "Order Confirmed", completed: true, date: "2025-08-16", time: "3:20 PM" },
-      { step: "Payment Processed", completed: true, date: "2025-08-16", time: "3:25 PM" },
-      { step: "Preparing Shipment", completed: false, date: "2025-08-17", time: "In Progress" },
-      { step: "Shipped", completed: false, date: "2025-08-17", time: "Expected" },
-      { step: "In Transit", completed: false, date: "2025-08-18", time: "Expected" },
-      { step: "Out for Delivery", completed: false, date: "2025-08-20", time: "Expected" },
-      { step: "Delivered", completed: false, date: "2025-08-20", time: "Expected" },
+      {
+        step: "Order Confirmed",
+        completed: true,
+        date: "2025-08-16",
+        time: "3:20 PM",
+      },
+      {
+        step: "Payment Processed",
+        completed: true,
+        date: "2025-08-16",
+        time: "3:25 PM",
+      },
+      {
+        step: "Preparing Shipment",
+        completed: false,
+        date: "2025-08-17",
+        time: "In Progress",
+      },
+      {
+        step: "Shipped",
+        completed: false,
+        date: "2025-08-17",
+        time: "Expected",
+      },
+      {
+        step: "In Transit",
+        completed: false,
+        date: "2025-08-18",
+        time: "Expected",
+      },
+      {
+        step: "Out for Delivery",
+        completed: false,
+        date: "2025-08-20",
+        time: "Expected",
+      },
+      {
+        step: "Delivered",
+        completed: false,
+        date: "2025-08-20",
+        time: "Expected",
+      },
     ],
     vendor: "Multiple Vendors",
     canCancel: true,
@@ -124,13 +199,48 @@ const mockActiveOrders = [
     currentLocation: "Order Processing",
     progress: 15,
     trackingSteps: [
-      { step: "Order Confirmed", completed: true, date: "2025-08-16", time: "6:45 PM" },
-      { step: "Payment Processed", completed: false, date: "2025-08-17", time: "Pending" },
-      { step: "Preparing Shipment", completed: false, date: "2025-08-17", time: "Pending" },
-      { step: "Shipped", completed: false, date: "2025-08-17", time: "Pending" },
-      { step: "In Transit", completed: false, date: "2025-08-18", time: "Pending" },
-      { step: "Out for Delivery", completed: false, date: "2025-08-19", time: "Pending" },
-      { step: "Delivered", completed: false, date: "2025-08-19", time: "Pending" },
+      {
+        step: "Order Confirmed",
+        completed: true,
+        date: "2025-08-16",
+        time: "6:45 PM",
+      },
+      {
+        step: "Payment Processed",
+        completed: false,
+        date: "2025-08-17",
+        time: "Pending",
+      },
+      {
+        step: "Preparing Shipment",
+        completed: false,
+        date: "2025-08-17",
+        time: "Pending",
+      },
+      {
+        step: "Shipped",
+        completed: false,
+        date: "2025-08-17",
+        time: "Pending",
+      },
+      {
+        step: "In Transit",
+        completed: false,
+        date: "2025-08-18",
+        time: "Pending",
+      },
+      {
+        step: "Out for Delivery",
+        completed: false,
+        date: "2025-08-19",
+        time: "Pending",
+      },
+      {
+        step: "Delivered",
+        completed: false,
+        date: "2025-08-19",
+        time: "Pending",
+      },
     ],
     vendor: "Multiple Vendors",
     canCancel: true,
@@ -140,7 +250,9 @@ const mockActiveOrders = [
 
 export default function MyOrdersPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState<"active" | "tracking">("active");
+  const [selectedTab, setSelectedTab] = useState<"active" | "tracking">(
+    "active"
+  );
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -151,31 +263,36 @@ export default function MyOrdersPage() {
     switch (status) {
       case "confirmed":
         return {
-          color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+          color:
+            "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
           icon: Clock,
           label: "Confirmed",
         };
       case "processing":
         return {
-          color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+          color:
+            "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
           icon: Package,
           label: "Processing",
         };
       case "shipped":
         return {
-          color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+          color:
+            "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
           icon: Truck,
           label: "Shipped",
         };
       case "delivered":
         return {
-          color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+          color:
+            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
           icon: CheckCircle,
           label: "Delivered",
         };
       default:
         return {
-          color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+          color:
+            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
           icon: Package,
           label: "Unknown",
         };
@@ -235,7 +352,9 @@ export default function MyOrdersPage() {
           {/* Progress Section */}
           <div className="mb-4">
             <div className="flex justify-between items-center text-sm mb-2">
-              <span className="text-gray-600 dark:text-gray-400">Order Progress</span>
+              <span className="text-gray-600 dark:text-gray-400">
+                Order Progress
+              </span>
               <span className="font-medium text-gray-900 dark:text-gray-100">
                 {order.progress}%
               </span>
@@ -424,7 +543,9 @@ export default function MyOrdersPage() {
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
           <div className="flex items-center gap-3 text-base">
             <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            <span className="text-gray-600 dark:text-gray-400">Estimated delivery:</span>
+            <span className="text-gray-600 dark:text-gray-400">
+              Estimated delivery:
+            </span>
             <span className="font-medium text-gray-900 dark:text-gray-100">
               {formatDate(order.estimatedDelivery)}
             </span>
@@ -481,13 +602,23 @@ export default function MyOrdersPage() {
           </div>
 
           {/* Tab Toggle */}
-          <Tabs value={selectedTab} onValueChange={setSelectedTab as any} className="w-auto">
+          <Tabs
+            value={selectedTab}
+            onValueChange={setSelectedTab as any}
+            className="w-auto"
+          >
             <TabsList className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-              <TabsTrigger value="active" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              <TabsTrigger
+                value="active"
+                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+              >
                 <Package className="h-4 w-4 mr-2" />
                 Active Orders
               </TabsTrigger>
-              <TabsTrigger value="tracking" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              <TabsTrigger
+                value="tracking"
+                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+              >
                 <MapPin className="h-4 w-4 mr-2" />
                 Track Orders
               </TabsTrigger>
@@ -570,7 +701,8 @@ export default function MyOrdersPage() {
                 <TrackingView key={order.id} order={order} />
               ))}
 
-            {mockActiveOrders.filter((order) => order.trackingId).length === 0 && (
+            {mockActiveOrders.filter((order) => order.trackingId).length ===
+              0 && (
               <Card className="text-center py-16 border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
                 <CardContent>
                   <div className="h-20 w-20 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">

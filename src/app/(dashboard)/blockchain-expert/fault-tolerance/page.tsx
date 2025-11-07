@@ -1,18 +1,24 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Badge } from "@/components/_ui/badge";
+import { Progress } from "@/components/_ui/progress";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { 
+} from "@/components/_ui/select";
+import {
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -27,14 +33,14 @@ import {
   Clock,
   Database,
   Network,
-  Zap
-} from 'lucide-react';
+  Zap,
+} from "lucide-react";
 
 interface Node {
   id: string;
   name: string;
-  type: 'peer' | 'orderer' | 'ca';
-  status: 'online' | 'offline' | 'syncing' | 'error';
+  type: "peer" | "orderer" | "ca";
+  status: "online" | "offline" | "syncing" | "error";
   health: number;
   lastSeen: string;
   location: string;
@@ -44,17 +50,17 @@ interface Node {
 interface FaultEvent {
   id: string;
   timestamp: string;
-  type: 'node-failure' | 'network-partition' | 'consensus-failure' | 'recovery';
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  type: "node-failure" | "network-partition" | "consensus-failure" | "recovery";
+  severity: "low" | "medium" | "high" | "critical";
   nodeId: string;
   description: string;
-  status: 'active' | 'resolved' | 'investigating';
+  status: "active" | "resolved" | "investigating";
 }
 
 const FaultTolerancePage = () => {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [faultEvents, setFaultEvents] = useState<FaultEvent[]>([]);
-  const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
+  const [selectedTimeRange, setSelectedTimeRange] = useState("24h");
   const [isLoading, setIsLoading] = useState(false);
 
   // Stats
@@ -65,8 +71,8 @@ const FaultTolerancePage = () => {
     errorNodes: 0,
     averageHealth: 0,
     faultTolerance: 0,
-    redundancyLevel: 'High',
-    consensusHealth: 98.5
+    redundancyLevel: "High",
+    consensusHealth: 98.5,
   });
 
   // Generate mock data
@@ -76,33 +82,65 @@ const FaultTolerancePage = () => {
 
   const generateMockData = () => {
     // Generate nodes
-    const nodeTypes: Node['type'][] = ['peer', 'orderer', 'ca'];
-    const statuses: Node['status'][] = ['online', 'offline', 'syncing', 'error'];
-    const locations = ['US-East', 'EU-West', 'Asia-Pacific', 'US-West', 'EU-Central'];
-    
+    const nodeTypes: Node["type"][] = ["peer", "orderer", "ca"];
+    const statuses: Node["status"][] = [
+      "online",
+      "offline",
+      "syncing",
+      "error",
+    ];
+    const locations = [
+      "US-East",
+      "EU-West",
+      "Asia-Pacific",
+      "US-West",
+      "EU-Central",
+    ];
+
     const mockNodes: Node[] = Array.from({ length: 12 }, (_, index) => {
-      const status = index < 9 ? 'online' : statuses[Math.floor(Math.random() * statuses.length)];
+      const status =
+        index < 9
+          ? "online"
+          : statuses[Math.floor(Math.random() * statuses.length)];
       return {
         id: `node_${index + 1}`,
-        name: `Node-${(index + 1).toString().padStart(2, '0')}`,
+        name: `Node-${(index + 1).toString().padStart(2, "0")}`,
         type: nodeTypes[index % nodeTypes.length],
         status,
-        health: status === 'online' ? Math.floor(Math.random() * 20) + 80 : Math.floor(Math.random() * 50),
+        health:
+          status === "online"
+            ? Math.floor(Math.random() * 20) + 80
+            : Math.floor(Math.random() * 50),
         lastSeen: new Date(Date.now() - Math.random() * 3600000).toISOString(),
         location: locations[Math.floor(Math.random() * locations.length)],
-        version: `v${Math.floor(Math.random() * 3) + 2}.${Math.floor(Math.random() * 10)}.${Math.floor(Math.random() * 10)}`
+        version: `v${Math.floor(Math.random() * 3) + 2}.${Math.floor(Math.random() * 10)}.${Math.floor(Math.random() * 10)}`,
       };
     });
 
     // Generate fault events
-    const eventTypes: FaultEvent['type'][] = ['node-failure', 'network-partition', 'consensus-failure', 'recovery'];
-    const severities: FaultEvent['severity'][] = ['low', 'medium', 'high', 'critical'];
-    const eventStatuses: FaultEvent['status'][] = ['active', 'resolved', 'investigating'];
+    const eventTypes: FaultEvent["type"][] = [
+      "node-failure",
+      "network-partition",
+      "consensus-failure",
+      "recovery",
+    ];
+    const severities: FaultEvent["severity"][] = [
+      "low",
+      "medium",
+      "high",
+      "critical",
+    ];
+    const eventStatuses: FaultEvent["status"][] = [
+      "active",
+      "resolved",
+      "investigating",
+    ];
 
     const mockEvents: FaultEvent[] = Array.from({ length: 20 }, (_, index) => {
       const type = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-      const severity = severities[Math.floor(Math.random() * severities.length)];
-      
+      const severity =
+        severities[Math.floor(Math.random() * severities.length)];
+
       return {
         id: `event_${index + 1}`,
         timestamp: new Date(Date.now() - index * 300000).toISOString(), // 5 minutes apart
@@ -110,7 +148,10 @@ const FaultTolerancePage = () => {
         severity,
         nodeId: mockNodes[Math.floor(Math.random() * mockNodes.length)].id,
         description: getEventDescription(type, severity),
-        status: index < 3 ? 'active' : eventStatuses[Math.floor(Math.random() * eventStatuses.length)]
+        status:
+          index < 3
+            ? "active"
+            : eventStatuses[Math.floor(Math.random() * eventStatuses.length)],
       };
     });
 
@@ -118,10 +159,11 @@ const FaultTolerancePage = () => {
     setFaultEvents(mockEvents);
 
     // Calculate stats
-    const onlineCount = mockNodes.filter(n => n.status === 'online').length;
-    const offlineCount = mockNodes.filter(n => n.status === 'offline').length;
-    const errorCount = mockNodes.filter(n => n.status === 'error').length;
-    const avgHealth = mockNodes.reduce((sum, node) => sum + node.health, 0) / mockNodes.length;
+    const onlineCount = mockNodes.filter((n) => n.status === "online").length;
+    const offlineCount = mockNodes.filter((n) => n.status === "offline").length;
+    const errorCount = mockNodes.filter((n) => n.status === "error").length;
+    const avgHealth =
+      mockNodes.reduce((sum, node) => sum + node.health, 0) / mockNodes.length;
     const faultTolerance = (onlineCount / mockNodes.length) * 100;
 
     setStats({
@@ -131,17 +173,21 @@ const FaultTolerancePage = () => {
       errorNodes: errorCount,
       averageHealth: Math.floor(avgHealth),
       faultTolerance: Math.floor(faultTolerance),
-      redundancyLevel: faultTolerance > 85 ? 'High' : faultTolerance > 70 ? 'Medium' : 'Low',
-      consensusHealth: 95 + Math.random() * 5
+      redundancyLevel:
+        faultTolerance > 85 ? "High" : faultTolerance > 70 ? "Medium" : "Low",
+      consensusHealth: 95 + Math.random() * 5,
     });
   };
 
-  const getEventDescription = (type: FaultEvent['type'], severity: FaultEvent['severity']) => {
+  const getEventDescription = (
+    type: FaultEvent["type"],
+    severity: FaultEvent["severity"]
+  ) => {
     const descriptions = {
-      'node-failure': `${severity} node failure detected`,
-      'network-partition': `Network partition ${severity} impact`,
-      'consensus-failure': `Consensus mechanism ${severity} disruption`,
-      'recovery': `System recovery process ${severity} priority`
+      "node-failure": `${severity} node failure detected`,
+      "network-partition": `Network partition ${severity} impact`,
+      "consensus-failure": `Consensus mechanism ${severity} disruption`,
+      recovery: `System recovery process ${severity} priority`,
     };
     return descriptions[type];
   };
@@ -154,51 +200,63 @@ const FaultTolerancePage = () => {
     }, 1000);
   };
 
-  const getStatusBadge = (status: Node['status']) => {
+  const getStatusBadge = (status: Node["status"]) => {
     const variants = {
-      online: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300',
-      offline: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300',
-      syncing: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300',
-      error: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-300'
+      online:
+        "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300",
+      offline:
+        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300",
+      syncing:
+        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300",
+      error:
+        "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-300",
     };
 
     const icons = {
       online: CheckCircle,
       offline: XCircle,
       syncing: RefreshCw,
-      error: AlertTriangle
+      error: AlertTriangle,
     };
 
     const Icon = icons[status];
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[status]}`}>
-        <Icon className={`w-3 h-3 mr-1 ${status === 'syncing' ? 'animate-spin' : ''}`} />
+      <span
+        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[status]}`}
+      >
+        <Icon
+          className={`w-3 h-3 mr-1 ${status === "syncing" ? "animate-spin" : ""}`}
+        />
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
   };
 
-  const getSeverityBadge = (severity: FaultEvent['severity']) => {
+  const getSeverityBadge = (severity: FaultEvent["severity"]) => {
     const variants = {
-      low: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300',
-      medium: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300',
-      high: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-300',
-      critical: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300'
+      low: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300",
+      medium:
+        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300",
+      high: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-300",
+      critical:
+        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300",
     };
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[severity]}`}>
+      <span
+        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[severity]}`}
+      >
         {severity.charAt(0).toUpperCase() + severity.slice(1)}
       </span>
     );
   };
 
-  const getNodeTypeIcon = (type: Node['type']) => {
+  const getNodeTypeIcon = (type: Node["type"]) => {
     const icons = {
       peer: Database,
       orderer: Server,
-      ca: Shield
+      ca: Shield,
     };
     const Icon = icons[type];
     return <Icon className="w-4 h-4 text-muted-foreground" />;
@@ -209,22 +267,22 @@ const FaultTolerancePage = () => {
   };
 
   const getHealthColor = (health: number) => {
-    if (health >= 80) return 'text-green-600';
-    if (health >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+    if (health >= 80) return "text-green-600";
+    if (health >= 60) return "text-yellow-600";
+    return "text-red-600";
   };
 
-  const filteredEvents = faultEvents.filter(event => {
+  const filteredEvents = faultEvents.filter((event) => {
     const now = new Date();
     const eventTime = new Date(event.timestamp);
     const timeDiff = now.getTime() - eventTime.getTime();
-    
+
     switch (selectedTimeRange) {
-      case '1h':
+      case "1h":
         return timeDiff <= 60 * 60 * 1000;
-      case '24h':
+      case "24h":
         return timeDiff <= 24 * 60 * 60 * 1000;
-      case '7d':
+      case "7d":
         return timeDiff <= 7 * 24 * 60 * 60 * 1000;
       default:
         return true;
@@ -242,12 +300,14 @@ const FaultTolerancePage = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button 
+          <Button
             variant="outline"
-            onClick={handleRefresh} 
+            onClick={handleRefresh}
             disabled={isLoading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button variant="outline">
@@ -261,7 +321,9 @@ const FaultTolerancePage = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Fault Tolerance</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Fault Tolerance
+            </CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -283,18 +345,23 @@ const FaultTolerancePage = () => {
               {stats.onlineNodes}/{stats.totalNodes}
             </div>
             <p className="text-xs text-muted-foreground">
-              {Math.floor((stats.onlineNodes / stats.totalNodes) * 100)}% operational
+              {Math.floor((stats.onlineNodes / stats.totalNodes) * 100)}%
+              operational
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Health</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Average Health
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getHealthColor(stats.averageHealth)}`}>
+            <div
+              className={`text-2xl font-bold ${getHealthColor(stats.averageHealth)}`}
+            >
               {stats.averageHealth}%
             </div>
             <p className="text-xs text-muted-foreground">System-wide health</p>
@@ -303,14 +370,18 @@ const FaultTolerancePage = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Consensus Health</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Consensus Health
+            </CardTitle>
             <Network className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
               {stats.consensusHealth.toFixed(1)}%
             </div>
-            <p className="text-xs text-muted-foreground">Consensus performance</p>
+            <p className="text-xs text-muted-foreground">
+              Consensus performance
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -319,7 +390,9 @@ const FaultTolerancePage = () => {
       <Card>
         <CardHeader>
           <CardTitle>Node Status Overview</CardTitle>
-          <CardDescription>Real-time status of all network nodes</CardDescription>
+          <CardDescription>
+            Real-time status of all network nodes
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -332,20 +405,27 @@ const FaultTolerancePage = () => {
                   {getNodeTypeIcon(node.type)}
                   <div>
                     <p className="font-medium">{node.name}</p>
-                    <p className="text-sm text-muted-foreground">{node.type} • {node.location}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {node.type} • {node.location}
+                    </p>
                   </div>
                 </div>
                 <div className="flex flex-col items-end space-y-1">
                   {getStatusBadge(node.status)}
                   <div className="flex items-center space-x-2">
-                    <span className={`text-sm font-medium ${getHealthColor(node.health)}`}>
+                    <span
+                      className={`text-sm font-medium ${getHealthColor(node.health)}`}
+                    >
                       {node.health}%
                     </span>
                     <div className="w-12 h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full transition-all duration-300 ${
-                          node.health >= 80 ? 'bg-green-500' : 
-                          node.health >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                          node.health >= 80
+                            ? "bg-green-500"
+                            : node.health >= 60
+                              ? "bg-yellow-500"
+                              : "bg-red-500"
                         }`}
                         style={{ width: `${node.health}%` }}
                       />
@@ -364,9 +444,14 @@ const FaultTolerancePage = () => {
           <div className="flex justify-between items-center">
             <div>
               <CardTitle>Fault Events</CardTitle>
-              <CardDescription>Recent system events and failures</CardDescription>
+              <CardDescription>
+                Recent system events and failures
+              </CardDescription>
             </div>
-            <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
+            <Select
+              value={selectedTimeRange}
+              onValueChange={setSelectedTimeRange}
+            >
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
@@ -387,7 +472,7 @@ const FaultTolerancePage = () => {
               >
                 <div className="flex items-start space-x-3">
                   <div className="mt-1">
-                    {event.type === 'recovery' ? (
+                    {event.type === "recovery" ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     ) : (
                       <AlertCircle className="w-4 h-4 text-red-600" />
@@ -395,10 +480,14 @@ const FaultTolerancePage = () => {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
-                      <p className="font-medium capitalize">{event.type.replace('-', ' ')}</p>
+                      <p className="font-medium capitalize">
+                        {event.type.replace("-", " ")}
+                      </p>
                       {getSeverityBadge(event.severity)}
                     </div>
-                    <p className="text-sm text-muted-foreground mb-1">{event.description}</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {event.description}
+                    </p>
                     <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                       <Clock className="w-3 h-3" />
                       <span>{formatTimestamp(event.timestamp)}</span>
@@ -408,11 +497,14 @@ const FaultTolerancePage = () => {
                   </div>
                 </div>
                 <div className="flex flex-col items-end space-y-1">
-                  <Badge 
-                    variant={event.status === 'resolved' ? 'default' : 'destructive'}
+                  <Badge
+                    variant={
+                      event.status === "resolved" ? "default" : "destructive"
+                    }
                     className="text-xs"
                   >
-                    {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                    {event.status.charAt(0).toUpperCase() +
+                      event.status.slice(1)}
                   </Badge>
                 </div>
               </div>
@@ -426,7 +518,9 @@ const FaultTolerancePage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Redundancy Levels</CardTitle>
-            <CardDescription>System backup and failover capabilities</CardDescription>
+            <CardDescription>
+              System backup and failover capabilities
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -436,7 +530,7 @@ const FaultTolerancePage = () => {
               </div>
               <Progress value={90} />
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Node Backup</span>
@@ -444,7 +538,7 @@ const FaultTolerancePage = () => {
               </div>
               <Progress value={85} />
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Network Failover</span>
@@ -458,29 +552,41 @@ const FaultTolerancePage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Recovery Metrics</CardTitle>
-            <CardDescription>System recovery and restoration times</CardDescription>
+            <CardDescription>
+              System recovery and restoration times
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
               <div>
-                <p className="text-sm font-medium">Recovery Time Objective (RTO)</p>
-                <p className="text-xs text-muted-foreground">Maximum downtime</p>
+                <p className="text-sm font-medium">
+                  Recovery Time Objective (RTO)
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Maximum downtime
+                </p>
               </div>
               <span className="text-lg font-bold text-green-600"> 2 min</span>
             </div>
-            
+
             <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
               <div>
-                <p className="text-sm font-medium">Recovery Point Objective (RPO)</p>
-                <p className="text-xs text-muted-foreground">Maximum data loss</p>
+                <p className="text-sm font-medium">
+                  Recovery Point Objective (RPO)
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Maximum data loss
+                </p>
               </div>
               <span className="text-lg font-bold text-blue-600"> 10 sec</span>
             </div>
-            
+
             <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
               <div>
                 <p className="text-sm font-medium">Mean Time to Recovery</p>
-                <p className="text-xs text-muted-foreground">Average recovery time</p>
+                <p className="text-xs text-muted-foreground">
+                  Average recovery time
+                </p>
               </div>
               <span className="text-lg font-bold text-purple-600">45 sec</span>
             </div>

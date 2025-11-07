@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
 import { DashboardHeader } from "@/components/common/dashboard-header";
+import { CustomerHeader } from "@/components/common/customer-header";
 import { DashboardSidebar } from "@/components/common/dashboard-sidebar";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
 
@@ -101,12 +102,15 @@ export default function DashboardLayout({
 
   console.log("[LAYOUT] Dashboard rendering for role:", userRole);
 
+  // Check if user is customer (uses e-commerce layout)
+  const isCustomer = userRole === "customer";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
-      <DashboardHeader />
+      {isCustomer ? <CustomerHeader /> : <DashboardHeader />}
       <div className="flex">
-        <DashboardSidebar />
-        <main className="flex-1 ml-64 min-h-screen">
+        {!isCustomer && <DashboardSidebar />}
+        <main className={`flex-1 ${!isCustomer ? "ml-64" : ""} min-h-screen`}>
           {children}
         </main>
       </div>

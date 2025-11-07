@@ -2,17 +2,22 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/_ui/card";
+import { Button } from "@/components/_ui/button";
+import { Input } from "@/components/_ui/input";
+import { Badge } from "@/components/_ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/_ui/select";
 import {
   Search,
   Star,
@@ -72,7 +77,8 @@ const mockProducts = [
   {
     id: "4",
     name: "Handcrafted Ceramic Mug",
-    description: "Beautiful handcrafted ceramic mug perfect for your morning coffee",
+    description:
+      "Beautiful handcrafted ceramic mug perfect for your morning coffee",
     price: 18.99,
     category: "Home & Kitchen",
     vendor: "Artisan Crafts",
@@ -111,7 +117,8 @@ const mockProducts = [
   {
     id: "7",
     name: "Vintage Leather Wallet",
-    description: "Genuine leather wallet with RFID protection and classic design",
+    description:
+      "Genuine leather wallet with RFID protection and classic design",
     price: 79.99,
     category: "Fashion & Accessories",
     vendor: "Leather Craft Co.",
@@ -194,7 +201,9 @@ export default function BrowseProductsPage() {
         case "rating-desc":
           return b.rating - a.rating;
         case "newest":
-          return new Date(b.addedDate).getTime() - new Date(a.addedDate).getTime();
+          return (
+            new Date(b.addedDate).getTime() - new Date(a.addedDate).getTime()
+          );
         default:
           return 0;
       }
@@ -209,7 +218,11 @@ export default function BrowseProductsPage() {
         ? prev.filter((id) => id !== productId)
         : [...prev, productId]
     );
-    toast.success(favorites.includes(productId) ? "Removed from favorites" : "Added to favorites");
+    toast.success(
+      favorites.includes(productId)
+        ? "Removed from favorites"
+        : "Added to favorites"
+    );
   };
 
   const addToCart = (product: any) => {
@@ -219,7 +232,7 @@ export default function BrowseProductsPage() {
   const ProductCard = ({ product }: { product: any }) => (
     <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-105 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
-      
+
       <CardHeader className="relative z-10 p-0">
         <div className="relative overflow-hidden rounded-t-lg">
           <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
@@ -262,7 +275,9 @@ export default function BrowseProductsPage() {
               }`}
               onClick={() => toggleFavorite(product.id)}
             >
-              <Heart className={`h-4 w-4 ${favorites.includes(product.id) ? "fill-current" : ""}`} />
+              <Heart
+                className={`h-4 w-4 ${favorites.includes(product.id) ? "fill-current" : ""}`}
+              />
             </Button>
           </div>
         </div>
@@ -271,7 +286,10 @@ export default function BrowseProductsPage() {
       <CardContent className="relative z-10 p-4">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Badge variant="outline" className="text-xs border-blue-200 text-blue-700 dark:border-blue-700 dark:text-blue-400">
+            <Badge
+              variant="outline"
+              className="text-xs border-blue-200 text-blue-700 dark:border-blue-700 dark:text-blue-400"
+            >
               {product.category}
             </Badge>
             <div className="flex items-center gap-1">
@@ -281,7 +299,7 @@ export default function BrowseProductsPage() {
               </span>
             </div>
           </div>
-          
+
           <div>
             <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-1">
               {product.name}
@@ -293,7 +311,7 @@ export default function BrowseProductsPage() {
               by {product.vendor}
             </p>
           </div>
-          
+
           <div className="flex items-center justify-between pt-2">
             <div>
               <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -320,18 +338,21 @@ export default function BrowseProductsPage() {
   const ProductListItem = ({ product }: { product: any }) => (
     <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-cyan-500/5" />
-      
+
       <CardContent className="relative z-10 p-4">
         <div className="flex gap-4">
           <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
             <Package className="h-8 w-8 text-gray-400 dark:text-gray-500" />
           </div>
-          
+
           <div className="flex-1 space-y-2">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="text-xs border-blue-200 text-blue-700 dark:border-blue-700 dark:text-blue-400">
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-blue-200 text-blue-700 dark:border-blue-700 dark:text-blue-400"
+                  >
                     {product.category}
                   </Badge>
                   <div className="flex items-center gap-1">
@@ -341,7 +362,7 @@ export default function BrowseProductsPage() {
                     </span>
                   </div>
                 </div>
-                
+
                 <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-1">
                   {product.name}
                 </h3>
@@ -352,19 +373,22 @@ export default function BrowseProductsPage() {
                   by {product.vendor}
                 </p>
               </div>
-              
+
               <div className="text-right ml-4">
                 <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   ${product.price}
                 </span>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between">
-              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400">
+              <Badge
+                variant="secondary"
+                className="text-xs bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
+              >
                 {product.inStock} in stock
               </Badge>
-              
+
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                   <Eye className="h-4 w-4" />
@@ -377,7 +401,9 @@ export default function BrowseProductsPage() {
                   }`}
                   onClick={() => toggleFavorite(product.id)}
                 >
-                  <Heart className={`h-4 w-4 ${favorites.includes(product.id) ? "fill-current" : ""}`} />
+                  <Heart
+                    className={`h-4 w-4 ${favorites.includes(product.id) ? "fill-current" : ""}`}
+                  />
                 </Button>
                 <Button
                   size="sm"
@@ -418,7 +444,7 @@ export default function BrowseProductsPage() {
                 </p>
               </div>
             </div>
-            
+
             {/* View Toggle */}
             <div className="flex items-center gap-2">
               <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
@@ -455,7 +481,7 @@ export default function BrowseProductsPage() {
         >
           <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-cyan-500/5" />
-            
+
             <CardHeader className="relative z-10 pb-4">
               <CardTitle className="flex items-center gap-3">
                 <div className="h-6 w-6 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
@@ -464,7 +490,7 @@ export default function BrowseProductsPage() {
                 Filters & Search
               </CardTitle>
             </CardHeader>
-            
+
             <CardContent className="relative z-10 pt-0">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="md:col-span-2 relative">
@@ -476,8 +502,11 @@ export default function BrowseProductsPage() {
                     className="pl-10 h-11 bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 focus:border-blue-500"
                   />
                 </div>
-                
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+
+                <Select
+                  value={selectedCategory}
+                  onValueChange={setSelectedCategory}
+                >
                   <SelectTrigger className="h-11 bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
@@ -489,7 +518,7 @@ export default function BrowseProductsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                
+
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="h-11 bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
                     <SelectValue placeholder="Sort by" />
@@ -509,13 +538,17 @@ export default function BrowseProductsPage() {
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-gray-500" />
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {filteredAndSortedProducts.length} of {mockProducts.length} products
+                    {filteredAndSortedProducts.length} of {mockProducts.length}{" "}
+                    products
                   </p>
                 </div>
-                
+
                 <div className="flex gap-2">
                   {searchTerm && (
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
+                    >
                       <Search className="h-3 w-3 mr-1" />
                       {searchTerm}
                       <button
@@ -527,7 +560,10 @@ export default function BrowseProductsPage() {
                     </Badge>
                   )}
                   {selectedCategory !== "All Categories" && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400">
+                    <Badge
+                      variant="secondary"
+                      className="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
+                    >
                       <Filter className="h-3 w-3 mr-1" />
                       {selectedCategory}
                       <button
@@ -576,7 +612,8 @@ export default function BrowseProductsPage() {
                   No products found
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                  We could not find any products matching your criteria. Try adjusting your search terms or filters.
+                  We could not find any products matching your criteria. Try
+                  adjusting your search terms or filters.
                 </p>
                 <Button
                   variant="outline"

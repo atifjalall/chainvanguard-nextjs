@@ -6,24 +6,24 @@ import Link from "next/link";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/_ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/_ui/card";
+import { Input } from "@/components/_ui/input";
+import { Label } from "@/components/_ui/label";
 import {
   Select,
   SelectTrigger,
   SelectContent,
   SelectItem,
   SelectValue,
-} from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@/components/_ui/select";
+import { Alert, AlertDescription } from "@/components/_ui/alert";
 import { toast } from "sonner";
 import {
   Package,
@@ -44,7 +44,7 @@ import {
 import { WalletData } from "@/types/web3";
 import { authAPI } from "@/lib/api/auth.api";
 import { AnimatePresence, motion } from "framer-motion";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/_ui/skeleton";
 import { AuthRouteGuard } from "@/components/guards/auth-route-guard";
 
 type WalletInputMode = "select" | "manual";
@@ -322,13 +322,13 @@ export default function LoginPage() {
                 <div
                   className={`transform transition-all duration-700 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
                 >
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white mb-3">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 mb-3">
                     <Wallet className="h-6 w-6" />
                   </div>
-                  <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1.5">
+                  <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
                     Welcome Back
                   </CardTitle>
-                  <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
+                  <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
                     Connect your Hyperledger Fabric wallet to access the supply
                     chain network
                   </CardDescription>
@@ -369,25 +369,25 @@ export default function LoginPage() {
                           <button
                             type="button"
                             onClick={() => setWalletInputMode("select")}
-                            className={`flex-1 py-1.5 px-2.5 rounded-md text-sm font-medium transition-all duration-300 ${
+                            className={`flex-1 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all duration-300 ${
                               walletInputMode === "select"
                                 ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
                                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                             }`}
                           >
-                            <Wallet className="h-4 w-4 inline mr-1.5" />
+                            <Wallet className="h-3.5 w-3.5 inline mr-1.5" />
                             Select Wallet
                           </button>
                           <button
                             type="button"
                             onClick={() => setWalletInputMode("manual")}
-                            className={`flex-1 py-1.5 px-2.5 rounded-md text-sm font-medium transition-all duration-300 ${
+                            className={`flex-1 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all duration-300 ${
                               walletInputMode === "manual"
                                 ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
                                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                             }`}
                           >
-                            <Edit3 className="h-4 w-4 inline mr-1.5" />
+                            <Edit3 className="h-3.5 w-3.5 inline mr-1.5" />
                             Enter Manually
                           </button>
                         </div>
@@ -409,9 +409,9 @@ export default function LoginPage() {
                               >
                                 <Label
                                   htmlFor="wallet-select"
-                                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                                  className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                                 >
-                                  <UserCheck className="h-3.5 w-3.5" />
+                                  <UserCheck className="h-3 w-3" />
                                   Select Your Wallet
                                 </Label>
                                 <Select
@@ -420,7 +420,7 @@ export default function LoginPage() {
                                 >
                                   <SelectTrigger
                                     size="sm"
-                                    className={`h-10 w-full flex items-center gap-2 px-2.5 py-0 text-sm leading-none border rounded-md hover:border-blue-300 focus:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50 ${
+                                    className={`h-9 w-full flex items-center gap-2 px-2.5 py-0 text-xs leading-none border rounded-md hover:border-blue-300 focus:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50 ${
                                       walletError
                                         ? "border-red-300 dark:border-red-700 focus:border-red-500"
                                         : "border-gray-200 dark:border-gray-700"
@@ -428,7 +428,7 @@ export default function LoginPage() {
                                   >
                                     <SelectValue
                                       placeholder="Choose your wallet"
-                                      className="w-full flex items-center h-10 text-sm"
+                                      className="w-full flex items-center h-9 text-xs"
                                     />
                                   </SelectTrigger>
                                   <SelectContent className="w-full">
@@ -440,10 +440,10 @@ export default function LoginPage() {
                                       >
                                         <div className="flex items-center gap-2 w-full">
                                           <div className="p-1 bg-blue-100 dark:bg-blue-900 rounded">
-                                            <Wallet className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                            <Wallet className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                                           </div>
                                           <div className="flex-1 text-left">
-                                            <div className="font-medium text-sm text-gray-900 dark:text-gray-100 leading-tight">
+                                            <div className="font-medium text-xs text-gray-900 dark:text-gray-100 leading-tight">
                                               {wallet.name}
                                             </div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400 font-mono leading-tight mt-0.5">
@@ -457,7 +457,7 @@ export default function LoginPage() {
                                       <SelectItem
                                         value="no-wallet"
                                         disabled
-                                        className="h-10 flex items-center px-2.5 text-sm opacity-60"
+                                        className="h-9 flex items-center px-2.5 text-xs opacity-60"
                                       >
                                         No wallets found - Create one first
                                       </SelectItem>
@@ -485,9 +485,9 @@ export default function LoginPage() {
                               >
                                 <Label
                                   htmlFor="manual-address"
-                                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                                  className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                                 >
-                                  <Edit3 className="h-3.5 w-3.5" />
+                                  <Edit3 className="h-3 w-3" />
                                   Enter Wallet Address
                                 </Label>
                                 <Input
@@ -498,7 +498,7 @@ export default function LoginPage() {
                                   onChange={(e) =>
                                     setManualWalletAddress(e.target.value)
                                   }
-                                  className={`!h-10 border hover:border-blue-300 focus:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50 font-mono text-sm placeholder:text-sm ${
+                                  className={`!h-9 border hover:border-blue-300 focus:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50 font-mono text-xs placeholder:text-xs ${
                                     walletError
                                       ? "border-red-300 dark:border-red-700 focus:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
@@ -519,9 +519,9 @@ export default function LoginPage() {
                         <div className="space-y-1.5">
                           <Label
                             htmlFor="password"
-                            className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                            className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
                           >
-                            <Lock className="h-3.5 w-3.5" />
+                            <Lock className="h-3 w-3" />
                             Wallet Password
                           </Label>
                           <div className="relative">
@@ -531,7 +531,7 @@ export default function LoginPage() {
                               placeholder="Enter your wallet password"
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
-                              className={`!h-10 border hover:border-blue-300 focus:border-blue-500 transition-colors pr-10 bg-white/50 dark:bg-gray-800/50 cursor-text text-sm placeholder:text-sm ${
+                              className={`!h-9 border hover:border-blue-300 focus:border-blue-500 transition-colors pr-9 bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs ${
                                 passwordError
                                   ? "border-red-300 dark:border-red-700 focus:border-red-500"
                                   : "border-gray-200 dark:border-gray-700"
@@ -542,7 +542,7 @@ export default function LoginPage() {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="absolute right-0 top-0 h-10 w-10 hover:bg-blue-50 dark:hover:bg-blue-950/50 cursor-pointer"
+                              className="absolute right-0 top-0 h-9 w-9 hover:bg-blue-50 dark:hover:bg-blue-950/50 cursor-pointer"
                               onClick={() => setShowPassword(!showPassword)}
                             >
                               {showPassword ? (
@@ -563,18 +563,18 @@ export default function LoginPage() {
                         {/* Submit Button */}
                         <Button
                           type="submit"
-                          className="w-full h-10 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                          className="w-full h-9 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
                           disabled={isLoading}
                         >
                           {isLoading ? (
                             <>
-                              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                              <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" />
                               Connecting to Network...
                             </>
                           ) : (
                             <>
                               Connect Wallet
-                              <LogIn className="ml-2 h-4 w-4" />
+                              <LogIn className="ml-2 h-3.5 w-3.5" />
                             </>
                           )}
                         </Button>
@@ -584,18 +584,18 @@ export default function LoginPage() {
                       <div className="mt-4 space-y-2.5">
                         <Button
                           variant="outline"
-                          className="w-full h-9 border border-gray-200 dark:border-gray-700 hover:bg-orange-50 hover:border-orange-200 dark:hover:bg-orange-950/20 dark:hover:border-orange-800 transition-all duration-200 cursor-pointer bg-white/50 dark:bg-gray-800/50 text-sm font-medium"
+                          className="w-full h-8 border border-gray-200 dark:border-gray-700 hover:bg-orange-50 hover:border-orange-200 dark:hover:bg-orange-950/20 dark:hover:border-orange-800 transition-all duration-200 cursor-pointer bg-white/50 dark:bg-gray-800/50 text-xs font-medium"
                           size="sm"
                           onClick={() => router.push("/forgot-password")}
                         >
-                          <Key className="mr-2 h-4 w-4 text-orange-600" />
+                          <Key className="mr-2 h-3.5 w-3.5 text-orange-600" />
                           Forgot Password?
                         </Button>
                       </div>
 
                       {/* Create Account Link */}
                       <div className="mt-4 text-center">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           Don&apos;t have a wallet?{" "}
                           <Link
                             href="/register"
@@ -611,8 +611,8 @@ export default function LoginPage() {
                         walletInputMode === "select" && (
                           <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
                             <Alert>
-                              <AlertTriangle className="h-4 w-4 text-amber-600" />
-                              <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
+                              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                              <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">
                                 No Hyperledger Fabric wallets found. Create a
                                 new wallet or enter your wallet address
                                 manually.
@@ -621,10 +621,10 @@ export default function LoginPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="w-full mt-2.5 border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/40 cursor-pointer text-sm font-medium h-9"
+                              className="w-full mt-2.5 border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/40 cursor-pointer text-xs font-medium h-8"
                               onClick={() => router.push("/register")}
                             >
-                              <Zap className="mr-2 h-4 w-4 text-amber-600" />
+                              <Zap className="mr-2 h-3.5 w-3.5 text-amber-600" />
                               Create Wallet
                             </Button>
                           </div>
