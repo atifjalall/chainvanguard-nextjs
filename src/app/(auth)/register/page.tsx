@@ -10,18 +10,18 @@ import {
   useWallet,
 } from "@/components/providers/wallet-provider";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Button } from "@/components/_ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Input } from "@/components/_ui/input";
-import { Label } from "@/components/_ui/label";
-import { Checkbox } from "@/components/_ui/checkbox";
-import { Alert, AlertDescription } from "@/components/_ui/alert";
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RolePreservation } from "@/utils/role-preservation";
 import {
   Select,
@@ -29,9 +29,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/_ui/select";
-import { Progress } from "@/components/_ui/progress";
-import { Badge } from "@/components/_ui/badge";
+} from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Package,
@@ -64,7 +64,7 @@ import {
 } from "lucide-react";
 import { UserRole, WalletData } from "@/types/web3";
 import { AnimatePresence, motion } from "framer-motion";
-import { Skeleton } from "@/components/_ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { authAPI, RegisterPayload } from "@/lib/api/auth.api";
 import { AuthRouteGuard } from "@/components/guards/auth-route-guard";
 
@@ -1133,25 +1133,65 @@ export default function RegisterPage() {
   // Signup skeleton loader component
   function SignupSkeleton() {
     return (
-      <Card className="relative overflow-hidden border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl animate-pulse">
+      <Card className="relative overflow-hidden border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
         <CardHeader className="relative z-10 text-center pb-4">
-          <Skeleton className="mx-auto h-12 w-12 rounded-full mb-3" />
-          <Skeleton className="mx-auto h-6 w-2/3 mb-2" />
-          <Skeleton className="mx-auto h-3 w-1/2" />
+          <Skeleton className="mx-auto h-8 w-48 mb-2" />
+          <Skeleton className="mx-auto h-4 w-64" />
         </CardHeader>
         <CardContent className="relative z-10">
-          <div className="space-y-4">
+          {/* Progress indicator skeleton */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <Skeleton className="h-1.5 w-full rounded-sm" />
+          </div>
+
+          {/* Form fields skeleton */}
+          <div className="space-y-4 mb-6">
+            {/* Title */}
+            <div className="text-center space-y-2 mb-4">
+              <Skeleton className="mx-auto h-6 w-40" />
+              <Skeleton className="mx-auto h-4 w-56" />
+            </div>
+
+            {/* Form inputs */}
             <div className="space-y-3">
-              <Skeleton className="h-9 w-full rounded-md" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Skeleton className="h-9 w-full rounded-md" />
-                <Skeleton className="h-9 w-full rounded-md" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full rounded-md" />
               </div>
             </div>
           </div>
+
+          {/* Navigation buttons skeleton */}
           <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-            <Skeleton className="h-9 w-24 rounded-md" />
-            <Skeleton className="h-9 w-32 rounded-md" />
+            <Skeleton className="h-10 w-28 rounded-md" />
+            <Skeleton className="h-10 w-32 rounded-md" />
+          </div>
+
+          {/* Footer link skeleton */}
+          <div className="mt-4 text-center">
+            <Skeleton className="mx-auto h-4 w-48" />
           </div>
         </CardContent>
       </Card>
@@ -1160,39 +1200,39 @@ export default function RegisterPage() {
 
   return (
     <AuthRouteGuard>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950 flex flex-col">
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
         {/* Header */}
-        <div className="w-full p-4 sm:p-6">
-          <div className="flex items-center justify-between max-w-6xl mx-auto">
+        <header className="fixed top-0 w-full z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
+          <div className="w-full px-6 h-16 flex items-center">
+            {/* Logo on the far left */}
             <Link
               href="/"
               className="flex items-center space-x-3 group cursor-pointer"
             >
-              <div className="h-8 w-8 rounded-xl bg-blue-600 flex items-center justify-center">
-                <Package className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <Package className="h-6 w-6 text-gray-900 dark:text-white" />
+              <span className="text-xl font-light text-gray-900 dark:text-white">
                 ChainVanguard
               </span>
             </Link>
 
-            <div className="flex items-center space-x-4">
+            {/* Push navbar to the right */}
+            <nav className="flex items-center gap-2 ml-auto">
               <ThemeToggle />
-              <Link href="/login" className="hidden sm:block">
+              <Link href="/login">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="text-xs text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50 cursor-pointer"
+                  className="border-gray-900 dark:border-white text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-none cursor-pointer text-xs h-9 px-4"
                 >
-                  Already have an account?
+                  Login
                 </Button>
               </Link>
-            </div>
+            </nav>
           </div>
-        </div>
+        </header>
 
         {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center p-4">
+        <div className="flex-1 flex items-center justify-center p-4 min-h-[calc(100vh-8rem)]">
           <div className="w-full max-w-2xl">
             {/* Progress Bar */}
             <div className="mb-6">
@@ -1203,9 +1243,9 @@ export default function RegisterPage() {
                 <span>{Math.round(progress)}% Complete</span>
               </div>
               <div className="relative">
-                <div className="h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-gray-200 dark:bg-gray-800 overflow-hidden">
                   <div
-                    className="h-full bg-blue-600 rounded-full transition-all duration-500 ease-out"
+                    className="h-full bg-gray-900 dark:bg-white transition-all duration-500 ease-out"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -1216,12 +1256,12 @@ export default function RegisterPage() {
             {isLoading && currentStep === 1 ? (
               <SignupSkeleton />
             ) : (
-              <Card className="relative overflow-hidden border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+              <Card className="relative overflow-hidden border border-gray-200 dark:border-gray-800 shadow-md bg-white dark:bg-gray-950 rounded-none">
                 <CardHeader className="relative z-10 text-center pb-4">
                   <div
                     className={`transform transition-all duration-500 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
                   >
-                    <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1">
                       {currentStep === 1 && "Create Your Wallet"}
                       {currentStep === 2 && "Personal Information"}
                       {currentStep === 3 && "Address Details"}
@@ -1261,10 +1301,10 @@ export default function RegisterPage() {
                     {currentStep === 1 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 mb-3">
+                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
                             <Wallet className="h-6 w-6" />
                           </div>
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Secure Wallet Creation
                           </h3>
                         </div>
@@ -1286,11 +1326,11 @@ export default function RegisterPage() {
                                 setWalletName(e.target.value);
                                 if (walletNameError) setWalletNameError("");
                               }}
-                              className={`mt-1 h-9 border ${
+                              className={`mt-1 h-9 border rounded-none ${
                                 walletNameError
                                   ? "border-red-500 dark:border-red-500"
                                   : "border-gray-200 dark:border-gray-700"
-                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
+                              } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs`}
                             />
                             {walletNameError && (
                               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1323,17 +1363,17 @@ export default function RegisterPage() {
                                     setPasswordError("");
                                   }}
                                   onBlur={() => setPasswordFocused(false)}
-                                  className={`h-9 pr-9 border ${
+                                  className={`h-9 pr-9 border rounded-none ${
                                     passwordError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
-                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
+                                  } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs`}
                                 />
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="absolute right-0 top-0 h-9 w-9 cursor-pointer"
+                                  className="absolute right-0 top-0 h-9 w-9 cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900"
                                   onClick={() => setShowPassword(!showPassword)}
                                 >
                                   {showPassword ? (
@@ -1361,7 +1401,7 @@ export default function RegisterPage() {
                                 }}
                                 className="overflow-hidden"
                               >
-                                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/80 shadow-sm px-3 py-2 space-y-1.5">
+                                <div className="rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm px-3 py-2 space-y-1.5">
                                   <div className="flex items-center gap-1.5 text-xs">
                                     <motion.span
                                       animate={{
@@ -1455,17 +1495,17 @@ export default function RegisterPage() {
                                   onChange={(e) =>
                                     setConfirmPassword(e.target.value)
                                   }
-                                  className={`h-9 pr-9 border ${
+                                  className={`h-9 pr-9 border rounded-none ${
                                     confirmPasswordError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
-                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
+                                  } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs`}
                                 />
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="absolute right-0 top-0 h-9 w-9 cursor-pointer"
+                                  className="absolute right-0 top-0 h-9 w-9 cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900"
                                   onClick={() =>
                                     setShowConfirmPassword(!showConfirmPassword)
                                   }
@@ -1493,10 +1533,10 @@ export default function RegisterPage() {
                     {currentStep === 2 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 mb-3">
+                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
                             <User className="h-6 w-6" />
                           </div>
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Tell Us About You
                           </h3>
                         </div>
@@ -1518,11 +1558,11 @@ export default function RegisterPage() {
                                 setName(e.target.value);
                                 if (nameError) setNameError("");
                               }}
-                              className={`mt-1 h-9 border ${
+                              className={`mt-1 h-9 border rounded-none ${
                                 nameError
                                   ? "border-red-500 dark:border-red-500"
                                   : "border-gray-200 dark:border-gray-700"
-                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
+                              } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs`}
                             />
                             {nameError && (
                               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1551,7 +1591,7 @@ export default function RegisterPage() {
                                     setEmail(e.target.value);
                                     if (emailError) setEmailError("");
                                   }}
-                                  className={`mt-1 h-9 border ${
+                                  className={`mt-1 h-9 border rounded-none ${
                                     emailError || emailExists
                                       ? "border-red-500 dark:border-red-500"
                                       : email &&
@@ -1559,7 +1599,7 @@ export default function RegisterPage() {
                                           !emailExists
                                         ? "border-green-500 dark:border-green-500"
                                         : "border-gray-200 dark:border-gray-700"
-                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs pr-9`}
+                                  } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs pr-9`}
                                 />
                                 <div className="absolute right-2.5 top-1/2 -translate-y-1/2 mt-0.5">
                                   {isCheckingEmail ? (
@@ -1625,11 +1665,11 @@ export default function RegisterPage() {
                                   setPhone("+92 " + rest);
                                   if (phoneError) setPhoneError("");
                                 }}
-                                className={`mt-1 h-9 border ${
+                                className={`mt-1 h-9 border rounded-none ${
                                   phoneError
                                     ? "border-red-500 dark:border-red-500"
                                     : "border-gray-200 dark:border-gray-700"
-                                } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
+                                } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs`}
                                 placeholder="300 1234567"
                               />
                               {phoneError && (
@@ -1648,10 +1688,10 @@ export default function RegisterPage() {
                     {currentStep === 3 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 mb-3">
+                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
                             <MapPin className="h-6 w-6" />
                           </div>
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Address Details
                           </h3>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
@@ -1677,11 +1717,11 @@ export default function RegisterPage() {
                                 setAddress(e.target.value);
                                 if (addressError) setAddressError("");
                               }}
-                              className={`mt-1 h-9 border ${
+                              className={`mt-1 h-9 border rounded-none ${
                                 addressError
                                   ? "border-red-500 dark:border-red-500"
                                   : "border-gray-200 dark:border-gray-700"
-                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
+                              } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs`}
                             />
                             {addressError && (
                               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1708,18 +1748,18 @@ export default function RegisterPage() {
                               >
                                 <SelectTrigger
                                   size="sm"
-                                  className={`mt-1 !h-9 w-full flex items-center gap-2 px-3 py-0 text-xs leading-none border ${
+                                  className={`mt-1 !h-9 w-full flex items-center gap-2 px-3 py-0 text-xs leading-none border rounded-none ${
                                     provinceError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
-                                  } rounded-md hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50`}
+                                  } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900`}
                                 >
                                   <SelectValue
                                     placeholder="Select province"
                                     className="w-full flex items-center h-9 text-xs"
                                   />
                                 </SelectTrigger>
-                                <SelectContent className="w-full">
+                                <SelectContent className="rounded-none">
                                   {provinceOptions.map((p) => (
                                     <SelectItem
                                       key={p}
@@ -1756,11 +1796,11 @@ export default function RegisterPage() {
                               >
                                 <SelectTrigger
                                   size="sm"
-                                  className={`mt-1 !h-9 w-full flex items-center gap-2 px-3 py-0 text-xs leading-none border ${
+                                  className={`mt-1 !h-9 w-full flex items-center gap-2 px-3 py-0 text-xs leading-none border rounded-none ${
                                     cityError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
-                                  } rounded-md hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 ${
+                                  } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 ${
                                     !province
                                       ? "opacity-50 cursor-not-allowed"
                                       : ""
@@ -1775,7 +1815,7 @@ export default function RegisterPage() {
                                     className="w-full flex items-center h-9 text-xs"
                                   />
                                 </SelectTrigger>
-                                <SelectContent className="w-full">
+                                <SelectContent className="rounded-none">
                                   {availableCities.map((c) => (
                                     <SelectItem
                                       key={c}
@@ -1817,11 +1857,11 @@ export default function RegisterPage() {
                                 setPostalCode(digits);
                                 if (postalCodeError) setPostalCodeError("");
                               }}
-                              className={`mt-1 h-9 border ${
+                              className={`mt-1 h-9 border rounded-none ${
                                 postalCodeError
                                   ? "border-red-500 dark:border-red-500"
                                   : "border-gray-200 dark:border-gray-700"
-                              } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
+                              } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs`}
                             />
                             {postalCodeError && (
                               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1838,10 +1878,10 @@ export default function RegisterPage() {
                     {currentStep === 4 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 mb-3">
+                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
                             <Shield className="h-6 w-6" />
                           </div>
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Choose Your Role
                           </h3>
                         </div>
@@ -1854,10 +1894,10 @@ export default function RegisterPage() {
                             return (
                               <Card
                                 key={role.value}
-                                className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
+                                className={`cursor-pointer transition-all duration-300 hover:shadow-lg rounded-none ${
                                   isSelected
-                                    ? "ring-2 ring-blue-500 shadow-lg bg-blue-50 dark:bg-blue-950/20"
-                                    : "hover:shadow-md bg-white/50 dark:bg-gray-800/50"
+                                    ? "ring-2 ring-gray-900 dark:ring-white shadow-lg bg-gray-50 dark:bg-gray-900"
+                                    : "hover:shadow-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                 }`}
                                 onClick={() =>
                                   setSelectedRole(role.value as UserRole)
@@ -1865,18 +1905,14 @@ export default function RegisterPage() {
                               >
                                 <CardHeader className="pb-2">
                                   <div className="flex items-center gap-2">
-                                    <div
-                                      className={`p-1.5 rounded-lg ${role.color}`}
-                                    >
-                                      <Icon className="h-4 w-4" />
-                                    </div>
+                                    <Icon className="h-5 w-5 text-gray-900 dark:text-white" />
                                     <div className="flex-1">
                                       <div className="flex items-center gap-1.5">
-                                        <CardTitle className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                        <CardTitle className="text-xs font-semibold text-gray-900 dark:text-white">
                                           {role.title}
                                         </CardTitle>
                                         {isSelected && (
-                                          <Check className="h-3 w-3 text-blue-500" />
+                                          <Check className="h-3 w-3 text-gray-900 dark:text-white" />
                                         )}
                                       </div>
                                       <CardDescription className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
@@ -1891,7 +1927,7 @@ export default function RegisterPage() {
                                       <Badge
                                         key={idx}
                                         variant="secondary"
-                                        className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-blue-400"
+                                        className="text-xs px-1.5 py-0.5 bg-transparent border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-none"
                                       >
                                         {feature}
                                       </Badge>
@@ -1912,8 +1948,8 @@ export default function RegisterPage() {
 
                         {/* Business Information */}
                         {requiresBusinessInfo && (
-                          <div className="space-y-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <h4 className="text-xs font-semibold flex items-center gap-1.5 text-gray-900 dark:text-gray-100">
+                          <div className="space-y-3 p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                            <h4 className="text-xs font-semibold flex items-center gap-1.5 text-gray-900 dark:text-white">
                               <Building className="h-3.5 w-3.5" />
                               Business Information
                             </h4>
@@ -1935,11 +1971,11 @@ export default function RegisterPage() {
                                     if (companyNameError)
                                       setCompanyNameError("");
                                   }}
-                                  className={`mt-1 h-9 border ${
+                                  className={`mt-1 h-9 border rounded-none ${
                                     companyNameError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
-                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
+                                  } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs`}
                                 />
                                 {companyNameError && (
                                   <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -1965,18 +2001,18 @@ export default function RegisterPage() {
                                 >
                                   <SelectTrigger
                                     size="sm"
-                                    className={`mt-1 !h-9 w-full flex items-center gap-2 px-3 py-0 text-xs leading-none border ${
+                                    className={`mt-1 !h-9 w-full flex items-center gap-2 px-3 py-0 text-xs leading-none border rounded-none ${
                                       businessTypeError
                                         ? "border-red-500 dark:border-red-500"
                                         : "border-gray-200 dark:border-gray-700"
-                                    } rounded-md hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50`}
+                                    } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900`}
                                   >
                                     <SelectValue
                                       placeholder="Select type"
                                       className="cursor-pointer w-full flex items-center h-9 text-xs"
                                     />
                                   </SelectTrigger>
-                                  <SelectContent className="w-full">
+                                  <SelectContent className="rounded-none">
                                     {selectedRole === "supplier" ? (
                                       <>
                                         <SelectItem
@@ -2050,11 +2086,11 @@ export default function RegisterPage() {
                                     if (businessAddressError)
                                       setBusinessAddressError("");
                                   }}
-                                  className={`mt-1 h-9 border ${
+                                  className={`mt-1 h-9 border rounded-none ${
                                     businessAddressError
                                       ? "border-red-500 dark:border-red-500"
                                       : "border-gray-200 dark:border-gray-700"
-                                  } hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs`}
+                                  } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs`}
                                 />
                                 {businessAddressError && (
                                   <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -2079,7 +2115,7 @@ export default function RegisterPage() {
                                   onChange={(e) =>
                                     setRegistrationNumber(e.target.value)
                                   }
-                                  className="mt-1 h-9 border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50 cursor-text text-xs placeholder:text-xs"
+                                  className="mt-1 h-9 border border-gray-200 dark:border-gray-700 hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all bg-white dark:bg-gray-900 cursor-text text-xs placeholder:text-xs rounded-none"
                                 />
                               </div>
                             </div>
@@ -2092,10 +2128,10 @@ export default function RegisterPage() {
                     {currentStep === 5 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 mb-3">
+                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
                             <CheckCircle2 className="h-6 w-6" />
                           </div>
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Review Your Information
                           </h3>
                         </div>
@@ -2103,7 +2139,7 @@ export default function RegisterPage() {
                         {/* Review Summary */}
                         <div className="space-y-3">
                           <div className="grid gap-3 sm:grid-cols-2">
-                            <Card className="p-3 bg-white/50 dark:bg-gray-800/50">
+                            <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none">
                               <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                                 Wallet Details
                               </h4>
@@ -2112,7 +2148,7 @@ export default function RegisterPage() {
                                   <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Name:
                                   </span>
-                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-white">
                                     {walletName}
                                   </span>
                                 </div>
@@ -2120,14 +2156,14 @@ export default function RegisterPage() {
                                   <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Network:
                                   </span>
-                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-white">
                                     Hyperledger Fabric
                                   </span>
                                 </div>
                               </div>
                             </Card>
 
-                            <Card className="p-3 bg-white/50 dark:bg-gray-800/50">
+                            <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none">
                               <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                                 Personal Info
                               </h4>
@@ -2136,7 +2172,7 @@ export default function RegisterPage() {
                                   <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Name:
                                   </span>
-                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-white">
                                     {name}
                                   </span>
                                 </div>
@@ -2144,7 +2180,7 @@ export default function RegisterPage() {
                                   <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Email:
                                   </span>
-                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-white">
                                     {email || "Not provided"}
                                   </span>
                                 </div>
@@ -2153,7 +2189,7 @@ export default function RegisterPage() {
                           </div>
 
                           {/* Address Summary */}
-                          <Card className="p-3 bg-white/50 dark:bg-gray-800/50">
+                          <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none">
                             <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                               Address
                             </h4>
@@ -2162,7 +2198,7 @@ export default function RegisterPage() {
                                 <span className="text-xs text-gray-700 dark:text-gray-300">
                                   Address:
                                 </span>
-                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                <span className="text-xs font-medium text-gray-900 dark:text-white">
                                   {address}
                                 </span>
                               </div>
@@ -2170,7 +2206,7 @@ export default function RegisterPage() {
                                 <span className="text-xs text-gray-700 dark:text-gray-300">
                                   State:
                                 </span>
-                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                <span className="text-xs font-medium text-gray-900 dark:text-white">
                                   {province}
                                 </span>
                               </div>
@@ -2178,7 +2214,7 @@ export default function RegisterPage() {
                                 <span className="text-xs text-gray-700 dark:text-gray-300">
                                   City:
                                 </span>
-                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                <span className="text-xs font-medium text-gray-900 dark:text-white">
                                   {city}
                                 </span>
                               </div>
@@ -2186,14 +2222,14 @@ export default function RegisterPage() {
                                 <span className="text-xs text-gray-700 dark:text-gray-300">
                                   Postal:
                                 </span>
-                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                <span className="text-xs font-medium text-gray-900 dark:text-white">
                                   {postalCode || "N/A"}
                                 </span>
                               </div>
                             </div>
                           </Card>
 
-                          <Card className="p-3 bg-white/50 dark:bg-gray-800/50">
+                          <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none">
                             <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                               Role & Access
                             </h4>
@@ -2204,15 +2240,12 @@ export default function RegisterPage() {
                                 );
                                 if (!roleOption) return null;
                                 const Icon = roleOption.icon;
+                                const isSelected = true;
                                 return (
                                   <>
-                                    <div
-                                      className={`p-1.5 rounded-lg ${roleOption.color}`}
-                                    >
-                                      <Icon className="h-3.5 w-3.5" />
-                                    </div>
+                                    <Icon className="h-4 w-4 text-gray-900 dark:text-white" />
                                     <div>
-                                      <div className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
                                         {roleOption.title}
                                       </div>
                                       <div className="text-xs text-gray-600 dark:text-gray-400">
@@ -2236,7 +2269,7 @@ export default function RegisterPage() {
                           </Card>
 
                           {requiresBusinessInfo && (
-                            <Card className="p-3 bg-white/50 dark:bg-gray-800/50">
+                            <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none">
                               <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                                 Business Information
                               </h4>
@@ -2245,7 +2278,7 @@ export default function RegisterPage() {
                                   <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Company:
                                   </span>
-                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-white">
                                     {companyName}
                                   </span>
                                 </div>
@@ -2253,7 +2286,7 @@ export default function RegisterPage() {
                                   <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Type:
                                   </span>
-                                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-gray-900 dark:text-white">
                                     {businessType}
                                   </span>
                                 </div>
@@ -2261,7 +2294,7 @@ export default function RegisterPage() {
                                   <span className="text-xs text-gray-700 dark:text-gray-300">
                                     Address:
                                   </span>
-                                  <span className="text-xs font-medium text-right text-gray-900 dark:text-gray-100">
+                                  <span className="text-xs font-medium text-right text-gray-900 dark:text-white">
                                     {businessAddress}
                                   </span>
                                 </div>
@@ -2272,9 +2305,9 @@ export default function RegisterPage() {
 
                         {/* Terms and Conditions */}
                         <div className="space-y-3">
-                          <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20">
-                            <Shield className="h-3.5 w-3.5 text-blue-600" />
-                            <AlertDescription className="text-blue-800 dark:text-blue-200 text-xs">
+                          <Alert className="border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-800 rounded-none">
+                            <Shield className="h-3.5 w-3.5 text-gray-900 dark:text-white" />
+                            <AlertDescription className="text-gray-900 dark:text-white text-xs">
                               Your wallet will be secured with Hyperledger
                               Fabric encryption. You will receive a 12-word
                               recovery phrase - this is the ONLY way to recover
@@ -2294,7 +2327,7 @@ export default function RegisterPage() {
                             <div className="grid gap-1 leading-none">
                               <label
                                 htmlFor="terms"
-                                className="text-xs font-medium cursor-pointer text-gray-900 dark:text-gray-100"
+                                className="text-xs font-medium cursor-pointer text-gray-900 dark:text-white"
                               >
                                 I accept the terms and conditions
                               </label>
@@ -2302,14 +2335,14 @@ export default function RegisterPage() {
                                 By creating an account, you agree to our{" "}
                                 <Link
                                   href="/terms"
-                                  className="text-blue-600 hover:underline cursor-pointer"
+                                  className="text-gray-900 dark:text-white hover:underline cursor-pointer"
                                 >
                                   Terms of Service
                                 </Link>{" "}
                                 and{" "}
                                 <Link
                                   href="/privacy"
-                                  className="text-blue-600 hover:underline cursor-pointer"
+                                  className="text-gray-900 dark:text-white hover:underline cursor-pointer"
                                 >
                                   Privacy Policy
                                 </Link>
@@ -2331,15 +2364,15 @@ export default function RegisterPage() {
                     {currentStep === 6 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 mb-3">
+                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
                             <Mail className="h-6 w-6" />
                           </div>
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Verify Your Email
                           </h3>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                             We&apos;ve sent a 6-digit code to{" "}
-                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                            <span className="font-medium text-gray-900 dark:text-white">
                               {email}
                             </span>
                           </p>
@@ -2362,13 +2395,13 @@ export default function RegisterPage() {
                               onPaste={index === 0 ? handleOtpPaste : undefined}
                               aria-label={`OTP digit ${index + 1}`}
                               title={`Enter digit ${index + 1} of verification code`}
-                              className={`w-10 h-10 sm:w-12 sm:h-12 text-center text-lg font-bold rounded-lg border-2 transition-all ${
+                              className={`w-10 h-10 sm:w-12 sm:h-12 text-center text-lg font-bold border-2 transition-all rounded-none ${
                                 otpError
                                   ? "border-red-500 bg-red-50 dark:bg-red-950/20 animate-shake"
                                   : digit
-                                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
-                                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                                    ? "border-gray-900 dark:border-white bg-gray-100 dark:bg-gray-800"
+                                    : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+                              } focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-gray-900 dark:focus:border-white`}
                             />
                           ))}
                         </div>
@@ -2402,7 +2435,7 @@ export default function RegisterPage() {
                           type="button"
                           onClick={verifyOtp}
                           disabled={isVerifyingOtp || otp.some((d) => !d)}
-                          className={`w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white cursor-pointer text-xs h-9 ${
+                          className={`w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 cursor-pointer text-xs h-9 rounded-none ${
                             isVerifyingOtp || otp.some((d) => !d)
                               ? "opacity-50 cursor-not-allowed"
                               : ""
@@ -2422,9 +2455,9 @@ export default function RegisterPage() {
                         </Button>
 
                         {/* Security Note */}
-                        <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20">
-                          <Shield className="h-3.5 w-3.5 text-blue-600" />
-                          <AlertDescription className="text-blue-800 dark:text-blue-200 text-xs">
+                        <Alert className="border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-800 rounded-none">
+                          <Shield className="h-3.5 w-3.5 text-gray-900 dark:text-white" />
+                          <AlertDescription className="text-gray-900 dark:text-white text-xs">
                             For your security, this code will expire in 10
                             minutes.
                           </AlertDescription>
@@ -2436,10 +2469,10 @@ export default function RegisterPage() {
                     {currentStep === 7 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 mb-3">
+                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
                             <KeyRound className="h-6 w-6" />
                           </div>
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Your Recovery Phrase
                           </h3>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
@@ -2448,9 +2481,9 @@ export default function RegisterPage() {
                           </p>
                         </div>
 
-                        <Alert className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20">
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                          <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">
+                        <Alert className="border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-800 rounded-none">
+                          <AlertTriangle className="h-3.5 w-3.5 text-gray-900 dark:text-white" />
+                          <AlertDescription className="text-gray-900 dark:text-white text-xs">
                             <strong>CRITICAL:</strong> Write down these 12 words
                             in exact order. Anyone with this phrase can access
                             your wallet and all assets.
@@ -2458,17 +2491,17 @@ export default function RegisterPage() {
                         </Alert>
 
                         {/* Recovery Phrase Display */}
-                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border-2 border-dashed border-gray-300 dark:border-gray-600">
+                        <div className="bg-gray-100 dark:bg-gray-800 p-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-none">
                           <div className="grid grid-cols-3 gap-2 mb-3">
                             {recoveryPhrase.split(" ").map((word, index) => (
                               <div
                                 key={index}
-                                className="flex items-center justify-center p-2 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm hover:shadow-md transition-shadow"
+                                className="flex items-center justify-center p-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow rounded-none"
                               >
                                 <span className="text-xs text-gray-500 dark:text-gray-400 mr-1.5">
                                   {index + 1}.
                                 </span>
-                                <span className="font-mono font-medium text-xs text-gray-900 dark:text-gray-100">
+                                <span className="font-mono font-medium text-xs text-gray-900 dark:text-white">
                                   {word}
                                 </span>
                               </div>
@@ -2481,7 +2514,7 @@ export default function RegisterPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => copyToClipboard(recoveryPhrase)}
-                              className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/20 border-gray-200 dark:border-gray-700 h-8"
+                              className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 border-gray-200 dark:border-gray-700 h-8 rounded-none"
                             >
                               <Copy className="h-3.5 w-3.5" />
                               Copy Phrase
@@ -2491,7 +2524,7 @@ export default function RegisterPage() {
                               variant="outline"
                               size="sm"
                               onClick={downloadRecoveryPhrase}
-                              className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-green-50 dark:hover:bg-green-950/20 border-gray-200 dark:border-gray-700 h-8"
+                              className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 border-gray-200 dark:border-gray-700 h-8 rounded-none"
                             >
                               <Download className="h-3.5 w-3.5" />
                               Download Backup
@@ -2500,14 +2533,14 @@ export default function RegisterPage() {
                         </div>
 
                         {/* Security Tips */}
-                        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
                           <div className="flex items-start gap-2">
-                            <BadgeCheck className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <BadgeCheck className="h-4 w-4 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
                             <div>
-                              <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                              <h4 className="text-xs font-semibold text-gray-900 dark:text-white mb-1">
                                 Security Best Practices
                               </h4>
-                              <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-0.5">
+                              <ul className="text-xs text-gray-900 dark:text-white space-y-0.5">
                                 <li>
                                   • Write the phrase on paper and store in a
                                   safe place
@@ -2544,7 +2577,7 @@ export default function RegisterPage() {
                           <div className="grid gap-1 leading-none">
                             <label
                               htmlFor="backup-confirmed"
-                              className="text-xs font-medium cursor-pointer text-gray-900 dark:text-gray-100"
+                              className="text-xs font-medium cursor-pointer text-gray-900 dark:text-white"
                             >
                               I have safely backed up my recovery phrase
                             </label>
@@ -2567,7 +2600,7 @@ export default function RegisterPage() {
                       disabled={currentStep === 1}
                       variant="outline"
                       size="sm"
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ${currentStep === 1 ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-none ${currentStep === 1 ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"}`}
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
                       Previous
@@ -2580,7 +2613,7 @@ export default function RegisterPage() {
                         disabled={
                           currentStep === 2 && (isCheckingEmail || emailExists)
                         }
-                        className={`flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium transition-colors cursor-pointer ${
+                        className={`flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 cursor-pointer text-xs h-9 rounded-none ${
                           currentStep === 2 && (isCheckingEmail || emailExists)
                             ? "opacity-50 cursor-not-allowed"
                             : ""
@@ -2604,7 +2637,11 @@ export default function RegisterPage() {
                         onClick={handleSubmit}
                         size="sm"
                         disabled={isLoading || !acceptedTerms}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-xs text-white font-medium transition-colors cursor-pointer ${isLoading || !acceptedTerms ? "opacity-50 cursor-not-allowed" : ""}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-medium transition-colors cursor-pointer rounded-none ${
+                          isLoading || !acceptedTerms
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
                       >
                         {isLoading ? (
                           <>
@@ -2624,7 +2661,7 @@ export default function RegisterPage() {
                         onClick={handleComplete}
                         size="sm"
                         disabled={!backupConfirmed}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-xs text-white font-medium transition-colors cursor-pointer ${!backupConfirmed ? "opacity-50 cursor-not-allowed" : ""}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-medium transition-colors cursor-pointer rounded-none ${!backupConfirmed ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
                         <Zap className="h-3.5 w-3.5" />
                         Complete Setup
@@ -2641,7 +2678,7 @@ export default function RegisterPage() {
                 Already have a wallet?{" "}
                 <Link
                   href="/login"
-                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium hover:underline transition-colors cursor-pointer"
+                  className="text-gray-900 dark:text-white font-medium hover:underline transition-colors cursor-pointer"
                 >
                   Sign In
                 </Link>
@@ -2654,7 +2691,7 @@ export default function RegisterPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer rounded-none"
                 >
                   Already have an account? Sign in
                 </Button>
@@ -2665,9 +2702,9 @@ export default function RegisterPage() {
 
         {/* Network Status */}
         <div className="fixed bottom-4 right-4 hidden sm:block">
-          <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer">
+          <div className="bg-white dark:bg-gray-900 backdrop-blur-sm border border-gray-200 dark:border-gray-700 px-4 py-2 transition-all duration-200 cursor-pointer rounded-none">
             <div className="flex items-center gap-1.5 text-xs">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+              <div className="w-1.5 h-1.5 bg-green-500 animate-pulse" />
               <span className="text-gray-600 dark:text-gray-400">
                 Hyperledger Network Online
               </span>
@@ -2675,12 +2712,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Background Decorations */}
-        <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl animate-pulse delay-1000" />
-          <div className="absolute top-3/4 left-3/4 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl animate-pulse delay-2000" />
-        </div>
+        {/* Background Decorations - REMOVED COLORED GRADIENTS */}
       </div>
     </AuthRouteGuard>
   );

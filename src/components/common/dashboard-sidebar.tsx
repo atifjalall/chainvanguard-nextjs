@@ -4,40 +4,58 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/_ui/button";
+import { Button } from "@/components/ui/button";
 import {
-  Home,
-  Package,
-  Warehouse,
-  ShoppingCart,
-  Users,
-  BarChart,
-  Plus,
-  History,
-  FileText,
-  ClipboardList,
-  TrendingUp,
-  List,
-  Shield,
-  Activity,
-  Monitor,
-  GitBranch,
-  Menu,
-  X,
-  Wallet,
-  PackageCheck,
-  PackagePlus,
-  Boxes,
-  CreditCard,
-  Inbox,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+  HomeIcon,
+  CubeIcon,
+  BuildingStorefrontIcon,
+  ShoppingCartIcon,
+  UsersIcon,
+  ChartBarIcon,
+  PlusIcon,
+  ClockIcon,
+  DocumentTextIcon,
+  ClipboardDocumentListIcon,
+  ArrowTrendingUpIcon,
+  ListBulletIcon,
+  ShieldCheckIcon,
+  BoltIcon,
+  ComputerDesktopIcon,
+  CodeBracketSquareIcon,
+  Bars3Icon,
+  XMarkIcon,
+  WalletIcon,
+  CheckBadgeIcon,
+  ArchiveBoxIcon,
+  CreditCardIcon,
+  InboxIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
+import { useEffect, useState, createContext, useContext } from "react";
 
-export function DashboardSidebar() {
-  const { user } = useAuth();
-  const pathname = usePathname();
+// Create context for sidebar state
+const SidebarContext = createContext<{
+  isCollapsed: boolean;
+  isMobile: boolean;
+  isOpen: boolean;
+  setIsCollapsed: (value: boolean) => void;
+  setIsOpen: (value: boolean) => void;
+}>({
+  isCollapsed: false,
+  isMobile: false,
+  isOpen: false,
+  setIsCollapsed: () => {},
+  setIsOpen: () => {},
+});
+
+export const useSidebar = () => useContext(SidebarContext);
+
+// Export the provider component
+export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Check if device is mobile
   useEffect(() => {
@@ -53,9 +71,26 @@ export function DashboardSidebar() {
     };
   }, []);
 
+  return (
+    <SidebarContext.Provider
+      value={{ isCollapsed, isMobile, isOpen, setIsCollapsed, setIsOpen }}
+    >
+      {children}
+    </SidebarContext.Provider>
+  );
+}
+
+export function DashboardSidebar() {
+  const { user } = useAuth();
+  const pathname = usePathname();
+  const { isOpen, isMobile, isCollapsed, setIsOpen, setIsCollapsed } =
+    useSidebar();
+
   // Close sidebar when route changes
   useEffect(() => {
-    setIsOpen(false);
+    if (isOpen) {
+      setIsOpen(false);
+    }
   }, [pathname]);
 
   const getNavigationItems = () => {
@@ -63,59 +98,79 @@ export function DashboardSidebar() {
       // 1. Supplier
       case "supplier":
         return [
-          { href: "/supplier", label: "Dashboard", icon: Home },
+          { href: "/supplier", label: "Dashboard", icon: HomeIcon },
           {
             href: "/supplier/add-inventory",
             label: "Add Inventory",
-            icon: PackagePlus,
+            icon: PlusIcon,
           },
-          { href: "/supplier/inventory", label: "Inventory", icon: Warehouse },
+          {
+            href: "/supplier/inventory",
+            label: "Inventory",
+            icon: BuildingStorefrontIcon,
+          },
 
           {
             href: "/supplier/vendor-requests",
             label: "Vendor Requests",
-            icon: Inbox,
+            icon: InboxIcon,
           },
-          { href: "/supplier/vendors", label: "Vendors", icon: Users },
+          { href: "/supplier/vendors", label: "Vendors", icon: UsersIcon },
           {
             href: "/supplier/transactions",
             label: "Transactions",
-            icon: CreditCard,
+            icon: CreditCardIcon,
           },
-          { href: "/supplier/insights", label: "Insights", icon: BarChart },
-          { href: "/wallet", label: "Wallet", icon: Wallet },
+          { href: "/supplier/insights", label: "Insights", icon: ChartBarIcon },
+          { href: "/wallet", label: "Wallet", icon: WalletIcon },
         ];
 
       // 2. Vendor
       case "vendor":
         return [
-          { href: "/vendor", label: "Dashboard", icon: Home },
-          { href: "/vendor/browse", label: "Browse Inventory", icon: Boxes },
+          { href: "/vendor", label: "Dashboard", icon: HomeIcon },
+          {
+            href: "/vendor/browse",
+            label: "Browse Inventory",
+            icon: ArchiveBoxIcon,
+          },
           {
             href: "/vendor/my-inventory",
             label: "My Inventory",
-            icon: Warehouse,
+            icon: BuildingStorefrontIcon,
           },
-          { href: "/vendor/my-requests", label: "My Requests", icon: Inbox },
+          {
+            href: "/vendor/my-requests",
+            label: "My Requests",
+            icon: InboxIcon,
+          },
           {
             href: "/vendor/transactions",
             label: "Transactions",
-            icon: CreditCard,
+            icon: CreditCardIcon,
           },
           {
             href: "/vendor/add-product",
             label: "Add Product",
-            icon: PackagePlus,
+            icon: PlusIcon,
           },
           {
             href: "/vendor/my-products",
             label: "My Products",
-            icon: PackageCheck,
+            icon: CheckBadgeIcon,
           },
-          { href: "/vendor/orders", label: "Orders", icon: ClipboardList },
-          { href: "/vendor/customers", label: "Customers", icon: Users },
-          { href: "/vendor/insights", label: "Insights", icon: TrendingUp },
-          { href: "/wallet", label: "Wallet", icon: Wallet },
+          {
+            href: "/vendor/orders",
+            label: "Orders",
+            icon: ClipboardDocumentListIcon,
+          },
+          { href: "/vendor/customers", label: "Customers", icon: UsersIcon },
+          {
+            href: "/vendor/insights",
+            label: "Insights",
+            icon: ArrowTrendingUpIcon,
+          },
+          { href: "/wallet", label: "Wallet", icon: WalletIcon },
         ];
 
       // Customer - No sidebar (uses e-commerce header instead)
@@ -125,38 +180,38 @@ export function DashboardSidebar() {
       // 3. Blockchain Expert
       case "expert":
         return [
-          { href: "/blockchain-expert", label: "Dashboard", icon: Home },
+          { href: "/blockchain-expert", label: "Dashboard", icon: HomeIcon },
           {
             href: "/blockchain-expert/all-transactions",
             label: "All Transactions",
-            icon: List,
+            icon: ListBulletIcon,
           },
           {
             href: "/blockchain-expert/blockchain-logs",
             label: "Blockchain Logs",
-            icon: FileText,
+            icon: DocumentTextIcon,
           },
           {
             href: "/blockchain-expert/consensus",
             label: "Consensus",
-            icon: GitBranch,
+            icon: CodeBracketSquareIcon,
           },
           {
             href: "/blockchain-expert/security",
             label: "Security",
-            icon: Shield,
+            icon: ShieldCheckIcon,
           },
           {
             href: "/blockchain-expert/fault-tolerance",
             label: "Fault Tolerance",
-            icon: Activity,
+            icon: BoltIcon,
           },
           {
             href: "/blockchain-expert/system-health",
             label: "System Health",
-            icon: Monitor,
+            icon: ComputerDesktopIcon,
           },
-          { href: "/wallet", label: "Wallet", icon: Wallet },
+          { href: "/wallet", label: "Wallet", icon: WalletIcon },
         ];
 
       default:
@@ -178,9 +233,36 @@ export function DashboardSidebar() {
         variant="outline"
         size="icon"
         onClick={() => setIsOpen(!isOpen)}
-        className="h-10 w-10 rounded-full bg-white/90 backdrop-blur-sm border-gray-300 shadow-md"
+        className="h-10 w-10 bg-white dark:bg-gray-900 backdrop-blur-sm border-gray-200 dark:border-gray-700 shadow-md rounded-none"
       >
-        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        {isOpen ? (
+          <XMarkIcon className="h-5 w-5" />
+        ) : (
+          <Bars3Icon className="h-5 w-5" />
+        )}
+      </Button>
+    </div>
+  );
+
+  // Desktop toggle button - fixed position relative to viewport
+  const DesktopToggle = () => (
+    <div
+      className={cn(
+        "hidden md:block fixed top-20 z-50 transition-all duration-300 ease-in-out",
+        isCollapsed ? "left-[52px]" : "left-[244px]"
+      )}
+    >
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="h-8 w-8 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow rounded-none"
+      >
+        {isCollapsed ? (
+          <ChevronRightIcon className="h-4 w-4" />
+        ) : (
+          <ChevronLeftIcon className="h-4 w-4" />
+        )}
       </Button>
     </div>
   );
@@ -200,15 +282,18 @@ export function DashboardSidebar() {
     <>
       <MobileToggle />
       <Overlay />
+      <DesktopToggle />
 
       <div
         className={cn(
-          "fixed left-0 top-0 h-full bg-transparent backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 z-40 transition-all duration-300 ease-in-out",
+          "fixed left-0 top-0 h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-40 transition-all duration-300 ease-in-out",
           isMobile
             ? isOpen
               ? "w-64 translate-x-0"
               : "-translate-x-full"
-            : "w-64 translate-x-0"
+            : isCollapsed
+              ? "w-16"
+              : "w-64"
         )}
       >
         <div className="h-full pt-12 pb-6 overflow-y-auto">
@@ -221,7 +306,7 @@ export function DashboardSidebar() {
                   onClick={() => setIsOpen(false)}
                   className="h-8 w-8 md:hidden"
                 >
-                  <X className="h-4 w-4" />
+                  <XMarkIcon className="h-4 w-4" />
                 </Button>
               )}
             </div>
@@ -234,15 +319,26 @@ export function DashboardSidebar() {
                     key={item.href}
                     variant={isActive ? "default" : "ghost"}
                     className={cn(
-                      "w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-colors duration-200",
+                      "w-full text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 rounded-none",
                       isActive &&
-                        "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                        "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 hover:text-white dark:hover:text-gray-900",
+                      "justify-start"
                     )}
                     asChild
+                    title={isCollapsed && !isMobile ? item.label : undefined}
                   >
-                    <Link href={item.href}>
-                      <Icon className="mr-3 h-4 w-4" />
-                      {item.label}
+                    <Link href={item.href} className="flex items-center">
+                      <Icon className={cn("h-4 w-4 flex-shrink-0", "mr-3")} />
+                      <span
+                        className={cn(
+                          "transition-all duration-300 ease-in-out whitespace-nowrap",
+                          isCollapsed && !isMobile
+                            ? "opacity-0 w-0 overflow-hidden"
+                            : "opacity-100 w-auto"
+                        )}
+                      >
+                        {item.label}
+                      </span>
                     </Link>
                   </Button>
                 );

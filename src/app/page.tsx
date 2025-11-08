@@ -1,899 +1,441 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/_ui/button";
-import { Highlighter } from "@/components/magicui/highlighter";
+import { Package } from "lucide-react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/_ui/card";
-import { Badge } from "@/components/_ui/badge";
-import {
-  ArrowRight,
-  Shield,
-  Zap,
-  Users,
-  Package,
-  TrendingUp,
-  CheckCircle,
-  Star,
-  Eye,
-  BarChart3,
-  Warehouse,
-  Clock,
-  Award,
-  Lock,
-  Cpu,
-  Database,
-  Network,
-} from "lucide-react";
-import { ThemeToggle } from "@/components/common/theme-toggle";
-import PixelBlast from "@/components/PixelBlast";
-import { motion } from "framer-motion";
-import { useState } from "react";
-
-// Custom motion component wrapper for focus animations
-const FocusMotionDiv = ({ children, className = "", ...props }: any) => {
-  const [isFocused, setIsFocused] = useState(false);
-
-  return (
-    <motion.div
-      className={className}
-      tabIndex={0}
-      onFocus={() => setIsFocused(true)}
-      onBlur={() => setIsFocused(false)}
-      animate={{
-        scale: isFocused ? 1.05 : 1,
-        boxShadow: isFocused
-          ? "0 0 0 4px rgba(59, 130, 246, 0.5)"
-          : "0 0 0 0px rgba(59, 130, 246, 0)",
-      }}
-      transition={{
-        type: "spring",
-        stiffness: 300,
-        damping: 20,
-      }}
-      {...props}
-    >
-      {children}
-    </motion.div>
-  );
-};
+  ShieldCheckIcon,
+  BoltIcon,
+  EyeIcon,
+  CircleStackIcon,
+  UsersIcon,
+  CheckCircleIcon,
+  ChartBarIcon,
+  CpuChipIcon,
+  BuildingStorefrontIcon,
+  ArrowRightIcon,
+} from "@heroicons/react/24/outline";
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen w-full">
-      {/* Animated PixelBlast background */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <PixelBlast
-          variant="circle"
-          pixelSize={16}
-          color="#2563eb"
-          patternScale={2.2}
-          patternDensity={0.5}
-          pixelSizeJitter={0.08}
-          enableRipples
-          rippleSpeed={0.18}
-          rippleThickness={0.09}
-          rippleIntensityScale={0.7}
-          liquid
-          liquidStrength={0.07}
-          liquidRadius={1.1}
-          liquidWobbleSpeed={2.2}
-          speed={0.22}
-          edgeFade={0.22}
-          transparent
-        />
-      </div>
+    <div className="min-h-screen bg-white dark:bg-gray-950">
+      {/* Header */}
+      <header className="fixed top-0 w-full z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
+        <div className="w-full px-6 h-16 flex items-center">
+          {/* Logo on the far left */}
+          <Link
+            href="/"
+            className="flex items-center space-x-3 group cursor-pointer"
+          >
+            <Package className="h-6 w-6 text-gray-900 dark:text-white" />
+            <span className="text-xl font-light text-gray-900 dark:text-white">
+              ChainVanguard
+            </span>
+          </Link>
 
-      {/* Main content overlays the animation */}
-      <div className="relative z-10">
-        <div className="min-h-screen bg-gradient-to-br from-slate-50/80 via-blue-50/80 to-cyan-50/80 dark:from-slate-950/80 dark:via-blue-950/80 dark:to-cyan-950/80 relative overflow-hidden">
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Floating geometric shapes */}
-            <div
-              className="absolute top-32 left-16 w-8 h-8 border border-blue-300/20 dark:border-blue-600/20 rotate-45 animate-spin"
-              style={{ animationDuration: "20s" }}
-            ></div>
-            <div
-              className="absolute top-96 right-32 w-6 h-6 border border-cyan-300/30 dark:border-cyan-600/30 rotate-12 animate-pulse"
-              style={{ animationDelay: "2s" }}
-            ></div>
-            <div
-              className="absolute bottom-64 left-24 w-4 h-8 bg-gradient-to-t from-blue-400/10 to-transparent animate-bounce"
-              style={{ animationDelay: "1s", animationDuration: "3s" }}
-            ></div>
+          {/* Push navbar to the right */}
+          <nav className="flex items-center gap-2 ml-auto">
+            <Link href="/login">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-gray-900 dark:border-white text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-none cursor-pointer text-xs h-9 px-4"
+              >
+                Login
+              </Button>
+            </Link>
+            <Link href="/register">
+              <Button
+                size="sm"
+                className="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 rounded-none cursor-pointer text-xs h-9 px-4"
+              >
+                Get Started
+              </Button>
+            </Link>
+          </nav>
+        </div>
+      </header>
 
-            {/* Animated lines and connections */}
-            <svg
-              className="absolute inset-0 w-full h-full"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <linearGradient
-                  id="lineGradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <stop
-                    offset="0%"
-                    stopColor="rgb(59, 130, 246)"
-                    stopOpacity="0.1"
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor="rgb(6, 182, 212)"
-                    stopOpacity="0.05"
-                  />
-                </linearGradient>
-              </defs>
-              <line
-                x1="10%"
-                y1="20%"
-                x2="30%"
-                y2="40%"
-                stroke="url(#lineGradient)"
-                strokeWidth="1"
-                className="animate-pulse"
-              />
-              <line
-                x1="70%"
-                y1="10%"
-                x2="90%"
-                y2="30%"
-                stroke="url(#lineGradient)"
-                strokeWidth="1"
-                className="animate-pulse"
-                style={{ animationDelay: "1s" }}
-              />
-              <line
-                x1="20%"
-                y1="80%"
-                x2="40%"
-                y2="60%"
-                stroke="url(#lineGradient)"
-                strokeWidth="1"
-                className="animate-pulse"
-                style={{ animationDelay: "2s" }}
-              />
-              <circle
-                cx="15%"
-                cy="30%"
-                r="2"
-                fill="rgb(59, 130, 246)"
-                fillOpacity="0.1"
-                className="animate-ping"
-                style={{ animationDelay: "0.5s" }}
-              />
-              <circle
-                cx="85%"
-                cy="20%"
-                r="1.5"
-                fill="rgb(6, 182, 212)"
-                fillOpacity="0.15"
-                className="animate-ping"
-                style={{ animationDelay: "1.5s" }}
-              />
-              <circle
-                cx="25%"
-                cy="70%"
-                r="1"
-                fill="rgb(59, 130, 246)"
-                fillOpacity="0.2"
-                className="animate-ping"
-                style={{ animationDelay: "2.5s" }}
-              />
-            </svg>
-
-            {/* Morphing abstract shapes */}
-            <div className="absolute top-1/4 right-1/4 w-32 h-32 opacity-5 dark:opacity-10">
-              <div
-                className="w-full h-full bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full animate-pulse transform rotate-12"
-                style={{ animationDuration: "4s" }}
-              ></div>
-            </div>
-            <div className="absolute bottom-1/3 left-1/5 w-24 h-24 opacity-5 dark:opacity-10">
-              <div
-                className="w-full h-full bg-gradient-to-tr from-cyan-500 to-blue-500 transform rotate-45 animate-spin"
-                style={{ animationDuration: "15s" }}
-              ></div>
-            </div>
-
-            {/* Hexagonal pattern */}
-            <div className="absolute top-1/2 left-1/3 transform -translate-x-1/2 -translate-y-1/2">
-              <div className="relative">
-                <div
-                  className="w-16 h-16 border border-blue-200/10 dark:border-blue-700/20 transform rotate-30 animate-spin"
-                  style={{
-                    clipPath:
-                      "polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)",
-                    animationDuration: "25s",
-                  }}
-                ></div>
-                <div
-                  className="absolute inset-2 w-12 h-12 border border-cyan-200/15 dark:border-cyan-700/25 transform -rotate-30 animate-spin"
-                  style={{
-                    clipPath:
-                      "polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)",
-                    animationDuration: "20s",
-                  }}
-                ></div>
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center pt-16">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <div className="space-y-8">
+            {/* Badge */}
+            <div className="inline-block">
+              <div className="h-6 px-3 border border-gray-400 dark:border-gray-400 bg-transparent text-gray-600 dark:text-gray-600 flex items-center text-xs">
+                Powered by Hyperledger Fabric & IPFS
               </div>
             </div>
 
-            {/* Floating triangular elements */}
-            <div
-              className="absolute top-20 right-1/4 w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-blue-300/20 dark:border-b-blue-600/30 animate-bounce"
-              style={{ animationDelay: "3s", animationDuration: "4s" }}
-            ></div>
-            <div
-              className="absolute bottom-32 right-16 w-0 h-0 border-l-3 border-r-3 border-b-6 border-l-transparent border-r-transparent border-b-cyan-300/25 dark:border-b-cyan-600/35 animate-pulse"
-              style={{ animationDelay: "1s" }}
-            ></div>
+            {/* Main Headline */}
+            <h1 className="text-5xl md:text-6xl font-light text-gray-900 dark:text-white leading-none">
+              Supply Chain
+              <span className="block mt-2 font-normal">Reimagined</span>
+            </h1>
 
-            {/* Network nodes animation */}
-            <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2">
-              <div className="relative">
-                <div className="w-2 h-2 bg-blue-400/30 rounded-full animate-ping"></div>
-                <div
-                  className="absolute top-8 left-6 w-1 h-1 bg-cyan-400/40 rounded-full animate-ping"
-                  style={{ animationDelay: "0.5s" }}
-                ></div>
-                <div
-                  className="absolute -top-4 -left-8 w-1.5 h-1.5 bg-blue-500/35 rounded-full animate-ping"
-                  style={{ animationDelay: "1s" }}
-                ></div>
-                <svg
-                  className="absolute -inset-8 w-16 h-16"
-                  xmlns="http://www.w3.org/2000/svg"
+            {/* Subheadline */}
+            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
+              Transparent, secure, and efficient supply chain management powered
+              by cutting-edge blockchain technology. Track products from origin
+              to consumer with complete transparency and immutable records.
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row justify-center gap-3 pt-8">
+              <Link href="/register">
+                <Button
+                  size="lg"
+                  className="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 h-9 px-8 rounded-none group text-xs cursor-pointer"
                 >
-                  <line
-                    x1="8"
-                    y1="8"
-                    x2="14"
-                    y2="16"
-                    stroke="rgb(59, 130, 246)"
-                    strokeOpacity="0.1"
-                    strokeWidth="0.5"
-                    className="animate-pulse"
-                  />
-                  <line
-                    x1="8"
-                    y1="8"
-                    x2="0"
-                    y2="4"
-                    stroke="rgb(6, 182, 212)"
-                    strokeOpacity="0.1"
-                    strokeWidth="0.5"
-                    className="animate-pulse"
-                    style={{ animationDelay: "0.5s" }}
-                  />
-                </svg>
-              </div>
+                  Start Your Journey
+                  <ArrowRightIcon className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-9 px-8 border-gray-900 dark:border-white text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-none text-xs cursor-pointer"
+                >
+                  Login
+                </Button>
+              </Link>
             </div>
 
-            {/* Enhanced gradient orbs with movement */}
-            <div
-              className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl animate-pulse transform translate-x-4 translate-y-4"
-              style={{ animation: "float 6s ease-in-out infinite" }}
-            ></div>
-            <div
-              className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-cyan-400/10 to-blue-400/10 rounded-full blur-3xl animate-pulse transform -translate-x-4 -translate-y-4"
-              style={{
-                animation: "float 8s ease-in-out infinite reverse",
-                animationDelay: "2s",
-              }}
-            ></div>
-            <div
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-blue-300/5 to-cyan-300/5 rounded-full blur-2xl animate-pulse"
-              style={{
-                animation: "float 10s ease-in-out infinite",
-                animationDelay: "1s",
-              }}
-            ></div>
+            {/* Stats */}
+            <div className="pt-20 grid grid-cols-3 gap-8 max-w-2xl mx-auto border-t border-gray-200 dark:border-gray-800 mt-20">
+              {[
+                { value: "10M+", label: "Products Tracked" },
+                { value: "500+", label: "Enterprise Clients" },
+                { value: "99.99%", label: "System Uptime" },
+              ].map((stat, i) => (
+                <div key={i} className="text-center">
+                  <div className="text-2xl font-light text-gray-900 dark:text-white mb-1">
+                    {stat.value}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {stat.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
-            {/* Existing floating particles enhanced */}
-            <div className="absolute top-20 left-10 w-2 h-2 bg-blue-400/30 rounded-full animate-pulse"></div>
-            <div
-              className="absolute top-40 right-20 w-3 h-3 bg-cyan-400/20 rounded-full animate-bounce"
-              style={{ animationDelay: "1s" }}
-            ></div>
-            <div
-              className="absolute top-60 left-1/4 w-1 h-1 bg-blue-500/40 rounded-full animate-ping"
-              style={{ animationDelay: "2s" }}
-            ></div>
-            <div
-              className="absolute bottom-40 right-1/3 w-2 h-2 bg-cyan-300/30 rounded-full animate-pulse"
-              style={{ animationDelay: "3s" }}
-            ></div>
-            <div
-              className="absolute bottom-20 left-1/2 w-1 h-1 bg-blue-400/50 rounded-full animate-bounce"
-              style={{ animationDelay: "4s" }}
-            ></div>
+      {/* Features Section */}
+      <section className="py-24 border-t border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-2xl font-light text-gray-900 dark:text-white mb-2">
+              Powerful Features
+            </h2>
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Everything you need for modern, secure supply chain management
+            </p>
           </div>
 
-          <style jsx>{`
-            @keyframes float {
-              0%,
-              100% {
-                transform: translateY(0px) translateX(0px);
-              }
-              25% {
-                transform: translateY(-10px) translateX(5px);
-              }
-              50% {
-                transform: translateY(-5px) translateX(-5px);
-              }
-              75% {
-                transform: translateY(-15px) translateX(3px);
-              }
-            }
-          `}</style>
-
-          {/* Header - Glassmorphism */}
-          <header className="bg-transparent dark:bg-transparent backdrop-blur-2xl border-b-0 sticky top-0 z-50 shadow-none">
-            <div className="container mx-auto px-6 flex h-16 items-center justify-between">
-              <FocusMotionDiv className="flex items-center space-x-3 cursor-pointer rounded-lg outline-none">
-                <motion.div
-                  className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Package className="h-5 w-5 text-white" />
-                </motion.div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-                  ChainVanguard
-                </span>
-              </FocusMotionDiv>
-              <nav className="flex items-center space-x-4">
-                <FocusMotionDiv className="rounded-lg outline-none">
-                  <ThemeToggle />
-                </FocusMotionDiv>
-                <Link href="/login">
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <FocusMotionDiv className="outline-none rounded-lg">
-                      <Button
-                        variant="ghost"
-                        className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50 cursor-pointer transition-all duration-300 backdrop-blur-md"
-                      >
-                        Login
-                      </Button>
-                    </FocusMotionDiv>
-                  </motion.div>
-                </Link>
-                <Link href="/register">
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <FocusMotionDiv className="outline-none rounded-lg">
-                      <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
-                        Get Started
-                      </Button>
-                    </FocusMotionDiv>
-                  </motion.div>
-                </Link>
-              </nav>
-            </div>
-          </header>
-
-          {/* Hero Section */}
-          <section className="py-24 text-center relative">
-            <div className="container mx-auto px-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
+          <div className="grid md:grid-cols-3 gap-px bg-gray-200 dark:bg-gray-800 border border-gray-200 dark:border-gray-800">
+            {[
+              {
+                icon: ShieldCheckIcon,
+                title: "Military-Grade Security",
+                desc: "End-to-end encryption with immutable blockchain records. Zero-trust architecture ensures complete data integrity and protection against tampering.",
+                metric: "99.99% Security Rating",
+              },
+              {
+                icon: BoltIcon,
+                title: "Real-Time Intelligence",
+                desc: "AI-powered analytics with instant tracking across global supply chains. Machine learning algorithms predict and prevent disruptions before they occur.",
+                metric: "<100ms Response Time",
+              },
+              {
+                icon: CircleStackIcon,
+                title: "Distributed Architecture",
+                desc: "IPFS-powered decentralized storage with automatic redundancy. Your data is distributed across multiple nodes for maximum availability and resilience.",
+                metric: "99.9% Uptime SLA",
+              },
+              {
+                icon: UsersIcon,
+                title: "Multi-Stakeholder Platform",
+                desc: "Unified ecosystem supporting suppliers, manufacturers, distributors, retailers, and consumers with role-based access controls and custom workflows.",
+                metric: "Unlimited Users",
+              },
+              {
+                icon: CpuChipIcon,
+                title: "Smart Contract Automation",
+                desc: "Hyperledger Fabric smart contracts automate compliance, payments, and quality assurance. Reduce manual processes by up to 90%.",
+                metric: "90% Process Automation",
+              },
+              {
+                icon: ChartBarIcon,
+                title: "Advanced Analytics Suite",
+                desc: "Comprehensive dashboards with predictive analytics, compliance reporting, and performance optimization insights for data-driven decisions.",
+                metric: "Real-Time Insights",
+              },
+            ].map((feature, i) => (
+              <div
+                key={i}
+                className="bg-white dark:bg-gray-950 p-8 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
               >
-                <div className="mt-40" />
-                <FocusMotionDiv className="inline-block mb-6 outline-none rounded-full">
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-50/50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-300/50 dark:border-blue-700 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-                  >
-                    <Zap className="h-3 w-3 mr-1" />
-                    Powered by Hyperledger Fabric & IPFS
-                  </Badge>
-                </FocusMotionDiv>
-
-                <motion.h1
-                  className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent mb-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                >
-                  Blockchain Supply Chain{" "}
-                  <span className="text-blue-600 dark:text-blue-400">
-                    Management
-                  </span>
-                </motion.h1>
-
-                <motion.p
-                  className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed mb-10"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                >
-                  Transparent, secure, and efficient supply chain management
-                  powered by cutting-edge blockchain technology. Track products
-                  from origin to consumer with complete transparency and
-                  immutable records.
-                </motion.p>
-
-                <motion.div
-                  className="flex flex-col sm:flex-row justify-center gap-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                >
-                  <Link href="/register">
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <FocusMotionDiv className="outline-none rounded-lg">
-                        <Button
-                          size="lg"
-                          className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-8 font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer"
-                        >
-                          Start Your Journey
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </Button>
-                      </FocusMotionDiv>
-                    </motion.div>
-                  </Link>
-                  <Link href="/login">
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <FocusMotionDiv className="outline-none rounded-lg">
-                        <Button
-                          variant="outline"
-                          size="lg"
-                          className="h-12 px-8 font-semibold border-gray-200 dark:border-gray-700 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all duration-300 cursor-pointer"
-                        >
-                          Sign In
-                        </Button>
-                      </FocusMotionDiv>
-                    </motion.div>
-                  </Link>
-                </motion.div>
-              </motion.div>
-            </div>
-          </section>
-
-          {/* Features Section - Glassmorphism Cards */}
-          <section className="py-24 relative">
-            <div className="container mx-auto px-6">
-              <motion.div
-                className="text-center mb-16"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                  Powerful Features
-                </h2>
-                <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                  Everything you need for modern, secure supply chain management
+                <feature.icon className="h-6 w-6 text-gray-900 dark:text-white mb-4" />
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mb-3">
+                  {feature.desc}
                 </p>
-              </motion.div>
-
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[
-                  {
-                    icon: Shield,
-                    title: "Military-Grade Security",
-                    desc: "End-to-end encryption with immutable blockchain records. Zero-trust architecture ensures complete data integrity and protection against tampering.",
-                    color:
-                      "bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 text-green-600 dark:text-green-400",
-                    metrics: "99.99% Security Rating",
-                    badge: "SOC 2 Type II",
-                  },
-                  {
-                    icon: Zap,
-                    title: "Real-Time Intelligence",
-                    desc: "AI-powered analytics with instant tracking across global supply chains. Machine learning algorithms predict and prevent disruptions before they occur.",
-                    color:
-                      "bg-gradient-to-br from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 text-yellow-600 dark:text-yellow-400",
-                    metrics: "<100ms Response Time",
-                    badge: "AI-Powered",
-                  },
-                  {
-                    icon: Database,
-                    title: "Distributed Architecture",
-                    desc: "IPFS-powered decentralized storage with automatic redundancy. Your data is distributed across multiple nodes for maximum availability and resilience.",
-                    color:
-                      "bg-gradient-to-br from-purple-100 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30 text-purple-600 dark:text-purple-400",
-                    metrics: "99.9% Uptime SLA",
-                    badge: "Decentralized",
-                  },
-                  {
-                    icon: Users,
-                    title: "Multi-Stakeholder Platform",
-                    desc: "Unified ecosystem supporting suppliers, manufacturers, distributors, retailers, and consumers with role-based access controls and custom workflows.",
-                    color:
-                      "bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 text-blue-600 dark:text-blue-400",
-                    metrics: "Unlimited Users",
-                    badge: "Enterprise Ready",
-                  },
-                  {
-                    icon: Cpu,
-                    title: "Smart Contract Automation",
-                    desc: "Hyperledger Fabric smart contracts automate compliance, payments, and quality assurance. Reduce manual processes by up to 90%.",
-                    color:
-                      "bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900/30 dark:to-red-900/30 text-orange-600 dark:text-orange-400",
-                    metrics: "90% Process Automation",
-                    badge: "Smart Contracts",
-                  },
-                  {
-                    icon: BarChart3,
-                    title: "Advanced Analytics Suite",
-                    desc: "Comprehensive dashboards with predictive analytics, compliance reporting, and performance optimization insights for data-driven decisions.",
-                    color:
-                      "bg-gradient-to-br from-pink-100 to-rose-100 dark:from-pink-900/30 dark:to-rose-900/30 text-pink-600 dark:text-pink-400",
-                    metrics: "Real-Time Insights",
-                    badge: "Business Intelligence",
-                  },
-                ].map((feature, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  >
-                    <FocusMotionDiv className="h-full outline-none rounded-xl">
-                      <motion.div whileHover={{ y: -5 }}>
-                        <Card className="h-full group border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] hover:shadow-[0_8px_32px_0_rgba(31,38,135,0.25)] transition-all duration-500 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl cursor-pointer relative overflow-hidden">
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                          <CardHeader className="pb-4 relative z-10">
-                            <div className="flex items-center justify-between mb-4">
-                              <motion.div
-                                className={`h-16 w-16 rounded-2xl ${feature.color} flex items-center justify-center shadow-lg`}
-                                whileHover={{ scale: 1.1, rotate: 5 }}
-                              >
-                                <feature.icon className="h-8 w-8" />
-                              </motion.div>
-                              <Badge
-                                variant="secondary"
-                                className="text-xs font-medium bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
-                              >
-                                {feature.badge}
-                              </Badge>
-                            </div>
-                            <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                              {feature.title}
-                            </CardTitle>
-                            <CardDescription className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm mb-4">
-                              {feature.desc}
-                            </CardDescription>
-                            <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                              <TrendingUp className="h-3 w-3" />
-                              {feature.metrics}
-                            </div>
-                          </CardHeader>
-                        </Card>
-                      </motion.div>
-                    </FocusMotionDiv>
-                  </motion.div>
-                ))}
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {feature.metric}
+                </p>
               </div>
-            </div>
-          </section>
-
-          {/* Statistics Section - Glassmorphism Cards */}
-          <section className="py-24 relative">
-            <div className="container mx-auto px-6">
-              <div className="grid md:grid-cols-4 gap-8">
-                {[
-                  {
-                    number: "10M+",
-                    label: "Products Tracked",
-                    icon: Package,
-                    desc: "Across global supply chains",
-                  },
-                  {
-                    number: "500+",
-                    label: "Enterprise Clients",
-                    icon: Users,
-                    desc: "Fortune 500 companies",
-                  },
-                  {
-                    number: "99.99%",
-                    label: "System Uptime",
-                    icon: CheckCircle,
-                    desc: "Enterprise SLA guarantee",
-                  },
-                  {
-                    number: "24/7",
-                    label: "Expert Support",
-                    icon: Shield,
-                    desc: "Global support coverage",
-                  },
-                ].map((stat, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  >
-                    <FocusMotionDiv className="outline-none rounded-xl">
-                      <motion.div whileHover={{ y: -5 }}>
-                        <Card className="text-center border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl group cursor-pointer">
-                          <CardContent className="p-8">
-                            <motion.div
-                              className="h-16 w-16 bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
-                              whileHover={{ scale: 1.1, rotate: 5 }}
-                            >
-                              <stat.icon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                            </motion.div>
-                            <div className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent mb-2">
-                              {stat.number}
-                            </div>
-                            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                              {stat.label}
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              {stat.desc}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    </FocusMotionDiv>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* User Roles Section - Glassmorphism Cards */}
-          <section className="py-24">
-            <div className="container mx-auto px-6">
-              <motion.div
-                className="text-center mb-16"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                  Choose Your Role
-                </h2>
-                <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                  Tailored interfaces for different stakeholders in the supply
-                  chain ecosystem
-                </p>
-              </motion.div>
-
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  {
-                    title: "Supplier/Ministry",
-                    desc: "Manage inventory, buy from vendors, sell to vendors, view full product history and compliance",
-                    badge: "Read & Write",
-                    icon: Warehouse,
-                    color: "bg-blue-500",
-                    badgeColor:
-                      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-                  },
-                  {
-                    title: "Vendor",
-                    desc: "Add products, sell to customers, view transaction history and comprehensive analytics",
-                    badge: "Write Access",
-                    icon: Package,
-                    color: "bg-green-500",
-                    badgeColor:
-                      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                  },
-                  {
-                    title: "Customer",
-                    desc: "Browse products, add to cart, purchase items, track orders with real-time updates",
-                    badge: "Read Only",
-                    icon: Eye,
-                    color: "bg-purple-500",
-                    badgeColor:
-                      "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-                  },
-                  {
-                    title: "Blockchain Expert",
-                    desc: "View all transactions, manage consensus, security settings, and fault tolerance systems",
-                    badge: "Admin Access",
-                    icon: BarChart3,
-                    color: "bg-orange-500",
-                    badgeColor:
-                      "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-                  },
-                ].map((role, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  >
-                    <FocusMotionDiv className="h-full outline-none rounded-xl">
-                      <motion.div whileHover={{ y: -5 }}>
-                        <Card className="h-full group text-center border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] hover:shadow-[0_8px_32px_0_rgba(31,38,135,0.25)] transition-all duration-500 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl cursor-pointer">
-                          <CardHeader className="pb-4">
-                            <motion.div
-                              className={`h-16 w-16 ${role.color} rounded-xl flex items-center justify-center mx-auto mb-4`}
-                              whileHover={{ scale: 1.1, rotate: 5 }}
-                            >
-                              <role.icon className="h-8 w-8 text-white" />
-                            </motion.div>
-                            <CardTitle className="text-lg text-gray-900 dark:text-gray-100 mb-2">
-                              {role.title}
-                            </CardTitle>
-                            <CardDescription className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                              {role.desc}
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <Badge className={`${role.badgeColor} font-medium`}>
-                              {role.badge}
-                            </Badge>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    </FocusMotionDiv>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Call to Action Section - Glassmorphism Card */}
-          <section className="py-24 relative">
-            <div className="container mx-auto px-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <FocusMotionDiv className="outline-none rounded-xl">
-                  <Card className="border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.2)] bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 animate-pulse"></div>
-
-                    <CardContent className="p-16 text-center relative z-10">
-                      <motion.div
-                        className="h-20 w-20 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl"
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                      >
-                        <Star className="h-10 w-10 text-white" />
-                      </motion.div>
-                      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-                        <p className="text-balance">
-                          Ready to{" "}
-                          <Highlighter action="underline" color="#FF9800">
-                            Transform
-                          </Highlighter>{" "}
-                          Your{" "}
-                          <Highlighter action="highlight" color="#87CEFA">
-                            Supply Chain
-                          </Highlighter>{" "}
-                          ?
-                        </p>
-                      </h2>
-                      <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
-                        Join thousands of businesses already using ChainVanguard
-                        to create transparent, secure, and efficient supply
-                        chain operations.
-                      </p>
-                      <div className="flex flex-col sm:flex-row justify-center gap-4">
-                        <Link href="/register">
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <FocusMotionDiv className="outline-none rounded-lg">
-                              <Button
-                                size="lg"
-                                className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-8 font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer"
-                              >
-                                Get Started Now
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                              </Button>
-                            </FocusMotionDiv>
-                          </motion.div>
-                        </Link>
-                        <Link href="/login">
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <FocusMotionDiv className="outline-none rounded-lg">
-                              <Button
-                                variant="outline"
-                                size="lg"
-                                className="h-12 px-8 font-semibold border-white/30 dark:border-gray-700/30 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all duration-300 cursor-pointer backdrop-blur-sm"
-                              >
-                                View Demo
-                              </Button>
-                            </FocusMotionDiv>
-                          </motion.div>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </FocusMotionDiv>
-              </motion.div>
-            </div>
-          </section>
-
-          {/* Footer - Glassmorphism */}
-          <footer className="border-t border-white/20 dark:border-gray-700/30 py-16 bg-white/50 dark:bg-gray-950/50 backdrop-blur-xl">
-            <div className="container mx-auto px-6">
-              <motion.div
-                className="text-center space-y-6"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <FocusMotionDiv className="inline-flex items-center justify-center space-x-3 cursor-pointer outline-none rounded-lg p-2">
-                  <motion.div
-                    className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                  >
-                    <Package className="h-5 w-5 text-white" />
-                  </motion.div>
-                  <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    ChainVanguard
-                  </span>
-                </FocusMotionDiv>
-                <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                  Revolutionizing supply chain management through blockchain
-                  technology, ensuring transparency, security, and efficiency
-                  for all stakeholders.
-                </p>
-                <div className="flex justify-center space-x-6">
-                  {[
-                    { text: "Next.js", color: "blue" },
-                    { text: "TypeScript", color: "green" },
-                    { text: "Hyperledger Fabric", color: "purple" },
-                  ].map((tech, idx) => (
-                    <FocusMotionDiv
-                      key={idx}
-                      className="outline-none rounded-full"
-                    >
-                      <Badge
-                        className={`${
-                          tech.color === "blue"
-                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                            : tech.color === "green"
-                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                        } cursor-pointer`}
-                      >
-                        {tech.text}
-                      </Badge>
-                    </FocusMotionDiv>
-                  ))}
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-500">
-                  © {new Date().getFullYear()} ChainVanguard. All rights
-                  reserved.
-                </p>
-              </motion.div>
-            </div>
-          </footer>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* Statistics */}
+      <section className="py-24 border-y border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-4 gap-12">
+            {[
+              {
+                icon: Package,
+                value: "10M+",
+                label: "Products Tracked",
+                desc: "Across global supply chains",
+              },
+              {
+                icon: UsersIcon,
+                value: "500+",
+                label: "Enterprise Clients",
+                desc: "Fortune 500 companies",
+              },
+              {
+                icon: CheckCircleIcon,
+                value: "99.99%",
+                label: "System Uptime",
+                desc: "Enterprise SLA guarantee",
+              },
+              {
+                icon: ShieldCheckIcon,
+                value: "24/7",
+                label: "Expert Support",
+                desc: "Global support coverage",
+              },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <stat.icon className="h-8 w-8 text-gray-900 dark:text-white mx-auto mb-4" />
+                <div className="text-2xl font-light text-gray-900 dark:text-white mb-1">
+                  {stat.value}
+                </div>
+                <div className="text-xs font-medium text-gray-900 dark:text-white mb-1">
+                  {stat.label}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  {stat.desc}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Roles Section */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-2xl font-light text-gray-900 dark:text-white mb-2">
+              Choose Your Role
+            </h2>
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Tailored interfaces for different stakeholders in the supply chain
+              ecosystem
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                title: "Supplier/Ministry",
+                desc: "Manage inventory, buy from vendors, sell to vendors, view full product history and compliance",
+                access: "Read & Write",
+                icon: BuildingStorefrontIcon,
+              },
+              {
+                title: "Vendor",
+                desc: "Add products, sell to customers, view transaction history and comprehensive analytics",
+                access: "Write Access",
+                icon: Package,
+              },
+              {
+                title: "Customer",
+                desc: "Browse products, add to cart, purchase items, track orders with real-time updates",
+                access: "Read Only",
+                icon: EyeIcon,
+              },
+              {
+                title: "Blockchain Expert",
+                desc: "View all transactions, manage consensus, security settings, and fault tolerance systems",
+                access: "Admin Access",
+                icon: ChartBarIcon,
+              },
+            ].map((role, i) => (
+              <div
+                key={i}
+                className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 hover:border-gray-900 dark:hover:border-white transition-colors cursor-pointer"
+              >
+                <div className="w-10 h-10 flex items-center justify-center">
+                  <role.icon className="h-6 w-6 text-gray-900 dark:text-white" />
+                </div>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  {role.title}
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+                  {role.desc}
+                </p>
+                <div className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 pt-3">
+                  {role.access}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Us */}
+      <section className="py-32">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-24 items-center">
+            <div>
+              <h2 className="text-3xl font-light text-gray-900 dark:text-white mb-8">
+                Why ChainVanguard?
+              </h2>
+              <div className="space-y-6">
+                {[
+                  {
+                    title: "Immutable Records",
+                    desc: "Blockchain ensures data integrity and prevents tampering",
+                  },
+                  {
+                    title: "Real-Time Tracking",
+                    desc: "Monitor every step of your supply chain instantly",
+                  },
+                  {
+                    title: "Enterprise Security",
+                    desc: "Zero-trust architecture with role-based access controls",
+                  },
+                  {
+                    title: "Seamless Integration",
+                    desc: "Works with your existing systems and workflows",
+                  },
+                  {
+                    title: "Expert Support",
+                    desc: "24/7 dedicated account management and technical assistance",
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-4">
+                    <CheckCircleIcon className="h-6 w-6 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative w-3/4 aspect-square mx-auto">
+              <div className="absolute inset-0 border border-gray-200 dark:border-gray-800" />
+              <div className="absolute inset-4 bg-gray-100 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
+                <Image
+                  src="/box.gif"
+                  alt="ChainVanguard Animation"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 border-t border-gray-200 dark:border-gray-800">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <div className="space-y-6">
+            <h2 className="text-3xl font-light text-gray-900 dark:text-white">
+              Ready to Transform Your Supply Chain?
+            </h2>
+            <p className="text-xs text-gray-600 dark:text-gray-400 max-w-lg mx-auto">
+              Join thousands of businesses already using ChainVanguard to create
+              transparent, secure, and efficient supply chain operations.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
+              <Link href="/register">
+                <Button
+                  size="lg"
+                  className="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 h-9 px-8 rounded-none group text-xs cursor-pointer"
+                >
+                  Get Started Now
+                  <ArrowRightIcon className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-9 px-8 border-gray-900 dark:border-white text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-none text-xs cursor-pointer"
+                >
+                  View Demo
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 dark:border-gray-800 py-12">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex flex-col items-center space-y-4">
+            <Link
+              href="/"
+              className="flex items-center space-x-3 group cursor-pointer"
+            >
+              <Package className="h-6 w-6 text-gray-900 dark:text-white" />
+              <span className="text-xl font-light text-gray-900 dark:text-white">
+                ChainVanguard
+              </span>
+            </Link>
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-md">
+              Revolutionizing supply chain management through blockchain
+              technology, ensuring transparency, security, and efficiency for
+              all stakeholders.
+            </p>
+            <div className="flex gap-4">
+              <span className="h-6 px-3 border border-gray-400 dark:border-gray-400 bg-transparent text-gray-600 dark:text-gray-600 flex items-center text-xs">
+                Next.js
+              </span>
+              <span className="h-6 px-3 border border-gray-400 dark:border-gray-400 bg-transparent text-gray-600 dark:text-gray-600 flex items-center text-xs">
+                TypeScript
+              </span>
+              <span className="h-6 px-3 border border-gray-400 dark:border-gray-400 bg-transparent text-gray-600 dark:text-gray-600 flex items-center text-xs">
+                Hyperledger Fabric
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 dark:text-gray-600">
+              © {new Date().getFullYear()} ChainVanguard. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -39,35 +39,34 @@ import {
 import { Label } from "@/components/_ui/label";
 import { Textarea } from "@/components/_ui/textarea";
 import {
-  Search,
-  Filter,
-  Plus,
-  Edit,
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
-  Warehouse,
-  Package,
-  RefreshCw,
-  Download,
-  Upload,
-  CheckCircle,
-  XCircle,
-  Clock,
-  DollarSign,
-  BarChart3,
-  Activity,
-  Eye,
-  ArrowUpRight,
-  ArrowDownRight,
-  Sparkles,
-  Factory,
-  Building2,
-  Shield,
-  Zap,
-  Target,
-  AlertTriangle,
-} from "lucide-react";
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  PlusIcon,
+  PencilIcon,
+  ExclamationCircleIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  BuildingStorefrontIcon,
+  CubeIcon,
+  ArrowPathIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  CurrencyDollarIcon,
+  ChartBarIcon,
+  ChartPieIcon,
+  EyeIcon,
+  ArrowUpRightIcon,
+  ArrowDownRightIcon,
+  SparklesIcon,
+  BuildingLibraryIcon,
+  BuildingOffice2Icon,
+  ShieldCheckIcon,
+  BoltIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Product } from "@/types";
 import { toast } from "sonner";
@@ -208,15 +207,15 @@ export default function SupplierInventoryPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "in-stock":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
       case "low-stock":
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+        return <ExclamationCircleIcon className="h-4 w-4 text-yellow-500" />;
       case "out-of-stock":
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircleIcon className="h-4 w-4 text-red-500" />;
       case "reserved":
-        return <Clock className="h-4 w-4 text-blue-500" />;
+        return <ClockIcon className="h-4 w-4 text-blue-500" />;
       default:
-        return <Package className="h-4 w-4 text-gray-500" />;
+        return <CubeIcon className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -403,21 +402,21 @@ export default function SupplierInventoryPage() {
                 variant="outline"
                 className="hidden lg:flex items-center gap-2 text-xs cursor-pointer"
               >
-                <RefreshCw className="h-4 w-4" />
+                <ArrowPathIcon className="h-4 w-4" />
                 Refresh
               </Button>
               <Button
                 variant="outline"
                 className="flex items-center gap-2 text-xs cursor-pointer"
               >
-                <Download className="h-4 w-4" />
+                <ArrowDownTrayIcon className="h-4 w-4" />
                 Export
               </Button>
               <Button
                 onClick={() => router.push("/supplier/add-inventory")}
-                className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-lg hover:shadow-xl text-xs cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs cursor-pointer"
               >
-                <Plus className="h-4 w-4" />
+                <PlusIcon className="h-4 w-4" />
                 Add Inventory
               </Button>
             </div>
@@ -436,7 +435,7 @@ export default function SupplierInventoryPage() {
                 title: "Total Items",
                 value: totalItems.toLocaleString(),
                 subtitle: "Products in inventory",
-                icon: Package,
+                icon: CubeIcon,
                 iconColor: "text-blue-600",
                 iconBg: "bg-blue-100 dark:bg-blue-900/30",
               },
@@ -444,7 +443,7 @@ export default function SupplierInventoryPage() {
                 title: "Total Value",
                 value: formatCurrency(totalValue),
                 subtitle: "Inventory worth",
-                icon: DollarSign,
+                icon: CurrencyDollarIcon,
                 iconColor: "text-green-600",
                 iconBg: "bg-green-100 dark:bg-green-900/30",
               },
@@ -452,7 +451,7 @@ export default function SupplierInventoryPage() {
                 title: "In Stock",
                 value: inStockItems.toString(),
                 subtitle: "Available items",
-                icon: CheckCircle,
+                icon: CheckCircleIcon,
                 iconColor: "text-green-600",
                 iconBg: "bg-green-100 dark:bg-green-900/30",
               },
@@ -460,7 +459,7 @@ export default function SupplierInventoryPage() {
                 title: "Low Stock",
                 value: lowStockItems.toString(),
                 subtitle: "Need restocking",
-                icon: AlertTriangle,
+                icon: ExclamationTriangleIcon,
                 iconColor: "text-yellow-600",
                 iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
               },
@@ -468,7 +467,7 @@ export default function SupplierInventoryPage() {
                 title: "Out of Stock",
                 value: outOfStockItems.toString(),
                 subtitle: "Require immediate attention",
-                icon: XCircle,
+                icon: XCircleIcon,
                 iconColor: "text-red-600",
                 iconBg: "bg-red-100 dark:bg-red-900/30",
               },
@@ -482,7 +481,7 @@ export default function SupplierInventoryPage() {
                     {stat.title}
                   </CardTitle>
                   <div
-                    className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
+                    className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center`}
                   >
                     <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                   </div>
@@ -510,7 +509,7 @@ export default function SupplierInventoryPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
                 <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <Filter className="h-4 w-4 text-purple-600" />
+                  <FunnelIcon className="h-4 w-4 text-purple-600" />
                 </div>
                 Filters & Search
               </CardTitle>
@@ -521,7 +520,7 @@ export default function SupplierInventoryPage() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative w-full">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search inventory by name, SKU, or category"
                     value={searchTerm}
@@ -562,7 +561,7 @@ export default function SupplierInventoryPage() {
                   {searchTerm && (
                     <Badge
                       variant="outline"
-                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
                     >
                       &quot;{searchTerm}&quot;
                       <button
@@ -576,7 +575,7 @@ export default function SupplierInventoryPage() {
                   {selectedStatus !== "All Status" && (
                     <Badge
                       variant="outline"
-                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
                     >
                       {selectedStatus}
                       <button
@@ -609,7 +608,7 @@ export default function SupplierInventoryPage() {
                   <div className="flex flex-col">
                     <CardTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
                       <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <Warehouse className="h-4 w-4 text-blue-600" />
+                        <BuildingStorefrontIcon className="h-4 w-4 text-blue-600" />
                       </div>
                       Inventory Overview
                     </CardTitle>
@@ -622,9 +621,9 @@ export default function SupplierInventoryPage() {
                   <div>
                     <Badge
                       variant="secondary"
-                      className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 text-xs"
+                      className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 text-xs border-0"
                     >
-                      <Activity className="h-3 w-3 mr-1" />
+                      <ChartPieIcon className="h-3 w-3 mr-1" />
                       Live Data
                     </Badge>
                   </div>
@@ -673,7 +672,7 @@ export default function SupplierInventoryPage() {
                           <TableCell className="pl-8 pr-4">
                             <div className="flex items-center gap-3">
                               <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                                <Package className="h-5 w-5 text-white" />
+                                <CubeIcon className="h-5 w-5 text-white" />
                               </div>
                               <div>
                                 <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
@@ -693,7 +692,7 @@ export default function SupplierInventoryPage() {
                           <TableCell className="pl-4 pr-4">
                             <Badge
                               variant="outline"
-                              className="font-medium text-xs"
+                              className="font-medium text-xs border-0"
                             >
                               {item.category}
                             </Badge>
@@ -712,7 +711,7 @@ export default function SupplierInventoryPage() {
                             <div className="flex items-center gap-2">
                               {getStatusIcon(item.inventoryStatus)}
                               <Badge
-                                className={`text-xs px-2 py-1 font-medium ${getStatusColor(item.inventoryStatus)}`}
+                                className={`text-xs px-2 py-1 font-medium ${getStatusColor(item.inventoryStatus)} border-0`}
                                 variant="secondary"
                               >
                                 {item.inventoryStatus.replace("-", " ")}
@@ -744,7 +743,7 @@ export default function SupplierInventoryPage() {
                                 }
                                 className="h-8 px-3 hover:bg-gray-50 hover:border-gray-200 dark:hover:bg-gray-900/20 text-xs cursor-pointer"
                               >
-                                <Eye className="h-3 w-3 mr-1" />
+                                <EyeIcon className="h-3 w-3 mr-1" />
                                 View
                               </Button>
                               <Button
@@ -757,7 +756,7 @@ export default function SupplierInventoryPage() {
                                 }
                                 className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 text-xs cursor-pointer"
                               >
-                                <Edit className="h-3 w-3 mr-1" />
+                                <PencilIcon className="h-3 w-3 mr-1" />
                                 Edit
                               </Button>
                             </div>
@@ -772,8 +771,8 @@ export default function SupplierInventoryPage() {
           ) : (
             <Card className="text-center py-16 border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden">
               <CardContent>
-                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-                  <Package className="h-10 w-10 text-gray-400" />
+                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                  <CubeIcon className="h-10 w-10 text-gray-400" />
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   {totalItems === 0 ? "No Inventory Items" : "No Items Found"}
@@ -788,7 +787,7 @@ export default function SupplierInventoryPage() {
                     onClick={() => router.push("/supplier/add-product")}
                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <PlusIcon className="h-4 w-4 mr-2" />
                     Add First Item
                   </Button>
                 ) : (
@@ -815,7 +814,7 @@ export default function SupplierInventoryPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
               <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Edit className="h-4 w-4 text-blue-600" />
+                <PencilIcon className="h-4 w-4 text-blue-600" />
               </div>
               Edit Stock Level
             </DialogTitle>
@@ -830,7 +829,7 @@ export default function SupplierInventoryPage() {
                 Current Stock
               </Label>
               <div className="flex items-center gap-2 mt-1">
-                <Package className="h-4 w-4 text-gray-500" />
+                <CubeIcon className="h-4 w-4 text-gray-500" />
                 <span className="text-base font-bold text-gray-900 dark:text-gray-100">
                   {adjustingItem?.quantity?.toLocaleString() || 0} units
                 </span>
@@ -920,7 +919,7 @@ export default function SupplierInventoryPage() {
               disabled={!adjustForm.quantity || !adjustForm.reason}
               className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer"
             >
-              <CheckCircle className="h-4 w-4 mr-2" />
+              <CheckCircleIcon className="h-4 w-4 mr-2" />
               Save Adjustment
             </Button>
           </DialogFooter>

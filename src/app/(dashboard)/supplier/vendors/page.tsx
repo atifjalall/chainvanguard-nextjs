@@ -38,54 +38,53 @@ import {
   TabsTrigger,
 } from "@/components/_ui/tabs";
 import {
-  Search,
-  Users,
-  Star,
-  ShoppingBag,
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  MapPin,
-  Phone,
-  Mail,
-  Eye,
-  MessageCircle,
-  Filter,
-  UserPlus,
-  Download,
-  RefreshCw,
-  Award,
-  Clock,
-  Package,
-  MoreHorizontal,
-  Heart,
-  AlertCircle,
-  CheckCircle,
-  Grid3X3,
-  List,
-  SlidersHorizontal,
-  Sparkles,
-  Shield,
-  Crown,
-  Activity,
-  Building2,
-  Truck,
-  Factory,
-  Globe,
-  ArrowUpRight,
-  ArrowDownRight,
-  Edit,
-  Trash2,
-  XCircle,
-  Copy,
-  ExternalLink,
-  Store,
-  Handshake,
-} from "lucide-react";
+  MagnifyingGlassIcon,
+  UsersIcon,
+  StarIcon,
+  ShoppingBagIcon,
+  CurrencyDollarIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  CalendarIcon,
+  MapPinIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  EyeIcon,
+  ChatBubbleLeftIcon,
+  FunnelIcon,
+  UserPlusIcon,
+  ArrowDownTrayIcon,
+  ArrowPathIcon,
+  TrophyIcon,
+  ClockIcon,
+  CubeIcon,
+  EllipsisHorizontalIcon,
+  HeartIcon,
+  ExclamationCircleIcon,
+  CheckCircleIcon,
+  Squares2X2Icon,
+  ListBulletIcon,
+  AdjustmentsHorizontalIcon,
+  SparklesIcon,
+  ShieldCheckIcon,
+  BuildingOffice2Icon,
+  TruckIcon,
+  BuildingLibraryIcon,
+  GlobeAltIcon,
+  ArrowUpRightIcon,
+  ArrowDownRightIcon,
+  PencilIcon,
+  TrashIcon,
+  XCircleIcon,
+  DocumentDuplicateIcon,
+  ArrowTopRightOnSquareIcon,
+  BuildingStorefrontIcon,
+  HandRaisedIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
 import SupplierVendorsSkeleton from "@/components/skeletons/supplierVendorsSkeleton";
+import { Activity } from "lucide-react";
 
 // Vendor interface
 interface Vendor {
@@ -324,15 +323,15 @@ export default function SupplierVendorsPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "active":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
       case "pending":
-        return <Clock className="h-4 w-4 text-yellow-500" />;
+        return <ClockIcon className="h-4 w-4 text-yellow-500" />;
       case "inactive":
-        return <XCircle className="h-4 w-4 text-gray-500" />;
+        return <XCircleIcon className="h-4 w-4 text-gray-500" />;
       case "suspended":
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
+        return <ExclamationCircleIcon className="h-4 w-4 text-red-500" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+        return <ExclamationCircleIcon className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -460,14 +459,14 @@ export default function SupplierVendorsPage() {
                 variant="outline"
                 className="hidden lg:flex items-center gap-2 text-xs cursor-pointer"
               >
-                <RefreshCw className="h-4 w-4" />
+                <ArrowPathIcon className="h-4 w-4" />
                 Refresh
               </Button>
               <Button
                 variant="outline"
                 className="flex items-center gap-2 text-xs cursor-pointer"
               >
-                <Download className="h-4 w-4" />
+                <ArrowDownTrayIcon className="h-4 w-4" />
                 Export
               </Button>
             </div>
@@ -486,7 +485,7 @@ export default function SupplierVendorsPage() {
                 title: "Total Vendors",
                 value: totalVendors.toLocaleString(),
                 subtitle: "Partner companies",
-                icon: Users,
+                icon: UsersIcon,
                 iconColor: "text-blue-600",
                 iconBg: "bg-blue-100 dark:bg-blue-900/30",
               },
@@ -494,7 +493,7 @@ export default function SupplierVendorsPage() {
                 title: "Active Partners",
                 value: activeVendors.toString(),
                 subtitle: "Currently active",
-                icon: CheckCircle,
+                icon: CheckCircleIcon,
                 iconColor: "text-green-600",
                 iconBg: "bg-green-100 dark:bg-green-900/30",
               },
@@ -502,7 +501,7 @@ export default function SupplierVendorsPage() {
                 title: "Total Volume",
                 value: formatCurrency(totalVolume),
                 subtitle: "Partnership value",
-                icon: DollarSign,
+                icon: CurrencyDollarIcon,
                 iconColor: "text-green-600",
                 iconBg: "bg-green-100 dark:bg-green-900/30",
               },
@@ -510,7 +509,7 @@ export default function SupplierVendorsPage() {
                 title: "Avg. Order Value",
                 value: formatCurrency(avgOrderValue),
                 subtitle: "Per transaction",
-                icon: TrendingUp,
+                icon: ArrowTrendingUpIcon,
                 iconColor: "text-purple-600",
                 iconBg: "bg-purple-100 dark:bg-purple-900/30",
               },
@@ -518,7 +517,7 @@ export default function SupplierVendorsPage() {
                 title: "Pending",
                 value: pendingVendors.toString(),
                 subtitle: "Need attention",
-                icon: Clock,
+                icon: ClockIcon,
                 iconColor: "text-yellow-600",
                 iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
               },
@@ -532,7 +531,7 @@ export default function SupplierVendorsPage() {
                     {stat.title}
                   </CardTitle>
                   <div
-                    className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
+                    className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center`}
                   >
                     <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                   </div>
@@ -560,7 +559,7 @@ export default function SupplierVendorsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
                 <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <Filter className="h-4 w-4 text-purple-600" />
+                  <FunnelIcon className="h-4 w-4 text-purple-600" />
                 </div>
                 Filters & Search
               </CardTitle>
@@ -571,7 +570,7 @@ export default function SupplierVendorsPage() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="relative w-full">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search vendors by name, email or business type"
                     value={searchTerm}
@@ -611,7 +610,7 @@ export default function SupplierVendorsPage() {
                 {searchTerm && (
                   <Badge
                     variant="outline"
-                    className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                    className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
                   >
                     &quot;{searchTerm}&quot;
                     <button
@@ -625,7 +624,7 @@ export default function SupplierVendorsPage() {
                 {selectedStatus !== "All Status" && (
                   <Badge
                     variant="outline"
-                    className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                    className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
                   >
                     {selectedStatus}
                     <button
@@ -660,28 +659,28 @@ export default function SupplierVendorsPage() {
                 value="all"
                 className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
               >
-                <Users className="h-4 w-4" />
+                <UsersIcon className="h-4 w-4" />
                 All Vendors ({totalVendors})
               </TabsTrigger>
               <TabsTrigger
                 value="active"
                 className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
               >
-                <CheckCircle className="h-4 w-4" />
+                <CheckCircleIcon className="h-4 w-4" />
                 Active ({activeVendors})
               </TabsTrigger>
               <TabsTrigger
                 value="pending"
                 className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
               >
-                <Clock className="h-4 w-4" />
+                <ClockIcon className="h-4 w-4" />
                 Pending ({pendingVendors})
               </TabsTrigger>
               <TabsTrigger
                 value="inactive"
                 className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
               >
-                <XCircle className="h-4 w-4" />
+                <XCircleIcon className="h-4 w-4" />
                 Inactive ({inactiveVendors})
               </TabsTrigger>
             </TabsList>
@@ -727,14 +726,14 @@ export default function SupplierVendorsPage() {
                               </p>
                               <div className="flex items-center gap-1 mt-1">
                                 <Badge
-                                  className={`text-xs px-2 py-0.5 ${getStatusColor(vendor.status)}`}
+                                  className={`text-xs px-2 py-0.5 ${getStatusColor(vendor.status)} border-0`}
                                   variant="secondary"
                                 >
                                   {vendor.status}
                                 </Badge>
                                 {vendor.rating && (
                                   <div className="flex items-center gap-1">
-                                    <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                                    <StarIcon className="h-3 w-3 text-yellow-500 fill-current" />
                                     <span className="text-xs text-gray-600 dark:text-gray-400">
                                       {vendor.rating}
                                     </span>
@@ -746,14 +745,14 @@ export default function SupplierVendorsPage() {
 
                           <div className="space-y-3 mb-4">
                             <div className="flex items-center gap-2 text-sm">
-                              <Building2 className="h-4 w-4 text-gray-500" />
+                              <BuildingOffice2Icon className="h-4 w-4 text-gray-500" />
                               <span className="text-gray-700 dark:text-gray-300">
                                 {vendor.businessType} • {vendor.companySize}{" "}
                                 employees
                               </span>
                             </div>
                             <div className="flex items-center gap-2 text-sm">
-                              <MapPin className="h-4 w-4 text-gray-500" />
+                              <MapPinIcon className="h-4 w-4 text-gray-500" />
                               <span className="text-gray-700 dark:text-gray-300">
                                 {vendor.location.city}, {vendor.location.state}
                               </span>
@@ -765,7 +764,7 @@ export default function SupplierVendorsPage() {
                                   <Badge
                                     key={index}
                                     variant="outline"
-                                    className="text-xs px-2 py-0.5"
+                                    className="text-xs px-2 py-0.5 border-0"
                                   >
                                     {spec}
                                   </Badge>
@@ -773,7 +772,7 @@ export default function SupplierVendorsPage() {
                               {vendor.specialization.length > 2 && (
                                 <Badge
                                   variant="outline"
-                                  className="text-xs px-2 py-0.5"
+                                  className="text-xs px-2 py-0.5 border-0"
                                 >
                                   +{vendor.specialization.length - 2}
                                 </Badge>
@@ -814,7 +813,7 @@ export default function SupplierVendorsPage() {
                                 }}
                                 className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 cursor-pointer"
                               >
-                                <Eye className="h-3 w-3 mr-1" />
+                                <EyeIcon className="h-3 w-3 mr-1" />
                                 Details
                               </Button>
                             </div>
@@ -859,14 +858,14 @@ export default function SupplierVendorsPage() {
                                 </p>
                                 <div className="flex items-center gap-2 mt-1">
                                   <Badge
-                                    className={`text-xs px-2 py-0.5 ${getStatusColor(vendor.status)}`}
+                                    className={`text-xs px-2 py-0.5 ${getStatusColor(vendor.status)} border-0`}
                                     variant="secondary"
                                   >
                                     {vendor.status}
                                   </Badge>
                                   {vendor.rating && (
                                     <div className="flex items-center gap-1">
-                                      <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                                      <StarIcon className="h-3 w-3 text-yellow-500 fill-current" />
                                       <span className="text-xs text-gray-600 dark:text-gray-400">
                                         {vendor.rating}
                                       </span>
@@ -910,7 +909,7 @@ export default function SupplierVendorsPage() {
                                   }}
                                   className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 cursor-pointer"
                                 >
-                                  <Eye className="h-3 w-3 mr-1" />
+                                  <EyeIcon className="h-3 w-3 mr-1" />
                                   Details
                                 </Button>
                               </div>
@@ -926,8 +925,8 @@ export default function SupplierVendorsPage() {
           ) : (
             <Card className="text-center py-16 border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden">
               <CardContent>
-                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-                  <Users className="h-10 w-10 text-gray-400" />
+                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                  <UsersIcon className="h-10 w-10 text-gray-400" />
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   {totalVendors === 0
@@ -964,7 +963,7 @@ export default function SupplierVendorsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-gray-100">
               <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                <Eye className="h-4 w-4 text-white" />
+                <EyeIcon className="h-4 w-4 text-white" />
               </div>
               Vendor Partner Details
             </DialogTitle>
@@ -991,7 +990,7 @@ export default function SupplierVendorsPage() {
                       {selectedVendor.name}
                     </h3>
                     <Badge
-                      className={`text-sm px-3 py-1 ${getStatusColor(selectedVendor.status)}`}
+                      className={`text-sm px-3 py-1 ${getStatusColor(selectedVendor.status)} border-0`}
                       variant="secondary"
                     >
                       {selectedVendor.status}
@@ -999,17 +998,17 @@ export default function SupplierVendorsPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Mail className="h-4 w-4" />
+                      <EnvelopeIcon className="h-4 w-4" />
                       <span>{selectedVendor.email}</span>
                     </div>
                     {selectedVendor.phone && (
                       <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <Phone className="h-4 w-4" />
+                        <PhoneIcon className="h-4 w-4" />
                         <span>{selectedVendor.phone}</span>
                       </div>
                     )}
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <MapPin className="h-4 w-4" />
+                      <MapPinIcon className="h-4 w-4" />
                       <span>
                         {selectedVendor.location.city},{" "}
                         {selectedVendor.location.state},{" "}
@@ -1021,7 +1020,7 @@ export default function SupplierVendorsPage() {
                 <div className="text-right">
                   {selectedVendor.rating && (
                     <div className="flex items-center gap-2 mb-2">
-                      <Star className="h-5 w-5 text-yellow-500 fill-current" />
+                      <StarIcon className="h-5 w-5 text-yellow-500 fill-current" />
                       <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
                         {selectedVendor.rating}
                       </span>
@@ -1038,7 +1037,7 @@ export default function SupplierVendorsPage() {
                 <Card className="border-0 shadow-sm bg-gray-50/30 dark:bg-gray-900/30">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                      <Building2 className="h-5 w-5" />
+                      <BuildingOffice2Icon className="h-5 w-5" />
                       Business Details
                     </CardTitle>
                   </CardHeader>
@@ -1064,7 +1063,7 @@ export default function SupplierVendorsPage() {
                           <Badge
                             key={index}
                             variant="outline"
-                            className="text-xs"
+                            className="text-xs border-0"
                           >
                             {spec}
                           </Badge>
@@ -1119,7 +1118,7 @@ export default function SupplierVendorsPage() {
                 <Card className="border-0 shadow-sm bg-gray-50/30 dark:bg-gray-900/30">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                      <Shield className="h-5 w-5" />
+                      <ShieldCheckIcon className="h-5 w-5" />
                       Certifications & Contract
                     </CardTitle>
                   </CardHeader>
@@ -1132,9 +1131,9 @@ export default function SupplierVendorsPage() {
                         {selectedVendor.certifications.map((cert, index) => (
                           <Badge
                             key={index}
-                            className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800"
+                            className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800 border-0"
                           >
-                            <Shield className="h-3 w-3 mr-1" />
+                            <ShieldCheckIcon className="h-3 w-3 mr-1" />
                             {cert}
                           </Badge>
                         ))}
@@ -1168,7 +1167,7 @@ export default function SupplierVendorsPage() {
                             }}
                             className="h-7 w-7 p-0 cursor-pointer"
                           >
-                            <Copy className="h-3 w-3" />
+                            <DocumentDuplicateIcon className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
@@ -1180,7 +1179,7 @@ export default function SupplierVendorsPage() {
                   <Card className="border-0 shadow-sm bg-gray-50/30 dark:bg-gray-900/30">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                        <MessageCircle className="h-5 w-5" />
+                        <ChatBubbleLeftIcon className="h-5 w-5" />
                         Notes
                       </CardTitle>
                     </CardHeader>
@@ -1209,7 +1208,7 @@ export default function SupplierVendorsPage() {
               }}
               className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
             >
-              <MessageCircle className="h-4 w-4 mr-2" />
+              <ChatBubbleLeftIcon className="h-4 w-4 mr-2" />
               Contact Vendor
             </Button>
           </DialogFooter>

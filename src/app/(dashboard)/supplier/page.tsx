@@ -9,17 +9,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Badge } from "@/components/_ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/_ui/avatar";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/_ui/tabs";
-import { Progress } from "@/components/_ui/progress";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -28,63 +23,62 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "@/components/_ui/dialog";
-import { Input } from "@/components/_ui/input";
-import { Label } from "@/components/_ui/label";
-import { Textarea } from "@/components/_ui/textarea";
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/_ui/select";
+} from "@/components/ui/select";
 import {
-  Package,
-  Users,
-  TrendingUp,
-  DollarSign,
-  AlertTriangle,
-  Plus,
-  Eye,
-  Edit,
-  Trash2,
-  Building2,
-  ArrowUpDown,
-  Globe,
-  Factory,
-  Truck,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Target,
-  Warehouse,
-  BarChart3,
-  ArrowRight,
-  ShoppingCart,
-  TrendingDown,
-  Zap,
-  Activity,
-  RefreshCw,
-  Download,
-  Filter,
-  Search,
-  Calendar,
-  MapPin,
-  Phone,
-  Mail,
-  Star,
-  Award,
-  Shield,
-  Crown,
-  Sparkles,
-  ArrowUpRight,
-  ArrowDownRight,
-  MoreHorizontal,
-  Grid3X3,
-  List,
-  AlertCircle,
-} from "lucide-react";
+  CubeIcon,
+  UsersIcon,
+  ArrowTrendingUpIcon,
+  CurrencyDollarIcon,
+  ExclamationTriangleIcon,
+  PlusIcon,
+  EyeIcon,
+  PencilIcon,
+  TrashIcon,
+  BuildingOffice2Icon,
+  ArrowsUpDownIcon,
+  GlobeAltIcon,
+  BuildingLibraryIcon,
+  TruckIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  TagIcon,
+  BuildingStorefrontIcon,
+  ChartBarIcon,
+  ArrowRightIcon,
+  ShoppingCartIcon,
+  ArrowTrendingDownIcon,
+  BoltIcon,
+  ChartPieIcon,
+  ArrowPathIcon,
+  ArrowDownTrayIcon,
+  FunnelIcon,
+  MagnifyingGlassIcon,
+  CalendarIcon,
+  MapPinIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  StarIcon,
+  TrophyIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  ArrowUpRightIcon,
+  ArrowDownRightIcon,
+  EllipsisHorizontalIcon,
+  Squares2X2Icon,
+  ListBulletIcon,
+  ExclamationCircleIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Product } from "@/types";
 import { toast } from "sonner";
@@ -403,17 +397,17 @@ export default function SupplierDashboard() {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "order_received":
-        return ShoppingCart;
+        return ShoppingCartIcon;
       case "vendor_added":
-        return Users;
+        return UsersIcon;
       case "stock_low":
-        return AlertTriangle;
+        return ExclamationTriangleIcon;
       case "product_added":
-        return Package;
+        return CubeIcon;
       case "transaction_completed":
-        return CheckCircle;
+        return CheckCircleIcon;
       default:
-        return Activity;
+        return BoltIcon;
     }
   };
 
@@ -438,41 +432,41 @@ export default function SupplierDashboard() {
         return {
           color:
             "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
-          icon: CheckCircle,
+          icon: CheckCircleIcon,
           label: "Active",
         };
       case "pending":
         return {
           color:
             "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400",
-          icon: Clock,
+          icon: ClockIcon,
           label: "Pending",
         };
       case "inactive":
         return {
           color:
             "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-          icon: XCircle,
+          icon: XCircleIcon,
           label: "Inactive",
         };
       case "low_stock":
         return {
           color:
             "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400",
-          icon: AlertTriangle,
+          icon: ExclamationTriangleIcon,
           label: "Low Stock",
         };
       case "out_of_stock":
         return {
           color: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
-          icon: XCircle,
+          icon: XCircleIcon,
           label: "Out of Stock",
         };
       default:
         return {
           color:
             "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-          icon: Clock,
+          icon: ClockIcon,
           label: "Unknown",
         };
     }
@@ -519,542 +513,519 @@ export default function SupplierDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
-      <div className="relative z-10 p-6 space-y-6">
-        {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
-        >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Supplier Dashboard
-              </h1>
-              <p className="text-base text-gray-600 dark:text-gray-400">
-                Manage your inventory, vendors, and supply operations
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge className="bg-green-100/80 text-green-700 dark:bg-green-900/30 dark:text-green-400 shadow-sm backdrop-blur-sm text-xs">
-                  {metrics.totalInventory} Inventory Items
-                </Badge>
-                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm backdrop-blur-sm text-xs">
-                  {metrics.totalVendors} Vendors
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className="border-blue-700 text-blue-700 bg-transparent dark:bg-blue-950 dark:text-blue-300 dark:border-blue-950 shadow-sm backdrop-blur-sm flex items-center gap-1 text-xs"
-                >
-                  <Shield className="h-3 w-3 mr-1 text-blue-500 dark:text-blue-300" />
-                  Blockchain Secured
-                </Badge>
-              </div>
+    <div className="relative z-10 p-6 space-y-6">
+      {/* Header */}
+      <div
+        className={`transform transition-all duration-700 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Supplier Dashboard
+            </h1>
+            <p className="text-base text-gray-600 dark:text-gray-400">
+              Manage your inventory, vendors, and supply operations
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge className="bg-transparent border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-none">
+                {metrics.totalInventory} Inventory Items
+              </Badge>
+              <Badge className="bg-transparent border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-none">
+                {metrics.totalVendors} Vendors
+              </Badge>
+              <Badge className="bg-transparent border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-1 text-xs rounded-none">
+                <ShieldCheckIcon className="h-3 w-3" />
+                Blockchain Secured
+              </Badge>
             </div>
-            <button
-              onClick={() => router.push("/supplier/add-inventory")}
-              className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer shadow-lg hover:shadow-xl"
-            >
-              <Plus className="h-4 w-4" />
-              Add Inventory
-            </button>
           </div>
+          <button
+            onClick={() => router.push("/supplier/add-inventory")}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-sm text-white dark:text-gray-900 font-medium transition-colors cursor-pointer rounded-none"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Add Inventory
+          </button>
         </div>
+      </div>
 
-        {/* Stats Grid */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-            {[
-              {
-                title: "Total Revenue",
-                value: formatCurrency(metrics.totalRevenue || 389000),
-                subtitle: "+12.5% vs last month",
-                icon: DollarSign,
-                iconColor: "text-green-600",
-                iconBg: "bg-green-100 dark:bg-green-900/30",
-              },
-              {
-                title: "Active Vendors",
-                value: metrics.totalVendors,
-                subtitle: `${metrics.pendingVendors} pending`,
-                icon: Users,
-                iconColor: "text-blue-600",
-                iconBg: "bg-blue-100 dark:bg-blue-900/30",
-              },
-              {
-                title: "Total Inventory",
-                value: metrics.totalInventory,
-                subtitle: `${metrics.activeInventory} active`,
-                icon: Warehouse,
-                iconColor: "text-purple-600",
-                iconBg: "bg-purple-100 dark:bg-purple-900/30",
-              },
-              {
-                title: "Inventory Value",
-                value: formatCurrency(metrics.totalInventoryValue || 137000),
-                subtitle: "Current stock value",
-                icon: Warehouse,
-                iconColor: "text-orange-600",
-                iconBg: "bg-orange-100 dark:bg-orange-900/30",
-              },
-              {
-                title: "Low Stock Items",
-                value: metrics.lowStockInventory,
-                subtitle: "Need reordering",
-                icon: AlertTriangle,
-                iconColor: "text-amber-600",
-                iconBg: "bg-amber-100 dark:bg-amber-900/30",
-              },
-              {
-                title: "Avg Order Value",
-                value: formatCurrency(metrics.avgOrderValue || 1547),
-                subtitle: "+3.8% vs last month",
-                icon: Target,
-                iconColor: "text-yellow-600",
-                iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
-              },
-            ].map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <Card
-                  key={index}
-                  className="border border-white/20 dark:border-gray-700/30 shadow-md hover:shadow-lg transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:scale-[1.02]"
-                >
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                      {stat.title}
-                    </CardTitle>
-                    <div
-                      className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
-                    >
-                      <Icon className={`h-5 w-5 ${stat.iconColor}`} />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                      {stat.value}
-                    </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {stat.subtitle}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div
-          className={`transform transition-all duration-700 delay-400 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Recent Activity */}
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl xl:col-span-2 hover:shadow-lg transition-all duration-300">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-base">
-                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-blue-600" />
-                  </div>
-                  Recent Activity
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Latest updates from your supply chain
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentActivity.slice(0, 6).map((activity) => {
-                    const Icon = getActivityIcon(activity.type);
-                    return (
-                      <div
-                        key={activity.id}
-                        className="flex items-center gap-4 p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all cursor-pointer border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md"
-                        style={{
-                          minHeight: "90px", // slightly reduced height
-                          alignItems: "center", // vertical center
-                        }}
-                      >
-                        <div
-                          className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                            activity.status === "success"
-                              ? "bg-green-100 dark:bg-green-900/30"
-                              : activity.status === "warning"
-                                ? "bg-orange-100 dark:bg-orange-900/30"
-                                : activity.status === "info"
-                                  ? "bg-blue-100 dark:bg-blue-900/30"
-                                  : "bg-gray-100 dark:bg-gray-800"
-                          }`}
-                        >
-                          <Icon
-                            className={`h-5 w-5 ${getActivityColor(activity.status)}`}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className="font-semibold text-gray-900 dark:text-gray-100">
-                              {activity.title}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              {activity.amount && (
-                                <Badge variant="outline" className="text-xs">
-                                  {formatCurrency(activity.amount)}
-                                </Badge>
-                              )}
-                              <span className="text-xs text-gray-500 dark:text-gray-500">
-                                {getTimeAgo(activity.timestamp)}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            {activity.description}
-                          </p>
-                          {activity.customer && (
-                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                              Customer: {activity.customer}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-6 text-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => router.push("/supplier/transactions")}
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+      {/* Stats Grid */}
+      <div
+        className={`transform transition-all duration-700 delay-200 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+          {[
+            {
+              title: "Total Revenue",
+              value: formatCurrency(metrics.totalRevenue || 389000),
+              subtitle: "+12.5% vs last month",
+              icon: CurrencyDollarIcon,
+              iconColor: "text-gray-900 dark:text-white",
+              iconBg: "bg-gray-100 dark:bg-gray-800",
+            },
+            {
+              title: "Active Vendors",
+              value: metrics.totalVendors,
+              subtitle: `${metrics.pendingVendors} pending`,
+              icon: UsersIcon,
+              iconColor: "text-gray-900 dark:text-white",
+              iconBg: "bg-gray-100 dark:bg-gray-800",
+            },
+            {
+              title: "Total Inventory",
+              value: metrics.totalInventory,
+              subtitle: `${metrics.activeInventory} active`,
+              icon: BuildingStorefrontIcon,
+              iconColor: "text-gray-900 dark:text-white",
+              iconBg: "bg-gray-100 dark:bg-gray-800",
+            },
+            {
+              title: "Inventory Value",
+              value: formatCurrency(metrics.totalInventoryValue || 137000),
+              subtitle: "Current stock value",
+              icon: BuildingStorefrontIcon,
+              iconColor: "text-gray-900 dark:text-white",
+              iconBg: "bg-gray-100 dark:bg-gray-800",
+            },
+            {
+              title: "Low Stock Items",
+              value: metrics.lowStockInventory,
+              subtitle: "Need reordering",
+              icon: ExclamationTriangleIcon,
+              iconColor: "text-gray-900 dark:text-white",
+              iconBg: "bg-gray-100 dark:bg-gray-800",
+            },
+            {
+              title: "Avg Order Value",
+              value: formatCurrency(metrics.avgOrderValue || 1547),
+              subtitle: "+3.8% vs last month",
+              icon: TagIcon,
+              iconColor: "text-gray-900 dark:text-white",
+              iconBg: "bg-gray-100 dark:bg-gray-800",
+            },
+          ].map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card
+                key={index}
+                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] rounded-none"
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                    {stat.title}
+                  </CardTitle>
+                  <div
+                    className={`h-10 w-10 flex items-center justify-center rounded-none`}
                   >
-                    View All Transactions
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Performance Overview */}
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-base">
-                  <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                    <BarChart3 className="h-4 w-4 text-purple-600" />
+                    <Icon className={`h-5 w-5 ${stat.iconColor}`} />
                   </div>
-                  Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                      Revenue Goal
-                    </span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      {formatCurrency(389000)} / {formatCurrency(500000)}
-                    </span>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    {stat.value}
                   </div>
-                  <Progress value={78} className="h-2" />
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                    78% completed
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {stat.subtitle}
                   </p>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                      Vendor Satisfaction
-                    </span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      4.7/5
-                    </span>
-                  </div>
-                  <Progress value={94} className="h-2" />
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                    94% satisfaction rate
-                  </p>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                      Stock Turnover
-                    </span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      6.2x
-                    </span>
-                  </div>
-                  <Progress value={85} className="h-2" />
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                    Above industry average
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+      </div>
 
-        {/* Bottom Section */}
-        <div
-          className={`transform transition-all duration-700 delay-600 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top Vendors */}
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-base">
-                  <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                    <Crown className="h-4 w-4 text-indigo-600" />
-                  </div>
-                  Top Vendors
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Your highest performing vendor partners
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {mockTopVendors.map((vendor, index) => {
-                    const statusConfig = getStatusConfig(vendor.status);
-                    const StatusIcon = statusConfig.icon;
-                    return (
-                      <div
-                        key={vendor.id}
-                        className="flex items-center gap-4 p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all cursor-pointer border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md"
-                      >
-                        <div className="relative">
-                          <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800 shadow-lg">
-                            <AvatarImage src="" alt={vendor.name} />
-                            <AvatarFallback className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 font-bold">
-                              {getInitials(vendor.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="absolute -top-1 -right-1">
-                            {index === 0 && (
-                              <div className="h-6 w-6 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                                <Crown className="h-3 w-3 text-yellow-600" />
-                              </div>
-                            )}
-                            {index === 1 && (
-                              <div className="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                <Award className="h-2 w-2 text-gray-600" />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                              {vendor.name}
-                            </h4>
-                            <Badge
-                              className={`${statusConfig.color} flex items-center gap-1 text-xs`}
-                            >
-                              <StatusIcon className="h-3 w-3" />
-                              {statusConfig.label}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-3 gap-3 text-xs">
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                                {formatCurrency(vendor.totalSpent)}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                Total Spent
-                              </p>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                                {vendor.totalOrders}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                Orders
-                              </p>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                                {vendor.rating}/5
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                Rating
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Top Products */}
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-base">
-                  <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                    <TrendingUp className="h-4 w-4 text-orange-600" />
-                  </div>
-                  Top Products
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Your best performing supply items
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {mockTopProducts.map((product) => {
-                    const statusConfig = getStatusConfig(product.status);
-                    const StatusIcon = statusConfig.icon;
-                    return (
-                      <div
-                        key={product.id}
-                        className="flex items-center gap-4 p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all cursor-pointer border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md"
-                      >
-                        <div className="h-12 w-12 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 font-bold">
-                          {getInitials(product.name)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                              {product.name}
-                            </h4>
-                            <Badge
-                              className={`${statusConfig.color} flex items-center gap-1 text-xs`}
-                            >
-                              <StatusIcon className="h-3 w-3" />
-                              {statusConfig.label}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-3 gap-3 text-xs">
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                                {formatCurrency(product.revenue)}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                Revenue
-                              </p>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                                {product.totalSold}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                Sold
-                              </p>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                                {product.currentStock}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                In Stock
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Quick Actions - moved to bottom */}
-        <div
-          className={`transform transition-all duration-700 delay-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 mt-6">
+      {/* Main Content */}
+      <div
+        className={`transform transition-all duration-700 delay-400 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Recent Activity */}
+          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 xl:col-span-2 hover:shadow-lg transition-all duration-300 rounded-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
-                <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                  <Zap className="h-4 w-4 text-indigo-600" />
-                </div>
-                Quick Actions
+                <ChartPieIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+                Recent Activity
               </CardTitle>
               <CardDescription className="text-xs">
-                Manage your supply chain efficiently
+                Latest updates from your supply chain
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <button
-                  onClick={() => router.push("/supplier/add-inventory")}
-                  className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
+              <div className="space-y-4">
+                {recentActivity.slice(0, 6).map((activity) => {
+                  const Icon = getActivityIcon(activity.type);
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-center gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all cursor-pointer border border-gray-200 dark:border-gray-700 hover:shadow-md"
+                      style={{
+                        minHeight: "90px",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div
+                        className={`h-10 w-10 flex items-center justify-center rounded-none`}
+                      >
+                        <Icon
+                          className={`h-5 w-5 ${getActivityColor(activity.status)}`}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-gray-900 dark:text-gray-100">
+                            {activity.title}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            {activity.amount && (
+                              <Badge className="bg-transparent border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-none">
+                                {formatCurrency(activity.amount)}
+                              </Badge>
+                            )}
+                            <span className="text-xs text-gray-500 dark:text-gray-500">
+                              {getTimeAgo(activity.timestamp)}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          {activity.description}
+                        </p>
+                        {activity.customer && (
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                            Customer: {activity.customer}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-6 text-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push("/supplier/transactions")}
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/20"
                 >
-                  <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                    <Plus className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div className="text-center">
-                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                      Add Inventory
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      New supply item
-                    </p>
-                  </div>
-                </button>
-                <button
-                  onClick={() => router.push("/supplier/vendors")}
-                  className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
-                >
-                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                    <Users className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div className="text-center">
-                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                      Manage Vendors
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      Vendor partners
-                    </p>
-                  </div>
-                </button>
-                <button
-                  onClick={() => router.push("/supplier/inventory")}
-                  className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
-                >
-                  <div className="h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                    <Warehouse className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <div className="text-center">
-                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                      Check Inventory
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      Stock overview
-                    </p>
-                  </div>
-                </button>
-                <button
-                  onClick={() => router.push("/supplier/insights")}
-                  className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
-                >
-                  <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                    <BarChart3 className="h-6 w-6 text-indigo-600" />
-                  </div>
-                  <div className="text-center">
-                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                      View Analytics
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      Supply insights
-                    </p>
-                  </div>
-                </button>
+                  View All Transactions
+                  <ArrowRightIcon className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Performance Overview */}
+          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 rounded-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-base">
+                <ChartBarIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+                Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                    Revenue Goal
+                  </span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    {formatCurrency(389000)} / {formatCurrency(500000)}
+                  </span>
+                </div>
+                <Progress value={78} className="h-2" />
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  78% completed
+                </p>
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                    Vendor Satisfaction
+                  </span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    4.7/5
+                  </span>
+                </div>
+                <Progress value={94} className="h-2" />
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  94% satisfaction rate
+                </p>
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                    Stock Turnover
+                  </span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    6.2x
+                  </span>
+                </div>
+                <Progress value={85} className="h-2" />
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  Above industry average
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Bottom Section */}
+      <div
+        className={`transform transition-all duration-700 delay-600 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top Vendors */}
+          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 rounded-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-base">
+                <SparklesIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+                Top Vendors
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Your highest performing vendor partners
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {mockTopVendors.map((vendor, index) => {
+                  const statusConfig = getStatusConfig(vendor.status);
+                  const StatusIcon = statusConfig.icon;
+                  return (
+                    <div
+                      key={vendor.id}
+                      className="flex items-center gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all cursor-pointer border border-gray-200 dark:border-gray-700 hover:shadow-md"
+                    >
+                      <div className="relative">
+                        <Avatar className="h-12 w-12 border-2 border-gray-200 dark:border-gray-700 rounded-none">
+                          <AvatarImage src="" alt={vendor.name} />
+                          <AvatarFallback className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold rounded-none">
+                            {getInitials(vendor.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -top-1 -right-1">
+                          {index === 0 && (
+                            <div className="h-6 w-6 bg-gray-100 dark:bg-gray-800 flex items-center justify-center rounded-none">
+                              <SparklesIcon className="h-3 w-3 text-gray-900 dark:text-white" />
+                            </div>
+                          )}
+                          {index === 1 && (
+                            <div className="h-5 w-5 bg-gray-100 dark:bg-gray-800 flex items-center justify-center rounded-none">
+                              <TrophyIcon className="h-2 w-2 text-gray-600" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                            {vendor.name}
+                          </h4>
+                          <Badge
+                            className={`${statusConfig.color} flex items-center gap-1 text-xs border-0 rounded-none`}
+                          >
+                            <StatusIcon className="h-3 w-3" />
+                            {statusConfig.label}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-xs">
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                              {formatCurrency(vendor.totalSpent)}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                              Total Spent
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                              {vendor.totalOrders}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                              Orders
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                              {vendor.rating}/5
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                              Rating
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Products */}
+          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 rounded-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-base">
+                <ArrowTrendingUpIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+                Top Products
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Your best performing supply items
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {mockTopProducts.map((product) => {
+                  const statusConfig = getStatusConfig(product.status);
+                  const StatusIcon = statusConfig.icon;
+                  return (
+                    <div
+                      key={product.id}
+                      className="flex items-center gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all cursor-pointer border border-gray-200 dark:border-gray-700 hover:shadow-md"
+                    >
+                      <div className="h-12 w-12 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-900 dark:text-white font-bold rounded-none">
+                        {getInitials(product.name)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                            {product.name}
+                          </h4>
+                          <Badge
+                            className={`${statusConfig.color} flex items-center gap-1 text-xs border-0 rounded-none`}
+                          >
+                            <StatusIcon className="h-3 w-3" />
+                            {statusConfig.label}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-xs">
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                              {formatCurrency(product.revenue)}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                              Revenue
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                              {product.totalSold}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                              Sold
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                              {product.currentStock}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                              In Stock
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div
+        className={`transform transition-all duration-700 delay-700 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-2xl transition-all duration-300 mt-6 rounded-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3 text-base">
+              <BoltIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+              Quick Actions
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Manage your supply chain efficiently
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <button
+                onClick={() => router.push("/supplier/add-inventory")}
+                className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-lg cursor-pointer group rounded-none"
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <PlusIcon className="h-6 w-6 text-gray-900 dark:text-white" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                    Add Inventory
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    New supply item
+                  </p>
+                </div>
+              </button>
+              <button
+                onClick={() => router.push("/supplier/vendors")}
+                className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-lg cursor-pointer group rounded-none"
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <UsersIcon className="h-6 w-6 text-gray-900 dark:text-white" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                    Manage Vendors
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Vendor partners
+                  </p>
+                </div>
+              </button>
+              <button
+                onClick={() => router.push("/supplier/inventory")}
+                className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-lg cursor-pointer group rounded-none"
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <BuildingStorefrontIcon className="h-6 w-6 text-gray-900 dark:text-white" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                    Check Inventory
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Stock overview
+                  </p>
+                </div>
+              </button>
+              <button
+                onClick={() => router.push("/supplier/insights")}
+                className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-lg cursor-pointer group rounded-none"
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <ChartBarIcon className="h-6 w-6 text-gray-900 dark:text-white" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                    View Analytics
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Supply insights
+                  </p>
+                </div>
+              </button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

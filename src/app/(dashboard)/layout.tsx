@@ -4,9 +4,44 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import { CustomerHeader } from "@/components/common/customer-header";
-import { DashboardSidebar } from "@/components/common/dashboard-sidebar";
+import CustomerHeader from "@/components/common/customer-header";
+import {
+  DashboardSidebar,
+  SidebarProvider,
+  useSidebar,
+} from "@/components/common/dashboard-sidebar";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
+import { cn } from "@/lib/utils";
+
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
+  const { isCollapsed, isMobile } = useSidebar();
+  const { user } = useAuth();
+
+  const isCustomer = user?.role === "customer";
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
+      {isCustomer ? <CustomerHeader /> : <DashboardHeader />}
+      <div className="flex">
+        {!isCustomer && <DashboardSidebar />}
+        <main
+          className={cn(
+            "flex-1 transition-all duration-300 ease-in-out",
+            isCustomer
+              ? "ml-0"
+              : isMobile
+                ? "ml-0"
+                : isCollapsed
+                  ? "ml-16"
+                  : "ml-64"
+          )}
+        >
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -102,18 +137,9 @@ export default function DashboardLayout({
 
   console.log("[LAYOUT] Dashboard rendering for role:", userRole);
 
-  // Check if user is customer (uses e-commerce layout)
-  const isCustomer = userRole === "customer";
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
-      {isCustomer ? <CustomerHeader /> : <DashboardHeader />}
-      <div className="flex">
-        {!isCustomer && <DashboardSidebar />}
-        <main className={`flex-1 ${!isCustomer ? "ml-64" : ""} min-h-screen`}>
-          {children}
-        </main>
-      </div>
-    </div>
+    <SidebarProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </SidebarProvider>
   );
 }
