@@ -29,38 +29,38 @@ import {
   TableRow,
 } from "@/components/_ui/table";
 import {
-  Search,
-  Filter,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Download,
-  RefreshCw,
-  DollarSign,
-  TrendingUp,
-  Calendar,
-  Eye,
-  ExternalLink,
-  CheckCircle,
-  Clock,
-  XCircle,
-  AlertCircle,
-  Activity,
-  Sparkles,
-  Shield,
-  Zap,
-  Building2,
-  Users,
-  Package,
-  ArrowUpRight,
-  ArrowDownRight,
-  Copy,
-  FileText,
-  Hash,
-  CreditCard,
-  Banknote,
-  Receipt,
-} from "lucide-react";
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  ArrowsUpDownIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  ArrowDownTrayIcon,
+  ArrowPathIcon,
+  CurrencyDollarIcon,
+  ArrowTrendingUpIcon,
+  CalendarIcon,
+  EyeIcon,
+  ArrowTopRightOnSquareIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  XCircleIcon,
+  ExclamationCircleIcon,
+  ChartPieIcon,
+  SparklesIcon,
+  ShieldCheckIcon,
+  BoltIcon,
+  BuildingOffice2Icon,
+  UsersIcon,
+  CubeIcon,
+  ArrowUpRightIcon,
+  ArrowDownRightIcon,
+  DocumentDuplicateIcon,
+  DocumentTextIcon,
+  HashtagIcon,
+  CreditCardIcon,
+  BanknotesIcon,
+  ReceiptPercentIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
 import SupplierTransactionsSkeleton from "@/components/skeletons/supplierTransactionsSkeleton";
@@ -199,13 +199,13 @@ export default function SupplierTransactionsPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
       case "pending":
-        return <Clock className="h-4 w-4 text-yellow-500" />;
+        return <ClockIcon className="h-4 w-4 text-yellow-500" />;
       case "cancelled":
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircleIcon className="h-4 w-4 text-red-500" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+        return <ExclamationCircleIcon className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -225,15 +225,15 @@ export default function SupplierTransactionsPage() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "sale":
-        return <ArrowUp className="h-4 w-4 text-green-500" />;
+        return <ArrowUpIcon className="h-4 w-4 text-green-500" />;
       case "purchase":
-        return <ArrowDown className="h-4 w-4 text-blue-500" />;
+        return <ArrowDownIcon className="h-4 w-4 text-blue-500" />;
       case "adjustment":
-        return <ArrowUpDown className="h-4 w-4 text-orange-500" />;
+        return <ArrowsUpDownIcon className="h-4 w-4 text-orange-500" />;
       case "transfer":
-        return <ArrowUpDown className="h-4 w-4 text-purple-500" />;
+        return <ArrowsUpDownIcon className="h-4 w-4 text-purple-500" />;
       default:
-        return <Activity className="h-4 w-4 text-gray-500" />;
+        return <ChartPieIcon className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -359,14 +359,14 @@ export default function SupplierTransactionsPage() {
                 variant="outline"
                 className="hidden lg:flex items-center gap-2 text-xs cursor-pointer"
               >
-                <RefreshCw className="h-4 w-4" />
+                <ArrowPathIcon className="h-4 w-4" />
                 Refresh
               </Button>
               <Button
                 variant="outline"
                 className="flex items-center gap-2 text-xs cursor-pointer"
               >
-                <Download className="h-4 w-4" />
+                <ArrowDownTrayIcon className="h-4 w-4" />
                 Export
               </Button>
             </div>
@@ -385,7 +385,7 @@ export default function SupplierTransactionsPage() {
                 title: "Total Transactions",
                 value: totalTransactions.toLocaleString(),
                 subtitle: "All time transactions",
-                icon: Receipt,
+                icon: ReceiptPercentIcon,
                 iconColor: "text-blue-600",
                 iconBg: "bg-blue-100 dark:bg-blue-900/30",
               },
@@ -393,7 +393,7 @@ export default function SupplierTransactionsPage() {
                 title: "Total Volume",
                 value: formatCurrency(totalVolume),
                 subtitle: "Transaction volume",
-                icon: DollarSign,
+                icon: CurrencyDollarIcon,
                 iconColor: "text-green-600",
                 iconBg: "bg-green-100 dark:bg-green-900/30",
               },
@@ -401,7 +401,7 @@ export default function SupplierTransactionsPage() {
                 title: "Total Sales",
                 value: formatCurrency(totalSales),
                 subtitle: "Revenue generated",
-                icon: TrendingUp,
+                icon: ArrowTrendingUpIcon,
                 iconColor: "text-green-600",
                 iconBg: "bg-green-100 dark:bg-green-900/30",
               },
@@ -409,7 +409,7 @@ export default function SupplierTransactionsPage() {
                 title: "Total Purchases",
                 value: formatCurrency(totalPurchases),
                 subtitle: "Supply investments",
-                icon: Banknote,
+                icon: BanknotesIcon,
                 iconColor: "text-blue-600",
                 iconBg: "bg-blue-100 dark:bg-blue-900/30",
               },
@@ -417,7 +417,7 @@ export default function SupplierTransactionsPage() {
                 title: "Completed",
                 value: completedTransactions.toString(),
                 subtitle: "Successfully processed",
-                icon: CheckCircle,
+                icon: CheckCircleIcon,
                 iconColor: "text-green-600",
                 iconBg: "bg-green-100 dark:bg-green-900/30",
               },
@@ -431,7 +431,7 @@ export default function SupplierTransactionsPage() {
                     {stat.title}
                   </CardTitle>
                   <div
-                    className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
+                    className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center`}
                   >
                     <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                   </div>
@@ -459,7 +459,7 @@ export default function SupplierTransactionsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
                 <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <Filter className="h-4 w-4 text-purple-600" />
+                  <FunnelIcon className="h-4 w-4 text-purple-600" />
                 </div>
                 Filters & Search
               </CardTitle>
@@ -470,7 +470,7 @@ export default function SupplierTransactionsPage() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="relative w-full">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search by reference, vendor or product"
                     value={searchTerm}
@@ -523,7 +523,7 @@ export default function SupplierTransactionsPage() {
                   {searchTerm && (
                     <Badge
                       variant="outline"
-                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
                     >
                       &quot;{searchTerm}&quot;
                       <button
@@ -537,7 +537,7 @@ export default function SupplierTransactionsPage() {
                   {selectedType !== "All Types" && (
                     <Badge
                       variant="outline"
-                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
                     >
                       {selectedType}
                       <button
@@ -551,7 +551,7 @@ export default function SupplierTransactionsPage() {
                   {selectedStatus !== "All Status" && (
                     <Badge
                       variant="outline"
-                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
+                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
                     >
                       {selectedStatus}
                       <button
@@ -584,7 +584,7 @@ export default function SupplierTransactionsPage() {
                   <div className="flex flex-col">
                     <CardTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
                       <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <Activity className="h-4 w-4 text-blue-600" />
+                        <ChartPieIcon className="h-4 w-4 text-blue-600" />
                       </div>
                       Transaction History
                     </CardTitle>
@@ -593,9 +593,9 @@ export default function SupplierTransactionsPage() {
                   <div>
                     <Badge
                       variant="secondary"
-                      className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 text-xs"
+                      className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 text-xs border-0"
                     >
-                      <Shield className="h-3 w-3 mr-1" />
+                      <ShieldCheckIcon className="h-3 w-3 mr-1" />
                       Blockchain Verified
                     </Badge>
                   </div>
@@ -644,7 +644,7 @@ export default function SupplierTransactionsPage() {
                           <TableCell className="px-2">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                                <FileText className="h-4 w-4 text-white" />
+                                <DocumentTextIcon className="h-4 w-4 text-white" />
                               </div>
                               <div>
                                 <code className="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
@@ -655,7 +655,7 @@ export default function SupplierTransactionsPage() {
                           </TableCell>
                           <TableCell className="px-2">
                             <div className="flex items-center gap-2">
-                              <Calendar className="h-3 w-3 text-gray-500" />
+                              <CalendarIcon className="h-3 w-3 text-gray-500" />
                               <span className="text-sm text-gray-900 dark:text-gray-100">
                                 {formatDate(transaction.date)}
                               </span>
@@ -665,7 +665,7 @@ export default function SupplierTransactionsPage() {
                             <div className="flex items-center gap-2">
                               {getTypeIcon(transaction.type)}
                               <Badge
-                                className={`text-xs px-2 py-1 font-medium ${getTypeColor(transaction.type)}`}
+                                className={`text-xs px-2 py-1 font-medium ${getTypeColor(transaction.type)} border-0`}
                                 variant="secondary"
                               >
                                 {transaction.type}
@@ -676,7 +676,7 @@ export default function SupplierTransactionsPage() {
                             <div className="flex items-center gap-2">
                               {getStatusIcon(transaction.status)}
                               <Badge
-                                className={`text-xs px-2 py-1 font-medium ${getStatusColor(transaction.status)}`}
+                                className={`text-xs px-2 py-1 font-medium ${getStatusColor(transaction.status)} border-0`}
                                 variant="secondary"
                               >
                                 {transaction.status}
@@ -685,7 +685,7 @@ export default function SupplierTransactionsPage() {
                           </TableCell>
                           <TableCell className="px-2">
                             <div className="flex items-center gap-2">
-                              <Building2 className="h-3 w-3 text-gray-500" />
+                              <BuildingOffice2Icon className="h-3 w-3 text-gray-500" />
                               <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {transaction.vendor}
                               </span>
@@ -704,9 +704,9 @@ export default function SupplierTransactionsPage() {
                           <TableCell className="px-2">
                             <div className="flex items-center gap-1">
                               {transaction.amount >= 0 ? (
-                                <ArrowUpRight className="h-3 w-3 text-green-500" />
+                                <ArrowUpRightIcon className="h-3 w-3 text-green-500" />
                               ) : (
-                                <ArrowDownRight className="h-3 w-3 text-red-500" />
+                                <ArrowDownRightIcon className="h-3 w-3 text-red-500" />
                               )}
                               <span
                                 className={`font-bold ${
@@ -722,7 +722,7 @@ export default function SupplierTransactionsPage() {
                           </TableCell>
                           <TableCell className="px-2">
                             <div className="flex items-center gap-2">
-                              <Hash className="h-3 w-3 text-gray-500" />
+                              <HashtagIcon className="h-3 w-3 text-gray-500" />
                               <code className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded block">
                                 {transaction.blockchainHash.substring(0, 16)}...
                               </code>
@@ -738,7 +738,7 @@ export default function SupplierTransactionsPage() {
                                 }
                                 className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 cursor-pointer"
                               >
-                                <Eye className="h-3 w-3 mr-1" />
+                                <EyeIcon className="h-3 w-3 mr-1" />
                                 View
                               </Button>
                               <Button
@@ -752,7 +752,7 @@ export default function SupplierTransactionsPage() {
                                 }
                                 className="h-8 w-8 p-0 hover:bg-gray-50 hover:border-gray-200 dark:hover:bg-gray-900/20 cursor-pointer"
                               >
-                                <Copy className="h-3 w-3" />
+                                <DocumentDuplicateIcon className="h-3 w-3" />
                               </Button>
                             </div>
                           </TableCell>
@@ -766,8 +766,8 @@ export default function SupplierTransactionsPage() {
           ) : (
             <Card className="text-center py-16 border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden">
               <CardContent>
-                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-                  <ArrowUpDown className="h-10 w-10 text-gray-400" />
+                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                  <ArrowsUpDownIcon className="h-10 w-10 text-gray-400" />
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   {totalTransactions === 0
@@ -784,7 +784,7 @@ export default function SupplierTransactionsPage() {
                     onClick={() => router.push("/supplier/products")}
                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer"
                   >
-                    <Package className="h-4 w-4 mr-2" />
+                    <CubeIcon className="h-4 w-4 mr-2" />
                     View Products
                   </Button>
                 ) : (

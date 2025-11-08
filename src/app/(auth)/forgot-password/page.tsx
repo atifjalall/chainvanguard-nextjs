@@ -6,24 +6,24 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Button } from "@/components/_ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Input } from "@/components/_ui/input";
-import { Label } from "@/components/_ui/label";
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/_ui/select";
-import { Alert, AlertDescription } from "@/components/_ui/alert";
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import {
   Package,
@@ -46,7 +46,7 @@ import {
   Check,
 } from "lucide-react";
 import { WalletData } from "@/types/web3";
-import { motion, AnimatePresence, easeOut, easeInOut } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { authAPI } from "@/lib/api/auth.api";
 import { AuthRouteGuard } from "@/components/guards/auth-route-guard";
 
@@ -779,7 +779,7 @@ export default function ForgotPasswordPage() {
       y: 0,
       transition: {
         duration: 0.4,
-        ease: easeOut,
+        ease: "easeOut",
       },
     },
     exit: {
@@ -787,45 +787,54 @@ export default function ForgotPasswordPage() {
       y: -20,
       transition: {
         duration: 0.3,
-        ease: easeOut,
+        ease: "easeOut",
       },
     },
   };
 
   return (
     <AuthRouteGuard>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950 flex flex-col">
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
         {/* Header */}
-        <div className="w-full p-4 sm:p-6">
-          <div className="flex items-center justify-between max-w-6xl mx-auto">
+        <header className="fixed top-0 w-full z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
+          <div className="w-full px-6 h-16 flex items-center">
+            {/* Logo on the far left */}
             <Link
               href="/"
               className="flex items-center space-x-3 group cursor-pointer"
             >
-              <div className="h-8 w-8 rounded-xl bg-blue-600 flex items-center justify-center">
-                <Package className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <Package className="h-6 w-6 text-gray-900 dark:text-white" />
+              <span className="text-xl font-light text-gray-900 dark:text-white">
                 ChainVanguard
               </span>
             </Link>
 
-            <div className="flex items-center space-x-4">
+            {/* Push navbar to the right */}
+            <nav className="flex items-center gap-2 ml-auto">
               <ThemeToggle />
-              <Link href="/login" className="hidden sm:block">
+              <Link href="/login">
                 <Button
-                  variant="ghost"
-                  className="cursor-pointer text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50"
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-900 dark:border-white text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-none cursor-pointer text-xs h-9 px-4"
                 >
                   Back to Login
                 </Button>
               </Link>
-            </div>
+              <Link href="/register">
+                <Button
+                  size="sm"
+                  className="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 rounded-none cursor-pointer text-xs h-9 px-4"
+                >
+                  Create Account
+                </Button>
+              </Link>
+            </nav>
           </div>
-        </div>
+        </header>
 
         {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center p-4">
+        <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-[calc(100vh-8rem)]">
           <div className="w-full max-w-2xl">
             {/* Progress Bar */}
             <AnimatePresence mode="wait">
@@ -836,18 +845,17 @@ export default function ForgotPasswordPage() {
                   exit={{ opacity: 0, height: 0 }}
                   className="mb-6 overflow-hidden"
                 >
-                  <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    <span className="font-medium">
+                  <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    <span>
                       Step {currentStep} of {totalSteps}
                     </span>
-                    <span className="font-medium">{Math.round(progress)}%</span>
+                    <span>{Math.round(progress)}%</span>
                   </div>
-                  <div className="relative h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                  <div className="relative h-1.5 bg-gray-200 dark:bg-gray-800 overflow-hidden">
                     <motion.div
-                      className="h-full bg-gradient-to-r from-blue-600 to-cyan-600 rounded-full"
+                      className="h-full bg-gray-900 dark:bg-white transition-all duration-500 ease-out"
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
-                      transition={{ duration: 0.5, ease: "easeOut" }}
                     />
                   </div>
                 </motion.div>
@@ -855,878 +863,700 @@ export default function ForgotPasswordPage() {
             </AnimatePresence>
 
             {/* Recovery Card */}
-            <Card className="relative overflow-hidden border-0 shadow-2xl bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
+            <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">
+              {/* Header */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentStep}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-center mb-6"
+                >
+                  <div className="inline-flex items-center justify-center w-12 h-12 mb-3">
+                    {getStepIcon()}
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                    {getStepTitle()}
+                  </h1>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                    {getStepDescription()}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
 
-              <CardHeader className="relative z-10 text-center pb-4">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentStep}
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate={isVisible ? "visible" : "hidden"}
-                    exit="exit"
-                  >
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 text-white mb-3 shadow-lg">
-                      {getStepIcon()}
-                    </div>
-                    <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-                      {getStepTitle()}
-                    </CardTitle>
-                    <CardDescription className="text-xs text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-                      {getStepDescription()}
-                    </CardDescription>
-                  </motion.div>
-                </AnimatePresence>
-              </CardHeader>
-
-              <CardContent className="relative z-10">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={`${currentStep}-${recoveryMode}`}
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate={isVisible ? "visible" : "hidden"}
-                    exit="exit"
-                  >
-                    {/* Step 0: Mode Selection */}
-                    {currentStep === 0 && (
-                      <div className="space-y-5">
-                        <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
-                          <Shield className="h-4 w-4 text-blue-600" />
-                          <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+              {/* Form Content */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`${currentStep}-${recoveryMode}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Step 0: Mode Selection */}
+                  {currentStep === 0 && (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                        <div className="flex items-start gap-2">
+                          <Shield className="h-3.5 w-3.5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-gray-900 dark:text-white">
                             Choose how you want to recover access to your wallet
-                          </AlertDescription>
-                        </Alert>
-
-                        <div className="grid gap-4">
-                          {/* Known Wallet Option */}
-                          <motion.button
-                            whileHover={{ scale: 1.005 }}
-                            whileTap={{ scale: 0.995 }}
-                            onClick={() => handleModeSelection("known-wallet")}
-                            className="w-full p-4 text-left border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all cursor-pointer group"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors">
-                                <Wallet className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                                  I Know My Wallet
-                                </h3>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                                  Select your wallet and reset password using
-                                  recovery phrase
-                                </p>
-                              </div>
-                              <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-0.5" />
-                            </div>
-                          </motion.button>
-
-                          {/* Forgot Wallet Option */}
-                          <motion.button
-                            whileHover={{ scale: 1.005 }}
-                            whileTap={{ scale: 0.995 }}
-                            onClick={() => handleModeSelection("forgot-wallet")}
-                            className="w-full p-4 text-left border border-gray-200 dark:border-gray-700 rounded-xl hover:border-cyan-400 hover:bg-cyan-50/50 dark:hover:bg-cyan-950/20 transition-all cursor-pointer group"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 bg-cyan-100 dark:bg-cyan-900/50 rounded-lg group-hover:bg-cyan-200 dark:group-hover:bg-cyan-800/50 transition-colors">
-                                <Search className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                                  I Forgot My Wallet
-                                </h3>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                                  Use recovery phrase to find wallet, then reset
-                                  password
-                                </p>
-                              </div>
-                              <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors mt-0.5" />
-                            </div>
-                          </motion.button>
+                          </p>
                         </div>
+                      </div>
 
-                        <div className="mt-5 p-4 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-gray-200 dark:border-gray-700">
+                      <div className="grid gap-3">
+                        {/* Known Wallet Option */}
+                        <button
+                          onClick={() => handleModeSelection("known-wallet")}
+                          className="w-full p-4 text-left border border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer rounded-none"
+                        >
                           <div className="flex items-start gap-3">
-                            <BadgeCheck className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                            <div>
-                              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1.5">
-                                What You&apos;ll Need
-                              </h4>
-                              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 leading-relaxed">
-                                <li>• Your 12-word recovery phrase</li>
-                                <li>• Words in the correct order</li>
-                                <li>• Correctly spelled words</li>
-                              </ul>
+                            <Wallet className="h-5 w-5 text-gray-900 dark:text-white mt-0.5" />
+                            <div className="flex-1">
+                              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                                I Know My Wallet
+                              </h3>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                                Select your wallet and reset password using
+                                recovery phrase
+                              </p>
                             </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 mt-0.5" />
+                          </div>
+                        </button>
+
+                        {/* Forgot Wallet Option */}
+                        <button
+                          onClick={() => handleModeSelection("forgot-wallet")}
+                          className="w-full p-4 text-left border border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer rounded-none"
+                        >
+                          <div className="flex items-start gap-3">
+                            <Search className="h-5 w-5 text-gray-900 dark:text-white mt-0.5" />
+                            <div className="flex-1">
+                              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                                I Forgot My Wallet
+                              </h3>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                                Use recovery phrase to find wallet, then reset
+                                password
+                              </p>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 mt-0.5" />
+                          </div>
+                        </button>
+                      </div>
+
+                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                        <div className="flex items-start gap-2">
+                          <BadgeCheck className="h-3.5 w-3.5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                          <div>
+                            <h4 className="text-xs font-medium text-gray-900 dark:text-white mb-1">
+                              What You&apos;ll Need
+                            </h4>
+                            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                              <li>• Your 12-word recovery phrase</li>
+                              <li>• Words in the correct order</li>
+                              <li>• Correctly spelled words</li>
+                            </ul>
                           </div>
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Known Wallet Flow - Step 1: Select Wallet */}
-                    {recoveryMode === "known-wallet" && currentStep === 1 && (
-                      <div className="space-y-4">
-                        <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
-                          <Shield className="h-3.5 w-3.5 text-blue-600" />
-                          <AlertDescription className="text-xs text-blue-800 dark:text-blue-200">
+                  {/* Known Wallet Flow - Step 1: Select Wallet */}
+                  {recoveryMode === "known-wallet" && currentStep === 1 && (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                        <div className="flex items-start gap-2">
+                          <Shield className="h-3.5 w-3.5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-gray-900 dark:text-white">
                             Have your 12-word recovery phrase ready before
                             continuing
-                          </AlertDescription>
-                        </Alert>
-
-                        {/* Wallet Input Mode Toggle */}
-                        <div className="flex items-center gap-1.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                          <button
-                            onClick={() => setWalletInputMode("select")}
-                            className={`flex-1 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all ${
-                              walletInputMode === "select"
-                                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                            }`}
-                          >
-                            <Wallet className="h-3.5 w-3.5 inline mr-1.5" />
-                            Select Wallet
-                          </button>
-                          <button
-                            onClick={() => setWalletInputMode("manual")}
-                            className={`flex-1 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all ${
-                              walletInputMode === "manual"
-                                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                            }`}
-                          >
-                            <Edit3 className="h-3.5 w-3.5 inline mr-1.5" />
-                            Enter Manually
-                          </button>
+                          </p>
                         </div>
+                      </div>
 
-                        <AnimatePresence mode="wait">
-                          {walletInputMode === "select" ? (
-                            <motion.div
-                              key="select"
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              transition={{ duration: 0.3 }}
-                              className="space-y-1.5"
+                      {/* Wallet Input Mode Toggle */}
+                      <div className="flex p-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <button
+                          onClick={() => setWalletInputMode("select")}
+                          className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer ${
+                            walletInputMode === "select"
+                              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                          }`}
+                        >
+                          <Wallet className="h-3.5 w-3.5 inline mr-1.5" />
+                          Select Wallet
+                        </button>
+                        <button
+                          onClick={() => setWalletInputMode("manual")}
+                          className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer ${
+                            walletInputMode === "manual"
+                              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                          }`}
+                        >
+                          <Edit3 className="h-3.5 w-3.5 inline mr-1.5" />
+                          Enter Manually
+                        </button>
+                      </div>
+
+                      <AnimatePresence mode="wait">
+                        {walletInputMode === "select" ? (
+                          <motion.div
+                            key="select"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.3 }}
+                            className="space-y-1.5"
+                          >
+                            <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                              <Wallet className="h-3 w-3" />
+                              Select Your Wallet
+                            </Label>
+                            <Select
+                              value={selectedWallet}
+                              onValueChange={(value) => {
+                                setSelectedWallet(value);
+                                if (walletError) setWalletError("");
+                              }}
                             >
-                              <Label
-                                htmlFor="wallet-select"
-                                className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
-                              >
-                                <Wallet className="h-3.5 w-3.5" />
-                                Select Your Wallet
-                              </Label>
-                              <Select
-                                value={selectedWallet}
-                                onValueChange={(value) => {
-                                  setSelectedWallet(value);
-                                  if (walletError) setWalletError("");
-                                }}
-                              >
-                                <SelectTrigger
-                                  size="sm"
-                                  className="!h-9 w-full border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-colors cursor-pointer bg-white/50 dark:bg-gray-800/50 text-xs"
-                                >
-                                  <SelectValue placeholder="Choose your wallet" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {availableWallets.map((wallet) => (
-                                    <SelectItem
-                                      key={wallet.id}
-                                      value={wallet.id}
-                                      className="cursor-pointer py-2.5 px-2.5"
-                                    >
-                                      <div className="flex items-center gap-2.5">
-                                        <div className="p-1 bg-blue-100 dark:bg-blue-900 rounded">
-                                          <Wallet className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                              <SelectTrigger className="h-9 w-full border rounded-none bg-white/50 dark:bg-gray-800/50 text-xs hover:border-gray-900 dark:hover:border-white transition-colors">
+                                <SelectValue placeholder="Choose your wallet" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-none">
+                                {availableWallets.map((wallet) => (
+                                  <SelectItem
+                                    key={wallet.id}
+                                    value={wallet.id}
+                                    className="cursor-pointer py-2 px-2.5"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className="p-1 bg-gray-900 dark:bg-white">
+                                        <Wallet className="h-3 w-3 text-white dark:text-gray-900" />
+                                      </div>
+                                      <div>
+                                        <div className="text-xs font-medium">
+                                          {wallet.name}
                                         </div>
-                                        <div>
-                                          <div className="text-xs font-medium">
-                                            {wallet.name}
-                                          </div>
-                                          <div className="text-xs text-gray-500 font-mono">
-                                            {formatAddress(wallet.address)}
-                                          </div>
+                                        <div className="text-xs text-gray-500 font-mono">
+                                          {formatAddress(wallet.address)}
                                         </div>
                                       </div>
-                                    </SelectItem>
-                                  ))}
-                                  {availableWallets.length === 0 && (
-                                    <SelectItem value="no-wallet" disabled>
-                                      <span className="text-xs">
-                                        No wallets found
-                                      </span>
-                                    </SelectItem>
-                                  )}
-                                </SelectContent>
-                              </Select>
-                            </motion.div>
-                          ) : (
-                            <motion.div
-                              key="manual"
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              transition={{ duration: 0.3 }}
-                              className="space-y-1.5"
-                            >
-                              <Label
-                                htmlFor="manual-address"
-                                className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300"
-                              >
-                                <Edit3 className="h-3.5 w-3.5" />
-                                Enter Wallet Address
-                              </Label>
-                              <Input
-                                id="manual-address"
-                                type="text"
-                                placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
-                                value={manualWalletAddress}
-                                onChange={(e) => {
-                                  setManualWalletAddress(e.target.value);
-                                  if (walletError) setWalletError("");
-                                }}
-                                className="!h-9 border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50 font-mono text-xs placeholder:text-xs"
-                              />
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-
-                        {walletError && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1"
-                          >
-                            {walletError}
-                          </motion.p>
-                        )}
-
-                        <AnimatePresence>
-                          {(selectedWallet ||
-                            (manualWalletAddress &&
-                              manualWalletAddress.length > 10)) && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10, height: 0 }}
-                              animate={{ opacity: 1, y: 0, height: "auto" }}
-                              exit={{ opacity: 0, y: -10, height: 0 }}
-                              transition={{ duration: 0.4 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="p-3 bg-cyan-50/50 dark:bg-cyan-950/20 rounded-xl border border-cyan-200 dark:border-cyan-800">
-                                <div className="flex items-start gap-2.5">
-                                  <BadgeCheck className="h-3.5 w-3.5 text-cyan-600 flex-shrink-0 mt-0.5" />
-                                  <div>
-                                    <h4 className="text-xs font-semibold text-cyan-900 dark:text-cyan-100 mb-1">
-                                      Next Step
-                                    </h4>
-                                    <ul className="text-xs text-cyan-800 dark:text-cyan-200 space-y-0.5 leading-relaxed">
-                                      <li>
-                                        • Enter your 12-word recovery phrase
-                                      </li>
-                                      <li>• Words must be in correct order</li>
-                                      <li>• Check spelling carefully</li>
-                                    </ul>
-                                  </div>
-                                </div>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    )}
-
-                    {/* Forgot Wallet Flow - Step 1: Enter Recovery Phrase */}
-                    {recoveryMode === "forgot-wallet" && currentStep === 1 && (
-                      <div className="space-y-5">
-                        <Alert className="border-cyan-200 dark:border-cyan-800 bg-cyan-50/50 dark:bg-cyan-950/20">
-                          <Search className="h-4 w-4 text-cyan-600" />
-                          <AlertDescription className="text-sm text-cyan-800 dark:text-cyan-200">
-                            Enter your recovery phrase and we&apos;ll locate
-                            your wallet
-                          </AlertDescription>
-                        </Alert>
-
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="recovery-phrase-find"
-                            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-                          >
-                            <KeyRound className="h-4 w-4" />
-                            Recovery Phrase (12 words)
-                          </Label>
-                          <textarea
-                            id="recovery-phrase-find"
-                            className="w-full p-4 border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 rounded-xl resize-none h-32 transition-colors cursor-text bg-white/50 dark:bg-gray-800/50 font-mono text-sm placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                            placeholder="Enter your 12-word recovery phrase separated by spaces&#10;Example: word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12"
-                            value={recoveryPhrase}
-                            onChange={(e) => {
-                              setRecoveryPhrase(e.target.value);
-                              if (recoveryPhraseError)
-                                setRecoveryPhraseError("");
-                            }}
-                          />
-                          <div className="flex items-center justify-between text-sm">
-                            <span
-                              className={`font-medium ${
-                                phraseWords.length === 12
-                                  ? "text-green-600 dark:text-green-400"
-                                  : "text-gray-500 dark:text-gray-400"
-                              }`}
-                            >
-                              {phraseWords.length} / 12 words
-                            </span>
-                            {phraseWords.length === 12 && (
-                              <motion.span
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="flex items-center gap-1.5 text-green-600 dark:text-green-400 font-medium"
-                              >
-                                <CheckCircle2 className="h-4 w-4" />
-                                Valid count
-                              </motion.span>
-                            )}
-                          </div>
-                          {recoveryPhraseError && (
-                            <motion.p
-                              initial={{ opacity: 0, y: -5 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1"
-                            >
-                              <AlertTriangle className="h-3 w-3" />
-                              {recoveryPhraseError}
-                            </motion.p>
-                          )}
-                        </div>
-
-                        {/* Word Preview Grid */}
-                        <AnimatePresence>
-                          {phraseWords.length > 0 && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10, height: 0 }}
-                              animate={{ opacity: 1, y: 0, height: "auto" }}
-                              exit={{ opacity: 0, y: -10, height: 0 }}
-                              transition={{ duration: 0.4 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="p-4 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-gray-200 dark:border-gray-700">
-                                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                                  Word Preview
-                                </h4>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                                  {phraseWords
-                                    .slice(0, 12)
-                                    .map((word, index) => (
-                                      <motion.div
-                                        key={index}
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: index * 0.03 }}
-                                        className="flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-                                      >
-                                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                                          {index + 1}.
-                                        </span>
-                                        <span className="text-xs font-mono font-medium text-gray-900 dark:text-gray-100 truncate">
-                                          {word}
-                                        </span>
-                                      </motion.div>
-                                    ))}
-                                </div>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    )}
-
-                    {/* Forgot Wallet Flow - Step 2: Confirm Found Wallet */}
-                    {recoveryMode === "forgot-wallet" &&
-                      currentStep === 2 &&
-                      recoveredWallet && (
-                        <div className="space-y-5">
-                          <Alert className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            <AlertDescription className="text-sm text-green-800 dark:text-green-200">
-                              Wallet found! Confirm this is correct before
-                              proceeding
-                            </AlertDescription>
-                          </Alert>
-
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                                {availableWallets.length === 0 && (
+                                  <SelectItem value="no-wallet" disabled>
+                                    No wallets found
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </motion.div>
+                        ) : (
                           <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.4 }}
-                            className="p-5 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-lg"
+                            key="manual"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="space-y-1.5"
                           >
-                            <div className="flex items-start gap-4">
-                              <div className="p-3 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl shadow-md">
-                                <Wallet className="h-6 w-6 text-white" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">
-                                  {recoveredWallet.name}
-                                </h3>
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between p-2.5 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                                      Address
-                                    </span>
-                                    <span className="text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">
-                                      {formatAddress(recoveredWallet.address)}
-                                    </span>
-                                  </div>
+                            <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                              <Edit3 className="h-3 w-3" />
+                              Enter Wallet Address
+                            </Label>
+                            <Input
+                              type="text"
+                              placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+                              value={manualWalletAddress}
+                              onChange={(e) => {
+                                setManualWalletAddress(e.target.value);
+                                if (walletError) setWalletError("");
+                              }}
+                              className="h-9 border rounded-none bg-white/50 dark:bg-gray-800/50 font-mono text-xs placeholder:text-xs hover:border-gray-900 dark:hover:border-white transition-colors cursor-text"
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {walletError && (
+                        <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {walletError}
+                        </p>
+                      )}
+
+                      <AnimatePresence>
+                        {(selectedWallet ||
+                          (manualWalletAddress &&
+                            manualWalletAddress.length > 10)) && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: "auto" }}
+                            exit={{ opacity: 0, y: -10, height: 0 }}
+                            transition={{ duration: 0.4 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="p-3 bg-cyan-50/50 dark:bg-cyan-950/20 rounded-xl border border-cyan-200 dark:border-cyan-800">
+                              <div className="flex items-start gap-2.5">
+                                <BadgeCheck className="h-3.5 w-3.5 text-cyan-600 flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <h4 className="text-xs font-semibold text-cyan-900 dark:text-cyan-100 mb-1.5">
+                                    Next Step
+                                  </h4>
+                                  <ul className="text-xs text-cyan-800 dark:text-cyan-200 space-y-0.5 leading-relaxed">
+                                    <li>
+                                      • Enter your 12-word recovery phrase
+                                    </li>
+                                    <li>• Words must be in correct order</li>
+                                    <li>• Check spelling carefully</li>
+                                  </ul>
                                 </div>
                               </div>
                             </div>
                           </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
 
-                          <div className="p-4 bg-blue-50/50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                            <div className="flex items-start gap-3">
-                              <BadgeCheck className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                              <div>
-                                <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1.5">
-                                  Is this your wallet?
-                                </h4>
-                                <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
-                                  If correct, continue to set a new password.
-                                  Otherwise, go back and verify your recovery
-                                  phrase.
-                                </p>
+                  {/* Forgot Wallet Flow - Step 1: Enter Recovery Phrase */}
+                  {recoveryMode === "forgot-wallet" && currentStep === 1 && (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                        <div className="flex items-start gap-2">
+                          <Search className="h-3.5 w-3.5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-gray-900 dark:text-white">
+                            Enter your recovery phrase and we&apos;ll locate
+                            your wallet
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                          <KeyRound className="h-3 w-3" />
+                          Recovery Phrase (12 words)
+                        </Label>
+                        <textarea
+                          className="w-full p-3 border border-gray-200 dark:border-gray-700 hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white rounded-none resize-none h-24 transition-colors cursor-text bg-white/50 dark:bg-gray-800/50 font-mono text-xs placeholder:text-xs focus:outline-none"
+                          placeholder="Enter your 12-word recovery phrase separated by spaces"
+                          value={recoveryPhrase}
+                          onChange={(e) => {
+                            setRecoveryPhrase(e.target.value);
+                            if (recoveryPhraseError) setRecoveryPhraseError("");
+                          }}
+                        />
+                        <div className="flex items-center justify-between text-xs">
+                          <span
+                            className={
+                              phraseWords.length === 12
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-gray-500 dark:text-gray-400"
+                            }
+                          >
+                            {phraseWords.length} / 12 words
+                          </span>
+                          {phraseWords.length === 12 && (
+                            <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Valid count
+                            </span>
+                          )}
+                        </div>
+                        {recoveryPhraseError && (
+                          <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            {recoveryPhraseError}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Word Preview Grid */}
+                      {phraseWords.length > 0 && (
+                        <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Word Preview
+                          </h4>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {phraseWords.slice(0, 12).map((word, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-1.5 p-1.5 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700"
+                              >
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {index + 1}.
+                                </span>
+                                <span className="text-xs font-mono font-medium text-gray-900 dark:text-white truncate">
+                                  {word}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Step 2: Known Wallet - Recovery Phrase */}
+                  {recoveryMode === "known-wallet" && currentStep === 2 && (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-3.5 w-3.5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-gray-900 dark:text-white">
+                            Enter your recovery phrase exactly as provided. All
+                            12 words in order.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                          <KeyRound className="h-3 w-3" />
+                          Recovery Phrase (12 words)
+                        </Label>
+                        <textarea
+                          className="w-full p-3 border border-gray-200 dark:border-gray-700 hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white rounded-none resize-none h-24 transition-colors cursor-text bg-white/50 dark:bg-gray-800/50 font-mono text-xs placeholder:text-xs focus:outline-none"
+                          placeholder="Enter your 12-word recovery phrase separated by spaces"
+                          value={recoveryPhrase}
+                          onChange={(e) => setRecoveryPhrase(e.target.value)}
+                        />
+                        <div className="flex items-center justify-between text-xs">
+                          <span
+                            className={
+                              phraseWords.length === 12
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-gray-500 dark:text-gray-400"
+                            }
+                          >
+                            {phraseWords.length} / 12 words
+                          </span>
+                          {phraseWords.length === 12 && (
+                            <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Valid count
+                            </span>
+                          )}
+                        </div>
+                        {recoveryPhraseError && (
+                          <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            {recoveryPhraseError}
+                          </p>
+                        )}
+                      </div>
+
+                      {phraseWords.length > 0 && (
+                        <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Word Preview
+                          </h4>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {phraseWords.slice(0, 12).map((word, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-1.5 p-1.5 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700"
+                              >
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {index + 1}.
+                                </span>
+                                <span className="text-xs font-mono font-medium text-gray-900 dark:text-white truncate">
+                                  {word}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Step 2: Forgot Wallet - Confirm Found Wallet */}
+                  {recoveryMode === "forgot-wallet" &&
+                    currentStep === 2 &&
+                    recoveredWallet && (
+                      <div className="space-y-4">
+                        <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-gray-900 dark:text-white">
+                              Wallet found! Confirm this is correct before
+                              proceeding
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="p-4 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-gray-900 dark:bg-white">
+                              <Wallet className="h-5 w-5 text-white dark:text-gray-900" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                {recoveredWallet.name}
+                              </h3>
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-between p-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                                    Address
+                                  </span>
+                                  <span className="text-xs font-mono font-medium text-gray-900 dark:text-white">
+                                    {formatAddress(recoveredWallet.address)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      )}
-
-                    {/* Known Wallet Flow - Step 2: Recovery Phrase */}
-                    {recoveryMode === "known-wallet" && currentStep === 2 && (
-                      <div className="space-y-5">
-                        <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
-                          <AlertTriangle className="h-4 w-4 text-blue-600" />
-                          <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
-                            Enter your recovery phrase exactly as provided. All
-                            12 words in order.
-                          </AlertDescription>
-                        </Alert>
-
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="recovery-phrase"
-                            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-                          >
-                            <KeyRound className="h-4 w-4" />
-                            Recovery Phrase (12 words)
-                          </Label>
-                          <textarea
-                            id="recovery-phrase"
-                            className="w-full p-4 border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 rounded-xl resize-none h-32 transition-colors cursor-text bg-white/50 dark:bg-gray-800/50 font-mono text-sm placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                            placeholder="Enter your 12-word recovery phrase separated by spaces&#10;Example: word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12"
-                            value={recoveryPhrase}
-                            onChange={(e) => setRecoveryPhrase(e.target.value)}
-                          />
-                          <div className="flex items-center justify-between text-sm">
-                            <span
-                              className={`font-medium ${
-                                phraseWords.length === 12
-                                  ? "text-green-600 dark:text-green-400"
-                                  : "text-gray-500 dark:text-gray-400"
-                              }`}
-                            >
-                              {phraseWords.length} / 12 words
-                            </span>
-                            {phraseWords.length === 12 && (
-                              <motion.span
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="flex items-center gap-1.5 text-green-600 dark:text-green-400 font-medium"
-                              >
-                                <CheckCircle2 className="h-4 w-4" />
-                                Valid count
-                              </motion.span>
-                            )}
-                          </div>
-                          {recoveryPhraseError && (
-                            <motion.p
-                              initial={{ opacity: 0, y: -5 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1"
-                            >
-                              <AlertTriangle className="h-3 w-3" />
-                              {recoveryPhraseError}
-                            </motion.p>
-                          )}
-                        </div>
-
-                        {/* Word Preview Grid */}
-                        <AnimatePresence>
-                          {phraseWords.length > 0 && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10, height: 0 }}
-                              animate={{ opacity: 1, y: 0, height: "auto" }}
-                              exit={{ opacity: 0, y: -10, height: 0 }}
-                              transition={{ duration: 0.4 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="p-4 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-gray-200 dark:border-gray-700">
-                                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                                  Word Preview
-                                </h4>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                                  {phraseWords
-                                    .slice(0, 12)
-                                    .map((word, index) => (
-                                      <motion.div
-                                        key={index}
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: index * 0.03 }}
-                                        className="flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-                                      >
-                                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                                          {index + 1}.
-                                        </span>
-                                        <span className="text-xs font-mono font-medium text-gray-900 dark:text-gray-100 truncate">
-                                          {word}
-                                        </span>
-                                      </motion.div>
-                                    ))}
-                                </div>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
                       </div>
                     )}
 
-                    {/* Step 3: New Password (Both Flows) */}
-                    {currentStep === 3 && (
-                      <div className="space-y-5">
-                        <Alert className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          <AlertDescription className="text-sm text-green-800 dark:text-green-200">
+                  {/* Step 3: New Password (Both Flows) */}
+                  {currentStep === 3 && (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-gray-900 dark:text-white">
                             {recoveryMode === "forgot-wallet"
                               ? "Wallet verified! Create a new secure password"
                               : "Recovery verified! Create a new secure password"}
-                          </AlertDescription>
-                        </Alert>
-
-                        <div className="space-y-4">
-                          <div>
-                            <Label
-                              htmlFor="new-password"
-                              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                              <Lock className="h-4 w-4" />
-                              New Password
-                            </Label>
-                            <div className="relative mt-1">
-                              <Input
-                                id="new-password"
-                                type={showNewPassword ? "text" : "password"}
-                                placeholder="Minimum 8 characters"
-                                value={newPassword}
-                                onFocus={() => {
-                                  setPasswordFocused(true);
-                                  if (newPasswordError) setNewPasswordError("");
-                                }}
-                                onBlur={() => setPasswordFocused(false)}
-                                onChange={(e) => {
-                                  setNewPassword(e.target.value);
-                                  if (newPasswordError) setNewPasswordError("");
-                                }}
-                                className="!h-10 pr-10 border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50 text-sm placeholder:text-sm"
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-0 top-0 h-10 w-10 cursor-pointer hover:bg-transparent"
-                                onClick={() =>
-                                  setShowNewPassword(!showNewPassword)
-                                }
-                              >
-                                {showNewPassword ? (
-                                  <EyeOff className="h-4 w-4" />
-                                ) : (
-                                  <Eye className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-
-                            {/* Password Strength Indicator */}
-                            <motion.div
-                              initial={false}
-                              animate={
-                                passwordFocused || newPassword.length > 0
-                                  ? {
-                                      height: "auto",
-                                      opacity: 1,
-                                      marginTop: 16,
-                                    }
-                                  : { height: 0, opacity: 0, marginTop: 0 }
-                              }
-                              transition={{ duration: 0.35, ease: "easeInOut" }}
-                              className="overflow-hidden"
-                            >
-                              <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/80 shadow-sm px-4 py-3 space-y-2">
-                                <div className="flex items-center gap-2 text-xs">
-                                  <motion.span
-                                    animate={{
-                                      scale: passwordChecks.length ? 1.2 : 1,
-                                      color: passwordChecks.length
-                                        ? "#22c55e"
-                                        : "#ef4444",
-                                    }}
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 300,
-                                    }}
-                                  >
-                                    <Check
-                                      className={`h-4 w-4 ${passwordChecks.length ? "text-green-500" : "text-red-500"}`}
-                                    />
-                                  </motion.span>
-                                  <span className="text-sm font-medium">
-                                    At least 8 characters
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs">
-                                  <motion.span
-                                    animate={{
-                                      scale: passwordChecks.uppercase ? 1.2 : 1,
-                                      color: passwordChecks.uppercase
-                                        ? "#22c55e"
-                                        : "#ef4444",
-                                    }}
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 300,
-                                    }}
-                                  >
-                                    <Check
-                                      className={`h-4 w-4 ${passwordChecks.uppercase ? "text-green-500" : "text-red-500"}`}
-                                    />
-                                  </motion.span>
-                                  <span className="text-sm font-medium">
-                                    One uppercase letter
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs">
-                                  <motion.span
-                                    animate={{
-                                      scale: passwordChecks.special ? 1.2 : 1,
-                                      color: passwordChecks.special
-                                        ? "#22c55e"
-                                        : "#ef4444",
-                                    }}
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 300,
-                                    }}
-                                  >
-                                    <Check
-                                      className={`h-4 w-4 ${passwordChecks.special ? "text-green-500" : "text-red-500"}`}
-                                    />
-                                  </motion.span>
-                                  <span className="text-sm font-medium">
-                                    One special character
-                                  </span>
-                                </div>
-                              </div>
-                            </motion.div>
-
-                            {newPasswordError && (
-                              <motion.p
-                                initial={{ opacity: 0, y: -5 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1"
-                              >
-                                <AlertTriangle className="h-3 w-3" />
-                                {newPasswordError}
-                              </motion.p>
-                            )}
-                          </div>
-
-                          <div>
-                            <Label
-                              htmlFor="confirm-password"
-                              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                              <Lock className="h-4 w-4" />
-                              Confirm New Password
-                            </Label>
-                            <div className="relative mt-1">
-                              <Input
-                                id="confirm-password"
-                                type={showConfirmPassword ? "text" : "password"}
-                                placeholder="Re-enter your password"
-                                value={confirmPassword}
-                                onFocus={() => {
-                                  if (confirmPasswordError)
-                                    setConfirmPasswordError("");
-                                }}
-                                onChange={(e) => {
-                                  setConfirmPassword(e.target.value);
-                                  if (confirmPasswordError)
-                                    setConfirmPasswordError("");
-                                }}
-                                className="!h-10 pr-10 border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50 text-sm placeholder:text-sm"
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-0 top-0 h-10 w-10 cursor-pointer hover:bg-transparent"
-                                onClick={() =>
-                                  setShowConfirmPassword(!showConfirmPassword)
-                                }
-                              >
-                                {showConfirmPassword ? (
-                                  <EyeOff className="h-4 w-4" />
-                                ) : (
-                                  <Eye className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                            {confirmPasswordError && (
-                              <motion.p
-                                initial={{ opacity: 0, y: -5 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1"
-                              >
-                                <AlertTriangle className="h-3 w-3" />
-                                {confirmPasswordError}
-                              </motion.p>
-                            )}
-                          </div>
-
-                          <div className="p-4 bg-blue-50/50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                            <div className="flex items-start gap-3">
-                              <BadgeCheck className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                              <div>
-                                <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1.5">
-                                  Password Tips
-                                </h4>
-                                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 leading-relaxed">
-                                  <li>
-                                    • Use at least 8 characters (12+
-                                    recommended)
-                                  </li>
-                                  <li>• Mix uppercase and lowercase letters</li>
-                                  <li>
-                                    • Include numbers and special characters
-                                  </li>
-                                  <li>• Avoid common words or personal info</li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
+                          </p>
                         </div>
                       </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
 
-                {/* Navigation Buttons */}
-                <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-                  {currentStep === 0 ? (
-                    <Link href="/login">
-                      <Button
-                        variant="outline"
-                        className="flex items-center gap-1.5 cursor-pointer border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs h-9 px-3"
-                      >
-                        <ArrowLeft className="h-3.5 w-3.5" />
-                        Back to Login
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={prevStep}
-                      disabled={isLoading || isRecoveringWallet}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed h-9"
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                      {currentStep === 1 ? "Change Method" : "Previous"}
-                    </Button>
-                  )}
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                            <Lock className="h-3 w-3" />
+                            New Password
+                          </Label>
+                          <div className="relative mt-1">
+                            <Input
+                              type={showNewPassword ? "text" : "password"}
+                              placeholder="Minimum 8 characters"
+                              value={newPassword}
+                              onFocus={() => {
+                                setPasswordFocused(true);
+                                if (newPasswordError) setNewPasswordError("");
+                              }}
+                              onBlur={() => setPasswordFocused(false)}
+                              onChange={(e) => {
+                                setNewPassword(e.target.value);
+                                if (newPasswordError) setNewPasswordError("");
+                              }}
+                              className="h-9 pr-9 border rounded-none bg-white/50 dark:bg-gray-800/50 text-xs placeholder:text-xs hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-colors cursor-text"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-9 w-9 cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900"
+                              onClick={() =>
+                                setShowNewPassword(!showNewPassword)
+                              }
+                            >
+                              {showNewPassword ? (
+                                <EyeOff className="h-3.5 w-3.5" />
+                              ) : (
+                                <Eye className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </div>
 
-                  {currentStep === 0 ? (
-                    <div />
-                  ) : currentStep < totalSteps ? (
-                    <Button
-                      type="button"
-                      onClick={handleContinue}
-                      disabled={isRecoveringWallet || isLoading}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-9"
-                    >
-                      {isRecoveringWallet || isLoading ? (
-                        <>
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                          {isRecoveringWallet
-                            ? "Finding Wallet..."
-                            : "Verifying..."}
-                        </>
-                      ) : (
-                        <>
-                          {recoveryMode === "forgot-wallet" &&
-                          currentStep === 1 ? (
-                            <>
-                              <Search className="h-3.5 w-3.5" />
-                              Find My Wallet
-                            </>
-                          ) : (
-                            <>
-                              Continue
-                              <ChevronRight className="h-3.5 w-3.5" />
-                            </>
+                          {/* Password Strength Indicator */}
+                          <motion.div
+                            initial={false}
+                            animate={
+                              passwordFocused || newPassword.length > 0
+                                ? { height: "auto", opacity: 1, marginTop: 12 }
+                                : { height: 0, opacity: 0, marginTop: 0 }
+                            }
+                            transition={{ duration: 0.3 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 rounded-none px-3 py-2 space-y-1.5">
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <Check
+                                  className={`h-3.5 w-3.5 ${passwordChecks.length ? "text-green-500" : "text-red-500"}`}
+                                />
+                                <span className="text-xs">
+                                  At least 8 characters
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <Check
+                                  className={`h-3.5 w-3.5 ${passwordChecks.uppercase ? "text-green-500" : "text-red-500"}`}
+                                />
+                                <span className="text-xs">
+                                  One uppercase letter
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <Check
+                                  className={`h-3.5 w-3.5 ${passwordChecks.special ? "text-green-500" : "text-red-500"}`}
+                                />
+                                <span className="text-xs">
+                                  One special character
+                                </span>
+                              </div>
+                            </div>
+                          </motion.div>
+
+                          {newPasswordError && (
+                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              {newPasswordError}
+                            </p>
                           )}
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={handleResetPassword}
-                      disabled={!isStepValid(totalSteps) || isLoading}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-600 hover:bg-green-700 text-xs text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-9"
-                    >
-                      {isLoading ? (
-                        <>
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                          Resetting...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Reset Password
-                        </>
-                      )}
-                    </Button>
+                        </div>
+
+                        <div>
+                          <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                            <Lock className="h-3 w-3" />
+                            Confirm New Password
+                          </Label>
+                          <div className="relative mt-1">
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="Re-enter your password"
+                              value={confirmPassword}
+                              onFocus={() => {
+                                if (confirmPasswordError)
+                                  setConfirmPasswordError("");
+                              }}
+                              onChange={(e) => {
+                                setConfirmPassword(e.target.value);
+                                if (confirmPasswordError)
+                                  setConfirmPasswordError("");
+                              }}
+                              className="h-9 pr-9 border rounded-none bg-white/50 dark:bg-gray-800/50 text-xs placeholder:text-xs hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-colors cursor-text"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-9 w-9 cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900"
+                              onClick={() =>
+                                setShowConfirmPassword(!showConfirmPassword)
+                              }
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-3.5 w-3.5" />
+                              ) : (
+                                <Eye className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </div>
+                          {confirmPasswordError && (
+                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              {confirmPasswordError}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Navigation Buttons */}
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                {currentStep === 0 ? (
+                  <Link href="/login">
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-1.5 cursor-pointer border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-xs h-9 px-3 rounded-none"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      Back to Login
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={prevStep}
+                    disabled={isLoading || isRecoveringWallet}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed h-9 rounded-none cursor-pointer"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    {currentStep === 1 ? "Change Method" : "Previous"}
+                  </Button>
+                )}
+
+                {currentStep === 0 ? (
+                  <div />
+                ) : currentStep < totalSteps ? (
+                  <Button
+                    type="button"
+                    onClick={handleContinue}
+                    disabled={isRecoveringWallet || isLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-9 rounded-none"
+                  >
+                    {isRecoveringWallet || isLoading ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        {isRecoveringWallet
+                          ? "Finding Wallet..."
+                          : "Verifying..."}
+                      </>
+                    ) : (
+                      <>
+                        {recoveryMode === "forgot-wallet" &&
+                        currentStep === 1 ? (
+                          <>
+                            <Search className="h-3.5 w-3.5" />
+                            Find My Wallet
+                          </>
+                        ) : (
+                          <>
+                            Continue
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleResetPassword}
+                    disabled={!isStepValid(totalSteps) || isLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-9 rounded-none"
+                  >
+                    {isLoading ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        Resetting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Reset Password
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
 
             {/* Help Links */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mt-4 text-center space-y-1.5"
-            >
+            <div className="mt-4 text-center space-y-1">
               <p className="text-xs text-gray-600 dark:text-gray-400">
                 Remember your password?{" "}
                 <Link
                   href="/login"
-                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-semibold hover:underline transition-colors cursor-pointer"
+                  className="text-gray-900 dark:text-white font-medium hover:underline transition-colors cursor-pointer"
                 >
                   Sign In
                 </Link>
@@ -1735,72 +1565,25 @@ export default function ForgotPasswordPage() {
                 Don&apos;t have a wallet?{" "}
                 <Link
                   href="/register"
-                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-semibold hover:underline transition-colors cursor-pointer"
+                  className="text-gray-900 dark:text-white font-medium hover:underline transition-colors cursor-pointer"
                 >
                   Create New Wallet
                 </Link>
               </p>
-            </motion.div>
+            </div>
           </div>
         </div>
 
         {/* Network Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="fixed bottom-4 right-4 hidden sm:block"
-        >
-          <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer">
+        <div className="fixed bottom-4 right-4 hidden sm:block">
+          <div className="bg-white dark:bg-gray-900 backdrop-blur-sm border border-gray-200 dark:border-gray-700 px-4 py-2 transition-all duration-200 cursor-pointer rounded-none">
             <div className="flex items-center gap-1.5 text-xs">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-gray-600 dark:text-gray-400 font-medium">
+              <div className="w-1.5 h-1.5 bg-green-500 animate-pulse" />
+              <span className="text-gray-600 dark:text-gray-400">
                 Hyperledger Network Online
               </span>
             </div>
           </div>
-        </motion.div>
-
-        {/* Background Decorations */}
-        <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-          <motion.div
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: easeInOut,
-            }}
-            className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"
-          />
-          <motion.div
-            animate={{
-              scale: [1, 1.3, 1],
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-              ease: easeInOut,
-              delay: 1,
-            }}
-            className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl"
-          />
-          <motion.div
-            animate={{
-              scale: [1, 1.4, 1],
-              opacity: [0.2, 0.4, 0.2],
-            }}
-            transition={{
-              duration: 12,
-              repeat: Infinity,
-              ease: easeInOut,
-              delay: 2,
-            }}
-            className="absolute top-3/4 left-3/4 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl"
-          />
         </div>
       </div>
     </AuthRouteGuard>

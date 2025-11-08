@@ -32,38 +32,36 @@ import {
   SelectValue,
 } from "@/components/_ui/select";
 import {
-  BarChart3,
-  Wallet,
-  Plus,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Copy,
-  RefreshCw,
-  CreditCard,
-  Building2,
-  History,
-  Eye,
-  EyeOff,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Shield,
-  TrendingUp,
-  TrendingDown,
-  Zap,
-  Activity,
-  Sparkles,
-  Target,
-  Download,
-  Filter,
-  Banknote,
-  Coins,
-  PiggyBank,
-  Send,
-  Receipt,
-  Star,
-  Loader2,
-} from "lucide-react";
+  ChartBarIcon,
+  WalletIcon,
+  PlusIcon,
+  ArrowUpRightIcon,
+  ArrowDownLeftIcon,
+  DocumentDuplicateIcon,
+  ArrowPathIcon,
+  CreditCardIcon,
+  BuildingLibraryIcon,
+  ClockIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  ShieldCheckIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  BoltIcon,
+  ChartPieIcon,
+  SparklesIcon,
+  ArrowDownTrayIcon,
+  FunnelIcon,
+  BanknotesIcon,
+  CurrencyDollarIcon,
+  BuildingStorefrontIcon,
+  PaperAirplaneIcon,
+  ReceiptPercentIcon,
+  StarIcon,
+  ArrowsRightLeftIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { toast } from "sonner";
@@ -282,15 +280,15 @@ export default function WalletPage() {
   const getTransactionIcon = (type: string) => {
     switch (type) {
       case "deposit":
-        return <ArrowDownLeft className="w-5 h-5 text-green-600" />;
+        return <ArrowDownLeftIcon className="w-5 h-5 text-green-600" />;
       case "received":
-        return <ArrowDownLeft className="w-5 h-5 text-blue-600" />;
+        return <ArrowDownLeftIcon className="w-5 h-5 text-blue-600" />;
       case "withdrawal":
-        return <ArrowUpRight className="w-5 h-5 text-orange-600" />;
+        return <ArrowUpRightIcon className="w-5 h-5 text-orange-600" />;
       case "payment":
-        return <Send className="w-5 h-5 text-red-600" />;
+        return <PaperAirplaneIcon className="w-5 h-5 text-red-600" />;
       default:
-        return <History className="w-5 h-5 text-gray-600" />;
+        return <ClockIcon className="w-5 h-5 text-gray-600" />;
     }
   };
 
@@ -300,28 +298,28 @@ export default function WalletPage() {
         return {
           color:
             "bg-green-100/80 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-          icon: CheckCircle,
+          icon: CheckCircleIcon,
           label: "Completed",
         };
       case "pending":
         return {
           color:
             "bg-yellow-100/80 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-          icon: Clock,
+          icon: ClockIcon,
           label: "Pending",
         };
       case "failed":
         return {
           color:
             "bg-red-100/80 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-          icon: AlertCircle,
+          icon: ExclamationCircleIcon,
           label: "Failed",
         };
       default:
         return {
           color:
             "bg-gray-100/80 text-gray-700 dark:bg-gray-800/30 dark:text-gray-300",
-          icon: Clock,
+          icon: ClockIcon,
           label: "Unknown",
         };
     }
@@ -330,21 +328,21 @@ export default function WalletPage() {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "Funding":
-        return <PiggyBank className="w-4 h-4" />;
+        return <BuildingStorefrontIcon className="w-4 h-4" />;
       case "Shopping":
-        return <Receipt className="w-4 h-4" />;
+        return <ReceiptPercentIcon className="w-4 h-4" />;
       case "Services":
-        return <Star className="w-4 h-4" />;
+        return <StarIcon className="w-4 h-4" />;
       case "Rewards":
-        return <Sparkles className="w-4 h-4" />;
+        return <SparklesIcon className="w-4 h-4" />;
       case "Transfer":
-        return <Send className="w-4 h-4" />;
+        return <PaperAirplaneIcon className="w-4 h-4" />;
       case "Withdrawal":
-        return <Banknote className="w-4 h-4" />;
+        return <BanknotesIcon className="w-4 h-4" />;
       case "Refund":
-        return <RefreshCw className="w-4 h-4" />;
+        return <ArrowPathIcon className="w-4 h-4" />;
       default:
-        return <Activity className="w-4 h-4" />;
+        return <ChartPieIcon className="w-4 h-4" />;
     }
   };
 
@@ -384,7 +382,7 @@ export default function WalletPage() {
         <Card className="w-full max-w-md text-center border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
           <CardContent className="pt-8 pb-6">
             <div className="h-20 w-20 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-lg">
-              <Wallet className="w-10 h-10 text-white" />
+              <WalletIcon className="w-10 h-10 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
               No Wallet Connected
@@ -393,7 +391,7 @@ export default function WalletPage() {
               Please connect your wallet to view balance and transactions
             </p>
             <button className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors cursor-pointer shadow-lg hover:shadow-xl mx-auto">
-              <Wallet className="w-4 h-4" />
+              <WalletIcon className="w-4 h-4" />
               Connect Wallet
             </button>
           </CardContent>
@@ -407,7 +405,7 @@ export default function WalletPage() {
       title: "Current Balance",
       value: showBalance ? `$${balance.toFixed(2)}` : "••••••",
       subtitle: "Available funds",
-      icon: Wallet,
+      icon: WalletIcon,
       iconColor: "text-blue-600",
       iconBg: "bg-blue-100 dark:bg-blue-900/30",
     },
@@ -415,7 +413,7 @@ export default function WalletPage() {
       title: "Total Income",
       value: `$${totalIncome.toFixed(2)}`,
       subtitle: "All time received",
-      icon: TrendingUp,
+      icon: ArrowTrendingUpIcon,
       iconColor: "text-green-600",
       iconBg: "bg-green-100 dark:bg-green-900/30",
     },
@@ -423,7 +421,7 @@ export default function WalletPage() {
       title: "Total Expenses",
       value: `$${totalExpenses.toFixed(2)}`,
       subtitle: "All time spent",
-      icon: TrendingDown,
+      icon: ArrowTrendingDownIcon,
       iconColor: "text-red-600",
       iconBg: "bg-red-100 dark:bg-red-900/30",
     },
@@ -431,7 +429,7 @@ export default function WalletPage() {
       title: "Pending",
       value: pendingTransactions,
       subtitle: "Transactions processing",
-      icon: Clock,
+      icon: ClockIcon,
       iconColor: "text-orange-600",
       iconBg: "bg-orange-100 dark:bg-orange-900/30",
     },
@@ -441,7 +439,7 @@ export default function WalletPage() {
     {
       label: "Add Funds",
       sublabel: "Deposit money",
-      icon: Plus,
+      icon: PlusIcon,
       iconColor: "text-green-600",
       iconBg: "bg-green-100 dark:bg-green-900/30",
       onClick: () => setAddFundsOpen(true),
@@ -449,7 +447,7 @@ export default function WalletPage() {
     {
       label: "Send",
       sublabel: "Transfer funds",
-      icon: Send,
+      icon: PaperAirplaneIcon,
       iconColor: "text-blue-600",
       iconBg: "bg-blue-100 dark:bg-blue-900/30",
       onClick: () => setSendOpen(true),
@@ -457,7 +455,7 @@ export default function WalletPage() {
     {
       label: "Withdraw",
       sublabel: "Cash out",
-      icon: ArrowUpRight,
+      icon: ArrowUpRightIcon,
       iconColor: "text-orange-600",
       iconBg: "bg-orange-100 dark:bg-orange-900/30",
       onClick: () => setWithdrawOpen(true),
@@ -465,7 +463,7 @@ export default function WalletPage() {
     {
       label: "Refresh",
       sublabel: "Update data",
-      icon: RefreshCw,
+      icon: ArrowPathIcon,
       iconColor: "text-purple-600",
       iconBg: "bg-purple-100 dark:bg-purple-900/30",
       onClick: handleRefresh,
@@ -499,14 +497,11 @@ export default function WalletPage() {
                 Welcome back, {user?.name || "User"}! 👋
               </p>
               <div className="flex items-center gap-2 mt-2">
-                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm backdrop-blur-sm text-xs">
+                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 backdrop-blur-sm text-xs border-0">
                   Wallet Connected
                 </Badge>
-                <Badge
-                  variant="outline"
-                  className="border-blue-700 bg-transparent text-blue-700 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-950 shadow-sm backdrop-blur-sm flex items-center gap-1 text-xs"
-                >
-                  <Shield className="h-3 w-3 mr-1 text-blue-500 dark:text-blue-300" />
+                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 backdrop-blur-sm flex items-center gap-1 text-xs border-0">
+                  <ShieldCheckIcon className="h-3 w-3" />
                   Blockchain Secured
                 </Badge>
               </div>
@@ -518,19 +513,19 @@ export default function WalletPage() {
                 variant="outline"
                 className="hidden lg:flex items-center gap-2 text-xs"
               >
-                <RefreshCw
+                <ArrowPathIcon
                   className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
                 />
                 Refresh
               </Button>
               <button
                 onClick={() => setShowBalance(!showBalance)}
-                className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs font-medium cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300 text-xs font-medium cursor-pointer"
               >
                 {showBalance ? (
-                  <EyeOff className="w-4 h-4" />
+                  <EyeSlashIcon className="w-4 h-4" />
                 ) : (
-                  <Eye className="w-4 h-4" />
+                  <EyeIcon className="w-4 h-4" />
                 )}
                 {showBalance ? "Hide" : "Show"} Balance
               </button>
@@ -557,7 +552,7 @@ export default function WalletPage() {
                       {stat.title}
                     </CardTitle>
                     <div
-                      className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
+                      className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center`}
                     >
                       <Icon className={`h-5 w-5 ${stat.iconColor}`} />
                     </div>
@@ -588,7 +583,7 @@ export default function WalletPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-base">
                   <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                    <Wallet className="h-4 w-4 text-purple-600" />
+                    <WalletIcon className="h-4 w-4 text-purple-600" />
                   </div>
                   Wallet Control
                 </CardTitle>
@@ -622,7 +617,7 @@ export default function WalletPage() {
                       onClick={() => copyToClipboard(currentWallet.address)}
                       className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
                     >
-                      <Copy className="w-4 h-4" />
+                      <DocumentDuplicateIcon className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -632,7 +627,7 @@ export default function WalletPage() {
                 {/* Security Status */}
                 <div className="p-4 bg-green-50/80 dark:bg-green-950/30 backdrop-blur-sm rounded-lg border border-green-100/50 dark:border-green-900/30">
                   <div className="flex items-center gap-2 mb-2">
-                    <Shield className="h-4 w-4 text-green-600" />
+                    <ShieldCheckIcon className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-semibold text-green-800 dark:text-green-300">
                       Security Status
                     </span>
@@ -650,7 +645,7 @@ export default function WalletPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-base">
                     <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                      <History className="h-4 w-4 text-indigo-600" />
+                      <ClockIcon className="h-4 w-4 text-indigo-600" />
                     </div>
                     Transaction History
                   </CardTitle>
@@ -678,7 +673,7 @@ export default function WalletPage() {
                 {filteredTransactions.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm mb-4">
-                      <History className="h-8 w-8 text-gray-400" />
+                      <ClockIcon className="h-8 w-8 text-gray-400" />
                     </div>
                     <p className="text-gray-600 dark:text-gray-400 mb-4">
                       {selectedFilter === "all"
@@ -695,9 +690,9 @@ export default function WalletPage() {
                     ) : (
                       <button
                         onClick={() => setAddFundsOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors mx-auto shadow-lg hover:shadow-xl text-xs"
+                        className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors mx-auto text-xs"
                       >
-                        <Plus className="h-4 w-4" />
+                        <PlusIcon className="h-4 w-4" />
                         Add Funds
                       </button>
                     )}
@@ -747,13 +742,16 @@ export default function WalletPage() {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <Badge
-                                  className={`${statusConfig.color} flex items-center gap-1 text-xs shadow-sm backdrop-blur-sm`}
+                                  className={`${statusConfig.color} flex items-center gap-1 text-xs backdrop-blur-sm border-0`}
                                 >
                                   <StatusIcon className="h-3 w-3" />
                                   {statusConfig.label}
                                 </Badge>
                                 {transaction.category && (
-                                  <Badge variant="outline" className="text-xs">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs border-0"
+                                  >
                                     {transaction.category}
                                   </Badge>
                                 )}
@@ -784,7 +782,7 @@ export default function WalletPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
                 <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                  <Zap className="h-4 w-4 text-indigo-600" />
+                  <BoltIcon className="h-4 w-4 text-indigo-600" />
                 </div>
                 Quick Actions
               </CardTitle>
@@ -798,8 +796,8 @@ export default function WalletPage() {
                   onClick={() => setAddFundsOpen(true)}
                   className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
                 >
-                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                    <Plus className="h-6 w-6 text-green-600" />
+                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <PlusIcon className="h-6 w-6 text-green-600" />
                   </div>
                   <div className="text-center">
                     <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
@@ -814,8 +812,8 @@ export default function WalletPage() {
                   onClick={() => setSendOpen(true)}
                   className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
                 >
-                  <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                    <Send className="h-6 w-6 text-blue-600" />
+                  <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <PaperAirplaneIcon className="h-6 w-6 text-blue-600" />
                   </div>
                   <div className="text-center">
                     <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
@@ -830,8 +828,8 @@ export default function WalletPage() {
                   onClick={() => setWithdrawOpen(true)}
                   className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
                 >
-                  <div className="h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                    <ArrowUpRight className="h-6 w-6 text-orange-600" />
+                  <div className="h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <ArrowUpRightIcon className="h-6 w-6 text-orange-600" />
                   </div>
                   <div className="text-center">
                     <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
@@ -846,8 +844,8 @@ export default function WalletPage() {
                   onClick={handleRefresh}
                   className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group"
                 >
-                  <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                    <RefreshCw className="h-6 w-6 text-purple-600" />
+                  <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <ArrowPathIcon className="h-6 w-6 text-purple-600" />
                   </div>
                   <div className="text-center">
                     <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
@@ -870,7 +868,7 @@ export default function WalletPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
-                  <Plus className="h-4 w-4 text-white" />
+                  <PlusIcon className="h-4 w-4 text-white" />
                 </div>
                 Add Funds to Wallet
               </DialogTitle>
@@ -899,25 +897,25 @@ export default function WalletPage() {
                   <SelectContent>
                     <SelectItem value="Bank Transfer">
                       <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4" />
+                        <BuildingLibraryIcon className="w-4 h-4" />
                         Bank Transfer
                       </div>
                     </SelectItem>
                     <SelectItem value="Credit Card">
                       <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4" />
+                        <CreditCardIcon className="w-4 h-4" />
                         Credit Card
                       </div>
                     </SelectItem>
                     <SelectItem value="Debit Card">
                       <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4" />
+                        <CreditCardIcon className="w-4 h-4" />
                         Debit Card
                       </div>
                     </SelectItem>
                     <SelectItem value="Cryptocurrency">
                       <div className="flex items-center gap-2">
-                        <Coins className="w-4 h-4" />
+                        <CurrencyDollarIcon className="w-4 h-4" />
                         Cryptocurrency
                       </div>
                     </SelectItem>
@@ -938,7 +936,9 @@ export default function WalletPage() {
                 disabled={isLoading}
                 className="px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white font-medium transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2"
               >
-                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isLoading && (
+                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                )}
                 {isLoading ? "Processing..." : "Add Funds"}
               </button>
             </DialogFooter>
@@ -951,7 +951,7 @@ export default function WalletPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                  <Send className="h-4 w-4 text-white" />
+                  <PaperAirplaneIcon className="h-4 w-4 text-white" />
                 </div>
                 Send Funds
               </DialogTitle>
@@ -1002,7 +1002,9 @@ export default function WalletPage() {
                 disabled={isLoading}
                 className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2"
               >
-                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isLoading && (
+                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                )}
                 {isLoading ? "Processing..." : "Send Funds"}
               </button>
             </DialogFooter>
@@ -1015,7 +1017,7 @@ export default function WalletPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center">
-                  <ArrowUpRight className="h-4 w-4 text-white" />
+                  <ArrowUpRightIcon className="h-4 w-4 text-white" />
                 </div>
                 Withdraw Funds
               </DialogTitle>
@@ -1063,7 +1065,9 @@ export default function WalletPage() {
                 disabled={isLoading}
                 className="px-4 py-2 rounded-md bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2"
               >
-                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isLoading && (
+                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                )}
                 {isLoading ? "Processing..." : "Withdraw"}
               </button>
             </DialogFooter>

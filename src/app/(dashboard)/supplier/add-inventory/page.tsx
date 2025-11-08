@@ -57,7 +57,9 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 
-// Categories from Inventory.js schema
+// ========================================
+// HARDCODED CATEGORIES (Matching Inventory.js schema exactly)
+// ========================================
 const inventoryCategories = [
   "Raw Material",
   "Fabric",
@@ -162,7 +164,28 @@ const patterns = [
   "Plaid",
 ];
 
-const finishes = ["Raw", "Bleached", "Dyed", "Printed", "Coated", "Plain"];
+const finishes = [
+  "Raw",
+  "Bleached",
+  "Dyed",
+  "Printed",
+  "Coated",
+  "Plain",
+  "Satin",
+  "Plain Weave",
+  "Twill",
+  "Satin Weave",
+  "Jacquard",
+  "Houndstooth",
+  "Tartan",
+  "Chevron",
+  "Geometric",
+  "Abstract",
+  "Digital",
+  "3D",
+  "Textured",
+  "Metallic",
+];
 
 const units = [
   "pieces",
@@ -207,13 +230,19 @@ export default function AddInventoryPage() {
     setIsVisible(true);
   }, []);
 
+  // ========================================
+  // UPDATED FORM DATA (Matching backend Inventory model)
+  // ========================================
   const [formData, setFormData] = useState({
+    // Basic Info
     name: "",
     description: "",
     category: "",
     subcategory: "",
     materialType: "Raw Material",
     brand: "",
+
+    // Textile Details (matching backend textileDetails structure)
     textileDetails: {
       fabricType: "",
       composition: "",
@@ -228,10 +257,14 @@ export default function AddInventoryPage() {
       shrinkage: "",
       washability: "",
     },
-    price: "",
+
+    // Pricing (matching backend field names)
+    pricePerUnit: "",
     costPrice: "",
     originalPrice: "",
     discount: "",
+
+    // Stock & Quantities
     quantity: "",
     reservedQuantity: "0",
     committedQuantity: "0",
@@ -242,34 +275,54 @@ export default function AddInventoryPage() {
     maximumQuantity: "",
     safetyStockLevel: "15",
     unit: "pieces",
+
+    // Identifiers
     sku: "",
+    internalCode: "",
+    barcode: "",
+
+    // Physical Properties
     weight: "",
     dimensions: "",
+
+    // Metadata
     tags: [],
     season: "All Season",
     countryOfOrigin: "",
     manufacturer: "",
+
+    // Supplier Info
     supplierName: "",
     supplierContact: {
       phone: "",
       email: "",
       address: "",
     },
+
+    // Quality & Compliance
     qualityGrade: "",
     certifications: [],
     isSustainable: false,
     complianceStandards: [],
+    sustainabilityCertifications: [],
+
+    // Timing
     leadTime: "7",
     estimatedDeliveryDays: "7",
     shelfLife: "",
+
+    // Media
     images: [],
+
+    // Additional
     notes: "",
-    internalCode: "",
-    barcode: "",
     carbonFootprint: "",
     recycledContent: "",
     autoReorderEnabled: false,
     isBatchTracked: false,
+
+    // Status
+    status: "active",
   });
 
   const [errors, setErrors] = useState({});
@@ -391,8 +444,8 @@ export default function AddInventoryPage() {
     if (!formData.category) newErrors.category = "Category is required";
     if (!formData.subcategory)
       newErrors.subcategory = "Subcategory is required";
-    if (!formData.price || parseFloat(formData.price) <= 0)
-      newErrors.price = "Valid price is required";
+    if (!formData.pricePerUnit || parseFloat(formData.pricePerUnit) <= 0)
+      newErrors.pricePerUnit = "Valid price is required";
     if (!formData.quantity || parseInt(formData.quantity) < 0)
       newErrors.quantity = "Valid quantity is required";
     if (!formData.textileDetails.color.trim())
@@ -419,12 +472,15 @@ export default function AddInventoryPage() {
 
   const resetForm = () => {
     setFormData({
+      // Basic Info
       name: "",
       description: "",
       category: "",
       subcategory: "",
       materialType: "Raw Material",
       brand: "",
+
+      // Textile Details (matching backend textileDetails structure)
       textileDetails: {
         fabricType: "",
         composition: "",
@@ -439,10 +495,14 @@ export default function AddInventoryPage() {
         shrinkage: "",
         washability: "",
       },
-      price: "",
+
+      // Pricing (matching backend field names)
+      pricePerUnit: "",
       costPrice: "",
       originalPrice: "",
       discount: "",
+
+      // Stock & Quantities
       quantity: "",
       reservedQuantity: "0",
       committedQuantity: "0",
@@ -453,35 +513,58 @@ export default function AddInventoryPage() {
       maximumQuantity: "",
       safetyStockLevel: "15",
       unit: "pieces",
+
+      // Identifiers
       sku: "",
+      internalCode: "",
+      barcode: "",
+
+      // Physical Properties
       weight: "",
       dimensions: "",
+
+      // Metadata
       tags: [],
       season: "All Season",
       countryOfOrigin: "",
       manufacturer: "",
+
+      // Supplier Info
       supplierName: "",
       supplierContact: { phone: "", email: "", address: "" },
+
+      // Quality & Compliance
       qualityGrade: "",
       certifications: [],
       isSustainable: false,
       complianceStandards: [],
+      sustainabilityCertifications: [],
+
+      // Timing
       leadTime: "7",
       estimatedDeliveryDays: "7",
       shelfLife: "",
+
+      // Media
       images: [],
+
+      // Additional
       notes: "",
-      internalCode: "",
-      barcode: "",
       carbonFootprint: "",
       recycledContent: "",
       autoReorderEnabled: false,
       isBatchTracked: false,
+
+      // Status
+      status: "active",
     });
     setCurrentStep(1);
     setErrors({});
   };
 
+  // ========================================
+  // UPDATED SUBMIT HANDLER (API call)
+  // ========================================
   const handleSubmit = async () => {
     if (!validateForm()) {
       toast.error("Please fix the errors before submitting");
@@ -491,50 +574,173 @@ export default function AddInventoryPage() {
     setIsLoading(true);
 
     try {
-      const inventoryItem = {
-        ...formData,
-        supplierId: user?.id || "supplier1",
-        supplierWalletAddress: user?.walletAddress || "",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: "active",
-        sku: formData.sku || `INV-${Date.now()}`,
-        blockchainVerified: false,
-        isVerified: false,
-        isFeatured: false,
-        totalConsumed: 0,
-        totalReceived: parseInt(formData.quantity) || 0,
-        totalRevenue: 0,
-        views: 0,
-        averageRating: 0,
-        totalReviews: 0,
-        averageMonthlyConsumption: 0,
-        turnoverRate: 0,
-        movements: [],
-        qualityChecks: [],
-        reorderAlerts: [],
-        storageLocations: [],
-        batches: [],
-        documents: [],
-        alerts: [],
-        images: formData.images.map((url, index) => ({
-          url,
-          viewType: index === 0 ? "front" : "detail",
-          isMain: index === 0,
-        })),
-      };
+      // Prepare form data for API
+      const formDataToSend = new FormData();
 
-      const existingInventory = JSON.parse(
-        localStorage.getItem(`supplier_${user?.id}_products`) || "[]"
-      );
-      const updatedInventory = [...existingInventory, inventoryItem];
-      localStorage.setItem(
-        `supplier_${user?.id}_products`,
-        JSON.stringify(updatedInventory)
+      // Add all text fields
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("category", formData.category);
+      formDataToSend.append("subcategory", formData.subcategory);
+      formDataToSend.append("materialType", formData.materialType);
+      formDataToSend.append("brand", formData.brand);
+
+      // Add textile details as JSON string
+      formDataToSend.append(
+        "textileDetails",
+        JSON.stringify(formData.textileDetails)
       );
 
-      toast.success("Inventory item added successfully!");
-      router.push("/supplier/inventory");
+      // Add pricing
+      formDataToSend.append("pricePerUnit", formData.pricePerUnit);
+      formDataToSend.append("costPrice", formData.costPrice || "0");
+      formDataToSend.append(
+        "originalPrice",
+        formData.originalPrice || formData.pricePerUnit
+      );
+      formDataToSend.append("discount", formData.discount || "0");
+
+      // Add stock quantities
+      formDataToSend.append("quantity", formData.quantity);
+      formDataToSend.append("reservedQuantity", formData.reservedQuantity);
+      formDataToSend.append("committedQuantity", formData.committedQuantity);
+      formDataToSend.append("damagedQuantity", formData.damagedQuantity);
+      formDataToSend.append("minStockLevel", formData.minStockLevel);
+      formDataToSend.append("reorderLevel", formData.reorderLevel);
+      formDataToSend.append("reorderQuantity", formData.reorderQuantity);
+      formDataToSend.append("maximumQuantity", formData.maximumQuantity || "0");
+      formDataToSend.append("safetyStockLevel", formData.safetyStockLevel);
+      formDataToSend.append("unit", formData.unit);
+
+      // Add identifiers
+      formDataToSend.append("sku", formData.sku || `INV-${Date.now()}`);
+      formDataToSend.append("internalCode", formData.internalCode);
+      formDataToSend.append("barcode", formData.barcode);
+
+      // Add physical properties
+      formDataToSend.append("weight", formData.weight || "0");
+      formDataToSend.append("dimensions", formData.dimensions);
+
+      // Add metadata
+      formDataToSend.append("tags", JSON.stringify(formData.tags));
+      formDataToSend.append("season", formData.season);
+      formDataToSend.append("countryOfOrigin", formData.countryOfOrigin);
+      formDataToSend.append("manufacturer", formData.manufacturer);
+
+      // Add supplier info
+      formDataToSend.append("supplierName", formData.supplierName);
+      formDataToSend.append(
+        "supplierContact",
+        JSON.stringify(formData.supplierContact)
+      );
+
+      // Add quality & compliance
+      formDataToSend.append("qualityGrade", formData.qualityGrade);
+      formDataToSend.append(
+        "certifications",
+        JSON.stringify(formData.certifications)
+      );
+      formDataToSend.append("isSustainable", formData.isSustainable);
+      formDataToSend.append(
+        "complianceStandards",
+        JSON.stringify(formData.complianceStandards)
+      );
+
+      // Add timing
+      formDataToSend.append("leadTime", formData.leadTime);
+      formDataToSend.append(
+        "estimatedDeliveryDays",
+        formData.estimatedDeliveryDays
+      );
+      formDataToSend.append("shelfLife", formData.shelfLife || "0");
+
+      // Add additional fields
+      formDataToSend.append("notes", formData.notes);
+      formDataToSend.append("carbonFootprint", formData.carbonFootprint || "0");
+      formDataToSend.append("recycledContent", formData.recycledContent || "0");
+      formDataToSend.append("autoReorderEnabled", formData.autoReorderEnabled);
+      formDataToSend.append("isBatchTracked", formData.isBatchTracked);
+      formDataToSend.append("status", formData.status);
+
+      // Add images (if any were uploaded)
+      // Note: Images would be actual File objects from file input
+      // For now, we'll skip images as they're mock URLs
+
+      // Try API call first
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/inventory`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formDataToSend,
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          toast.success("Inventory item added successfully!");
+          router.push("/supplier/inventory");
+          return;
+        } else {
+          throw new Error(result.message || "Failed to add inventory item");
+        }
+      } catch (apiError) {
+        console.warn(
+          "API call failed, falling back to localStorage:",
+          apiError.message
+        );
+
+        // Fallback to localStorage if API fails
+        const inventoryItem = {
+          _id: `inv_${Date.now()}`,
+          ...formData,
+          supplierId: user?.id || "supplier1",
+          supplierWalletAddress: user?.walletAddress || "",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          sku: formData.sku || `INV-${Date.now()}`,
+          blockchainVerified: false,
+          isVerified: false,
+          isFeatured: false,
+          totalConsumed: 0,
+          totalReceived: parseInt(formData.quantity) || 0,
+          totalRevenue: 0,
+          views: 0,
+          averageRating: 0,
+          totalReviews: 0,
+          averageMonthlyConsumption: 0,
+          turnoverRate: 0,
+          movements: [],
+          qualityChecks: [],
+          reorderAlerts: [],
+          storageLocations: [],
+          batches: [],
+          documents: [],
+          alerts: [],
+          images: formData.images.map((url, index) => ({
+            url,
+            viewType: index === 0 ? "front" : "detail",
+            isMain: index === 0,
+          })),
+        };
+
+        const existingInventory = JSON.parse(
+          localStorage.getItem(`supplier_${user?.id}_products`) || "[]"
+        );
+        const updatedInventory = [...existingInventory, inventoryItem];
+        localStorage.setItem(
+          `supplier_${user?.id}_products`,
+          JSON.stringify(updatedInventory)
+        );
+
+        toast.success("Inventory item added successfully (offline mode)!");
+        router.push("/supplier/inventory");
+      }
     } catch (error) {
       toast.error("Failed to add inventory item");
       console.error("Error adding inventory:", error);
@@ -566,17 +772,17 @@ export default function AddInventoryPage() {
               <Button
                 variant="outline"
                 onClick={() => setPreviewMode(false)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 text-xs cursor-pointer h-8"
                 size="sm"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-3 w-3" />
                 Back to Edit
               </Button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   Inventory Item Preview
                 </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-base text-gray-600 dark:text-gray-400 mt-1">
                   Preview how your inventory item will appear
                 </p>
               </div>
@@ -585,12 +791,12 @@ export default function AddInventoryPage() {
               onClick={handleSubmit}
               disabled={isLoading}
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-xs h-8"
             >
               {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="h-3 w-3 animate-spin mr-2" />
               ) : (
-                <CheckCircle className="h-4 w-4 mr-2" />
+                <CheckCircle className="h-3 w-3 mr-2" />
               )}
               {isLoading ? "Adding..." : "Add to Inventory"}
             </Button>
@@ -634,10 +840,10 @@ export default function AddInventoryPage() {
                     {formData.name || "Item Name"}
                   </h2>
                   <div className="flex items-center gap-2 mb-3">
-                    <Badge className="text-xs">
+                    <Badge className="text-xs border-0">
                       {formData.category || "Category"}
                     </Badge>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs border-0">
                       {formData.subcategory || "Subcategory"}
                     </Badge>
                   </div>
@@ -653,7 +859,7 @@ export default function AddInventoryPage() {
                         Price per {formData.unit}
                       </p>
                       <p className="text-lg font-bold text-blue-600">
-                        ${formData.price || "0.00"}
+                        ${formData.pricePerUnit || "0.00"}
                       </p>
                     </div>
                     <div className="text-right">
@@ -705,7 +911,7 @@ export default function AddInventoryPage() {
                         <Badge
                           key={index}
                           variant="outline"
-                          className="bg-green-50 dark:bg-green-900/20 text-xs"
+                          className="bg-green-50 dark:bg-green-900/20 text-xs border-0"
                         >
                           <Award className="h-3 w-3 mr-1" />
                           {cert}
@@ -740,15 +946,12 @@ export default function AddInventoryPage() {
                 Add new textile materials and components to inventory
               </p>
               <div className="flex items-center gap-2 mt-2">
-                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm backdrop-blur-sm text-xs">
+                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 backdrop-blur-sm text-xs border-0">
                   <Package className="h-3 w-3 mr-1" />
                   Inventory Management
                 </Badge>
-                <Badge
-                  variant="outline"
-                  className="border-blue-700 text-blue-700 bg-transparent dark:bg-blue-950 dark:text-blue-300 dark:border-blue-950 shadow-sm backdrop-blur-sm flex items-center gap-1 text-xs"
-                >
-                  <Shield className="h-3 w-3 mr-1 text-blue-500 dark:text-blue-300" />
+                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 backdrop-blur-sm flex items-center gap-1 text-xs border-0">
+                  <Shield className="h-3 w-3" />
                   Blockchain Tracked
                 </Badge>
               </div>
@@ -758,26 +961,26 @@ export default function AddInventoryPage() {
                 variant="outline"
                 onClick={resetForm}
                 size="sm"
-                className="text-xs"
+                className="text-xs cursor-pointer h-8"
               >
-                <RotateCcw className="h-4 w-4 mr-2" />
+                <RotateCcw className="h-3 w-3 mr-2" />
                 Reset
               </Button>
               <Button
                 variant="outline"
                 onClick={saveAsDraft}
                 size="sm"
-                className="text-xs"
+                className="text-xs cursor-pointer h-8"
               >
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="h-3 w-3 mr-2" />
                 Save Draft
               </Button>
               <Button
                 onClick={() => setPreviewMode(true)}
                 size="sm"
-                className="bg-purple-600 hover:bg-purple-700 text-xs"
+                className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
               >
-                <Eye className="h-4 w-4 mr-2" />
+                <Eye className="h-3 w-3 mr-2" />
                 Preview
               </Button>
             </div>
@@ -809,7 +1012,7 @@ export default function AddInventoryPage() {
                   onClick={() => setCurrentStep(step)}
                   className={`flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer hover:shadow-md ${
                     step === currentStep
-                      ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                      ? "bg-blue-600 text-white"
                       : step < currentStep
                         ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                         : "bg-gray-100 dark:bg-gray-800 text-gray-500"
@@ -845,7 +1048,10 @@ export default function AddInventoryPage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-xs font-medium">
+                    <Label
+                      htmlFor="name"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Item Name *
                     </Label>
                     <Input
@@ -855,7 +1061,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("name", e.target.value)
                       }
-                      className={`text-sm h-10 ${errors.name ? "border-red-500" : ""}`}
+                      className={`text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${errors.name ? "border-red-500" : ""}`}
                     />
                     {errors.name && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
@@ -866,7 +1072,10 @@ export default function AddInventoryPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="category" className="text-xs font-medium">
+                    <Label
+                      htmlFor="category"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Category *
                     </Label>
                     <Select
@@ -877,13 +1086,17 @@ export default function AddInventoryPage() {
                       }}
                     >
                       <SelectTrigger
-                        className={`text-sm h-10 ${errors.category ? "border-red-500" : ""}`}
+                        className={`text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer ${errors.category ? "border-red-500" : ""}`}
                       >
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
                         {inventoryCategories.map((cat) => (
-                          <SelectItem key={cat} value={cat} className="text-sm">
+                          <SelectItem
+                            key={cat}
+                            value={cat}
+                            className="text-sm h-9"
+                          >
                             {cat}
                           </SelectItem>
                         ))}
@@ -900,7 +1113,7 @@ export default function AddInventoryPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="subcategory"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Subcategory *
                     </Label>
@@ -912,7 +1125,7 @@ export default function AddInventoryPage() {
                       disabled={!formData.category}
                     >
                       <SelectTrigger
-                        className={`text-sm h-10 ${errors.subcategory ? "border-red-500" : ""}`}
+                        className={`text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer ${errors.subcategory ? "border-red-500" : ""}`}
                       >
                         <SelectValue placeholder="Select subcategory" />
                       </SelectTrigger>
@@ -940,7 +1153,7 @@ export default function AddInventoryPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="materialType"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Material Type
                     </Label>
@@ -950,7 +1163,7 @@ export default function AddInventoryPage() {
                         handleInputChange("materialType", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-10">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -968,7 +1181,10 @@ export default function AddInventoryPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="sku" className="text-xs font-medium">
+                    <Label
+                      htmlFor="sku"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       SKU / Item Code
                     </Label>
                     <Input
@@ -976,7 +1192,7 @@ export default function AddInventoryPage() {
                       placeholder="e.g., INV-2025-001"
                       value={formData.sku}
                       onChange={(e) => handleInputChange("sku", e.target.value)}
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-500">
                       Leave empty to auto-generate
@@ -984,7 +1200,10 @@ export default function AddInventoryPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="brand" className="text-xs font-medium">
+                    <Label
+                      htmlFor="brand"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Brand / Manufacturer
                     </Label>
                     <Input
@@ -994,12 +1213,15 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("brand", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="unit" className="text-xs font-medium">
+                    <Label
+                      htmlFor="unit"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Unit of Measurement *
                     </Label>
                     <Select
@@ -1008,7 +1230,7 @@ export default function AddInventoryPage() {
                         handleInputChange("unit", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-10">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -1028,7 +1250,7 @@ export default function AddInventoryPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="supplierName"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Supplier Name *
                     </Label>
@@ -1039,7 +1261,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("supplierName", e.target.value)
                       }
-                      className={`text-sm h-10 ${errors.supplierName ? "border-red-500" : ""}`}
+                      className={`text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${errors.supplierName ? "border-red-500" : ""}`}
                     />
                     {errors.supplierName && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
@@ -1051,7 +1273,10 @@ export default function AddInventoryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description" className="text-xs font-medium">
+                  <Label
+                    htmlFor="description"
+                    className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                  >
                     Item Description *
                   </Label>
                   <Textarea
@@ -1061,27 +1286,35 @@ export default function AddInventoryPage() {
                     onChange={(e) =>
                       handleInputChange("description", e.target.value)
                     }
-                    rows={4}
-                    className={`text-sm resize-none ${
+                    maxLength={1000}
+                    rows={6}
+                    className={`text-sm resize-none bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${
                       errors.description ? "border-red-500" : ""
                     }`}
                   />
-                  {errors.description && (
-                    <p className="text-xs text-red-500 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.description}
+                  <div className="flex justify-between items-center">
+                    {errors.description ? (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.description}
+                      </p>
+                    ) : (
+                      <span />
+                    )}
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      {formData.description.length}/1000 characters
                     </p>
-                  )}
+                  </div>
                 </div>
 
                 <div className="flex justify-end">
                   <Button
                     onClick={nextStep}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
                   >
                     Next Step
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <ArrowRight className="h-3 w-3 ml-2" />
                   </Button>
                 </div>
               </div>
@@ -1106,7 +1339,10 @@ export default function AddInventoryPage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="color" className="text-xs font-medium">
+                    <Label
+                      htmlFor="color"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Color *
                     </Label>
                     <Input
@@ -1116,7 +1352,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("color", e.target.value)
                       }
-                      className={`text-sm h-10 ${
+                      className={`text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${
                         errors["textileDetails.color"] ? "border-red-500" : ""
                       }`}
                     />
@@ -1129,7 +1365,10 @@ export default function AddInventoryPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="colorCode" className="text-xs font-medium">
+                    <Label
+                      htmlFor="colorCode"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Color Code
                     </Label>
                     <Input
@@ -1139,12 +1378,15 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("colorCode", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="fabricType" className="text-xs font-medium">
+                    <Label
+                      htmlFor="fabricType"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Fabric Type
                     </Label>
                     <Select
@@ -1153,7 +1395,7 @@ export default function AddInventoryPage() {
                         handleTextileDetailChange("fabricType", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-10">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
                         <SelectValue placeholder="Select fabric type" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -1173,7 +1415,7 @@ export default function AddInventoryPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="composition"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Composition
                     </Label>
@@ -1184,12 +1426,15 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("composition", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="pattern" className="text-xs font-medium">
+                    <Label
+                      htmlFor="pattern"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Pattern
                     </Label>
                     <Select
@@ -1198,7 +1443,7 @@ export default function AddInventoryPage() {
                         handleTextileDetailChange("pattern", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-10">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -1216,7 +1461,10 @@ export default function AddInventoryPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="finish" className="text-xs font-medium">
+                    <Label
+                      htmlFor="finish"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Finish
                     </Label>
                     <Select
@@ -1225,7 +1473,7 @@ export default function AddInventoryPage() {
                         handleTextileDetailChange("finish", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-10">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
                         <SelectValue placeholder="Select finish" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -1243,7 +1491,10 @@ export default function AddInventoryPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="gsm" className="text-xs font-medium">
+                    <Label
+                      htmlFor="gsm"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       GSM (Grams per Square Meter)
                     </Label>
                     <Input
@@ -1254,12 +1505,15 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("gsm", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="width" className="text-xs font-medium">
+                    <Label
+                      htmlFor="width"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Width (cm or inches)
                     </Label>
                     <Input
@@ -1270,14 +1524,14 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("width", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label
                       htmlFor="fabricWeight"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Fabric Weight
                     </Label>
@@ -1291,12 +1545,15 @@ export default function AddInventoryPage() {
                           e.target.value
                         )
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="shrinkage" className="text-xs font-medium">
+                    <Label
+                      htmlFor="shrinkage"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Shrinkage
                     </Label>
                     <Input
@@ -1306,14 +1563,14 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("shrinkage", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label
                       htmlFor="washability"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Washability
                     </Label>
@@ -1324,12 +1581,15 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("washability", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="weight" className="text-xs font-medium">
+                    <Label
+                      htmlFor="weight"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Weight
                     </Label>
                     <div className="relative">
@@ -1341,7 +1601,7 @@ export default function AddInventoryPage() {
                         onChange={(e) =>
                           handleInputChange("weight", e.target.value)
                         }
-                        className="pl-10 text-sm h-10"
+                        className="pl-10 text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                       />
                     </div>
                   </div>
@@ -1350,7 +1610,7 @@ export default function AddInventoryPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="careInstructions"
-                    className="text-xs font-medium"
+                    className="text-xs font-medium text-gray-700 dark:text-gray-300"
                   >
                     Care Instructions
                   </Label>
@@ -1364,20 +1624,25 @@ export default function AddInventoryPage() {
                         e.target.value
                       )
                     }
-                    rows={3}
-                    className="resize-none text-sm"
+                    rows={6}
+                    className="resize-none text-sm bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                   />
                 </div>
 
                 <div className="flex justify-between">
-                  <Button variant="outline" onClick={prevStep} size="sm">
+                  <Button
+                    variant="outline"
+                    onClick={prevStep}
+                    size="sm"
+                    className="text-xs cursor-pointer h-8"
+                  >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
                   <Button
                     onClick={nextStep}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
                   >
                     Next Step
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -1386,7 +1651,7 @@ export default function AddInventoryPage() {
               </div>
             )}
 
-            {/* Step 3: Stock & Pricing */}
+            {/* Step 3: Stock & Pricing - Update all Inputs to have consistent background */}
             {currentStep === 3 && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3 mb-6">
@@ -1405,7 +1670,10 @@ export default function AddInventoryPage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price" className="text-xs font-medium">
+                    <Label
+                      htmlFor="price"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Unit Price *
                     </Label>
                     <div className="relative">
@@ -1417,23 +1685,26 @@ export default function AddInventoryPage() {
                         type="number"
                         step="0.01"
                         placeholder="0.00"
-                        value={formData.price}
+                        value={formData.pricePerUnit}
                         onChange={(e) =>
-                          handleInputChange("price", e.target.value)
+                          handleInputChange("pricePerUnit", e.target.value)
                         }
-                        className={`pl-8 text-sm h-10 ${errors.price ? "border-red-500" : ""}`}
+                        className={`pl-8 text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${errors.pricePerUnit ? "border-red-500" : ""}`}
                       />
                     </div>
-                    {errors.price && (
+                    {errors.pricePerUnit && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        {errors.price}
+                        {errors.pricePerUnit}
                       </p>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="costPrice" className="text-xs font-medium">
+                    <Label
+                      htmlFor="costPrice"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Cost Price
                     </Label>
                     <div className="relative">
@@ -1449,13 +1720,16 @@ export default function AddInventoryPage() {
                         onChange={(e) =>
                           handleInputChange("costPrice", e.target.value)
                         }
-                        className="pl-8 text-sm h-10"
+                        className="pl-8 text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="discount" className="text-xs font-medium">
+                    <Label
+                      htmlFor="discount"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Discount %
                     </Label>
                     <Input
@@ -1468,14 +1742,17 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("discount", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="quantity" className="text-xs font-medium">
+                    <Label
+                      htmlFor="quantity"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Current Quantity *
                     </Label>
                     <Input
@@ -1486,7 +1763,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("quantity", e.target.value)
                       }
-                      className={`text-sm h-10 ${errors.quantity ? "border-red-500" : ""}`}
+                      className={`text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${errors.quantity ? "border-red-500" : ""}`}
                     />
                     {errors.quantity && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
@@ -1499,7 +1776,7 @@ export default function AddInventoryPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="minStockLevel"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Minimum Stock Level
                     </Label>
@@ -1511,14 +1788,14 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("minStockLevel", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label
                       htmlFor="reorderLevel"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Reorder Level
                     </Label>
@@ -1530,14 +1807,14 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("reorderLevel", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label
                       htmlFor="reorderQuantity"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Reorder Quantity
                     </Label>
@@ -1549,14 +1826,14 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("reorderQuantity", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label
                       htmlFor="safetyStockLevel"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Safety Stock Level
                     </Label>
@@ -1568,14 +1845,14 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("safetyStockLevel", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label
                       htmlFor="maximumQuantity"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Maximum Quantity
                     </Label>
@@ -1587,12 +1864,15 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("maximumQuantity", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="leadTime" className="text-xs font-medium">
+                    <Label
+                      htmlFor="leadTime"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Lead Time (days)
                     </Label>
                     <Input
@@ -1603,12 +1883,15 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("leadTime", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="shelfLife" className="text-xs font-medium">
+                    <Label
+                      htmlFor="shelfLife"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Shelf Life (days)
                     </Label>
                     <Input
@@ -1619,7 +1902,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("shelfLife", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
                 </div>
@@ -1659,14 +1942,19 @@ export default function AddInventoryPage() {
                 </div>
 
                 <div className="flex justify-between">
-                  <Button variant="outline" onClick={prevStep} size="sm">
+                  <Button
+                    variant="outline"
+                    onClick={prevStep}
+                    size="sm"
+                    className="text-xs cursor-pointer h-8"
+                  >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
                   <Button
                     onClick={nextStep}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
                   >
                     Next Step
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -1696,7 +1984,7 @@ export default function AddInventoryPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="qualityGrade"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Quality Grade
                     </Label>
@@ -1706,7 +1994,7 @@ export default function AddInventoryPage() {
                         handleInputChange("qualityGrade", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-10">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
                         <SelectValue placeholder="Select quality grade" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -1724,7 +2012,10 @@ export default function AddInventoryPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="season" className="text-xs font-medium">
+                    <Label
+                      htmlFor="season"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Season
                     </Label>
                     <Select
@@ -1733,7 +2024,7 @@ export default function AddInventoryPage() {
                         handleInputChange("season", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-10">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -1753,7 +2044,7 @@ export default function AddInventoryPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="countryOfOrigin"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Country of Origin
                     </Label>
@@ -1764,14 +2055,14 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("countryOfOrigin", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label
                       htmlFor="manufacturer"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Manufacturer
                     </Label>
@@ -1782,12 +2073,15 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("manufacturer", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="barcode" className="text-xs font-medium">
+                    <Label
+                      htmlFor="barcode"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Barcode
                     </Label>
                     <Input
@@ -1797,14 +2091,14 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("barcode", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label
                       htmlFor="internalCode"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Internal Code
                     </Label>
@@ -1815,7 +2109,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("internalCode", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
                 </div>
@@ -1886,7 +2180,7 @@ export default function AddInventoryPage() {
                           addComplianceStandard();
                         }
                       }}
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                     <Button
                       type="button"
@@ -1925,7 +2219,7 @@ export default function AddInventoryPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="carbonFootprint"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Carbon Footprint (kg CO2)
                     </Label>
@@ -1938,14 +2232,14 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("carbonFootprint", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label
                       htmlFor="recycledContent"
-                      className="text-xs font-medium"
+                      className="text-xs font-medium text-gray-700 dark:text-gray-300"
                     >
                       Recycled Content %
                     </Label>
@@ -1958,7 +2252,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("recycledContent", e.target.value)
                       }
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                   </div>
                 </div>
@@ -1971,7 +2265,7 @@ export default function AddInventoryPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="supplierPhone"
-                        className="text-xs font-medium"
+                        className="text-xs font-medium text-gray-700 dark:text-gray-300"
                       >
                         Phone
                       </Label>
@@ -1982,14 +2276,14 @@ export default function AddInventoryPage() {
                         onChange={(e) =>
                           handleSupplierContactChange("phone", e.target.value)
                         }
-                        className="text-sm h-10"
+                        className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label
                         htmlFor="supplierEmail"
-                        className="text-xs font-medium"
+                        className="text-xs font-medium text-gray-700 dark:text-gray-300"
                       >
                         Email
                       </Label>
@@ -2001,14 +2295,14 @@ export default function AddInventoryPage() {
                         onChange={(e) =>
                           handleSupplierContactChange("email", e.target.value)
                         }
-                        className="text-sm h-10"
+                        className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                       />
                     </div>
 
                     <div className="space-y-2 lg:col-span-2">
                       <Label
                         htmlFor="supplierAddress"
-                        className="text-xs font-medium"
+                        className="text-xs font-medium text-gray-700 dark:text-gray-300"
                       >
                         Address
                       </Label>
@@ -2020,21 +2314,26 @@ export default function AddInventoryPage() {
                           handleSupplierContactChange("address", e.target.value)
                         }
                         rows={2}
-                        className="resize-none text-sm"
+                        className="resize-none text-sm bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="flex justify-between">
-                  <Button variant="outline" onClick={prevStep} size="sm">
+                  <Button
+                    variant="outline"
+                    onClick={prevStep}
+                    size="sm"
+                    className="text-xs cursor-pointer h-8"
+                  >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
                   <Button
                     onClick={nextStep}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
                   >
                     Next Step
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -2173,7 +2472,7 @@ export default function AddInventoryPage() {
                           addTag();
                         }
                       }}
-                      className="text-sm h-10"
+                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                     />
                     <Button
                       type="button"
@@ -2221,13 +2520,16 @@ export default function AddInventoryPage() {
                     onChange={(e) =>
                       handleInputChange("dimensions", e.target.value)
                     }
-                    className="text-sm h-10"
+                    className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                   />
                 </div>
 
                 {/* Additional Notes */}
                 <div className="space-y-2">
-                  <Label htmlFor="notes" className="text-xs font-medium">
+                  <Label
+                    htmlFor="notes"
+                    className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                  >
                     Additional Notes (Internal)
                   </Label>
                   <Textarea
@@ -2236,7 +2538,7 @@ export default function AddInventoryPage() {
                     value={formData.notes}
                     onChange={(e) => handleInputChange("notes", e.target.value)}
                     rows={3}
-                    className="resize-none text-sm"
+                    className="resize-none text-sm bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
                   />
                 </div>
 
@@ -2267,7 +2569,7 @@ export default function AddInventoryPage() {
                           Price
                         </p>
                         <p className="font-semibold text-gray-900 dark:text-gray-100">
-                          ${formData.price || "0.00"}
+                          ${formData.pricePerUnit || "0.00"}
                         </p>
                       </div>
                       <div>
@@ -2350,7 +2652,12 @@ export default function AddInventoryPage() {
 
                 {/* Navigation */}
                 <div className="flex justify-between">
-                  <Button variant="outline" onClick={prevStep} size="sm">
+                  <Button
+                    variant="outline"
+                    onClick={prevStep}
+                    size="sm"
+                    className="text-xs cursor-pointer h-8"
+                  >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
@@ -2368,12 +2675,12 @@ export default function AddInventoryPage() {
                       onClick={() => setIsConfirmOpen(true)}
                       disabled={isLoading}
                       size="sm"
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
                     >
                       {isLoading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-3 w-3 mr-2 animate-spin" />
                       ) : (
-                        <CheckCircle className="h-4 w-4 mr-2" />
+                        <CheckCircle className="h-3 w-3 mr-2" />
                       )}
                       {isLoading ? "Adding..." : "Add to Inventory"}
                     </Button>
@@ -2386,15 +2693,15 @@ export default function AddInventoryPage() {
 
         {/* Confirmation Dialog - matching dashboard style */}
         <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-          <DialogContent className="bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl">
+          <DialogContent className="bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 shadow-xl">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-gray-100">
+              <DialogTitle className="text-base font-bold flex items-center gap-3 text-gray-900 dark:text-gray-100">
                 <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                   <Package className="h-4 w-4 text-blue-600" />
                 </div>
                 Add to Inventory
               </DialogTitle>
-              <DialogDescription className="text-sm">
+              <DialogDescription className="text-xs">
                 Are you ready to add this item to the inventory? This action
                 will:
               </DialogDescription>
@@ -2433,6 +2740,7 @@ export default function AddInventoryPage() {
                 variant="outline"
                 onClick={() => setIsConfirmOpen(false)}
                 size="sm"
+                className="text-xs cursor-pointer h-8"
               >
                 Cancel
               </Button>
@@ -2440,12 +2748,12 @@ export default function AddInventoryPage() {
                 onClick={handleSubmit}
                 disabled={isLoading}
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
               >
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3 w-3 mr-2 animate-spin" />
                 ) : (
-                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <CheckCircle className="h-3 w-3 mr-2" />
                 )}
                 {isLoading ? "Adding..." : "Confirm & Add"}
               </Button>

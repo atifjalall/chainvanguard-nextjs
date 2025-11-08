@@ -1,586 +1,516 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/_ui/card";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/_ui/button";
-import { Badge } from "@/components/_ui/badge";
-import { Progress } from "@/components/_ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/_ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
-  ShoppingCart,
-  Package,
-  TrendingUp,
-  Clock,
-  CheckCircle,
-  Truck,
-  MapPin,
-  Star,
-  DollarSign,
-  Eye,
-  Plus,
-  ArrowRight,
-  Sparkles,
-  Shield,
-  Zap,
-  Heart,
-  Trash2,
-} from "lucide-react";
-import { useAuth } from "@/components/providers/auth-provider";
+  ShoppingBagIcon,
+  TruckIcon,
+  ShieldCheckIcon,
+  ArrowRightIcon,
+  HeartIcon,
+} from "@heroicons/react/24/outline";
+import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
 import { toast } from "sonner";
-import Link from "next/link";
 
-// Mock data - replace with Hyperledger Fabric calls
-const mockCartItems = [
+// Mock data for featured products
+const FEATURED_PRODUCTS = [
   {
-    id: "cart-001",
-    name: "Organic Coffee Beans",
-    vendor: "Green Farm Co.",
-    price: 24.99,
-    quantity: 2,
-    image: "/api/placeholder/80/80",
-    inStock: true,
-  },
-  {
-    id: "cart-002",
-    name: "Premium Tea Collection",
-    vendor: "Mountain Tea Ltd.",
-    price: 89.99,
-    quantity: 1,
-    image: "/api/placeholder/80/80",
-    inStock: true,
-  },
-];
-
-const mockOrders = [
-  {
-    id: "ORD-001",
-    date: "2025-08-12",
-    total: 156.78,
-    status: "delivered",
-    items: 3,
-    vendor: "Green Farm Co.",
-    trackingId: "TRK001",
-    estimatedDelivery: "2025-08-14",
-  },
-  {
-    id: "ORD-002",
-    date: "2025-08-10",
-    total: 89.99,
-    status: "shipped",
-    items: 1,
-    vendor: "Mountain Tea Ltd.",
-    trackingId: "TRK002",
-    estimatedDelivery: "2025-08-16",
-  },
-  {
-    id: "ORD-003",
-    date: "2025-08-08",
-    total: 245.5,
-    status: "processing",
-    items: 5,
-    vendor: "Tech Solutions Inc.",
-    trackingId: "TRK003",
-    estimatedDelivery: "2025-08-18",
-  },
-];
-
-const mockLastOrder = {
-  id: "ORD-002",
-  status: "shipped",
-  estimatedDelivery: "2025-08-16",
-  currentLocation: "Distribution Center - Frankfurt",
-  progress: 75,
-  trackingSteps: [
-    { step: "Order Confirmed", completed: true, date: "2025-08-10" },
-    { step: "Processing", completed: true, date: "2025-08-10" },
-    { step: "Shipped", completed: true, date: "2025-08-12" },
-    { step: "In Transit", completed: true, date: "2025-08-13" },
-    { step: "Out for Delivery", completed: false, date: "2025-08-16" },
-    { step: "Delivered", completed: false, date: "2025-08-16" },
-  ],
-};
-
-const mockRecentProducts = [
-  {
-    id: "prod-001",
-    name: "Wireless Bluetooth Headphones",
-    vendor: "Tech Solutions Inc.",
-    price: 199.99,
-    rating: 4.8,
-    image: "/api/placeholder/120/120",
-    category: "Electronics",
-  },
-  {
-    id: "prod-002",
-    name: "Organic Cotton T-Shirt",
-    vendor: "Eco Fashion",
+    id: 1,
+    name: "Premium Cotton T-Shirt",
+    category: "Men",
     price: 29.99,
-    rating: 4.6,
-    image: "/api/placeholder/120/120",
-    category: "Clothing",
+    originalPrice: 49.99,
+    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500",
+    badge: "Best Seller",
+    rating: 4.8,
+    reviews: 234,
   },
   {
-    id: "prod-003",
-    name: "Natural Honey",
-    vendor: "Local Farms",
-    price: 18.5,
+    id: 2,
+    name: "Classic Denim Jacket",
+    category: "Women",
+    price: 89.99,
+    originalPrice: 129.99,
+    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500",
+    badge: "Trending",
     rating: 4.9,
-    image: "/api/placeholder/120/120",
-    category: "Food",
+    reviews: 187,
+  },
+  {
+    id: 3,
+    name: "Sneakers Collection",
+    category: "Unisex",
+    price: 79.99,
+    originalPrice: 119.99,
+    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500",
+    badge: "New",
+    rating: 4.7,
+    reviews: 156,
+  },
+  {
+    id: 4,
+    name: "Summer Dress",
+    category: "Women",
+    price: 59.99,
+    originalPrice: 89.99,
+    image: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=500",
+    badge: "Sale",
+    rating: 4.6,
+    reviews: 203,
+  },
+  {
+    id: 5,
+    name: "Leather Wallet",
+    category: "Accessories",
+    price: 39.99,
+    originalPrice: 59.99,
+    image: "https://images.unsplash.com/photo-1627123424574-724758594e93?w=500",
+    badge: "Hot",
+    rating: 4.7,
+    reviews: 142,
+  },
+  {
+    id: 6,
+    name: "Sport Watch",
+    category: "Accessories",
+    price: 149.99,
+    originalPrice: 199.99,
+    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500",
+    badge: "Premium",
+    rating: 4.9,
+    reviews: 289,
+  },
+  {
+    id: 7,
+    name: "Casual Backpack",
+    category: "Unisex",
+    price: 69.99,
+    originalPrice: 99.99,
+    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500",
+    badge: "Popular",
+    rating: 4.5,
+    reviews: 198,
+  },
+  {
+    id: 8,
+    name: "Designer Sunglasses",
+    category: "Accessories",
+    price: 129.99,
+    originalPrice: 179.99,
+    image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=500",
+    badge: "Luxury",
+    rating: 4.8,
+    reviews: 167,
+  },
+];
+
+const NEW_ARRIVALS = [
+  {
+    id: 9,
+    name: "Winter Coat",
+    price: 189.99,
+    image: "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400",
+  },
+  {
+    id: 10,
+    name: "Wool Sweater",
+    price: 79.99,
+    image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400",
+  },
+  {
+    id: 11,
+    name: "Chelsea Boots",
+    price: 139.99,
+    image: "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=400",
+  },
+  {
+    id: 12,
+    name: "Knit Beanie",
+    price: 19.99,
+    image: "https://images.unsplash.com/photo-1576871337622-98d48d1cf531?w=400",
+  },
+];
+
+const CATEGORIES = [
+  { name: "Men", count: "2,456" },
+  { name: "Women", count: "3,821" },
+  { name: "Kids", count: "1,203" },
+  { name: "Accessories", count: "945" },
+];
+
+const COLLECTIONS = [
+  {
+    title: "Summer Collection",
+    image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800",
+  },
+  {
+    title: "Winter Essentials",
+    image: "https://images.unsplash.com/photo-1483118714900-540cf339fd46?w=800",
   },
 ];
 
 export default function CustomerDashboard() {
-  const { user } = useAuth();
-  const [cartItems, setCartItems] = useState(mockCartItems);
-  const [recentOrders, setRecentOrders] = useState(mockOrders);
-  const [isVisible, setIsVisible] = useState(false);
+  const router = useRouter();
+  const [wishlist, setWishlist] = useState<number[]>([]);
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
 
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
-
-  // Calculate stats
-  const cartTotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const totalSpent = recentOrders.reduce((sum, order) => sum + order.total, 0);
-  const ordersInTransit = recentOrders.filter(
-    (order) => order.status === "shipped" || order.status === "processing"
-  ).length;
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "delivered":
-        return "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-400";
-      case "shipped":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400";
-      case "processing":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-400";
-      case "cancelled":
-        return "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-400";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
-    }
+  const toggleWishlist = (productId: number) => {
+    setWishlist((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId]
+    );
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "delivered":
-        return <CheckCircle className="h-4 w-4" />;
-      case "shipped":
-        return <Truck className="h-4 w-4" />;
-      case "processing":
-        return <Clock className="h-4 w-4" />;
-      default:
-        return <Package className="h-4 w-4" />;
+  const handleSubscribe = () => {
+    // Simple email validation
+    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (isValid) {
+      toast.success("Subscribed");
+      setSubscribed(true);
+      setEmail("");
+      setTimeout(() => setSubscribed(false), 2000); // Reset after 2s
     }
-  };
-
-  const removeFromCart = (itemId: string) => {
-    setCartItems(cartItems.filter((item) => item.id !== itemId));
-    toast.success("Item removed from cart");
-  };
-
-  const getUserInitials = () => {
-    if (user?.name) {
-      return user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase();
-    }
-    return "U";
+    // Optionally, show error toast if invalid:
+    // else toast.error("Please enter a valid email address");
   };
 
   return (
-    <div className="space-y-8 p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <Avatar className="h-20 w-20 border-4 border-white shadow-xl">
-                <AvatarImage
-                  src="/default-avatar.png"
-                  alt={user?.name ?? "User"}
-                />{" "}
-                <AvatarFallback className="bg-gradient-to-br from-blue-600 to-cyan-600 text-white text-lg font-bold">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full p-2">
-                <Shield className="h-4 w-4 text-white" />
-              </div>
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-                Welcome back, {user?.name || "Customer"}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 text-lg mt-2">
-                Your blockchain supply chain dashboard
+    <div className="min-h-screen bg-white dark:bg-gray-950">
+      {/* Hero Section */}
+      <section className="relative h-[80vh] flex items-center">
+        <div className="absolute inset-0 z-0">
+          <img
+            src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600"
+            alt="Hero"
+            className="w-full h-full object-cover opacity-20 dark:opacity-10"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent dark:from-gray-950 dark:via-gray-950/80 dark:to-transparent" />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="max-w-2xl space-y-8">
+            <div className="space-y-4 animate-fadeIn">
+              <p className="text-sm uppercase tracking-wider text-gray-600 dark:text-gray-400">
+                New Season
               </p>
-              <div className="flex items-center gap-2 mt-3">
-                <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Verified Customer
-                </Badge>
-                <Badge variant="outline" className="border-gray-300">
-                  <Shield className="h-3 w-3 mr-1" />
-                  Secure Wallet
-                </Badge>
-              </div>
+              <h1 className="text-6xl sm:text-7xl font-light text-gray-900 dark:text-white">
+                Timeless
+                <span className="block font-normal">Elegance</span>
+              </h1>
+              <p className="text-lg text-gray-600 dark:text-gray-400 max-w-md">
+                Curated collections of premium quality products for the
+                discerning shopper.
+              </p>
+            </div>
+
+            <div
+              className="flex gap-4 animate-fadeIn"
+              style={{ animationDelay: "0.2s" }}
+            >
+              <Button
+                size="lg"
+                onClick={() => router.push("/customer/products")}
+                className="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 px-8 h-9 rounded-none text-xs cursor-pointer"
+              >
+                Shop Now
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => router.push("/customer/products")}
+                className="border-gray-900 dark:border-white text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 px-8 h-9 rounded-none text-xs cursor-pointer"
+              >
+                Explore
+              </Button>
             </div>
           </div>
-          <Link href="/customer/browse">
-            <Button
-              size="lg"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <ShoppingCart className="h-5 w-5 mr-2" />
-              Browse Products
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </Link>
         </div>
-      </div>
+      </section>
 
-      {/* Stats Cards */}
-      <div
-        className={`transform transition-all duration-700 delay-200 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {
-              title: "Cart Items",
-              value: cartItemCount,
-              subtitle: `${cartTotal.toFixed(2)} total value`,
-              icon: ShoppingCart,
-            },
-            {
-              title: "Total Orders",
-              value: recentOrders.length,
-              subtitle: "Orders placed",
-              icon: Package,
-            },
-            {
-              title: "In Transit",
-              value: ordersInTransit,
-              subtitle: "Orders shipping",
-              icon: Truck,
-            },
-            {
-              title: "Total Spent",
-              value: `${totalSpent.toFixed(2)}`,
-              subtitle: "All time purchases",
-              icon: DollarSign,
-            },
-          ].map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card
-                key={index}
-                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl"
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    {stat.title}
-                  </CardTitle>
-                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {stat.value}
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    {stat.subtitle}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Main Content Grid */}
-      <div
-        className={`transform transition-all duration-700 delay-400 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          {/* Recent Orders */}
-          <Card className="relative overflow-hidden border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                  <Package className="h-4 w-4 text-white" />
-                </div>
-                Recent Orders
-              </CardTitle>
-              <CardDescription>
-                Track your latest blockchain transactions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10 space-y-4">
-              {recentOrders.slice(0, 3).map((order) => (
-                <div
-                  key={order.id}
-                  className="group flex items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-200 border border-gray-200/50 dark:border-gray-700/50"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                        {getStatusIcon(order.status)}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {order.id}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {order.vendor} • {order.items} items
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right flex items-center gap-3">
-                    <div>
-                      <Badge
-                        className={`${getStatusColor(order.status)} text-xs`}
-                        variant="secondary"
-                      >
-                        {order.status}
-                      </Badge>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">
-                        ${order.total.toFixed(2)}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              <Link href="/customer/orders">
-                <Button
-                  variant="outline"
-                  className="w-full border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  View All Orders
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Shopping Cart */}
-          <Card className="relative overflow-hidden border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-pink-500/5" />
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-                  <ShoppingCart className="h-4 w-4 text-white" />
-                </div>
-                Shopping Cart ({cartItemCount} items)
-              </CardTitle>
-              <CardDescription>
-                Items ready for blockchain checkout
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10 space-y-4">
-              {cartItems.length > 0 ? (
-                <>
-                  {cartItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="group flex items-center gap-4 p-4 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-200"
-                    >
-                      <div className="w-12 h-12 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 rounded-lg flex items-center justify-center">
-                        <Package className="h-6 w-6 text-gray-500 dark:text-gray-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {item.name}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {item.vendor}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Qty: {item.quantity} × ${item.price}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFromCart(item.id)}
-                          className="text-red-500 hover:text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
-                        Total:
-                      </span>
-                      <span className="font-bold text-xl text-gray-900 dark:text-gray-100">
-                        ${cartTotal.toFixed(2)}
-                      </span>
-                    </div>
-                    <Link href="/customer/cart">
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                        <Shield className="h-4 w-4 mr-2" />
-                        Proceed to Checkout
-                      </Button>
-                    </Link>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="h-16 w-16 mx-auto mb-4 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center">
-                    <ShoppingCart className="h-8 w-8 text-gray-500 dark:text-gray-400" />
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Your cart is empty
-                  </p>
-                  <Link href="/customer/browse">
-                    <Button variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Start Shopping
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Order Tracking Section */}
-      <div
-        className={`transform transition-all duration-700 delay-600 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <Card className="relative overflow-hidden border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5" />
-          <CardHeader className="relative z-10">
-            <CardTitle className="flex items-center gap-3 text-xl">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
-                <MapPin className="h-4 w-4 text-white" />
-              </div>
-              Latest Order Tracking
-            </CardTitle>
-            <CardDescription>
-              Real-time blockchain supply chain tracking
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
-                    Order {mockLastOrder.id}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Current Status: {mockLastOrder.currentLocation}
-                  </p>
-                </div>
-                <Badge
-                  className={getStatusColor(mockLastOrder.status)}
-                  variant="secondary"
-                >
-                  {mockLastOrder.status}
-                </Badge>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Delivery Progress
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {mockLastOrder.progress}%
-                  </span>
-                </div>
-                <Progress
-                  value={mockLastOrder.progress}
-                  className="h-3 bg-gray-200 dark:bg-gray-700"
-                />
+      {/* Features */}
+      <section className="border-y border-gray-200 dark:border-gray-800 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-12">
+            {[
+              {
+                icon: TruckIcon,
+                title: "Free Shipping",
+                desc: "On orders over $50",
+              },
+              {
+                icon: ShieldCheckIcon,
+                title: "Secure Payment",
+                desc: "100% protected",
+              },
+              {
+                icon: ShoppingBagIcon,
+                title: "Easy Returns",
+                desc: "30-day guarantee",
+              },
+            ].map((feature, index) => (
+              <div key={index} className="text-center space-y-2">
+                <feature.icon className="h-6 w-6 mx-auto text-gray-900 dark:text-white" />
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                  {feature.title}
+                </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Estimated delivery: {mockLastOrder.estimatedDelivery}
+                  {feature.desc}
                 </p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-8">
-                {mockLastOrder.trackingSteps.map((step, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col items-center text-center"
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-full border-2 flex items-center justify-center mb-2 transition-all duration-300 ${
-                        step.completed
-                          ? "bg-green-100 border-green-500 text-green-700 dark:bg-green-950 dark:border-green-400 dark:text-green-400"
-                          : "bg-gray-100 border-gray-300 text-gray-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
-                      }`}
-                    >
-                      {step.completed ? (
-                        <CheckCircle className="h-5 w-5" />
-                      ) : (
-                        <Clock className="h-5 w-5" />
-                      )}
-                    </div>
-                    <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                      {step.step}
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {step.date}
-                    </p>
-                  </div>
-                ))}
+      {/* Categories */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {CATEGORIES.map((category, index) => (
+              <button
+                key={index}
+                onClick={() =>
+                  router.push(`/customer/products?category=${category.name}`)
+                }
+                className="group text-center space-y-3 p-8 border border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-all duration-300 cursor-pointer"
+              >
+                <h3 className="text-xl font-light text-gray-900 dark:text-white">
+                  {category.name}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {category.count} items
+                </p>
+                <div className="flex items-center justify-center text-sm text-gray-900 dark:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  Explore <ArrowRightIcon className="h-4 w-4 ml-1" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Collections */}
+      <section className="py-24 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {COLLECTIONS.map((collection, index) => (
+              <div
+                key={index}
+                className="group relative h-96 overflow-hidden cursor-pointer"
+                onClick={() => router.push("/customer/products")}
+              >
+                <img
+                  src={collection.image}
+                  alt={collection.title}
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                />
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all duration-300" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <h3 className="text-3xl font-light text-white">
+                    {collection.title}
+                  </h3>
+                </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-              <Link href="/customer/orders">
-                <Button
-                  variant="outline"
-                  className="w-full mt-6 border-gray-200 dark:border-gray-700"
-                >
-                  <Zap className="h-4 w-4 mr-2" />
-                  View Full Tracking Details
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Featured Products */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-16 text-center space-y-2">
+            <h2 className="text-4xl font-light text-gray-900 dark:text-white">
+              Featured Products
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Handpicked for quality and style
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {FEATURED_PRODUCTS.map((product) => (
+              <div
+                key={product.id}
+                className="group cursor-pointer"
+                onClick={() => router.push(`/customer/products/${product.id}`)}
+              >
+                <div className="relative aspect-[3/4] mb-4 overflow-hidden bg-gray-100 dark:bg-gray-900">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleWishlist(product.id);
+                    }}
+                    className="absolute top-4 right-4 p-2 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                  >
+                    {wishlist.includes(product.id) ? (
+                      <HeartIconSolid className="h-5 w-5 text-gray-900 dark:text-white" />
+                    ) : (
+                      <HeartIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-900 dark:text-white">
+                      ${product.price}
+                    </span>
+                    <span className="text-sm text-gray-400 dark:text-gray-500 line-through">
+                      ${product.originalPrice}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-16 text-center">
+            <Button
+              variant="outline"
+              onClick={() => router.push("/customer/products")}
+              className="border-gray-900 dark:border-white text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 px-8 h-9 rounded-none text-xs cursor-pointer"
+            >
+              View All Products
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* New Arrivals */}
+      <section className="py-24 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-16 space-y-2">
+            <p className="text-sm uppercase tracking-wider text-gray-600 dark:text-gray-400">
+              Just In
+            </p>
+            <h2 className="text-4xl font-light text-gray-900 dark:text-white">
+              New Arrivals
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {NEW_ARRIVALS.map((item) => (
+              <div
+                key={item.id}
+                className="group cursor-pointer"
+                onClick={() => router.push(`/customer/products/${item.id}`)}
+              >
+                <div className="relative aspect-[3/4] mb-4 overflow-hidden bg-gray-100 dark:bg-gray-900">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <Badge className="absolute top-4 left-4 bg-transparent border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-none">
+                    New
+                  </Badge>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                    {item.name}
+                  </h3>
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    ${item.price}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter */}
+      <section className="py-24 border-y border-gray-200 dark:border-gray-800">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
+          <div className="space-y-2">
+            <h2 className="text-3xl font-light text-gray-900 dark:text-white">
+              Stay Updated
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Subscribe to receive updates on new arrivals and exclusive offers.
+            </p>
+          </div>
+
+          <div className="flex gap-2 max-w-md mx-auto">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="flex-1 h-9 px-4 bg-transparent border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-gray-900 dark:focus:border-white transition-colors cursor-text rounded-none text-xs"
+              disabled={subscribed}
+            />
+            <Button
+              className="h-9 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 px-8 cursor-pointer rounded-none text-xs"
+              onClick={handleSubscribe}
+              type="button"
+              disabled={subscribed}
+            >
+              {subscribed ? "Subscribed" : "Subscribe"}
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Instagram */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-16 text-center space-y-2">
+            <h2 className="text-3xl font-light text-gray-900 dark:text-white">
+              @shopwithus
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Follow us on Instagram
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            {[...Array(6)].map((_, index) => (
+              <div
+                key={index}
+                className="aspect-square overflow-hidden cursor-pointer group"
+              >
+                <img
+                  src={`https://images.unsplash.com/photo-${1483985988355 + index * 10000}-763728e1935b?w=400`}
+                  alt={`Instagram ${index + 1}`}
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.8s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }

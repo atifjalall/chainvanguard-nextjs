@@ -42,30 +42,31 @@ import {
   Legend,
 } from "recharts";
 import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Truck,
-  Users,
-  Package,
-  Building2,
-  Calendar,
-  Download,
-  RefreshCw,
-  ArrowUpRight,
-  ArrowDownRight,
-  Globe,
-  Target,
-  Clock,
-  Award,
-  Zap,
-  BarChart3,
-  PieChart as PieChartIcon,
-  Activity,
-  Factory,
-  Shield,
-  Sparkles,
-} from "lucide-react";
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  CurrencyDollarIcon,
+  TruckIcon,
+  UsersIcon,
+  CubeIcon,
+  BuildingOffice2Icon,
+  CalendarIcon,
+  ArrowDownTrayIcon,
+  ArrowPathIcon,
+  ArrowUpRightIcon,
+  ArrowDownRightIcon,
+  GlobeAltIcon,
+  TagIcon,
+  ClockIcon,
+  TrophyIcon,
+  BoltIcon,
+  ChartBarIcon,
+  ChartPieIcon,
+  ChartPieIcon as PieChartIconAlt,
+  BuildingStorefrontIcon,
+  BuildingLibraryIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
 import SupplierInsightsSkeleton from "@/components/skeletons/supplierInsightsSkeleton";
@@ -572,7 +573,7 @@ export default function SupplierAnalyticsPage() {
           {title}
         </CardTitle>
         <div
-          className={`h-10 w-10 rounded-full ${gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}
+          className={`h-10 w-10 rounded-full ${gradient} flex items-center justify-center`}
         >
           <Icon className="h-5 w-5 text-white" />
         </div>
@@ -583,9 +584,9 @@ export default function SupplierAnalyticsPage() {
         </div>
         <div className="flex items-center gap-1">
           {growth >= 0 ? (
-            <ArrowUpRight className="h-4 w-4 text-green-500" />
+            <ArrowUpRightIcon className="h-4 w-4 text-green-500" />
           ) : (
-            <ArrowDownRight className="h-4 w-4 text-red-500" />
+            <ArrowDownRightIcon className="h-4 w-4 text-red-500" />
           )}
           <span
             className={`text-xs font-medium ${
@@ -625,18 +626,12 @@ export default function SupplierAnalyticsPage() {
               Track your supply performance and vendor relationships
             </p>
             <div className="flex items-center gap-2 mt-3">
-              <Badge
-                variant="secondary"
-                className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 text-xs"
-              >
-                <BarChart3 className="h-3 w-3 mr-1" />
+              <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs border-0">
+                <ChartBarIcon className="h-3 w-3 mr-1" />
                 Real-time Analytics
               </Badge>
-              <Badge
-                variant="secondary"
-                className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800 text-xs"
-              >
-                <Shield className="h-3 w-3 mr-1" />
+              <Badge className="bg-green-100/80 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs border-0">
+                <ShieldCheckIcon className="h-3 w-3 mr-1" />
                 Blockchain Secured
               </Badge>
             </div>
@@ -659,14 +654,14 @@ export default function SupplierAnalyticsPage() {
               className="flex items-center gap-2 text-xs"
               onClick={loadAnalytics}
             >
-              <RefreshCw className="h-4 w-4" />
+              <ArrowPathIcon className="h-4 w-4" />
               Refresh
             </Button>
             <Button
               variant="outline"
               className="flex items-center gap-2 text-xs"
             >
-              <Download className="h-4 w-4" />
+              <ArrowDownTrayIcon className="h-4 w-4" />
               Export
             </Button>
           </div>
@@ -685,7 +680,7 @@ export default function SupplierAnalyticsPage() {
               title: "Total Revenue",
               value: currentPeriodData.revenue.value,
               subtitle: "Total supply revenue",
-              icon: DollarSign,
+              icon: CurrencyDollarIcon,
               iconColor: "text-green-600",
               iconBg: "bg-green-100 dark:bg-green-900/30",
               formatter: formatCurrency,
@@ -694,7 +689,7 @@ export default function SupplierAnalyticsPage() {
               title: "Supply Orders",
               value: currentPeriodData.orders.value,
               subtitle: "Orders processed",
-              icon: Truck,
+              icon: TruckIcon,
               iconColor: "text-blue-600",
               iconBg: "bg-blue-100 dark:bg-blue-900/30",
             },
@@ -702,7 +697,7 @@ export default function SupplierAnalyticsPage() {
               title: "Active Vendors",
               value: currentPeriodData.vendors.value,
               subtitle: "Vendor partners",
-              icon: Building2,
+              icon: BuildingOffice2Icon,
               iconColor: "text-purple-600",
               iconBg: "bg-purple-100 dark:bg-purple-900/30",
             },
@@ -710,7 +705,7 @@ export default function SupplierAnalyticsPage() {
               title: "Avg Order Value",
               value: currentPeriodData.avgOrderValue.value,
               subtitle: "Average order value",
-              icon: Target,
+              icon: TagIcon,
               iconColor: "text-orange-600",
               iconBg: "bg-orange-100 dark:bg-orange-900/30",
               formatter: formatCurrency,
@@ -719,7 +714,7 @@ export default function SupplierAnalyticsPage() {
               title: "Inventory Value",
               value: currentPeriodData.inventoryValue.value,
               subtitle: "Total inventory worth",
-              icon: Package,
+              icon: CubeIcon,
               iconColor: "text-pink-600",
               iconBg: "bg-pink-100 dark:bg-pink-900/30",
               formatter: formatCurrency,
@@ -734,7 +729,7 @@ export default function SupplierAnalyticsPage() {
                   {stat.title}
                 </CardTitle>
                 <div
-                  className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
+                  className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center`}
                 >
                   <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                 </div>
@@ -765,28 +760,28 @@ export default function SupplierAnalyticsPage() {
                 value="supply"
                 className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
-                <BarChart3 className="h-4 w-4" />
+                <ChartBarIcon className="h-4 w-4" />
                 Supply Trends
               </TabsTrigger>
               <TabsTrigger
                 value="products"
                 className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
-                <Factory className="h-4 w-4" />
+                <BuildingLibraryIcon className="h-4 w-4" />
                 Products
               </TabsTrigger>
               <TabsTrigger
                 value="vendors"
                 className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
-                <Building2 className="h-4 w-4" />
+                <BuildingOffice2Icon className="h-4 w-4" />
                 Vendors
               </TabsTrigger>
               <TabsTrigger
                 value="performance"
                 className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
-                <Activity className="h-4 w-4" />
+                <ChartPieIcon className="h-4 w-4" />
                 Performance
               </TabsTrigger>
             </TabsList>
@@ -1207,7 +1202,7 @@ export default function SupplierAnalyticsPage() {
                   <CardTitle className="text-sm font-medium text-foreground">
                     Order Fulfillment
                   </CardTitle>
-                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <TagIcon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-foreground">
@@ -1227,7 +1222,7 @@ export default function SupplierAnalyticsPage() {
                   <CardTitle className="text-sm font-medium text-foreground">
                     Vendor Satisfaction
                   </CardTitle>
-                  <Award className="h-4 w-4 text-muted-foreground" />
+                  <TrophyIcon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-foreground">4.8</div>
@@ -1245,7 +1240,7 @@ export default function SupplierAnalyticsPage() {
                   <CardTitle className="text-sm font-medium text-foreground">
                     Lead Time
                   </CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <ClockIcon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-foreground">3.2d</div>
@@ -1263,7 +1258,7 @@ export default function SupplierAnalyticsPage() {
                   <CardTitle className="text-sm font-medium text-foreground">
                     Quality Score
                   </CardTitle>
-                  <Zap className="h-4 w-4 text-muted-foreground" />
+                  <BoltIcon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-foreground">
@@ -1292,7 +1287,7 @@ export default function SupplierAnalyticsPage() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                    <ArrowTrendingUpIcon className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
                     <div>
                       <h4 className="font-medium text-green-800 dark:text-green-300">
                         Excellent Supply Performance
@@ -1306,7 +1301,7 @@ export default function SupplierAnalyticsPage() {
                   </div>
 
                   <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <GlobeAltIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                     <div>
                       <h4 className="font-medium text-blue-800 dark:text-blue-300">
                         Expansion Opportunity
@@ -1320,7 +1315,7 @@ export default function SupplierAnalyticsPage() {
                   </div>
 
                   <div className="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                    <Package className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+                    <CubeIcon className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                     <div>
                       <h4 className="font-medium text-orange-800 dark:text-orange-300">
                         Inventory Optimization
@@ -1334,7 +1329,7 @@ export default function SupplierAnalyticsPage() {
                   </div>
 
                   <div className="flex items-start gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-                    <Building2 className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+                    <BuildingOffice2Icon className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
                     <div>
                       <h4 className="font-medium text-purple-800 dark:text-purple-300">
                         Vendor Relationships
@@ -1448,7 +1443,7 @@ export default function SupplierAnalyticsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-base">
               <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-indigo-600" />
+                <SparklesIcon className="h-4 w-4 text-indigo-600" />
               </div>
               Quick Actions
             </CardTitle>
@@ -1459,8 +1454,8 @@ export default function SupplierAnalyticsPage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <button className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group">
-                <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                  <Factory className="h-6 w-6 text-blue-600" />
+                <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <BuildingLibraryIcon className="h-6 w-6 text-blue-600" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
@@ -1472,8 +1467,8 @@ export default function SupplierAnalyticsPage() {
                 </div>
               </button>
               <button className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group">
-                <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                  <Building2 className="h-6 w-6 text-green-600" />
+                <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <BuildingOffice2Icon className="h-6 w-6 text-green-600" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
@@ -1485,8 +1480,8 @@ export default function SupplierAnalyticsPage() {
                 </div>
               </button>
               <button className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group">
-                <div className="h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                  <Package className="h-6 w-6 text-orange-600" />
+                <div className="h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <CubeIcon className="h-6 w-6 text-orange-600" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
@@ -1498,8 +1493,8 @@ export default function SupplierAnalyticsPage() {
                 </div>
               </button>
               <button className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:shadow-xl cursor-pointer group">
-                <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                  <Download className="h-6 w-6 text-indigo-600" />
+                <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <ArrowDownTrayIcon className="h-6 w-6 text-indigo-600" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
