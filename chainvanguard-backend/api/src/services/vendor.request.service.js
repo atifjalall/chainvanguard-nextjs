@@ -10,7 +10,6 @@ import fabricService from "./fabric.service.js";
 import Order from "../models/Order.js";
 import walletBalanceService from "./wallet.balance.service.js";
 import inventoryService from "./inventory.service.js";
-
 class VendorRequestService {
   /**
    * Create a new purchase request
@@ -135,6 +134,61 @@ class VendorRequestService {
       } catch (blockchainError) {
         console.error("⚠️ Blockchain recording failed:", blockchainError);
         // Continue - don't fail the request if blockchain fails
+      }
+
+      // ✅ ADD: Notify vendor about request creation
+      await notificationService.createNotification({
+        userId: vendorId,
+        userRole: "vendor",
+        type: "vendor_request_created",
+        category: "vendor_requests",
+        title: "Request Submitted",
+        message: `Your request #${request.requestNumber} for ${request.items.length} items has been submitted to ${supplier.name || supplier.companyName}`,
+        priority: "medium",
+        actionType: "view_order",
+        actionUrl: `/vendor/requests/${request._id}`,
+        relatedEntity: {
+          entityType: "vendor_request",
+          entityId: request._id,
+          entityData: {
+            requestNumber: request.requestNumber,
+            total: request.total,
+            itemCount: request.items.length,
+          },
+        },
+      });
+
+      // ✅ ADD: Notify supplier about new request
+      await notificationService.createNotification({
+        userId: supplierId,
+        userRole: "supplier",
+        type: "vendor_request_created",
+        category: "vendor_requests",
+        title: "New Vendor Request",
+        message: `New inventory request #${request.requestNumber} received from ${vendor.name || vendor.companyName}. Total: $${request.total.toFixed(2)}`,
+        priority: "high",
+        isUrgent: true,
+        actionType: "view_order",
+        actionUrl: `/supplier/requests/${request._id}`,
+        relatedEntity: {
+          entityType: "vendor_request",
+          entityId: request._id,
+        },
+      });
+
+      // ✅ ADD: If auto-approved, notify vendor
+      if (autoApprove) {
+        await notificationService.createNotification({
+          userId: vendorId,
+          userRole: "vendor",
+          type: "vendor_request_approved",
+          category: "vendor_requests",
+          title: "Request Auto-Approved",
+          message: `Your request #${request.requestNumber} has been automatically approved`,
+          priority: "high",
+          actionType: "view_order",
+          actionUrl: `/vendor/requests/${request._id}`,
+        });
       }
 
       // Existing blockchain logging
@@ -295,6 +349,22 @@ class VendorRequestService {
         }
         await request.save();
 
+        await notificationService.createNotification({
+          userId: request.vendorId,
+          userRole: "vendor",
+          type: "vendor_request_approved",
+          category: "vendor_requests",
+          title: "Request Approved",
+          message: `Your request #${request.requestNumber} has been approved by supplier`,
+          priority: "high",
+          actionType: "view_order",
+          actionUrl: `/vendor/requests/${request._id}`,
+          relatedEntity: {
+            entityType: "vendor_request",
+            entityId: request._id,
+          },
+        });
+
         console.log("✅ Approval recorded on blockchain:", blockchainResult);
       } catch (blockchainError) {
         console.error(
@@ -402,6 +472,22 @@ class VendorRequestService {
         }
         await request.save();
 
+        await notificationService.createNotification({
+          userId: request.vendorId,
+          userRole: "vendor",
+          type: "vendor_request_rejected",
+          category: "vendor_requests",
+          title: "Request Declined",
+          message: `Your request #${request.requestNumber} has been declined by supplier. Reason: ${notes || "Not specified"}`,
+          priority: "high",
+          actionType: "view_order",
+          actionUrl: `/vendor/requests/${request._id}`,
+          relatedEntity: {
+            entityType: "vendor_request",
+            entityId: request._id,
+          },
+        });
+
         console.log("✅ Rejection recorded on blockchain:", blockchainResult);
       } catch (blockchainError) {
         console.error(
@@ -503,6 +589,20 @@ class VendorRequestService {
           request.blockchainTxId = blockchainResult.txId;
         }
         await request.save();
+
+        await notificationService.createNotification({
+          userId: request.items[0].supplierId, // or get unique supplier IDs
+          userRole: "supplier",
+          type: "vendor_request_cancelled",
+          category: "vendor_requests",
+          title: "Request Cancelled",
+          message: `Vendor request #${request.requestNumber} was cancelled by vendor`,
+          priority: "medium",
+          relatedEntity: {
+            entityType: "vendor_request",
+            entityId: request._id,
+          },
+        });
 
         console.log(
           "✅ Cancellation recorded on blockchain:",

@@ -31,6 +31,8 @@ import {
   InboxIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ReceiptRefundIcon,
+  MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useState, createContext, useContext } from "react";
 
@@ -132,7 +134,7 @@ export function DashboardSidebar() {
           {
             href: "/vendor/browse",
             label: "Browse Inventory",
-            icon: ArchiveBoxIcon,
+            icon: MagnifyingGlassIcon,
           },
           {
             href: "/vendor/my-inventory",
@@ -157,12 +159,17 @@ export function DashboardSidebar() {
           {
             href: "/vendor/my-products",
             label: "My Products",
-            icon: CheckBadgeIcon,
+            icon: CubeIcon,
           },
           {
             href: "/vendor/orders",
             label: "Orders",
             icon: ClipboardDocumentListIcon,
+          },
+          {
+            href: "/vendor/returns",
+            label: "Returns",
+            icon: ReceiptRefundIcon,
           },
           { href: "/vendor/customers", label: "Customers", icon: UsersIcon },
           {
@@ -244,29 +251,6 @@ export function DashboardSidebar() {
     </div>
   );
 
-  // Desktop toggle button - fixed position relative to viewport
-  const DesktopToggle = () => (
-    <div
-      className={cn(
-        "hidden md:block fixed top-20 z-50 transition-all duration-300 ease-in-out",
-        isCollapsed ? "left-[52px]" : "left-[244px]"
-      )}
-    >
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="h-8 w-8 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow rounded-none"
-      >
-        {isCollapsed ? (
-          <ChevronRightIcon className="h-4 w-4" />
-        ) : (
-          <ChevronLeftIcon className="h-4 w-4" />
-        )}
-      </Button>
-    </div>
-  );
-
   // Overlay for mobile when sidebar is open
   const Overlay = () => (
     <div
@@ -282,7 +266,6 @@ export function DashboardSidebar() {
     <>
       <MobileToggle />
       <Overlay />
-      <DesktopToggle />
 
       <div
         className={cn(

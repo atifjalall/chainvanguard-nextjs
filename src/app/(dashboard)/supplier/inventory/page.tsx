@@ -374,447 +374,573 @@ export default function SupplierInventoryPage() {
     });
   };
 
+  // BADGE COLOR MAP
+  const badgeColorMap: Record<
+    string,
+    { bg: string; border: string; text: string; icon: string }
+  > = {
+    green: {
+      bg: "bg-green-100/10 dark:bg-green-900/10",
+      border: "border border-green-200 dark:border-green-900",
+      text: "text-green-700 dark:text-green-400",
+      icon: "text-green-700 dark:text-green-400",
+    },
+    blue: {
+      bg: "bg-blue-100/10 dark:bg-blue-900/10",
+      border: "border border-blue-200 dark:border-blue-900",
+      text: "text-blue-700 dark:text-blue-400",
+      icon: "text-blue-700 dark:text-blue-400",
+    },
+    yellow: {
+      bg: "bg-yellow-100/10 dark:bg-yellow-900/10",
+      border: "border border-yellow-200 dark:border-yellow-900",
+      text: "text-yellow-700 dark:text-yellow-400",
+      icon: "text-yellow-700 dark:text-yellow-400",
+    },
+    red: {
+      bg: "bg-red-100/10 dark:bg-red-900/10",
+      border: "border border-red-200 dark:border-red-900",
+      text: "text-red-700 dark:text-red-400",
+      icon: "text-red-700 dark:text-red-400",
+    },
+  };
+
+  // Helper to get badge color by status/type
+  function getBadgeColor(type: string) {
+    switch (type) {
+      case "in-stock":
+      case "active":
+      case "Items":
+        return badgeColorMap.green;
+      case "low-stock":
+      case "yellow":
+      case "pending":
+        return badgeColorMap.yellow;
+      case "out-of-stock":
+      case "red":
+        return badgeColorMap.red;
+      case "reserved":
+      case "blue":
+      case "Inventory Tracked":
+      case "Live Data":
+        return badgeColorMap.blue;
+      default:
+        return badgeColorMap.blue;
+    }
+  }
+
   if (isLoading) {
     return <SupplierInventorySkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
-      <div className="relative z-10 p-6 space-y-6">
-        {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
-        >
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Supply Chain Inventory
-              </h1>
-              <p className="text-base text-gray-600 dark:text-gray-400">
-                Manage stock levels and track inventory across your supply chain
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={loadInventory}
-                variant="outline"
-                className="hidden lg:flex items-center gap-2 text-xs cursor-pointer"
+    <div className="relative z-10 p-6 space-y-6 bg-white dark:bg-gray-950 min-h-screen">
+      {/* Header */}
+      <div
+        className={`transform transition-all duration-700 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Supply Chain Inventory
+            </h1>
+            <p className="text-base text-gray-600 dark:text-gray-400">
+              Manage stock levels and track inventory across your supply chain
+            </p>
+            {/* Header badges */}
+            <div className="flex items-center gap-2 mt-2">
+              <Badge
+                className={`${getBadgeColor("Items").bg} ${getBadgeColor("Items").border} ${getBadgeColor("Items").text} text-xs rounded-none`}
               >
-                <ArrowPathIcon className="h-4 w-4" />
-                Refresh
-              </Button>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 text-xs cursor-pointer"
+                {totalItems} Items
+              </Badge>
+              <Badge
+                className={`${getBadgeColor("blue").bg} ${getBadgeColor("blue").border} ${getBadgeColor("blue").text} flex items-center gap-1 text-xs rounded-none`}
               >
-                <ArrowDownTrayIcon className="h-4 w-4" />
-                Export
-              </Button>
-              <Button
-                onClick={() => router.push("/supplier/add-inventory")}
-                className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs cursor-pointer"
-              >
-                <PlusIcon className="h-4 w-4" />
-                Add Inventory
-              </Button>
+                <CheckCircleIcon
+                  className={`h-3 w-3 text-blue-700 dark:text-blue-400`}
+                />
+                Inventory Tracked
+              </Badge>
             </div>
           </div>
-        </div>
-
-        {/* Statistics Cards */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {[
-              {
-                title: "Total Items",
-                value: totalItems.toLocaleString(),
-                subtitle: "Products in inventory",
-                icon: CubeIcon,
-                iconColor: "text-blue-600",
-                iconBg: "bg-blue-100 dark:bg-blue-900/30",
-              },
-              {
-                title: "Total Value",
-                value: formatCurrency(totalValue),
-                subtitle: "Inventory worth",
-                icon: CurrencyDollarIcon,
-                iconColor: "text-green-600",
-                iconBg: "bg-green-100 dark:bg-green-900/30",
-              },
-              {
-                title: "In Stock",
-                value: inStockItems.toString(),
-                subtitle: "Available items",
-                icon: CheckCircleIcon,
-                iconColor: "text-green-600",
-                iconBg: "bg-green-100 dark:bg-green-900/30",
-              },
-              {
-                title: "Low Stock",
-                value: lowStockItems.toString(),
-                subtitle: "Need restocking",
-                icon: ExclamationTriangleIcon,
-                iconColor: "text-yellow-600",
-                iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
-              },
-              {
-                title: "Out of Stock",
-                value: outOfStockItems.toString(),
-                subtitle: "Require immediate attention",
-                icon: XCircleIcon,
-                iconColor: "text-red-600",
-                iconBg: "bg-red-100 dark:bg-red-900/30",
-              },
-            ].map((stat, index) => (
-              <Card
-                key={index}
-                className="border border-white/20 dark:border-gray-700/30 shadow-md hover:shadow-lg transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:scale-[1.02]"
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {stat.title}
-                  </CardTitle>
-                  <div
-                    className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center`}
-                  >
-                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                    {stat.value}
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    {stat.subtitle}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={loadInventory}
+              variant="outline"
+              className="hidden lg:flex items-center gap-2 text-xs cursor-pointer rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+            >
+              <ArrowPathIcon className="h-4 w-4 text-black dark:text-white" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 text-xs cursor-pointer rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4 text-black dark:text-white" />
+              Export
+            </Button>
+            <Button
+              onClick={() => router.push("/supplier/add-inventory")}
+              className="flex items-center gap-2 px-4 py-2 rounded-none bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 font-medium text-xs cursor-pointer transition-all"
+            >
+              <PlusIcon className="h-4 w-4 text-white dark:text-black" />
+              Add Inventory
+            </Button>
           </div>
         </div>
+      </div>
 
-        {/* Filters Card */}
-        <div
-          className={`transform transition-all duration-700 delay-300 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-base">
-                <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <FunnelIcon className="h-4 w-4 text-purple-600" />
+      {/* Statistics Cards */}
+      <div
+        className={`transform transition-all duration-700 delay-200 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {[
+            {
+              title: "Total Items",
+              value: totalItems.toLocaleString(),
+              subtitle: "Products in inventory",
+              icon: CubeIcon,
+            },
+            {
+              title: "Total Value",
+              value: formatCurrency(totalValue),
+              subtitle: "Inventory worth",
+              icon: CurrencyDollarIcon,
+            },
+            {
+              title: "In Stock",
+              value: inStockItems.toString(),
+              subtitle: "Available items",
+              icon: CheckCircleIcon,
+            },
+            {
+              title: "Low Stock",
+              value: lowStockItems.toString(),
+              subtitle: "Need restocking",
+              icon: ExclamationTriangleIcon,
+            },
+            {
+              title: "Out of Stock",
+              value: outOfStockItems.toString(),
+              subtitle: "Require immediate attention",
+              icon: XCircleIcon,
+            },
+          ].map((stat, index) => (
+            <Card
+              key={index}
+              className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] rounded-none"
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  {stat.title}
+                </CardTitle>
+                <div className="h-10 w-10 flex items-center justify-center rounded-none">
+                  <stat.icon className="h-5 w-5 text-black dark:text-white" />
                 </div>
-                Filters & Search
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Filter and search through your inventory
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative w-full">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search inventory by name, SKU, or category"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300"
-                  />
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                  {stat.value}
                 </div>
-                <Select
-                  value={selectedStatus}
-                  onValueChange={setSelectedStatus}
-                >
-                  <SelectTrigger className="h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300 cursor-pointer">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300 cursor-pointer">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {stat.subtitle}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Filters Card */}
+      <div
+        className={`transform transition-all duration-700 delay-300 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        <Card className="border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 rounded-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3 text-base">
+              <div className="h-8 w-8 rounded-none flex items-center justify-center">
+                <FunnelIcon className="h-4 w-4 text-black dark:text-white" />
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2 items-center">
-                  {searchTerm && (
-                    <Badge
-                      variant="outline"
-                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
+              Filters & Search
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Filter and search through your inventory
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative w-full">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search inventory by name, SKU, or category"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+                />
+              </div>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {statusOptions.map((status) => (
+                    <SelectItem
+                      key={status}
+                      value={status}
+                      className="text-sm h-9"
                     >
-                      &quot;{searchTerm}&quot;
-                      <button
-                        onClick={() => setSearchTerm("")}
-                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  {selectedStatus !== "All Status" && (
-                    <Badge
-                      variant="outline"
-                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {sortOptions.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="text-sm h-9"
                     >
-                      {selectedStatus}
-                      <button
-                        onClick={() => setSelectedStatus("All Status")}
-                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
-                    {filteredAndSortedInventory.length} items found
-                  </span>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2 items-center">
+                {searchTerm && (
+                  <Badge
+                    variant="outline"
+                    className={`${badgeColorMap.blue.bg} ${badgeColorMap.blue.border} ${badgeColorMap.blue.text} text-xs rounded-none`}
+                  >
+                    &quot;{searchTerm}&quot;
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                {selectedStatus !== "All Status" && (
+                  <Badge
+                    variant="outline"
+                    className={`${getBadgeColor(selectedStatus).bg} ${getBadgeColor(selectedStatus).border} ${getBadgeColor(selectedStatus).text} flex items-center gap-1 text-xs rounded-none`}
+                  >
+                    {/* Optionally, add icon for status badge if you want */}
+                    {selectedStatus === "in-stock" && (
+                      <CheckCircleIcon
+                        className={`h-3 w-3 ${badgeColorMap.green.icon} dark:text-white`}
+                      />
+                    )}
+                    {selectedStatus === "low-stock" && (
+                      <ExclamationCircleIcon
+                        className={`h-3 w-3 ${badgeColorMap.yellow.icon} dark:text-white`}
+                      />
+                    )}
+                    {selectedStatus === "out-of-stock" && (
+                      <XCircleIcon
+                        className={`h-3 w-3 ${badgeColorMap.red.icon} dark:text-white`}
+                      />
+                    )}
+                    {selectedStatus === "reserved" && (
+                      <ClockIcon
+                        className={`h-3 w-3 ${badgeColorMap.red.icon} dark:text-white`}
+                      />
+                    )}
+                    {selectedStatus}
+                    <button
+                      onClick={() => setSelectedStatus("All Status")}
+                      className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
+                  {filteredAndSortedInventory.length} items found
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Inventory Table */}
+      <div
+        className={`transform transition-all duration-700 delay-400 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        }`}
+      >
+        {filteredAndSortedInventory.length > 0 ? (
+          <Card className="border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 rounded-none">
+            <CardHeader className="border-b border-gray-200 dark:border-gray-700">
+              <div className="flex flex-row items-center gap-4">
+                <div className="flex flex-col">
+                  <CardTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
+                    <div className="h-8 w-8 rounded-none flex items-center justify-center">
+                      <BuildingStorefrontIcon className="h-4 w-4 text-black dark:text-white" />
+                    </div>
+                    Inventory Overview
+                  </CardTitle>
                 </div>
+                <div className="flex-1" />
+                <div>
+                  {/* "Live Data" badge */}
+                  <Badge
+                    variant="secondary"
+                    className={`${badgeColorMap.blue.bg} ${badgeColorMap.blue.border} ${badgeColorMap.blue.text} text-xs rounded-none flex items-center`}
+                  >
+                    <ChartPieIcon
+                      className={`h-3 w-3 mr-1 ${badgeColorMap.blue.icon}`}
+                    />
+                    Live Data
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200/50 dark:border-gray-800/50">
+                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                        Product
+                      </TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                        SKU
+                      </TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                        Category
+                      </TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                        Stock
+                      </TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                        Unit Price
+                      </TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                        Total Value
+                      </TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                        Last Updated
+                      </TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAndSortedInventory.map((item: any) => (
+                      <TableRow
+                        key={item.id}
+                        className="border-b border-gray-200/30 dark:border-gray-800/30 hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors rounded-none"
+                      >
+                        <TableCell className="pl-8 pr-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-none bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                              <CubeIcon className="h-5 w-5 text-black dark:text-white" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                                {item.name}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">
+                                Origin: {item.origin}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="pl-4 pr-4">
+                          <Badge
+                            variant="outline"
+                            className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-mono text-xs px-2 py-1 rounded-none"
+                          >
+                            {item.sku}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="pl-4 pr-4">
+                          <Badge
+                            variant="outline"
+                            className="font-medium text-xs border-0 rounded-none"
+                          >
+                            {item.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="pl-4 pr-4">
+                          <div>
+                            <p className="font-bold text-gray-900 dark:text-gray-100 text-xs">
+                              {item.quantity.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                              Min: {item.minimumOrderQuantity || 1}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="pl-4 pr-4">
+                          <div className="flex items-center gap-2">
+                            {/* REMOVE getStatusIcon(item.inventoryStatus) here */}
+                            <Badge
+                              className={`text-xs px-2 py-1 font-medium ${
+                                item.inventoryStatus === "in-stock"
+                                  ? `${badgeColorMap.green.bg} ${badgeColorMap.green.border} ${badgeColorMap.green.text}`
+                                  : item.inventoryStatus === "low-stock"
+                                    ? `${badgeColorMap.yellow.bg} ${badgeColorMap.yellow.border} ${badgeColorMap.yellow.text}`
+                                    : item.inventoryStatus === "out-of-stock"
+                                      ? `${badgeColorMap.red.bg} ${badgeColorMap.red.border} ${badgeColorMap.red.text}`
+                                      : item.inventoryStatus === "reserved"
+                                        ? `${badgeColorMap.blue.bg} ${badgeColorMap.blue.border} ${badgeColorMap.blue.text}`
+                                        : `${badgeColorMap.blue.bg} ${badgeColorMap.blue.border} ${badgeColorMap.blue.text}`
+                              } flex items-center gap-1 rounded-none`}
+                              variant="secondary"
+                            >
+                              {item.inventoryStatus === "in-stock" && (
+                                <CheckCircleIcon
+                                  className={`h-3 w-3 ${badgeColorMap.green.icon} dark:text-white`}
+                                />
+                              )}
+                              {item.inventoryStatus === "low-stock" && (
+                                <ExclamationCircleIcon
+                                  className={`h-3 w-3 ${badgeColorMap.yellow.icon} dark:text-white`}
+                                />
+                              )}
+                              {item.inventoryStatus === "out-of-stock" && (
+                                <XCircleIcon
+                                  className={`h-3 w-3 ${badgeColorMap.red.icon} dark:text-white`}
+                                />
+                              )}
+                              {item.inventoryStatus === "reserved" && (
+                                <ClockIcon
+                                  className={`h-3 w-3 ${badgeColorMap.blue.icon} dark:text-white`}
+                                />
+                              )}
+                              {![
+                                "in-stock",
+                                "low-stock",
+                                "out-of-stock",
+                                "reserved",
+                              ].includes(item.inventoryStatus) && (
+                                <CubeIcon
+                                  className={`h-3 w-3 ${badgeColorMap.blue.icon} dark:text-white`}
+                                />
+                              )}
+                              {item.inventoryStatus.replace("-", " ")}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="pl-4 pr-4">
+                          <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                            {formatCurrency(item.price)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="pl-4 pr-4">
+                          <span className="font-bold text-green-600 dark:text-green-400 text-xs">
+                            {formatCurrency(item.totalValue)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="pl-4 pr-4">
+                          <span className="text-xs text-gray-600 dark:text-gray-400">
+                            {formatDate(item.lastUpdated)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="pl-4 pr-8">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                router.push(`/supplier/inventory/${item.id}/`)
+                              }
+                              className="h-8 px-3 hover:bg-gray-50 hover:border-gray-200 dark:hover:bg-gray-900/20 text-xs cursor-pointer rounded-none"
+                            >
+                              <EyeIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
+                              View
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                router.push(
+                                  `/supplier/inventory/${item.id}/edit`
+                                )
+                              }
+                              className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 text-xs cursor-pointer rounded-none"
+                            >
+                              <PencilIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
+                              Edit
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Inventory Table */}
-        <div
-          className={`transform transition-all duration-700 delay-400 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          {filteredAndSortedInventory.length > 0 ? (
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
-              <CardHeader className="border-b border-gray-200 dark:border-gray-800">
-                <div className="flex flex-row items-center gap-4">
-                  <div className="flex flex-col">
-                    <CardTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
-                      <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <BuildingStorefrontIcon className="h-4 w-4 text-blue-600" />
-                      </div>
-                      Inventory Overview
-                    </CardTitle>
-                    {/* Remove items found from here */}
-                    {/* <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
-                      {filteredAndSortedInventory.length} items found
-                    </CardDescription> */}
-                  </div>
-                  <div className="flex-1" />
-                  <div>
-                    <Badge
-                      variant="secondary"
-                      className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 text-xs border-0"
-                    >
-                      <ChartPieIcon className="h-3 w-3 mr-1" />
-                      Live Data
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b border-gray-200/50 dark:border-gray-800/50">
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
-                          Product
-                        </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
-                          SKU
-                        </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
-                          Category
-                        </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
-                          Stock
-                        </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
-                          Status
-                        </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
-                          Unit Price
-                        </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
-                          Total Value
-                        </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
-                          Last Updated
-                        </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAndSortedInventory.map((item: any) => (
-                        <TableRow
-                          key={item.id}
-                          className="border-b border-gray-200/30 dark:border-gray-800/30 hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors"
-                        >
-                          <TableCell className="pl-8 pr-4">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                                <CubeIcon className="h-5 w-5 text-white" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                                  {item.name}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-500">
-                                  Origin: {item.origin}
-                                </p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
-                              {item.sku}
-                            </code>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <Badge
-                              variant="outline"
-                              className="font-medium text-xs border-0"
-                            >
-                              {item.category}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <div>
-                              <p className="font-bold text-gray-900 dark:text-gray-100 text-xs">
-                                {item.quantity.toLocaleString()}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                Min: {item.minimumOrderQuantity || 1}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(item.inventoryStatus)}
-                              <Badge
-                                className={`text-xs px-2 py-1 font-medium ${getStatusColor(item.inventoryStatus)} border-0`}
-                                variant="secondary"
-                              >
-                                {item.inventoryStatus.replace("-", " ")}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                              {formatCurrency(item.price)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <span className="font-bold text-green-600 dark:text-green-400 text-xs">
-                              {formatCurrency(item.totalValue)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <span className="text-xs text-gray-600 dark:text-gray-400">
-                              {formatDate(item.lastUpdated)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-8">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  router.push(`/supplier/inventory/${item.id}/`)
-                                }
-                                className="h-8 px-3 hover:bg-gray-50 hover:border-gray-200 dark:hover:bg-gray-900/20 text-xs cursor-pointer"
-                              >
-                                <EyeIcon className="h-3 w-3 mr-1" />
-                                View
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  router.push(
-                                    `/supplier/inventory/${item.id}/edit`
-                                  )
-                                }
-                                className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 text-xs cursor-pointer"
-                              >
-                                <PencilIcon className="h-3 w-3 mr-1" />
-                                Edit
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="text-center py-16 border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden">
-              <CardContent>
-                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                  <CubeIcon className="h-10 w-10 text-gray-400" />
-                </div>
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  {totalItems === 0 ? "No Inventory Items" : "No Items Found"}
-                </h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                  {totalItems === 0
-                    ? "Start by adding your first supply product to track inventory."
-                    : "Try adjusting your search terms or filters to find items."}
-                </p>
-                {totalItems === 0 ? (
-                  <Button
-                    onClick={() => router.push("/supplier/add-product")}
-                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-2" />
-                    Add First Item
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSelectedStatus("All Status");
-                    }}
-                    className="inline-flex items-center gap-2 text-xs cursor-pointer"
-                  >
-                    Clear Filters
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        ) : (
+          <Card className="text-center py-16 border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 overflow-hidden rounded-none">
+            <CardContent>
+              <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-none flex items-center justify-center">
+                <CubeIcon className="h-10 w-10 text-black dark:text-white" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                {totalItems === 0 ? "No Inventory Items" : "No Items Found"}
+              </h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                {totalItems === 0
+                  ? "Start by adding your first supply product to track inventory."
+                  : "Try adjusting your search terms or filters to find items."}
+              </p>
+              {totalItems === 0 ? (
+                <Button
+                  onClick={() => router.push("/supplier/add-product")}
+                  className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer rounded-none"
+                >
+                  <PlusIcon className="h-4 w-4 mr-2 text-white dark:text-black" />
+                  Add First Item
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedStatus("All Status");
+                  }}
+                  className="inline-flex items-center gap-2 text-xs cursor-pointer rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+                >
+                  {/* No icon here, but if you add one, use text-black */}
+                  Clear Filters
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Stock Adjustment Dialog */}
       <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
-        <DialogContent className="max-w-md bg-white dark:bg-gray-950 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 shadow-md">
+        <DialogContent className="max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md rounded-none">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
-              <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <PencilIcon className="h-4 w-4 text-blue-600" />
+              <div className="h-8 w-8 rounded-none flex items-center justify-center">
+                <PencilIcon className="h-4 w-4 text-black dark:text-white" />
               </div>
               Edit Stock Level
             </DialogTitle>
@@ -824,12 +950,12 @@ export default function SupplierInventoryPage() {
           </DialogHeader>
 
           <div className="space-y-6">
-            <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 rounded-lg border border-gray-200/50 dark:border-gray-800/50">
+            <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-none border border-gray-200 dark:border-gray-700">
               <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 Current Stock
               </Label>
               <div className="flex items-center gap-2 mt-1">
-                <CubeIcon className="h-4 w-4 text-gray-500" />
+                <CubeIcon className="h-4 w-4 text-black" />
                 <span className="text-base font-bold text-gray-900 dark:text-gray-100">
                   {adjustingItem?.quantity?.toLocaleString() || 0} units
                 </span>
@@ -854,7 +980,7 @@ export default function SupplierInventoryPage() {
                     quantity: e.target.value,
                   }))
                 }
-                className="mt-1 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500/20"
+                className="mt-1 h-12 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none rounded-none"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Use + for additions, - for reductions (e.g., +100, -25)
@@ -871,7 +997,7 @@ export default function SupplierInventoryPage() {
                   setAdjustForm((prev) => ({ ...prev, reason: value }))
                 }
               >
-                <SelectTrigger className="mt-1 h-12 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm cursor-pointer">
+                <SelectTrigger className="mt-1 h-12 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 cursor-pointer focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none rounded-none">
                   <SelectValue placeholder="Select reason" />
                 </SelectTrigger>
                 <SelectContent>
@@ -900,7 +1026,7 @@ export default function SupplierInventoryPage() {
                 onChange={(e) =>
                   setAdjustForm((prev) => ({ ...prev, notes: e.target.value }))
                 }
-                className="mt-1 border-0 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500/20"
+                className="mt-1 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none rounded-none"
                 rows={3}
               />
             </div>
@@ -910,16 +1036,16 @@ export default function SupplierInventoryPage() {
             <Button
               variant="outline"
               onClick={() => setIsAdjustOpen(false)}
-              className="shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer"
+              className="shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer rounded-none"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSaveAdjustment}
               disabled={!adjustForm.quantity || !adjustForm.reason}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer"
+              className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer rounded-none"
             >
-              <CheckCircleIcon className="h-4 w-4 mr-2" />
+              <CheckCircleIcon className="h-4 w-4 mr-2 text-black dark:text-white" />
               Save Adjustment
             </Button>
           </DialogFooter>

@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import Order from "../models/Order.js";
+import notificationService from "./notification.service.js";
 
 class LoyaltyService {
   /**
@@ -32,6 +33,15 @@ class LoyaltyService {
       }
 
       await customer.save();
+
+      await notificationService.createNotification({
+        userId: customerId,
+        type: "loyalty_points_earned",
+        title: "Loyalty Points Earned!",
+        message: `You earned ${pointsEarned} points! Total: ${customer.loyaltyPoints}`,
+        priority: "low",
+        category: "loyalty",
+      });
 
       console.log(
         `✅ Awarded ${pointsEarned} loyalty points to customer ${customer.name}`

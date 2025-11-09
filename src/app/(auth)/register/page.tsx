@@ -34,34 +34,34 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  Package,
-  Wallet,
-  Eye,
-  EyeOff,
-  Shield,
-  Copy,
-  Check,
-  AlertTriangle,
-  Download,
-  RefreshCw,
-  Users,
-  User,
-  Mail,
-  Phone,
-  Building,
-  MapPin,
-  ChevronLeft,
-  ChevronRight,
-  Lock,
-  Zap,
-  CheckCircle2,
-  FileText,
-  Crown,
-  Store,
-  Factory,
-  KeyRound,
-  BadgeCheck,
-} from "lucide-react";
+  CubeIcon as Package,
+  WalletIcon as Wallet,
+  EyeIcon as Eye,
+  EyeSlashIcon as EyeOff,
+  ShieldCheckIcon as Shield,
+  ClipboardDocumentIcon as Copy,
+  CheckIcon as Check,
+  ExclamationTriangleIcon as AlertTriangle,
+  ArrowDownTrayIcon as Download,
+  ArrowPathIcon as RefreshCw,
+  UsersIcon as Users,
+  UserIcon as User,
+  EnvelopeIcon as Mail,
+  PhoneIcon as Phone,
+  BuildingOfficeIcon as Building,
+  MapPinIcon as MapPin,
+  ChevronLeftIcon as ChevronLeft,
+  ChevronRightIcon as ChevronRight,
+  LockClosedIcon as Lock,
+  BoltIcon as Zap,
+  CheckCircleIcon as CheckCircle2,
+  DocumentTextIcon as FileText,
+  TrophyIcon as Crown,
+  ShoppingBagIcon as Store,
+  BuildingOffice2Icon as Factory,
+  KeyIcon as KeyRound,
+  CheckBadgeIcon as BadgeCheck,
+} from "@heroicons/react/24/outline";
 import { UserRole, WalletData } from "@/types/web3";
 import { AnimatePresence, motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -487,12 +487,10 @@ export default function RegisterPage() {
       console.error("[OTP] Verification error:", error);
       setOtpError(true);
 
-      // Shake animation and clear
-      setTimeout(() => {
-        setOtp(["", "", "", "", "", ""]);
-        setOtpError(false);
-        document.getElementById("otp-0")?.focus();
-      }, 500);
+      // Immediately empty all fields and reset to normal
+      setOtp(["", "", "", "", "", ""]);
+      setOtpError(false);
+      document.getElementById("otp-0")?.focus();
 
       toast.error(error.message || "Invalid verification code");
     } finally {
@@ -512,6 +510,11 @@ export default function RegisterPage() {
     // Auto-focus next input
     if (value && index < 5) {
       document.getElementById(`otp-${index + 1}`)?.focus();
+    }
+
+    // Auto-submit when all 6 digits are filled
+    if (newOtp.every((digit) => digit !== "")) {
+      verifyOtp();
     }
   };
 
@@ -1209,7 +1212,6 @@ export default function RegisterPage() {
               href="/"
               className="flex items-center space-x-3 group cursor-pointer"
             >
-              <Package className="h-6 w-6 text-gray-900 dark:text-white" />
               <span className="text-xl font-light text-gray-900 dark:text-white">
                 ChainVanguard
               </span>
@@ -1301,8 +1303,8 @@ export default function RegisterPage() {
                     {currentStep === 1 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
-                            <Wallet className="h-6 w-6" />
+                          <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
+                            <Wallet className="h-8 w-8" />
                           </div>
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Secure Wallet Creation
@@ -1533,8 +1535,8 @@ export default function RegisterPage() {
                     {currentStep === 2 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
-                            <User className="h-6 w-6" />
+                          <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
+                            <User className="h-8 w-8" />
                           </div>
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Tell Us About You
@@ -1688,8 +1690,8 @@ export default function RegisterPage() {
                     {currentStep === 3 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
-                            <MapPin className="h-6 w-6" />
+                          <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
+                            <MapPin className="h-8 w-8" />
                           </div>
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Address Details
@@ -1878,8 +1880,8 @@ export default function RegisterPage() {
                     {currentStep === 4 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
-                            <Shield className="h-6 w-6" />
+                          <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
+                            <Shield className="h-8 w-8" />
                           </div>
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Choose Your Role
@@ -2128,8 +2130,8 @@ export default function RegisterPage() {
                     {currentStep === 5 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
-                            <CheckCircle2 className="h-6 w-6" />
+                          <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
+                            <CheckCircle2 className="h-8 w-8" />
                           </div>
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Review Your Information
@@ -2364,8 +2366,8 @@ export default function RegisterPage() {
                     {currentStep === 6 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
-                            <Mail className="h-6 w-6" />
+                          <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
+                            <Mail className="h-8 w-8" />
                           </div>
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Verify Your Email
@@ -2395,13 +2397,13 @@ export default function RegisterPage() {
                               onPaste={index === 0 ? handleOtpPaste : undefined}
                               aria-label={`OTP digit ${index + 1}`}
                               title={`Enter digit ${index + 1} of verification code`}
-                              className={`w-10 h-10 sm:w-12 sm:h-12 text-center text-lg font-bold border-2 transition-all rounded-none ${
+                              className={`w-9 h-9 text-center text-sm font-bold border rounded-none outline-none ${
                                 otpError
                                   ? "border-red-500 bg-red-50 dark:bg-red-950/20 animate-shake"
                                   : digit
                                     ? "border-gray-900 dark:border-white bg-gray-100 dark:bg-gray-800"
                                     : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
-                              } focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-gray-900 dark:focus:border-white`}
+                              } hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-all`}
                             />
                           ))}
                         </div>
@@ -2413,11 +2415,11 @@ export default function RegisterPage() {
                           </p>
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={sendOtpEmail}
                             disabled={resendTimer > 0 || isLoading}
-                            className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer"
+                            className="text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 border-gray-200 dark:border-gray-700 h-8 rounded-none"
                           >
                             {resendTimer > 0 ? (
                               `Resend code in ${resendTimer}s`
@@ -2429,30 +2431,6 @@ export default function RegisterPage() {
                             )}
                           </Button>
                         </div>
-
-                        {/* Verify Button */}
-                        <Button
-                          type="button"
-                          onClick={verifyOtp}
-                          disabled={isVerifyingOtp || otp.some((d) => !d)}
-                          className={`w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 cursor-pointer text-xs h-9 rounded-none ${
-                            isVerifyingOtp || otp.some((d) => !d)
-                              ? "opacity-50 cursor-not-allowed"
-                              : ""
-                          }`}
-                        >
-                          {isVerifyingOtp ? (
-                            <>
-                              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                              Verifying...
-                            </>
-                          ) : (
-                            <>
-                              <BadgeCheck className="h-3.5 w-3.5" />
-                              Verify Email
-                            </>
-                          )}
-                        </Button>
 
                         {/* Security Note */}
                         <Alert className="border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-800 rounded-none">
@@ -2469,8 +2447,8 @@ export default function RegisterPage() {
                     {currentStep === 7 && (
                       <div className="space-y-4">
                         <div className="text-center mb-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 mb-3">
-                            <KeyRound className="h-6 w-6" />
+                          <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
+                            <KeyRound className="h-8 w-8" />
                           </div>
                           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                             Your Recovery Phrase

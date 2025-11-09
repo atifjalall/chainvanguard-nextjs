@@ -31,6 +31,7 @@ import vendorInventoryRoutes from "./routes/vendor.inventory.routes.js";
 import inventoryBrowseRoutes from "./routes/inventory.browse.routes.js";
 import checkoutRoutes from "./routes/checkout.routes.js";
 import vendorTransactionRoutes from "./routes/vendor.transaction.routes.js";
+import customerBrowseRoutes from "./routes/customer.browse.routes.js";
 
 dotenv.config();
 
@@ -160,6 +161,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/checkout", checkoutRoutes);
+app.use("/api/customer/browse", customerBrowseRoutes);
 app.use("/api/qr", qrRoutes);
 app.use("/api/expert", expertRoutes);
 app.use("/api/blockchain", blockchainRoutes);

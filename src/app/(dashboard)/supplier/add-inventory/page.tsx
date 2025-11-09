@@ -1,14 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/_ui/card";
+import { Card, CardContent } from "@/components/_ui/card";
 import { Button } from "@/components/_ui/button";
 import { Input } from "@/components/_ui/input";
 import { Label } from "@/components/_ui/label";
@@ -32,30 +27,28 @@ import {
 } from "@/components/_ui/dialog";
 import { Checkbox } from "@/components/_ui/checkbox";
 import {
-  Package,
-  Upload,
-  Image as ImageIcon,
-  X,
-  AlertCircle,
-  Camera,
-  ArrowLeft,
-  Save,
-  Eye,
-  Loader2,
-  CheckCircle,
-  Tag,
-  Ruler,
-  Weight,
-  Award,
-  Plus,
-  RotateCcw,
-  Shield,
-  Palette,
-  Activity,
-  ArrowRight,
-} from "lucide-react";
+  ArchiveBoxIcon,
+  ArrowUpTrayIcon,
+  XMarkIcon,
+  ExclamationCircleIcon,
+  ArrowLeftIcon,
+  DocumentDuplicateIcon,
+  EyeIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  ScaleIcon,
+  PlusIcon,
+  ShieldCheckIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  CameraIcon,
+  PhotoIcon,
+  SwatchIcon,
+  DocumentTextIcon,
+} from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
+import { Loader2 } from "lucide-react";
 
 // ========================================
 // HARDCODED CATEGORIES (Matching Inventory.js schema exactly)
@@ -71,7 +64,7 @@ const inventoryCategories = [
   "Tools & Equipment",
 ];
 
-const subcategoryMap = {
+const subcategoryMap: { [key: string]: string[] } = {
   "Raw Material": [
     "Cotton Fabric",
     "Polyester Fabric",
@@ -214,16 +207,92 @@ const certifications = [
 
 const seasons = ["Spring", "Summer", "Autumn", "Winter", "All Season"];
 
+// ================== Types ==================
+type TextileDetails = {
+  fabricType: string;
+  composition: string;
+  gsm: string;
+  width: string;
+  fabricWeight: string;
+  color: string;
+  colorCode: string;
+  pattern: string;
+  finish: string;
+  careInstructions: string;
+  shrinkage: string;
+  washability: string;
+};
+
+type SupplierContact = {
+  phone: string;
+  email: string;
+  address: string;
+};
+
+type FormDataType = {
+  name: string;
+  description: string;
+  category: string;
+  subcategory: string;
+  materialType: string;
+  brand: string;
+  textileDetails: TextileDetails;
+  pricePerUnit: string;
+  costPrice: string;
+  originalPrice: string;
+  discount: string;
+  quantity: string;
+  reservedQuantity: string;
+  committedQuantity: string;
+  damagedQuantity: string;
+  minStockLevel: string;
+  reorderLevel: string;
+  reorderQuantity: string;
+  maximumQuantity: string;
+  safetyStockLevel: string;
+  unit: string;
+  sku: string;
+  internalCode: string;
+  barcode: string;
+  weight: string;
+  dimensions: string;
+  tags: string[];
+  season: string;
+  countryOfOrigin: string;
+  manufacturer: string;
+  supplierName: string;
+  supplierContact: SupplierContact;
+  qualityGrade: string;
+  certifications: string[];
+  isSustainable: boolean;
+  complianceStandards: string[];
+  sustainabilityCertifications: string[];
+  leadTime: string;
+  estimatedDeliveryDays: string;
+  shelfLife: string;
+  images: string[];
+  notes: string;
+  carbonFootprint: string;
+  recycledContent: string;
+  autoReorderEnabled: boolean;
+  isBatchTracked: boolean;
+  status: string;
+};
+
+type ErrorsType = {
+  [key: string]: string;
+};
+
 export default function AddInventoryPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [previewMode, setPreviewMode] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [previewMode, setPreviewMode] = useState<boolean>(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
+  const [isVisible, setIsVisible] = useState<boolean>(false);
+  const [currentStep, setCurrentStep] = useState<number>(1);
   const totalSteps = 5;
 
   useEffect(() => {
@@ -233,7 +302,7 @@ export default function AddInventoryPage() {
   // ========================================
   // UPDATED FORM DATA (Matching backend Inventory model)
   // ========================================
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataType>({
     // Basic Info
     name: "",
     description: "",
@@ -325,25 +394,31 @@ export default function AddInventoryPage() {
     status: "active",
   });
 
-  const [errors, setErrors] = useState({});
-  const [tagInput, setTagInput] = useState("");
-  const [complianceInput, setComplianceInput] = useState("");
+  const [errors, setErrors] = useState<ErrorsType>({});
+  const [tagInput, setTagInput] = useState<string>("");
+  const [complianceInput, setComplianceInput] = useState<string>("");
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field: keyof FormDataType, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
-  const handleTextileDetailChange = (field, value) => {
+  const handleTextileDetailChange = (
+    field: keyof TextileDetails,
+    value: string
+  ) => {
     setFormData((prev) => ({
       ...prev,
       textileDetails: { ...prev.textileDetails, [field]: value },
     }));
   };
 
-  const handleSupplierContactChange = (field, value) => {
+  const handleSupplierContactChange = (
+    field: keyof SupplierContact,
+    value: string
+  ) => {
     setFormData((prev) => ({
       ...prev,
       supplierContact: { ...prev.supplierContact, [field]: value },
@@ -360,7 +435,7 @@ export default function AddInventoryPage() {
     }
   };
 
-  const removeTag = (tagToRemove) => {
+  const removeTag = (tagToRemove: string) => {
     setFormData((prev) => ({
       ...prev,
       tags: prev.tags.filter((tag) => tag !== tagToRemove),
@@ -383,7 +458,7 @@ export default function AddInventoryPage() {
     }
   };
 
-  const removeComplianceStandard = (standard) => {
+  const removeComplianceStandard = (standard: string) => {
     setFormData((prev) => ({
       ...prev,
       complianceStandards: prev.complianceStandards.filter(
@@ -392,14 +467,14 @@ export default function AddInventoryPage() {
     }));
   };
 
-  const handleImageUpload = async (files) => {
+  const handleImageUpload = async (files: FileList | null) => {
     if (!files) return;
 
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
-      const newImages = [];
+      const newImages: string[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -409,7 +484,9 @@ export default function AddInventoryPage() {
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
 
-        const mockImageUrl = `https://via.placeholder.com/400x300?text=${encodeURIComponent(file.name)}`;
+        const mockImageUrl = `https://via.placeholder.com/400x300?text=${encodeURIComponent(
+          file.name
+        )}`;
         newImages.push(mockImageUrl);
       }
 
@@ -428,7 +505,7 @@ export default function AddInventoryPage() {
     }
   };
 
-  const removeImage = (indexToRemove) => {
+  const removeImage = (indexToRemove: number) => {
     setFormData((prev) => ({
       ...prev,
       images: prev.images.filter((_, index) => index !== indexToRemove),
@@ -436,7 +513,7 @@ export default function AddInventoryPage() {
   };
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors: ErrorsType = {};
 
     if (!formData.name.trim()) newErrors.name = "Item name is required";
     if (!formData.description.trim())
@@ -640,7 +717,7 @@ export default function AddInventoryPage() {
         "certifications",
         JSON.stringify(formData.certifications)
       );
-      formDataToSend.append("isSustainable", formData.isSustainable);
+      formDataToSend.append("isSustainable", formData.isSustainable.toString());
       formDataToSend.append(
         "complianceStandards",
         JSON.stringify(formData.complianceStandards)
@@ -658,8 +735,14 @@ export default function AddInventoryPage() {
       formDataToSend.append("notes", formData.notes);
       formDataToSend.append("carbonFootprint", formData.carbonFootprint || "0");
       formDataToSend.append("recycledContent", formData.recycledContent || "0");
-      formDataToSend.append("autoReorderEnabled", formData.autoReorderEnabled);
-      formDataToSend.append("isBatchTracked", formData.isBatchTracked);
+      formDataToSend.append(
+        "autoReorderEnabled",
+        formData.autoReorderEnabled.toString()
+      );
+      formDataToSend.append(
+        "isBatchTracked",
+        formData.isBatchTracked.toString()
+      );
       formDataToSend.append("status", formData.status);
 
       // Add images (if any were uploaded)
@@ -670,7 +753,7 @@ export default function AddInventoryPage() {
       try {
         const token = localStorage.getItem("token");
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/inventory`,
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/api/inventory`,
           {
             method: "POST",
             headers: {
@@ -692,7 +775,7 @@ export default function AddInventoryPage() {
       } catch (apiError) {
         console.warn(
           "API call failed, falling back to localStorage:",
-          apiError.message
+          apiError instanceof Error ? apiError.message : String(apiError)
         );
 
         // Fallback to localStorage if API fails
@@ -765,7 +848,7 @@ export default function AddInventoryPage() {
 
   if (previewMode) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
+      <div className="min-h-screen bg-white dark:bg-gray-950">
         <div className="p-6 space-y-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
@@ -775,7 +858,7 @@ export default function AddInventoryPage() {
                 className="flex items-center gap-2 text-xs cursor-pointer h-8"
                 size="sm"
               >
-                <ArrowLeft className="h-3 w-3" />
+                <ArrowLeftIcon className="h-3 w-3" />
                 Back to Edit
               </Button>
               <div>
@@ -791,26 +874,26 @@ export default function AddInventoryPage() {
               onClick={handleSubmit}
               disabled={isLoading}
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-xs h-8"
+              className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none transition-all"
             >
               {isLoading ? (
-                <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                <ArrowPathIcon className="h-3 w-3 animate-spin mr-2" />
               ) : (
-                <CheckCircle className="h-3 w-3 mr-2" />
+                <CheckCircleIcon className="h-3 w-3 mr-2" />
               )}
               {isLoading ? "Adding..." : "Add to Inventory"}
             </Button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+            <Card className="border border-gray-200 dark:border-gray-800 shadow-md bg-white dark:bg-gray-950">
               <CardContent className="p-6">
                 {formData.images.length > 0 ? (
                   <div className="space-y-4">
                     <img
                       src={formData.images[0]}
                       alt={formData.name}
-                      className="w-full aspect-video object-cover rounded-lg"
+                      className="w-full aspect-video object-cover rounded-none"
                     />
                     {formData.images.length > 1 && (
                       <div className="grid grid-cols-4 gap-2">
@@ -819,32 +902,34 @@ export default function AddInventoryPage() {
                             key={index}
                             src={image}
                             alt={`${formData.name} ${index + 2}`}
-                            className="aspect-square object-cover rounded"
+                            className="aspect-square object-cover rounded-none"
                           />
                         ))}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="aspect-video rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                    <ImageIcon className="h-12 w-12 text-gray-400" />
+                  <div className="aspect-video rounded-none bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                    <PhotoIcon className="h-12 w-12 text-gray-400" />
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+            <Card className="border border-gray-200 dark:border-gray-800 shadow-md bg-white dark:bg-gray-950">
               <CardContent className="p-6 space-y-4">
                 <div>
-                  <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-gray-100">
+                  <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
                     {formData.name || "Item Name"}
                   </h2>
                   <div className="flex items-center gap-2 mb-3">
-                    <Badge className="text-xs border-0">
-                      {formData.category || "Category"}
+                    <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
+                      <ArchiveBoxIcon className="h-3 w-3 mr-1 text-blue-700 dark:text-blue-400" />
+                      Inventory Management
                     </Badge>
-                    <Badge variant="outline" className="text-xs border-0">
-                      {formData.subcategory || "Subcategory"}
+                    <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 flex items-center gap-1 text-xs rounded-none">
+                      <ShieldCheckIcon className="h-3 w-3 text-green-700 dark:text-green-400" />
+                      Blockchain Tracked
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-700 dark:text-gray-300">
@@ -852,7 +937,7 @@ export default function AddInventoryPage() {
                   </p>
                 </div>
 
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-none p-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -889,7 +974,7 @@ export default function AddInventoryPage() {
                     .map((item, index) => (
                       <div
                         key={index}
-                        className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3"
+                        className="bg-gray-50 dark:bg-gray-800/50 rounded-none p-3"
                       >
                         <p className="text-xs text-gray-500 uppercase">
                           {item.label}
@@ -903,17 +988,15 @@ export default function AddInventoryPage() {
 
                 {formData.certifications.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold mb-2 text-gray-900 dark:text-gray-100">
+                    <p className="text-xs font-semibold mb-2 text-gray-900 dark:text-white">
                       Certifications
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {formData.certifications.map((cert, index) => (
                         <Badge
                           key={index}
-                          variant="outline"
-                          className="bg-green-50 dark:bg-green-900/20 text-xs border-0"
+                          className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none"
                         >
-                          <Award className="h-3 w-3 mr-1" />
                           {cert}
                         </Badge>
                       ))}
@@ -929,7 +1012,7 @@ export default function AddInventoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
       <div className="relative z-10 p-6 space-y-6">
         {/* Header - matching dashboard style */}
         <div
@@ -939,19 +1022,19 @@ export default function AddInventoryPage() {
         >
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Add Inventory Item
               </h1>
               <p className="text-base text-gray-600 dark:text-gray-400">
                 Add new textile materials and components to inventory
               </p>
               <div className="flex items-center gap-2 mt-2">
-                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 backdrop-blur-sm text-xs border-0">
-                  <Package className="h-3 w-3 mr-1" />
+                <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
+                  <ArchiveBoxIcon className="h-3 w-3 mr-1 text-blue-700 dark:text-blue-400" />
                   Inventory Management
                 </Badge>
-                <Badge className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 backdrop-blur-sm flex items-center gap-1 text-xs border-0">
-                  <Shield className="h-3 w-3" />
+                <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 flex items-center gap-1 text-xs rounded-none">
+                  <ShieldCheckIcon className="h-3 w-3 text-green-700 dark:text-green-400" />
                   Blockchain Tracked
                 </Badge>
               </div>
@@ -961,26 +1044,26 @@ export default function AddInventoryPage() {
                 variant="outline"
                 onClick={resetForm}
                 size="sm"
-                className="text-xs cursor-pointer h-8"
+                className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
               >
-                <RotateCcw className="h-3 w-3 mr-2" />
+                <ArrowPathIcon className="h-3 w-3 mr-2" />
                 Reset
               </Button>
               <Button
                 variant="outline"
                 onClick={saveAsDraft}
                 size="sm"
-                className="text-xs cursor-pointer h-8"
+                className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
               >
-                <Save className="h-3 w-3 mr-2" />
+                <DocumentDuplicateIcon className="h-3 w-3 mr-2" />
                 Save Draft
               </Button>
               <Button
                 onClick={() => setPreviewMode(true)}
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
+                className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none transition-all"
               >
-                <Eye className="h-3 w-3 mr-2" />
+                <EyeIcon className="h-3 w-3 mr-2" />
                 Preview
               </Button>
             </div>
@@ -988,10 +1071,10 @@ export default function AddInventoryPage() {
         </div>
 
         {/* Progress Bar - matching dashboard card style */}
-        <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
+        <Card className="border border-gray-200 dark:border-gray-800 shadow-md bg-white dark:bg-gray-950 hover:shadow-lg transition-all duration-300 rounded-none">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                 Step {currentStep} of {totalSteps}
               </h3>
               <span className="text-xs text-gray-500 dark:text-gray-500">
@@ -1001,43 +1084,49 @@ export default function AddInventoryPage() {
             <Progress value={getStepProgress()} className="h-2 mb-4" />
             <div className="grid grid-cols-5 gap-3">
               {[
-                { step: 1, title: "Basic Info", icon: Package },
-                { step: 2, title: "Textile Details", icon: Palette },
-                { step: 3, title: "Stock & Pricing", icon: Activity },
-                { step: 4, title: "Quality", icon: Shield },
-                { step: 5, title: "Media", icon: Camera },
-              ].map(({ step, title, icon: Icon }) => (
-                <button
-                  key={step}
-                  onClick={() => setCurrentStep(step)}
-                  className={`flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer hover:shadow-md ${
-                    step === currentStep
-                      ? "bg-blue-600 text-white"
-                      : step < currentStep
-                        ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-500"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="text-xs font-medium">{title}</span>
-                </button>
-              ))}
+                { step: 1, title: "Basic Info", icon: DocumentTextIcon },
+                { step: 2, title: "Textile Details", icon: SwatchIcon },
+                { step: 3, title: "Stock & Pricing", icon: ArchiveBoxIcon },
+                { step: 4, title: "Quality", icon: ShieldCheckIcon },
+                { step: 5, title: "Media", icon: CameraIcon },
+              ].map(({ step, title, icon: Icon }) => {
+                const isSelected = step === currentStep;
+                return (
+                  <button
+                    key={step}
+                    onClick={() => setCurrentStep(step)}
+                    className={`flex items-center gap-2 p-2 rounded-none transition-all cursor-pointer hover:shadow-md ${
+                      isSelected
+                        ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                        : step < currentStep
+                          ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          : "bg-gray-50 dark:bg-gray-900 text-gray-500"
+                    }`}
+                  >
+                    <Icon
+                      className={`h-4 w-4 ${
+                        isSelected
+                          ? "text-white dark:text-gray-900"
+                          : "text-gray-900 dark:text-gray-100"
+                      }`}
+                    />
+                    <span className="text-xs font-medium">{title}</span>
+                  </button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
 
         {/* Form Content - matching dashboard card style */}
-        <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300">
+        <Card className="border border-gray-200 dark:border-gray-800 shadow-md bg-white dark:bg-gray-950 hover:shadow-lg transition-all duration-300 rounded-none">
           <CardContent className="p-6">
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Package className="h-4 w-4 text-blue-600" />
-                  </div>
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                       Basic Item Information
                     </h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -1061,11 +1150,13 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("name", e.target.value)
                       }
-                      className={`text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${errors.name ? "border-red-500" : ""}`}
+                      className={`text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none${
+                        errors.name ? " border-red-500" : ""
+                      } border-gray-200 dark:border-gray-700`}
                     />
                     {errors.name && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
+                        <ExclamationCircleIcon className="h-3 w-3" />
                         {errors.name}
                       </p>
                     )}
@@ -1086,7 +1177,9 @@ export default function AddInventoryPage() {
                       }}
                     >
                       <SelectTrigger
-                        className={`text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer ${errors.category ? "border-red-500" : ""}`}
+                        className={`text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none${
+                          errors.category ? " border-red-500" : ""
+                        } border-gray-200 dark:border-gray-700`}
                       >
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
@@ -1104,7 +1197,7 @@ export default function AddInventoryPage() {
                     </Select>
                     {errors.category && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
+                        <ExclamationCircleIcon className="h-3 w-3" />
                         {errors.category}
                       </p>
                     )}
@@ -1125,7 +1218,9 @@ export default function AddInventoryPage() {
                       disabled={!formData.category}
                     >
                       <SelectTrigger
-                        className={`text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer ${errors.subcategory ? "border-red-500" : ""}`}
+                        className={`text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none${
+                          errors.subcategory ? " border-red-500" : ""
+                        } border-gray-200 dark:border-gray-700`}
                       >
                         <SelectValue placeholder="Select subcategory" />
                       </SelectTrigger>
@@ -1144,7 +1239,7 @@ export default function AddInventoryPage() {
                     </Select>
                     {errors.subcategory && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
+                        <ExclamationCircleIcon className="h-3 w-3" />
                         {errors.subcategory}
                       </p>
                     )}
@@ -1163,9 +1258,7 @@ export default function AddInventoryPage() {
                         handleInputChange("materialType", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none" />
                       <SelectContent className="max-h-[300px]">
                         {materialTypes.map((type) => (
                           <SelectItem
@@ -1192,7 +1285,7 @@ export default function AddInventoryPage() {
                       placeholder="e.g., INV-2025-001"
                       value={formData.sku}
                       onChange={(e) => handleInputChange("sku", e.target.value)}
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-500">
                       Leave empty to auto-generate
@@ -1213,7 +1306,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("brand", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1230,9 +1323,7 @@ export default function AddInventoryPage() {
                         handleInputChange("unit", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none" />
                       <SelectContent className="max-h-[300px]">
                         {units.map((unit) => (
                           <SelectItem
@@ -1261,11 +1352,13 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("supplierName", e.target.value)
                       }
-                      className={`text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${errors.supplierName ? "border-red-500" : ""}`}
+                      className={`text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none${
+                        errors.supplierName ? " border-red-500" : ""
+                      }`}
                     />
                     {errors.supplierName && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
+                        <ExclamationCircleIcon className="h-3 w-3" />
                         {errors.supplierName}
                       </p>
                     )}
@@ -1288,14 +1381,14 @@ export default function AddInventoryPage() {
                     }
                     maxLength={1000}
                     rows={6}
-                    className={`text-sm resize-none bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${
-                      errors.description ? "border-red-500" : ""
-                    }`}
+                    className={`text-sm resize-none bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none${
+                      errors.description ? " border-red-500" : ""
+                    } border-gray-200 dark:border-gray-700`}
                   />
                   <div className="flex justify-between items-center">
                     {errors.description ? (
                       <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
+                        <ExclamationCircleIcon className="h-3 w-3" />
                         {errors.description}
                       </p>
                     ) : (
@@ -1311,10 +1404,10 @@ export default function AddInventoryPage() {
                   <Button
                     onClick={nextStep}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
+                    className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none transition-all"
                   >
                     Next Step
-                    <ArrowRight className="h-3 w-3 ml-2" />
+                    <ArrowRightIcon className="h-3 w-3 ml-2" />
                   </Button>
                 </div>
               </div>
@@ -1324,11 +1417,9 @@ export default function AddInventoryPage() {
             {currentStep === 2 && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Palette className="h-4 w-4 text-blue-600" />
-                  </div>
+ 
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                       Textile Details & Properties
                     </h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -1352,13 +1443,13 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("color", e.target.value)
                       }
-                      className={`text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${
-                        errors["textileDetails.color"] ? "border-red-500" : ""
+                      className={`text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none${
+                        errors["textileDetails.color"] ? " border-red-500" : ""
                       }`}
                     />
                     {errors["textileDetails.color"] && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
+                        <ExclamationCircleIcon className="h-3 w-3" />
                         {errors["textileDetails.color"]}
                       </p>
                     )}
@@ -1378,7 +1469,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("colorCode", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1395,7 +1486,7 @@ export default function AddInventoryPage() {
                         handleTextileDetailChange("fabricType", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                         <SelectValue placeholder="Select fabric type" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -1426,7 +1517,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("composition", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1443,7 +1534,7 @@ export default function AddInventoryPage() {
                         handleTextileDetailChange("pattern", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -1473,7 +1564,7 @@ export default function AddInventoryPage() {
                         handleTextileDetailChange("finish", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                         <SelectValue placeholder="Select finish" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -1505,7 +1596,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("gsm", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1524,7 +1615,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("width", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1545,7 +1636,7 @@ export default function AddInventoryPage() {
                           e.target.value
                         )
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1563,7 +1654,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("shrinkage", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1581,7 +1672,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleTextileDetailChange("washability", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1593,7 +1684,7 @@ export default function AddInventoryPage() {
                       Weight
                     </Label>
                     <div className="relative">
-                      <Weight className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <ScaleIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         id="weight"
                         placeholder="e.g., 2.5 kg"
@@ -1601,7 +1692,7 @@ export default function AddInventoryPage() {
                         onChange={(e) =>
                           handleInputChange("weight", e.target.value)
                         }
-                        className="pl-10 text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                        className="pl-10 text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1625,7 +1716,7 @@ export default function AddInventoryPage() {
                       )
                     }
                     rows={6}
-                    className="resize-none text-sm bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                    className="resize-none text-sm bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                   />
                 </div>
 
@@ -1634,18 +1725,18 @@ export default function AddInventoryPage() {
                     variant="outline"
                     onClick={prevStep}
                     size="sm"
-                    className="text-xs cursor-pointer h-8"
+                    className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
                   >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <ArrowLeftIcon className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
                   <Button
                     onClick={nextStep}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
+                    className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none transition-all"
                   >
                     Next Step
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <ArrowRightIcon className="h-3 w-3 ml-2" />
                   </Button>
                 </div>
               </div>
@@ -1655,11 +1746,9 @@ export default function AddInventoryPage() {
             {currentStep === 3 && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-blue-600" />
-                  </div>
+
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                       Stock Management & Pricing
                     </h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -1689,12 +1778,14 @@ export default function AddInventoryPage() {
                         onChange={(e) =>
                           handleInputChange("pricePerUnit", e.target.value)
                         }
-                        className={`pl-8 text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${errors.pricePerUnit ? "border-red-500" : ""}`}
+                        className={`pl-8 text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none${
+                          errors.pricePerUnit ? " border-red-500" : ""
+                        } outline-none ring-0 shadow-none`}
                       />
                     </div>
                     {errors.pricePerUnit && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
+                        <ExclamationCircleIcon className="h-3 w-3" />
                         {errors.pricePerUnit}
                       </p>
                     )}
@@ -1720,7 +1811,7 @@ export default function AddInventoryPage() {
                         onChange={(e) =>
                           handleInputChange("costPrice", e.target.value)
                         }
-                        className="pl-8 text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                        className="pl-8 text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                       />
                     </div>
                   </div>
@@ -1742,7 +1833,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("discount", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
                 </div>
@@ -1763,11 +1854,13 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("quantity", e.target.value)
                       }
-                      className={`text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 ${errors.quantity ? "border-red-500" : ""}`}
+                      className={`text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none${
+                        errors.quantity ? " border-red-500" : ""
+                      } outline-none ring-0 shadow-none`}
                     />
                     {errors.quantity && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
+                        <ExclamationCircleIcon className="h-3 w-3" />
                         {errors.quantity}
                       </p>
                     )}
@@ -1788,7 +1881,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("minStockLevel", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1807,7 +1900,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("reorderLevel", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1826,7 +1919,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("reorderQuantity", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1845,7 +1938,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("safetyStockLevel", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1864,7 +1957,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("maximumQuantity", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1883,7 +1976,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("leadTime", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -1902,7 +1995,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("shelfLife", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
                 </div>
@@ -1912,7 +2005,7 @@ export default function AddInventoryPage() {
                     <Checkbox
                       id="autoReorder"
                       checked={formData.autoReorderEnabled}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         handleInputChange("autoReorderEnabled", !!checked)
                       }
                     />
@@ -1928,7 +2021,7 @@ export default function AddInventoryPage() {
                     <Checkbox
                       id="batchTracked"
                       checked={formData.isBatchTracked}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         handleInputChange("isBatchTracked", !!checked)
                       }
                     />
@@ -1946,18 +2039,18 @@ export default function AddInventoryPage() {
                     variant="outline"
                     onClick={prevStep}
                     size="sm"
-                    className="text-xs cursor-pointer h-8"
+                    className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
                   >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <ArrowLeftIcon className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
                   <Button
                     onClick={nextStep}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
+                    className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none transition-all"
                   >
                     Next Step
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <ArrowRightIcon className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
               </div>
@@ -1967,11 +2060,8 @@ export default function AddInventoryPage() {
             {currentStep === 4 && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Shield className="h-4 w-4 text-blue-600" />
-                  </div>
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                       Quality & Compliance Standards
                     </h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -1994,7 +2084,7 @@ export default function AddInventoryPage() {
                         handleInputChange("qualityGrade", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                         <SelectValue placeholder="Select quality grade" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -2024,7 +2114,7 @@ export default function AddInventoryPage() {
                         handleInputChange("season", value)
                       }
                     >
-                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 cursor-pointer">
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -2055,7 +2145,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("countryOfOrigin", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -2073,7 +2163,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("manufacturer", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -2091,7 +2181,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("barcode", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
 
@@ -2109,21 +2199,20 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("internalCode", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <Label className="flex items-center gap-2 text-xs font-medium">
-                    <Award className="h-4 w-4" />
                     Certifications
                   </Label>
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                     {certifications.map((cert) => (
                       <label
                         key={cert}
-                        className="flex items-center gap-2 p-3 bg-white/50 dark:bg-gray-800/50 border rounded-lg cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                        className="flex items-center gap-2 p-3 bg-white/50 dark:bg-gray-800/50 border rounded-none cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors"
                       >
                         <Checkbox
                           checked={formData.certifications.includes(cert)}
@@ -2174,21 +2263,22 @@ export default function AddInventoryPage() {
                       placeholder="e.g., REACH Compliant"
                       value={complianceInput}
                       onChange={(e) => setComplianceInput(e.target.value)}
-                      onKeyPress={(e) => {
+                      onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
                           addComplianceStandard();
                         }
                       }}
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       onClick={addComplianceStandard}
                       size="sm"
+                      className="rounded-none"
                     >
-                      <Plus className="h-4 w-4" />
+                      <PlusIcon className="h-4 w-4" />
                     </Button>
                   </div>
                   {formData.complianceStandards.length > 0 && (
@@ -2197,17 +2287,17 @@ export default function AddInventoryPage() {
                         <Badge
                           key={index}
                           variant="secondary"
-                          className="text-xs"
+                          className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none"
                         >
                           {standard}
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="ml-1 h-auto p-0"
+                            className="ml-1 h-auto p-0 rounded-none"
                             onClick={() => removeComplianceStandard(standard)}
                           >
-                            <X className="h-3 w-3" />
+                            <XMarkIcon className="h-3 w-3 text-green-700 dark:text-green-400" />
                           </Button>
                         </Badge>
                       ))}
@@ -2232,7 +2322,7 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("carbonFootprint", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                     />
                   </div>
 
@@ -2252,13 +2342,13 @@ export default function AddInventoryPage() {
                       onChange={(e) =>
                         handleInputChange("recycledContent", e.target.value)
                       }
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <Label className="text-xs font-medium">
+                  <Label className="flex items-center gap-2 text-xs font-medium">
                     Supplier Contact Information
                   </Label>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -2276,7 +2366,7 @@ export default function AddInventoryPage() {
                         onChange={(e) =>
                           handleSupplierContactChange("phone", e.target.value)
                         }
-                        className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                        className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                       />
                     </div>
 
@@ -2295,7 +2385,7 @@ export default function AddInventoryPage() {
                         onChange={(e) =>
                           handleSupplierContactChange("email", e.target.value)
                         }
-                        className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                        className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                       />
                     </div>
 
@@ -2314,7 +2404,7 @@ export default function AddInventoryPage() {
                           handleSupplierContactChange("address", e.target.value)
                         }
                         rows={2}
-                        className="resize-none text-sm bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                        className="resize-none text-sm bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -2325,18 +2415,18 @@ export default function AddInventoryPage() {
                     variant="outline"
                     onClick={prevStep}
                     size="sm"
-                    className="text-xs cursor-pointer h-8"
+                    className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
                   >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <ArrowLeftIcon className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
                   <Button
                     onClick={nextStep}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
+                    className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none transition-all"
                   >
                     Next Step
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <ArrowRightIcon className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
               </div>
@@ -2346,11 +2436,8 @@ export default function AddInventoryPage() {
             {currentStep === 5 && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Camera className="h-4 w-4 text-blue-600" />
-                  </div>
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                       Media Upload & Final Details
                     </h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -2362,17 +2449,16 @@ export default function AddInventoryPage() {
                 {/* Image Upload */}
                 <div className="space-y-4">
                   <Label className="flex items-center gap-2 text-xs font-medium">
-                    <ImageIcon className="h-4 w-4" />
                     Product Images
                   </Label>
 
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm hover:bg-white/50 dark:hover:bg-gray-800/50 transition-colors">
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-none p-6 bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm hover:bg-white/50 dark:hover:bg-gray-800/50 transition-colors">
                     <div className="text-center">
-                      <div className="mx-auto h-12 w-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-3">
+                      <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-none mb-3">
                         {isUploading ? (
-                          <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
+                          <Loader2 className="h-6 w-6 text-gray-900 dark:text-gray-100 animate-spin" />
                         ) : (
-                          <Upload className="h-6 w-6 text-blue-600" />
+                          <ArrowUpTrayIcon className="h-6 w-6 text-gray-900 dark:text-gray-100" />
                         )}
                       </div>
                       <div className="mb-3">
@@ -2399,13 +2485,12 @@ export default function AddInventoryPage() {
                       />
                       <label
                         htmlFor="image-upload"
-                        className={`inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer ${
+                        className={`inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 rounded-none text-sm font-medium shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer ${
                           isUploading
                             ? "opacity-50 cursor-not-allowed"
-                            : "hover:bg-blue-700"
+                            : "hover:bg-gray-700 dark:hover:bg-gray-200"
                         }`}
                       >
-                        <Camera className="h-4 w-4" />
                         Choose Images
                       </label>
                     </div>
@@ -2426,26 +2511,26 @@ export default function AddInventoryPage() {
                       {formData.images.map((image, index) => (
                         <div
                           key={index}
-                          className="relative group aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden"
+                          className="relative group aspect-square bg-gray-100 dark:bg-gray-800 rounded-none overflow-hidden"
                         >
                           <img
                             src={image}
                             alt={`Item ${index + 1}`}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover rounded-none"
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">
                             <Button
                               type="button"
                               variant="destructive"
                               size="sm"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-none"
                               onClick={() => removeImage(index)}
                             >
-                              <X className="h-4 w-4" />
+                              <XMarkIcon className="h-4 w-4" />
                             </Button>
                           </div>
                           {index === 0 && (
-                            <Badge className="absolute top-2 left-2 bg-blue-600 text-white text-xs">
+                            <Badge className="absolute top-2 left-2 bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
                               Main
                             </Badge>
                           )}
@@ -2458,7 +2543,6 @@ export default function AddInventoryPage() {
                 {/* Tags */}
                 <div className="space-y-4">
                   <Label className="flex items-center gap-2 text-xs font-medium">
-                    <Tag className="h-4 w-4" />
                     Item Tags
                   </Label>
                   <div className="flex gap-2">
@@ -2466,22 +2550,22 @@ export default function AddInventoryPage() {
                       placeholder="Add a tag (e.g., premium, durable)"
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
-                      onKeyPress={(e) => {
+                      onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
                           addTag();
                         }
                       }}
-                      className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                      className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       onClick={addTag}
-                      className="shrink-0"
+                      className="shrink-0 rounded-none"
                       size="sm"
                     >
-                      <Plus className="h-4 w-4" />
+                      <PlusIcon className="h-4 w-4" />
                     </Button>
                   </div>
                   {formData.tags.length > 0 && (
@@ -2490,17 +2574,17 @@ export default function AddInventoryPage() {
                         <Badge
                           key={index}
                           variant="secondary"
-                          className="text-xs"
+                          className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none"
                         >
                           {tag}
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="ml-1 h-auto p-0"
+                            className="ml-1 h-auto p-0 rounded-none"
                             onClick={() => removeTag(tag)}
                           >
-                            <X className="h-3 w-3" />
+                            <XMarkIcon className="h-3 w-3 text-blue-700 dark:text-blue-400" />
                           </Button>
                         </Badge>
                       ))}
@@ -2511,7 +2595,6 @@ export default function AddInventoryPage() {
                 {/* Dimensions */}
                 <div className="space-y-4">
                   <Label className="flex items-center gap-2 text-xs font-medium">
-                    <Ruler className="h-4 w-4" />
                     Dimensions (Optional)
                   </Label>
                   <Input
@@ -2520,7 +2603,7 @@ export default function AddInventoryPage() {
                     onChange={(e) =>
                       handleInputChange("dimensions", e.target.value)
                     }
-                    className="text-sm h-9 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                    className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                   />
                 </div>
 
@@ -2538,15 +2621,15 @@ export default function AddInventoryPage() {
                     value={formData.notes}
                     onChange={(e) => handleInputChange("notes", e.target.value)}
                     rows={3}
-                    className="resize-none text-sm bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700"
+                    className="resize-none text-sm bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none"
                   />
                 </div>
 
                 {/* Summary Card - matching dashboard style */}
-                <Card className="border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-900/20 backdrop-blur-sm">
+                <Card className="border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 backdrop-blur-sm rounded-none">
                   <CardContent className="p-4">
                     <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                      <CheckCircle className="h-4 w-4 text-blue-600" />
+                      <CheckIcon className="h-4 w-4 text-gray-900 dark:text-gray-100" />
                       Inventory Item Summary
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -2656,33 +2739,24 @@ export default function AddInventoryPage() {
                     variant="outline"
                     onClick={prevStep}
                     size="sm"
-                    className="text-xs cursor-pointer h-8"
+                    className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
                   >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <ArrowLeftIcon className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
                   <div className="flex gap-3">
                     <Button
-                      variant="outline"
-                      onClick={() => setPreviewMode(true)}
-                      size="sm"
-                      className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Preview
-                    </Button>
-                    <Button
                       onClick={() => setIsConfirmOpen(true)}
                       disabled={isLoading}
                       size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
+                      className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none transition-all"
                     >
                       {isLoading ? (
                         <Loader2 className="h-3 w-3 mr-2 animate-spin" />
                       ) : (
-                        <CheckCircle className="h-3 w-3 mr-2" />
+                        <CheckCircleIcon className="h-3 w-3 mr-2" />
                       )}
-                      {isLoading ? "Adding..." : "Add to Inventory"}
+                      {isLoading ? "Adding..." : "Confirm & Add"}
                     </Button>
                   </div>
                 </div>
@@ -2693,11 +2767,11 @@ export default function AddInventoryPage() {
 
         {/* Confirmation Dialog - matching dashboard style */}
         <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-          <DialogContent className="bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 shadow-xl">
+          <DialogContent className="bg-white dark:bg-gray-950 backdrop-blur-xl border border-gray-200 dark:border-gray-800 shadow-xl">
             <DialogHeader>
               <DialogTitle className="text-base font-bold flex items-center gap-3 text-gray-900 dark:text-gray-100">
-                <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Package className="h-4 w-4 text-blue-600" />
+                <div className="h-8 w-8 flex items-center justify-center rounded-none">
+                  <ArchiveBoxIcon className="h-4 w-4 text-gray-900 dark:text-gray-100" />
                 </div>
                 Add to Inventory
               </DialogTitle>
@@ -2707,29 +2781,29 @@ export default function AddInventoryPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+              <div className="bg-blue-100 dark:bg-blue-900 rounded-none p-4">
                 <ul className="space-y-2 text-xs">
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     Create inventory record on blockchain
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     Store item images securely on IPFS
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     Enable stock tracking and management
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     Set up automated reorder alerts
                   </li>
                 </ul>
               </div>
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+              <div className="bg-yellow-100 dark:bg-yellow-900 rounded-none p-4">
                 <p className="text-xs text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
+                  <ExclamationCircleIcon className="h-4 w-4 text-yellow-700 dark:text-yellow-300" />
                   Once added, inventory information will be recorded on the
                   blockchain for traceability.
                 </p>
@@ -2740,7 +2814,7 @@ export default function AddInventoryPage() {
                 variant="outline"
                 onClick={() => setIsConfirmOpen(false)}
                 size="sm"
-                className="text-xs cursor-pointer h-8"
+                className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
               >
                 Cancel
               </Button>
@@ -2748,12 +2822,12 @@ export default function AddInventoryPage() {
                 onClick={handleSubmit}
                 disabled={isLoading}
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer h-8"
+                className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none transition-all"
               >
                 {isLoading ? (
                   <Loader2 className="h-3 w-3 mr-2 animate-spin" />
                 ) : (
-                  <CheckCircle className="h-3 w-3 mr-2" />
+                  <CheckCircleIcon className="h-3 w-3 mr-2" />
                 )}
                 {isLoading ? "Adding..." : "Confirm & Add"}
               </Button>

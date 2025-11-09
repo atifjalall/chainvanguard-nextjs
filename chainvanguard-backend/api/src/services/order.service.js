@@ -9,6 +9,7 @@ import walletBalanceService from "./wallet.balance.service.js";
 import logger from "../utils/logger.js";
 import loyaltyService from "./loyalty.service.js";
 import vendorInventoryService from "./vendor.inventory.service.js";
+import notificationService from "./notification.service.js";
 
 class OrderService {
   // ========================================
@@ -196,13 +197,52 @@ class OrderService {
         comment: "Order placed",
       });
 
-      // 8. Reserve product stock - ✅ FIXED: pass session
+      // 8. Reserve product stock - FIXED: pass session
       await this.reserveProductStock(validatedItems, session);
 
       // 9. Save order
       await order.save({ session });
 
-      // 🆕 LOG ORDER CREATION
+      await notificationService.createNotification({
+        userId: customerId,
+        userRole: "customer",
+        type: "order_placed",
+        category: "order",
+        title: "Order Placed Successfully",
+        message: `Your order #${order.orderNumber} has been placed successfully. Total: $${order.total.toFixed(2)}`,
+        orderId: order._id,
+        priority: "high",
+        actionType: "view_order",
+        actionUrl: `/orders/${order._id}`,
+        relatedEntity: {
+          entityType: "order",
+          entityId: order._id,
+          entityData: {
+            orderNumber: order.orderNumber,
+            total: order.total,
+          },
+        },
+      });
+
+      // Notify vendor/seller
+      await notificationService.createNotification({
+        userId: order.sellerId,
+        userRole: order.sellerRole,
+        type: "order_placed",
+        category: "order",
+        title: "New Order Received",
+        message: `New order #${order.orderNumber} received from ${customer.name}. Total: $${order.total.toFixed(2)}`,
+        orderId: order._id,
+        priority: "high",
+        actionType: "view_order",
+        actionUrl: `/orders/${order._id}`,
+        relatedEntity: {
+          entityType: "order",
+          entityId: order._id,
+        },
+      });
+
+      // LOG ORDER CREATION
       await logger.logOrder({
         type: "order_created",
         action: `Order created: ${order.orderNumber}`,
@@ -975,10 +1015,60 @@ class OrderService {
         await this.releaseProductStock(order.items);
       }
 
-      await order.save(); // ← LINE 880
+      await order.save();
 
-      // ✨ ADD THIS ENTIRE BLOCK RIGHT HERE (after order.save())
+      const statusMessages = {
+        confirmed: {
+          customer: `Your order #${order.orderNumber} has been confirmed`,
+          vendor: `Order #${order.orderNumber} confirmed successfully`,
+        },
+        processing: {
+          customer: `Your order #${order.orderNumber} is being processed`,
+          vendor: `Processing order #${order.orderNumber}`,
+        },
+        shipped: {
+          customer: `Your order #${order.orderNumber} has been shipped`,
+          vendor: `Order #${order.orderNumber} has been shipped`,
+        },
+        delivered: {
+          customer: `Your order #${order.orderNumber} has been delivered`,
+          vendor: `Order #${order.orderNumber} delivered successfully`,
+        },
+        cancelled: {
+          customer: `Your order #${order.orderNumber} has been cancelled`,
+          vendor: `Order #${order.orderNumber} was cancelled`,
+        },
+      };
 
+      if (statusMessages[newStatus]) {
+        // Notify customer
+        await notificationService.createNotification({
+          userId: order.customerId,
+          userRole: "customer",
+          type: `order_${newStatus}`,
+          category: "order",
+          title: `Order ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+          message: statusMessages[newStatus].customer,
+          orderId: order._id,
+          priority: newStatus === "cancelled" ? "high" : "medium",
+          actionType: "view_order",
+          actionUrl: `/orders/${order._id}`,
+        });
+
+        // Notify vendor
+        await notificationService.createNotification({
+          userId: order.sellerId,
+          userRole: "vendor",
+          type: `order_${newStatus}`,
+          category: "order",
+          title: `Order ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+          message: statusMessages[newStatus].vendor,
+          orderId: order._id,
+          priority: "medium",
+          actionType: "view_order",
+          actionUrl: `/orders/${order._id}`,
+        });
+      }
       // Award loyalty points when order is delivered
       if (newStatus === "delivered" || newStatus === "completed") {
         try {
@@ -1307,7 +1397,32 @@ class OrderService {
 
       await order.save();
 
-      // 🆕 LOG ORDER CANCELLATION
+
+      await notificationService.createNotification({
+        userId: order.customerId,
+        userRole: "customer",
+        type: "order_cancelled",
+        category: "order",
+        title: "Order Cancelled",
+        message: `Your order #${order.orderNumber} has been cancelled. Refund will be processed shortly.`,
+        orderId: order._id,
+        priority: "high",
+        actionType: "view_order",
+        actionUrl: `/orders/${order._id}`,
+      });
+
+      await notificationService.createNotification({
+        userId: order.sellerId,
+        userRole: "vendor",
+        type: "order_cancelled",
+        category: "order",
+        title: "Order Cancelled",
+        message: `Order #${order.orderNumber} was cancelled by customer`,
+        orderId: order._id,
+        priority: "medium",
+      });
+
+      // LOG ORDER CANCELLATION
       const user = await User.findById(userId);
       await logger.logOrder({
         type: "order_cancelled",
@@ -2517,6 +2632,861 @@ class OrderService {
       default:
         return null; // No filter for all time
     }
+  }
+
+  // ========================================
+  // ENHANCED ORDER TRACKING METHODS
+  // ========================================
+
+  /**
+   * Get comprehensive order tracking information
+   */
+  async getOrderTracking(orderId, userId, userRole) {
+    try {
+      const order = await Order.findById(orderId)
+        .populate("customerId", "name email phone")
+        .populate("sellerId", "name companyName phone")
+        .populate("items.productId", "name images")
+        .lean();
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      const isCustomer = order.customerId._id.toString() === userId;
+      const isSeller = order.sellerId._id.toString() === userId;
+      const isExpert = userRole === "expert";
+
+      if (!isCustomer && !isSeller && !isExpert) {
+        throw new Error("Unauthorized: You don't have access to this order");
+      }
+
+      const progress = this.calculateDeliveryProgress(order);
+      const currentLocation =
+        order.supplyChainEvents.length > 0
+          ? order.supplyChainEvents[order.supplyChainEvents.length - 1]
+          : null;
+      const estimatedDelivery =
+        order.estimatedDeliveryDate || this.estimateDeliveryDate(order);
+
+      const timeline = order.supplyChainEvents
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .map((event, index) => ({
+          id: event._id,
+          stage: event.stage,
+          location: event.location,
+          description: event.description,
+          timestamp: event.timestamp,
+          coordinates: event.coordinates,
+          isLatest: index === 0,
+          icon: this.getStageIcon(event.stage),
+        }));
+
+      const daysInTransit = order.shippedAt
+        ? Math.ceil(
+            (Date.now() - new Date(order.shippedAt)) / (1000 * 60 * 60 * 24)
+          )
+        : 0;
+
+      return {
+        order: {
+          id: order._id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          createdAt: order.createdAt,
+          items: order.items.map((item) => ({
+            productId: item.productId?._id,
+            productName: item.productName,
+            quantity: item.quantity,
+            image: item.productId?.images?.[0]?.url || "",
+          })),
+        },
+        tracking: {
+          trackingNumber: order.trackingNumber || "Not assigned yet",
+          courierName: order.courierName || "Not assigned",
+          trackingUrl: order.trackingUrl || null,
+          currentStatus: order.status,
+          canTrack: !!order.trackingNumber && !!order.courierName,
+        },
+        shipping: {
+          method: order.shippingMethod,
+          estimatedDelivery: estimatedDelivery,
+          actualDelivery: order.actualDeliveryDate,
+          daysInTransit,
+          isDelayed: this.isDeliveryDelayed(order),
+        },
+        currentLocation: currentLocation
+          ? {
+              stage: currentLocation.stage,
+              location: currentLocation.location,
+              description: currentLocation.description,
+              timestamp: currentLocation.timestamp,
+              coordinates: currentLocation.coordinates,
+            }
+          : null,
+        progress: {
+          percentage: progress.percentage,
+          currentStage: progress.currentStage,
+          completedStages: progress.completedStages,
+          remainingStages: progress.remainingStages,
+          nextStage: progress.nextStage,
+        },
+        timeline,
+        shippingAddress: order.shippingAddress,
+        seller: {
+          name: order.sellerId.name,
+          companyName: order.sellerId.companyName,
+          phone: order.sellerId.phone,
+        },
+        customer:
+          isSeller || isExpert
+            ? {
+                name: order.customerId.name,
+                email: order.customerId.email,
+                phone: order.customerId.phone,
+              }
+            : null,
+      };
+    } catch (error) {
+      console.error("❌ Get order tracking error:", error);
+      throw error;
+    }
+  }
+
+  async getLiveTrackingUpdates(orderId, userId, userRole, lastEventId = null) {
+    try {
+      const order = await Order.findById(orderId)
+        .select(
+          "status supplyChainEvents trackingNumber courierName estimatedDeliveryDate customerId sellerId"
+        )
+        .lean();
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      const isCustomer = order.customerId.toString() === userId;
+      const isSeller = order.sellerId.toString() === userId;
+      const isExpert = userRole === "expert";
+
+      if (!isCustomer && !isSeller && !isExpert) {
+        throw new Error("Unauthorized");
+      }
+
+      let newEvents = order.supplyChainEvents;
+      if (lastEventId) {
+        const lastEventIndex = order.supplyChainEvents.findIndex(
+          (e) => e._id.toString() === lastEventId
+        );
+        if (lastEventIndex !== -1) {
+          newEvents = order.supplyChainEvents.slice(lastEventIndex + 1);
+        }
+      }
+
+      const progress = this.calculateDeliveryProgress(order);
+
+      return {
+        hasUpdates: newEvents.length > 0,
+        currentStatus: order.status,
+        progress: progress.percentage,
+        latestEvent:
+          newEvents.length > 0 ? newEvents[newEvents.length - 1] : null,
+        newEvents: newEvents.map((event) => ({
+          id: event._id,
+          stage: event.stage,
+          location: event.location,
+          description: event.description,
+          timestamp: event.timestamp,
+        })),
+        lastEventId:
+          order.supplyChainEvents.length > 0
+            ? order.supplyChainEvents[order.supplyChainEvents.length - 1]._id
+            : null,
+      };
+    } catch (error) {
+      console.error("❌ Get live tracking updates error:", error);
+      throw error;
+    }
+  }
+
+  async trackOrderByNumber(orderNumber, email, userId = null) {
+    try {
+      const order = await Order.findOne({ orderNumber })
+        .populate("items.productId", "name images")
+        .select(
+          "orderNumber status trackingNumber courierName trackingUrl estimatedDeliveryDate actualDeliveryDate supplyChainEvents customerEmail shippingAddress shippingMethod createdAt"
+        )
+        .lean();
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      if (!userId && email) {
+        if (order.customerEmail.toLowerCase() !== email.toLowerCase()) {
+          throw new Error("Email does not match order records");
+        }
+      }
+
+      const progress = this.calculateDeliveryProgress(order);
+      const currentLocation =
+        order.supplyChainEvents.length > 0
+          ? order.supplyChainEvents[order.supplyChainEvents.length - 1]
+          : null;
+
+      return {
+        orderNumber: order.orderNumber,
+        status: order.status,
+        orderDate: order.createdAt,
+        tracking: {
+          trackingNumber: order.trackingNumber || "Not assigned yet",
+          courierName: order.courierName || "Not assigned",
+          trackingUrl: order.trackingUrl || null,
+          canTrack: !!order.trackingNumber,
+        },
+        shipping: {
+          method: order.shippingMethod,
+          estimatedDelivery: order.estimatedDeliveryDate,
+          actualDelivery: order.actualDeliveryDate,
+        },
+        progress: {
+          percentage: progress.percentage,
+          currentStage: progress.currentStage,
+        },
+        currentLocation: currentLocation
+          ? {
+              location: currentLocation.location,
+              description: currentLocation.description,
+              timestamp: currentLocation.timestamp,
+            }
+          : null,
+        timeline: order.supplyChainEvents
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+          .map((event) => ({
+            stage: event.stage,
+            location: event.location,
+            description: event.description,
+            timestamp: event.timestamp,
+          })),
+        shippingAddress: order.shippingAddress,
+      };
+    } catch (error) {
+      console.error("❌ Track order by number error:", error);
+      throw error;
+    }
+  }
+
+  async addTrackingEvent(orderId, eventData, userId) {
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      const isSeller = order.sellerId.toString() === userId;
+      if (!isSeller) {
+        const user = await User.findById(userId);
+        if (!user || user.role !== "expert") {
+          throw new Error(
+            "Unauthorized: Only seller or expert can add tracking events"
+          );
+        }
+      }
+
+      order.supplyChainEvents.push({
+        stage: eventData.stage,
+        location: eventData.location,
+        description: eventData.description,
+        coordinates: eventData.coordinates,
+        performedBy: userId,
+        timestamp: new Date(),
+      });
+
+      await order.save();
+
+      return {
+        success: true,
+        message: "Tracking event added successfully",
+        event: order.supplyChainEvents[order.supplyChainEvents.length - 1],
+      };
+    } catch (error) {
+      console.error("❌ Add tracking event error:", error);
+      throw error;
+    }
+  }
+
+  async updateTrackingInfo(orderId, trackingData, userId, userRole) {
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      const isSeller = order.sellerId.toString() === userId;
+      if (!isSeller && userRole !== "expert") {
+        throw new Error("Unauthorized: Only seller can update tracking info");
+      }
+
+      let updated = false;
+
+      if (trackingData.trackingNumber) {
+        order.trackingNumber = trackingData.trackingNumber;
+        updated = true;
+      }
+
+      if (trackingData.courierName) {
+        order.courierName = trackingData.courierName;
+        updated = true;
+
+        if (order.trackingNumber && !trackingData.trackingUrl) {
+          order.trackingUrl = this.generateTrackingUrl(
+            order.courierName,
+            order.trackingNumber
+          );
+        }
+      }
+
+      if (trackingData.estimatedDeliveryDate) {
+        order.estimatedDeliveryDate = new Date(
+          trackingData.estimatedDeliveryDate
+        );
+        updated = true;
+      }
+
+      if (trackingData.trackingUrl) {
+        order.trackingUrl = trackingData.trackingUrl;
+        updated = true;
+      }
+
+      if (!updated) {
+        throw new Error("No tracking information provided to update");
+      }
+
+      await order.save();
+
+      return {
+        success: true,
+        message: "Tracking information updated successfully",
+        tracking: {
+          trackingNumber: order.trackingNumber,
+          courierName: order.courierName,
+          trackingUrl: order.trackingUrl,
+          estimatedDeliveryDate: order.estimatedDeliveryDate,
+        },
+      };
+    } catch (error) {
+      console.error("❌ Update tracking info error:", error);
+      throw error;
+    }
+  }
+
+  async getTrackingMapData(orderId, userId, userRole) {
+    try {
+      const order = await Order.findById(orderId)
+        .select("supplyChainEvents shippingAddress customerId sellerId")
+        .lean();
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      const isCustomer = order.customerId.toString() === userId;
+      const isSeller = order.sellerId.toString() === userId;
+      const isExpert = userRole === "expert";
+
+      if (!isCustomer && !isSeller && !isExpert) {
+        throw new Error("Unauthorized");
+      }
+
+      const trackingPoints = order.supplyChainEvents
+        .filter(
+          (event) =>
+            event.coordinates && event.coordinates.lat && event.coordinates.lng
+        )
+        .map((event) => ({
+          location: event.location,
+          coordinates: {
+            lat: event.coordinates.lat,
+            lng: event.coordinates.lng,
+          },
+          timestamp: event.timestamp,
+          stage: event.stage,
+          description: event.description,
+        }));
+
+      if (order.shippingAddress.latitude && order.shippingAddress.longitude) {
+        trackingPoints.push({
+          location: `${order.shippingAddress.city}, ${order.shippingAddress.state}`,
+          coordinates: {
+            lat: order.shippingAddress.latitude,
+            lng: order.shippingAddress.longitude,
+          },
+          isDestination: true,
+          stage: "destination",
+          description: "Delivery Address",
+        });
+      }
+
+      return {
+        trackingPoints,
+        hasCoordinates: trackingPoints.length > 0,
+        currentLocation:
+          trackingPoints.length > 0
+            ? trackingPoints[trackingPoints.length - 1]
+            : null,
+      };
+    } catch (error) {
+      console.error("❌ Get tracking map data error:", error);
+      throw error;
+    }
+  }
+
+  async getDeliveryProgress(orderId, userId, userRole) {
+    try {
+      const order = await Order.findById(orderId)
+        .select("status supplyChainEvents customerId sellerId")
+        .lean();
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      const isCustomer = order.customerId.toString() === userId;
+      const isSeller = order.sellerId.toString() === userId;
+      const isExpert = userRole === "expert";
+
+      if (!isCustomer && !isSeller && !isExpert) {
+        throw new Error("Unauthorized");
+      }
+
+      return this.calculateDeliveryProgress(order);
+    } catch (error) {
+      console.error("❌ Get delivery progress error:", error);
+      throw error;
+    }
+  }
+
+  async getOrderHistory(customerId, filters = {}) {
+    try {
+      const query = { customerId };
+
+      if (filters.status) query.status = filters.status;
+      if (filters.paymentStatus) query.paymentStatus = filters.paymentStatus;
+
+      if (filters.startDate || filters.endDate) {
+        query.createdAt = {};
+        if (filters.startDate)
+          query.createdAt.$gte = new Date(filters.startDate);
+        if (filters.endDate) query.createdAt.$lte = new Date(filters.endDate);
+      }
+
+      if (filters.minAmount || filters.maxAmount) {
+        query.total = {};
+        if (filters.minAmount) query.total.$gte = filters.minAmount;
+        if (filters.maxAmount) query.total.$lte = filters.maxAmount;
+      }
+
+      if (filters.search) {
+        query.$or = [
+          { orderNumber: { $regex: filters.search, $options: "i" } },
+          { "items.productName": { $regex: filters.search, $options: "i" } },
+        ];
+      }
+
+      const page = filters.page || 1;
+      const limit = filters.limit || 20;
+      const skip = (page - 1) * limit;
+      const sortBy = filters.sortBy || "createdAt";
+      const sortOrder = filters.sortOrder === "asc" ? 1 : -1;
+
+      const [orders, total] = await Promise.all([
+        Order.find(query)
+          .sort({ [sortBy]: sortOrder })
+          .skip(skip)
+          .limit(limit)
+          .populate("items.productId", "name images price status")
+          .populate("sellerId", "name companyName email")
+          .lean(),
+        Order.countDocuments(query),
+      ]);
+
+      const enrichedOrders = orders.map((order) => ({
+        ...order,
+        canCancel: ["pending", "confirmed"].includes(order.status),
+        canReturn:
+          order.status === "delivered" &&
+          order.isReturnable &&
+          order.returnDeadline &&
+          new Date() <= new Date(order.returnDeadline),
+        canReview: order.status === "delivered" && !order.isReviewed,
+        daysSinceOrder: Math.ceil(
+          (Date.now() - new Date(order.createdAt)) / (1000 * 60 * 60 * 24)
+        ),
+      }));
+
+      return {
+        orders: enrichedOrders,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: limit,
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1,
+        },
+      };
+    } catch (error) {
+      console.error("❌ Get order history error:", error);
+      throw error;
+    }
+  }
+
+  async getCustomerOrderStats(customerId) {
+    try {
+      const [
+        totalOrders,
+        ordersByStatus,
+        totalSpent,
+        recentOrders,
+        cancelledOrders,
+      ] = await Promise.all([
+        Order.countDocuments({ customerId }),
+        Order.aggregate([
+          { $match: { customerId: new mongoose.Types.ObjectId(customerId) } },
+          { $group: { _id: "$status", count: { $sum: 1 } } },
+        ]),
+        Order.aggregate([
+          {
+            $match: {
+              customerId: new mongoose.Types.ObjectId(customerId),
+              paymentStatus: "paid",
+            },
+          },
+          { $group: { _id: null, total: { $sum: "$total" } } },
+        ]),
+        Order.find({ customerId })
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .select("orderNumber status total createdAt items")
+          .populate("items.productId", "name images")
+          .lean(),
+        Order.countDocuments({ customerId, status: "cancelled" }),
+      ]);
+
+      const statusBreakdown = {};
+      ordersByStatus.forEach((item) => {
+        statusBreakdown[item._id] = item.count;
+      });
+
+      return {
+        totalOrders,
+        totalSpent: totalSpent[0]?.total || 0,
+        averageOrderValue:
+          totalOrders > 0 ? (totalSpent[0]?.total || 0) / totalOrders : 0,
+        statusBreakdown: {
+          pending: statusBreakdown.pending || 0,
+          confirmed: statusBreakdown.confirmed || 0,
+          processing: statusBreakdown.processing || 0,
+          shipped: statusBreakdown.shipped || 0,
+          delivered: statusBreakdown.delivered || 0,
+          cancelled: cancelledOrders,
+          refunded: statusBreakdown.refunded || 0,
+        },
+        recentOrders,
+        cancellationRate:
+          totalOrders > 0 ? (cancelledOrders / totalOrders) * 100 : 0,
+      };
+    } catch (error) {
+      console.error("❌ Get customer order stats error:", error);
+      throw error;
+    }
+  }
+
+  async getOrderTimeline(orderId, userId, userRole) {
+    try {
+      const order = await Order.findById(orderId)
+        .populate("customerId", "name email")
+        .populate("sellerId", "name companyName")
+        .lean();
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      const isCustomer = order.customerId._id.toString() === userId;
+      const isSeller = order.sellerId._id.toString() === userId;
+      const isExpert = userRole === "expert";
+
+      if (!isCustomer && !isSeller && !isExpert) {
+        throw new Error("Unauthorized: You don't have access to this order");
+      }
+
+      const timeline = [];
+
+      timeline.push({
+        id: `created-${order._id}`,
+        type: "order_created",
+        status: "pending",
+        title: "Order Placed",
+        description: `Order ${order.orderNumber} was placed`,
+        timestamp: order.createdAt,
+        icon: "shopping-cart",
+      });
+
+      order.statusHistory.forEach((history) => {
+        timeline.push({
+          id: `status-${history._id}`,
+          type: "status_change",
+          status: history.status,
+          title: `Order ${history.status.charAt(0).toUpperCase() + history.status.slice(1)}`,
+          description:
+            history.notes || `Order status changed to ${history.status}`,
+          timestamp: history.timestamp,
+          icon: this.getStatusIcon(history.status),
+        });
+      });
+
+      order.supplyChainEvents.forEach((event) => {
+        timeline.push({
+          id: `supply-${event._id}`,
+          type: "supply_chain_event",
+          status: event.stage,
+          title: event.stage.replace(/_/g, " ").toUpperCase(),
+          description: event.description,
+          location: event.location,
+          timestamp: event.timestamp,
+          icon: this.getStageIcon(event.stage),
+        });
+      });
+
+      timeline.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      return {
+        order: {
+          id: order._id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          total: order.total,
+          createdAt: order.createdAt,
+        },
+        timeline,
+        currentStatus: order.status,
+      };
+    } catch (error) {
+      console.error("❌ Get order timeline error:", error);
+      throw error;
+    }
+  }
+
+  async checkCancellationEligibility(orderId, userId) {
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      if (order.customerId.toString() !== userId) {
+        throw new Error("Unauthorized: You can only check your own orders");
+      }
+
+      const canCancel = ["pending", "confirmed"].includes(order.status);
+      const canRequestCancellation = order.status === "processing";
+
+      let reason = "";
+      let recommendation = "";
+
+      if (canCancel) {
+        reason = "Order can be cancelled directly";
+        recommendation =
+          "You can cancel this order immediately without approval";
+      } else if (canRequestCancellation) {
+        reason = "Order is being processed";
+        recommendation =
+          "You can request cancellation, which requires seller approval";
+      } else {
+        reason = `Order status is ${order.status}`;
+        recommendation = "This order cannot be cancelled at this stage";
+      }
+
+      let refundInfo = null;
+      if (
+        (canCancel || canRequestCancellation) &&
+        order.paymentStatus === "paid"
+      ) {
+        refundInfo = {
+          eligible: true,
+          amount: order.total,
+          method: order.paymentMethod === "wallet" ? "wallet" : "original",
+          estimatedDays: order.paymentMethod === "wallet" ? 0 : 7,
+        };
+      }
+
+      return {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        canCancel,
+        canRequestCancellation,
+        reason,
+        recommendation,
+        refundInfo,
+      };
+    } catch (error) {
+      console.error("❌ Check cancellation eligibility error:", error);
+      throw error;
+    }
+  }
+
+  async requestOrderCancellation(orderId, userId, cancellationData) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const order = await Order.findById(orderId).session(session);
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      if (order.customerId.toString() !== userId) {
+        throw new Error("Unauthorized: You can only cancel your own orders");
+      }
+
+      if (order.status !== "processing") {
+        throw new Error(
+          `Order in ${order.status} status cannot request cancellation`
+        );
+      }
+
+      order.cancellationRequest = {
+        requested: true,
+        requestedAt: new Date(),
+        requestedBy: userId,
+        reason: cancellationData.reason,
+        reasonDetails: cancellationData.reasonDetails || "",
+        status: "pending",
+      };
+
+      order.addStatusHistory(
+        "processing",
+        userId,
+        "customer",
+        `Cancellation requested: ${cancellationData.reason}`
+      );
+
+      await order.save({ session });
+      await session.commitTransaction();
+
+      return {
+        success: true,
+        message:
+          "Cancellation request submitted successfully. The seller will review your request.",
+        order: {
+          id: order._id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          cancellationRequest: order.cancellationRequest,
+        },
+      };
+    } catch (error) {
+      await session.abortTransaction();
+      console.error("❌ Request order cancellation error:", error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  calculateDeliveryProgress(order) {
+    const stages = {
+      pending: { value: 0, label: "Order Placed" },
+      confirmed: { value: 20, label: "Order Confirmed" },
+      processing: { value: 40, label: "Processing" },
+      shipped: { value: 60, label: "Shipped" },
+      in_transit: { value: 80, label: "In Transit" },
+      out_for_delivery: { value: 90, label: "Out for Delivery" },
+      delivered: { value: 100, label: "Delivered" },
+    };
+
+    const currentStage = stages[order.status] || stages.pending;
+
+    const completedStages = Object.entries(stages)
+      .filter(([key, stage]) => stage.value < currentStage.value)
+      .map(([key, stage]) => ({ stage: key, label: stage.label }));
+
+    const remainingStages = Object.entries(stages)
+      .filter(([key, stage]) => stage.value > currentStage.value)
+      .map(([key, stage]) => ({ stage: key, label: stage.label }));
+
+    const nextStage = remainingStages.length > 0 ? remainingStages[0] : null;
+
+    return {
+      percentage: currentStage.value,
+      currentStage: {
+        stage: order.status,
+        label: currentStage.label,
+      },
+      completedStages,
+      remainingStages,
+      nextStage,
+    };
+  }
+
+  isDeliveryDelayed(order) {
+    if (!order.estimatedDeliveryDate || order.status === "delivered") {
+      return false;
+    }
+    const now = new Date();
+    const estimatedDate = new Date(order.estimatedDeliveryDate);
+    return now > estimatedDate && order.status !== "delivered";
+  }
+
+  estimateDeliveryDate(order) {
+    if (order.estimatedDeliveryDate) {
+      return order.estimatedDeliveryDate;
+    }
+    const shippingDays = {
+      standard: 7,
+      express: 3,
+      overnight: 1,
+      pickup: 0,
+    };
+    const days = shippingDays[order.shippingMethod] || 7;
+    const baseDate = order.shippedAt || order.createdAt;
+    const estimated = new Date(baseDate);
+    estimated.setDate(estimated.getDate() + days);
+    return estimated;
+  }
+
+  getStageIcon(stage) {
+    const icons = {
+      order_placed: "shopping-cart",
+      confirmed: "check",
+      payment_confirmed: "credit-card",
+      preparing: "box",
+      processing: "package",
+      packed: "package",
+      shipped: "truck",
+      in_transit: "truck",
+      out_for_delivery: "map-pin",
+      delivered: "check-circle",
+      cancelled: "x-circle",
+      refunded: "dollar-sign",
+      returned: "rotate-ccw",
+    };
+    return icons[stage] || "circle";
+  }
+
+  getStatusIcon(status) {
+    const icons = {
+      pending: "clock",
+      confirmed: "check",
+      processing: "package",
+      shipped: "truck",
+      delivered: "check-circle",
+      cancelled: "x-circle",
+      refunded: "dollar-sign",
+    };
+    return icons[status] || "circle";
   }
 }
 

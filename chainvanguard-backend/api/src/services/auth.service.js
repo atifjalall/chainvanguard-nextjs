@@ -7,6 +7,7 @@ import pkg from "jsonwebtoken";
 const { sign } = pkg;
 import crypto from "crypto";
 import logger from "../utils/logger.js";
+import notificationService from "./notification.service.js";
 
 class AuthService {
   constructor() {
@@ -70,6 +71,18 @@ class AuthService {
       await newUser.save();
       console.log(`✅ User saved to MongoDB: ${newUser._id}`);
 
+      await notificationService.createNotification({
+        userId: newUser._id,
+        userRole: newUser.role,
+        type: "account_verified",
+        category: "account",
+        title: "Welcome to ChainVanguard!",
+        message: `Welcome ${newUser.name}! Your account has been created successfully. Start exploring our platform.`,
+        priority: "medium",
+        actionType: "update_profile",
+        actionUrl: `/profile`,
+      });
+
       // 🆕 LOG REGISTRATION
       await logger.logAuth({
         type: "user_registered",
@@ -91,6 +104,18 @@ class AuthService {
       // 5. Register on blockchain (async)
       this.registerOnBlockchain(newUser).catch((err) => {
         console.error("⚠️ Blockchain registration failed (will retry):", err);
+      });
+
+      await notificationService.createNotification({
+        userId: newUser._id,
+        userRole: newUser.role,
+        type: "account_verified",
+        category: "account",
+        title: "Welcome to ChainVanguard!",
+        message: `Welcome ${newUser.name}! Your account has been created successfully.`,
+        priority: "medium",
+        actionType: "update_profile",
+        actionUrl: `/profile`,
       });
 
       // 6. Generate verification code
@@ -358,6 +383,20 @@ class AuthService {
     delete userObj.encryptedMnemonic;
     delete userObj.__v;
     return userObj;
+  }
+
+  async sendPasswordResetNotification(userId, userRole) {
+    await notificationService.createNotification({
+      userId,
+      userRole,
+      type: "security_alert",
+      category: "security",
+      title: "Password Reset Requested",
+      message:
+        "A password reset was requested for your account. If this wasn't you, please contact support immediately.",
+      priority: "high",
+      isUrgent: true,
+    });
   }
 }
 

@@ -27,10 +27,12 @@ import {
   ShoppingCartIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
+import { useSidebar } from "@/components/common/dashboard-sidebar";
 
 export function DashboardHeader() {
   const { user, logout } = useAuth();
   const { currentWallet, balance, disconnectWallet } = useWallet();
+  const { isCollapsed, setIsCollapsed } = useSidebar();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -106,8 +108,38 @@ export function DashboardHeader() {
     <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
       <div className="flex h-14 items-center justify-between px-4">
         <div className="flex items-center space-x-3">
+          {/* Add collapse button next to logo, visible only on desktop */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="hidden md:flex h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded-none"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="1.5"
+              stroke="currentColor"
+              className="h-4.5 w-4.5 text-gray-700 dark:text-gray-300"
+            >
+              {/* Outer rectangle with path-based rounded corners */}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 7.25A2.25 2.25 0 0 1 5.25 5h13.5A2.25 2.25 0 0 1 21 7.25v9.5A2.25 2.25 0 0 1 18.75 19H5.25A2.25 2.25 0 0 1 3 16.75v-9.5Z"
+              />
+              {/* Vertical divider line */}
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5v14" />
+              {/* Two horizontal lines in sidebar section */}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 9h2M5 12h2"
+              />
+            </svg>
+          </Button>
           <div className="flex items-center space-x-2">
-            <CubeIcon className="h-6 w-6 text-gray-900 dark:text-white cursor-pointer" />
             <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
               ChainVanguard
             </span>

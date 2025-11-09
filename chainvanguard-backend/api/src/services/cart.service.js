@@ -4,7 +4,7 @@ import Product from "../models/Product.js";
 import User from "../models/User.js";
 import redisService from "./redis.service.js";
 import logger from "../utils/logger.js";
-
+import notificationService from "./notification.service.js";
 class CartService {
   // ========================================
   // GET CART
@@ -43,6 +43,12 @@ class CartService {
           select: "name price images status",
         },
       ]);
+
+      // Explicitly calculate subtotal and totalAmount from items
+      cart.subtotal = cart.items.reduce((sum, item) => {
+        return sum + item.price * item.quantity;
+      }, 0);
+      cart.totalAmount = cart.subtotal;
 
       // Check for Redis cache
       const cacheKey = userId
@@ -113,6 +119,22 @@ class CartService {
         );
       }
 
+      if (availableQty > 0 && availableQty <= product.minStockLevel) {
+        await notificationService.createNotification({
+          userId: product.sellerId,
+          userRole: "vendor",
+          type: "low_stock",
+          category: "inventory",
+          title: "Low Stock Alert",
+          message: `"${product.name}" is running low. Current stock: ${availableQty}`,
+          productId: product._id,
+          priority: "high",
+          isUrgent: true,
+          actionType: "view_product",
+          actionUrl: `/products/${product._id}`,
+        });
+      }
+
       // 5. Validate apparel selections if provided
       if (itemData.selectedSize) {
         const validSizes = [
@@ -155,6 +177,11 @@ class CartService {
 
       // 7. Add to cart (will update if exists)
       await cart.addItem(cartItemData);
+
+      // 🆕 CALCULATE AND SET TOTAL
+      cart.totalAmount = cart.items.reduce((sum, item) => {
+        return sum + item.price * item.quantity;
+      }, 0);
 
       // 8. Populate and return updated cart
       await cart.populate([
@@ -880,6 +907,34 @@ class CartService {
     } catch (error) {
       console.error("❌ Find abandoned carts error:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Send cart abandoned notification
+   */
+  async notifyAbandonedCart(userId) {
+    try {
+      const cart = await Cart.findOne({ userId }).populate(
+        "items.productId",
+        "name price images"
+      );
+
+      if (!cart || cart.items.length === 0) return;
+
+      await notificationService.createNotification({
+        userId,
+        userRole: "customer",
+        type: "cart_abandoned",
+        category: "cart",
+        title: "Complete Your Purchase",
+        message: `You have ${cart.totalItems} items waiting in your cart. Complete your purchase now!`,
+        priority: "low",
+        actionType: "view_order",
+        actionUrl: `/cart`,
+      });
+    } catch (error) {
+      logger.error("Error sending abandoned cart notification:", error);
     }
   }
 }
