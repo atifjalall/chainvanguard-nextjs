@@ -323,15 +323,15 @@ export default function SupplierVendorsPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "active":
-        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
+        return <CheckCircleIcon className="h-4 w-4" />;
       case "pending":
-        return <ClockIcon className="h-4 w-4 text-yellow-500" />;
+        return <ClockIcon className="h-4 w-4" />;
       case "inactive":
-        return <XCircleIcon className="h-4 w-4 text-gray-500" />;
+        return <XCircleIcon className="h-4 w-4" />;
       case "suspended":
-        return <ExclamationCircleIcon className="h-4 w-4 text-red-500" />;
+        return <ExclamationCircleIcon className="h-4 w-4" />;
       default:
-        return <ExclamationCircleIcon className="h-4 w-4 text-gray-500" />;
+        return <ExclamationCircleIcon className="h-4 w-4" />;
     }
   };
 
@@ -347,6 +347,20 @@ export default function SupplierVendorsPage() {
         return "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
       default:
         return "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
+    }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400";
+      case "pending":
+        return "bg-yellow-100/10 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900 text-yellow-700 dark:text-yellow-400";
+      case "inactive":
+      case "suspended":
+        return "bg-red-100/10 dark:bg-red-900/10 border border-red-100 dark:border-red-900 text-red-700 dark:text-red-400";
+      default:
+        return "bg-gray-100/10 dark:bg-gray-900/10 border border-gray-200 dark:border-gray-900 text-gray-700 dark:text-gray-300";
     }
   };
 
@@ -436,7 +450,7 @@ export default function SupplierVendorsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
       <div className="relative z-10 p-6 space-y-6">
         {/* Header */}
         <div
@@ -457,14 +471,14 @@ export default function SupplierVendorsPage() {
               <Button
                 onClick={loadVendors}
                 variant="outline"
-                className="hidden lg:flex items-center gap-2 text-xs cursor-pointer"
+                className="hidden lg:flex items-center gap-2 text-xs cursor-pointer rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
               >
                 <ArrowPathIcon className="h-4 w-4" />
                 Refresh
               </Button>
               <Button
                 variant="outline"
-                className="flex items-center gap-2 text-xs cursor-pointer"
+                className="flex items-center gap-2 text-xs cursor-pointer rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
               >
                 <ArrowDownTrayIcon className="h-4 w-4" />
                 Export
@@ -486,55 +500,51 @@ export default function SupplierVendorsPage() {
                 value: totalVendors.toLocaleString(),
                 subtitle: "Partner companies",
                 icon: UsersIcon,
-                iconColor: "text-blue-600",
-                iconBg: "bg-blue-100 dark:bg-blue-900/30",
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
               {
                 title: "Active Partners",
                 value: activeVendors.toString(),
                 subtitle: "Currently active",
                 icon: CheckCircleIcon,
-                iconColor: "text-green-600",
-                iconBg: "bg-green-100 dark:bg-green-900/30",
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
               {
                 title: "Total Volume",
                 value: formatCurrency(totalVolume),
                 subtitle: "Partnership value",
                 icon: CurrencyDollarIcon,
-                iconColor: "text-green-600",
-                iconBg: "bg-green-100 dark:bg-green-900/30",
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
               {
                 title: "Avg. Order Value",
                 value: formatCurrency(avgOrderValue),
                 subtitle: "Per transaction",
                 icon: ArrowTrendingUpIcon,
-                iconColor: "text-purple-600",
-                iconBg: "bg-purple-100 dark:bg-purple-900/30",
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
               {
                 title: "Pending",
                 value: pendingVendors.toString(),
                 subtitle: "Need attention",
                 icon: ClockIcon,
-                iconColor: "text-yellow-600",
-                iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
             ].map((stat, index) => (
               <Card
                 key={index}
-                className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl"
+                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] rounded-none"
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
                     {stat.title}
                   </CardTitle>
-                  <div
-                    className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center`}
-                  >
-                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
-                  </div>
+                  <stat.icon className="h-5 w-5" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
@@ -555,12 +565,10 @@ export default function SupplierVendorsPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+          <Card className="border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 rounded-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
-                <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <FunnelIcon className="h-4 w-4 text-purple-600" />
-                </div>
+                <FunnelIcon className="h-4 w-4" />
                 Filters & Search
               </CardTitle>
               <CardDescription className="text-xs">
@@ -575,31 +583,39 @@ export default function SupplierVendorsPage() {
                     placeholder="Search vendors by name, email or business type"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300"
+                    className="pl-9 h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                   />
                 </div>
                 <Select
                   value={selectedStatus}
                   onValueChange={setSelectedStatus}
                 >
-                  <SelectTrigger className="h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300 cursor-pointer">
+                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[300px]">
                     {statusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
+                      <SelectItem
+                        key={status}
+                        value={status}
+                        className="text-sm h-9"
+                      >
                         {status}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300 cursor-pointer">
+                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[300px]">
                     {sortOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        className="text-sm h-9"
+                      >
                         {option.label}
                       </SelectItem>
                     ))}
@@ -610,7 +626,7 @@ export default function SupplierVendorsPage() {
                 {searchTerm && (
                   <Badge
                     variant="outline"
-                    className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
+                    className="text-xs bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 border rounded-none"
                   >
                     &quot;{searchTerm}&quot;
                     <button
@@ -624,7 +640,7 @@ export default function SupplierVendorsPage() {
                 {selectedStatus !== "All Status" && (
                   <Badge
                     variant="outline"
-                    className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50 border-0"
+                    className="text-xs bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 border rounded-none"
                   >
                     {selectedStatus}
                     <button
@@ -649,42 +665,65 @@ export default function SupplierVendorsPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <Tabs
-            value={selectedTab}
-            onValueChange={setSelectedTab}
-            className="w-full flex justify-center"
-          >
-            <TabsList className="grid max-w-2xl w-full grid-cols-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur border-gray-200 dark:border-gray-700 mx-auto">
-              <TabsTrigger
-                value="all"
-                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
-              >
-                <UsersIcon className="h-4 w-4" />
-                All Vendors ({totalVendors})
-              </TabsTrigger>
-              <TabsTrigger
-                value="active"
-                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
-              >
-                <CheckCircleIcon className="h-4 w-4" />
-                Active ({activeVendors})
-              </TabsTrigger>
-              <TabsTrigger
-                value="pending"
-                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
-              >
-                <ClockIcon className="h-4 w-4" />
-                Pending ({pendingVendors})
-              </TabsTrigger>
-              <TabsTrigger
-                value="inactive"
-                className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white justify-center cursor-pointer"
-              >
-                <XCircleIcon className="h-4 w-4" />
-                Inactive ({inactiveVendors})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="w-full flex justify-center">
+            {/* THEME-MATCHED TABS (like login page wallet selector) */}
+            <Tabs
+              value={selectedTab}
+              onValueChange={setSelectedTab}
+              className="w-full flex justify-center"
+            >
+              <TabsList className="flex w-full max-w-2xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-0.5 rounded-none mx-auto">
+                <TabsTrigger
+                  value="all"
+                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                  ${
+                    selectedTab === "all"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                  } flex items-center gap-2 justify-center`}
+                >
+                  <UsersIcon className="h-4 w-4" />
+                  All Vendors ({totalVendors})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="active"
+                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                  ${
+                    selectedTab === "active"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                  } flex items-center gap-2 justify-center`}
+                >
+                  <CheckCircleIcon className="h-4 w-4" />
+                  Active ({activeVendors})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="pending"
+                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                  ${
+                    selectedTab === "pending"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                  } flex items-center gap-2 justify-center`}
+                >
+                  <ClockIcon className="h-4 w-4" />
+                  Pending ({pendingVendors})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="inactive"
+                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                  ${
+                    selectedTab === "inactive"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                  } flex items-center gap-2 justify-center`}
+                >
+                  <XCircleIcon className="h-4 w-4" />
+                  Inactive ({inactiveVendors})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
 
         {/* Vendor Content */}
@@ -701,16 +740,16 @@ export default function SupplierVendorsPage() {
                     {filteredAndSortedVendors.map((vendor) => (
                       <Card
                         key={vendor.id}
-                        className="border border-white/20 dark:border-gray-700/30 shadow-md hover:shadow-lg transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden group"
+                        className="border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-900 overflow-hidden group rounded-none"
                       >
                         <CardContent className="p-6">
                           <div className="flex items-start gap-4 mb-4">
-                            <Avatar className="h-12 w-12 border-2 border-white shadow-lg">
+                            <Avatar className="h-12 w-12 border-2 border-gray-200 dark:border-gray-700 rounded-none bg-gray-100 dark:bg-gray-800">
                               <AvatarImage
                                 src={vendor.avatar}
                                 alt={vendor.name}
                               />
-                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-bold">
+                              <AvatarFallback className="text-gray-900 dark:text-white font-bold rounded-none">
                                 {getInitials(vendor.name)}
                               </AvatarFallback>
                             </Avatar>
@@ -726,7 +765,7 @@ export default function SupplierVendorsPage() {
                               </p>
                               <div className="flex items-center gap-1 mt-1">
                                 <Badge
-                                  className={`text-xs px-2 py-0.5 ${getStatusColor(vendor.status)} border-0`}
+                                  className={`flex items-center gap-1 text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(vendor.status)}`}
                                   variant="secondary"
                                 >
                                   {vendor.status}
@@ -764,7 +803,7 @@ export default function SupplierVendorsPage() {
                                   <Badge
                                     key={index}
                                     variant="outline"
-                                    className="text-xs px-2 py-0.5 border-0"
+                                    className="text-xs border-0"
                                   >
                                     {spec}
                                   </Badge>
@@ -772,7 +811,7 @@ export default function SupplierVendorsPage() {
                               {vendor.specialization.length > 2 && (
                                 <Badge
                                   variant="outline"
-                                  className="text-xs px-2 py-0.5 border-0"
+                                  className="text-xs border-0"
                                 >
                                   +{vendor.specialization.length - 2}
                                 </Badge>
@@ -811,7 +850,7 @@ export default function SupplierVendorsPage() {
                                   setSelectedVendor(vendor);
                                   setIsDetailsOpen(true);
                                 }}
-                                className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 cursor-pointer"
+                                className="h-8 px-3 hover:bg-gray-50 dark:hover:bg-gray-900 hover:border-gray-200 dark:hover:border-gray-700 cursor-pointer rounded-none"
                               >
                                 <EyeIcon className="h-3 w-3 mr-1" />
                                 Details
@@ -823,7 +862,7 @@ export default function SupplierVendorsPage() {
                     ))}
                   </div>
                 ) : (
-                  <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+                  <Card className="border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 rounded-none">
                     <CardContent className="p-0">
                       <div className="space-y-0">
                         {filteredAndSortedVendors.map((vendor, index) => (
@@ -835,12 +874,12 @@ export default function SupplierVendorsPage() {
                                 : ""
                             }`}
                           >
-                            <Avatar className="h-12 w-12 border-2 border-white shadow-lg">
+                            <Avatar className="h-12 w-12 border-2 border-gray-200 dark:border-gray-700 rounded-none bg-gray-100 dark:bg-gray-800">
                               <AvatarImage
                                 src={vendor.avatar}
                                 alt={vendor.name}
                               />
-                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-bold">
+                              <AvatarFallback className="text-gray-900 dark:text-white font-bold rounded-none">
                                 {getInitials(vendor.name)}
                               </AvatarFallback>
                             </Avatar>
@@ -858,7 +897,7 @@ export default function SupplierVendorsPage() {
                                 </p>
                                 <div className="flex items-center gap-2 mt-1">
                                   <Badge
-                                    className={`text-xs px-2 py-0.5 ${getStatusColor(vendor.status)} border-0`}
+                                    className={`flex items-center gap-1 text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(vendor.status)}`}
                                     variant="secondary"
                                   >
                                     {vendor.status}
@@ -907,7 +946,7 @@ export default function SupplierVendorsPage() {
                                     setSelectedVendor(vendor);
                                     setIsDetailsOpen(true);
                                   }}
-                                  className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 cursor-pointer"
+                                  className="h-8 px-3 hover:bg-gray-50 dark:hover:bg-gray-900 hover:border-gray-200 dark:hover:border-gray-700 cursor-pointer rounded-none"
                                 >
                                   <EyeIcon className="h-3 w-3 mr-1" />
                                   Details
@@ -923,9 +962,9 @@ export default function SupplierVendorsPage() {
               </TabsContent>
             </Tabs>
           ) : (
-            <Card className="text-center py-16 border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden">
+            <Card className="text-center py-16 border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 overflow-hidden rounded-none">
               <CardContent>
-                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                <div className="h-20 w-20 mx-auto mb-6 flex items-center justify-center">
                   <UsersIcon className="h-10 w-10 text-gray-400" />
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -959,245 +998,254 @@ export default function SupplierVendorsPage() {
 
       {/* Vendor Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-0 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-gray-100">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                <EyeIcon className="h-4 w-4 text-white" />
-              </div>
-              Vendor Partner Details
-            </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-400">
-              Complete information about your vendor partnership
-            </DialogDescription>
-          </DialogHeader>
-          {selectedVendor && (
-            <div className="space-y-6">
-              {/* Vendor Header */}
-              <div className="flex items-center gap-6 p-6 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl">
-                <Avatar className="h-20 w-20 border-4 border-white shadow-lg">
-                  <AvatarImage
-                    src={selectedVendor.avatar}
-                    alt={selectedVendor.name}
-                  />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xl font-bold">
-                    {getInitials(selectedVendor.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      {selectedVendor.name}
-                    </h3>
-                    <Badge
-                      className={`text-sm px-3 py-1 ${getStatusColor(selectedVendor.status)} border-0`}
-                      variant="secondary"
-                    >
-                      {selectedVendor.status}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <EnvelopeIcon className="h-4 w-4" />
-                      <span>{selectedVendor.email}</span>
-                    </div>
-                    {selectedVendor.phone && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <PhoneIcon className="h-4 w-4" />
-                        <span>{selectedVendor.phone}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <MapPinIcon className="h-4 w-4" />
-                      <span>
-                        {selectedVendor.location.city},{" "}
-                        {selectedVendor.location.state},{" "}
-                        {selectedVendor.location.country}
-                      </span>
-                    </div>
-                  </div>
+        <DialogContent
+          style={{ width: "100%", maxWidth: "700px" }}
+          className="w-full max-w-[700px] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 shadow-2xl rounded-none p-0"
+        >
+          {/* Add margin to modal content */}
+          <div className="p-6">
+            {/* Move all modal content inside this div */}
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 text-xl font-bold text-gray-900 dark:text-gray-100">
+                <div className="h-8 w-8 flex items-center justify-center">
+                  <EyeIcon className="h-4 w-4" />
                 </div>
-                <div className="text-right">
-                  {selectedVendor.rating && (
-                    <div className="flex items-center gap-2 mb-2">
-                      <StarIcon className="h-5 w-5 text-yellow-500 fill-current" />
-                      <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        {selectedVendor.rating}
-                      </span>
+                Vendor Partner Details
+              </DialogTitle>
+              <DialogDescription className="text-base text-gray-600 dark:text-gray-400">
+                Complete information about your vendor partnership
+              </DialogDescription>
+            </DialogHeader>
+            {selectedVendor && (
+              <div className="space-y-6">
+                {/* Vendor Header */}
+                <div className="flex items-center gap-6 p-6 bg-gray-50 dark:bg-gray-900 rounded-none">
+                  <Avatar className="h-20 w-20 border-4 border-gray-200 dark:border-gray-700 rounded-none bg-gray-100 dark:bg-gray-800">
+                    <AvatarImage
+                      src={selectedVendor.avatar}
+                      alt={selectedVendor.name}
+                    />
+                    <AvatarFallback className="text-gray-900 dark:text-white text-lg font-bold rounded-none">
+                      {getInitials(selectedVendor.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                        {selectedVendor.name}
+                      </h3>
+                      <Badge
+                        className={`flex items-center gap-1 text-sm px-3 py-1 rounded-none ${getStatusBadgeClass(selectedVendor.status)}`}
+                        variant="secondary"
+                      >
+                        {selectedVendor.status}
+                      </Badge>
                     </div>
-                  )}
-                  <p className="text-sm text-gray-500">
-                    Partner since {formatDate(selectedVendor.joinDate)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Business Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-0 shadow-sm bg-gray-50/30 dark:bg-gray-900/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                      <BuildingOffice2Icon className="h-5 w-5" />
-                      Business Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-sm text-gray-500">Business Type</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
-                        {selectedVendor.businessType}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Company Size</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
-                        {selectedVendor.companySize} employees
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-2">
-                        Specialization
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedVendor.specialization.map((spec, index) => (
-                          <Badge
-                            key={index}
-                            variant="outline"
-                            className="text-xs border-0"
-                          >
-                            {spec}
-                          </Badge>
-                        ))}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <EnvelopeIcon className="h-4 w-4" />
+                        <span>{selectedVendor.email}</span>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-sm bg-gray-50/30 dark:bg-gray-900/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                      <Activity className="h-5 w-5" />
-                      Partnership Metrics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          {selectedVendor.totalOrders}
-                        </p>
-                        <p className="text-sm text-gray-500">Total Orders</p>
-                      </div>
-                      <div className="text-center p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                          {formatCurrency(selectedVendor.totalSpent)}
-                        </p>
-                        <p className="text-sm text-gray-500">Total Spent</p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">
-                        Average Order Value
-                      </p>
-                      <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                        {formatCurrency(selectedVendor.averageOrderValue)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Last Order</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
-                        {formatDate(selectedVendor.lastOrderDate)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Additional Information */}
-              <div className="space-y-4">
-                <Card className="border-0 shadow-sm bg-gray-50/30 dark:bg-gray-900/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                      <ShieldCheckIcon className="h-5 w-5" />
-                      Certifications & Contract
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <p className="text-sm text-gray-500 mb-2">
-                        Certifications
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedVendor.certifications.map((cert, index) => (
-                          <Badge
-                            key={index}
-                            className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800 border-0"
-                          >
-                            <ShieldCheckIcon className="h-3 w-3 mr-1" />
-                            {cert}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    {selectedVendor.contractExpiry && (
-                      <div>
-                        <p className="text-sm text-gray-500">Contract Expiry</p>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {formatDate(selectedVendor.contractExpiry)}
-                        </p>
-                      </div>
-                    )}
-                    {selectedVendor.walletAddress && (
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">
-                          Blockchain Wallet
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
-                            {selectedVendor.walletAddress}
-                          </code>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                selectedVendor.walletAddress || ""
-                              );
-                              toast.success("Wallet address copied!");
-                            }}
-                            className="h-7 w-7 p-0 cursor-pointer"
-                          >
-                            <DocumentDuplicateIcon className="h-3 w-3" />
-                          </Button>
+                      {selectedVendor.phone && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <PhoneIcon className="h-4 w-4" />
+                          <span>{selectedVendor.phone}</span>
                         </div>
+                      )}
+                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <MapPinIcon className="h-4 w-4" />
+                        <span>
+                          {selectedVendor.location.city},{" "}
+                          {selectedVendor.location.state},{" "}
+                          {selectedVendor.location.country}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {selectedVendor.rating && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <StarIcon className="h-5 w-5 text-yellow-500 fill-current" />
+                        <span className="text-base font-bold text-gray-900 dark:text-gray-100">
+                          {selectedVendor.rating}
+                        </span>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                    <p className="text-sm text-gray-500">
+                      Partner since {formatDate(selectedVendor.joinDate)}
+                    </p>
+                  </div>
+                </div>
 
-                {selectedVendor.notes && (
-                  <Card className="border-0 shadow-sm bg-gray-50/30 dark:bg-gray-900/30">
+                {/* Business Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card className="border-0 shadow-sm bg-gray-50 dark:bg-gray-900 rounded-none">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                        <ChatBubbleLeftIcon className="h-5 w-5" />
-                        Notes
+                      <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                        <BuildingOffice2Icon className="h-5 w-5" />
+                        Business Details
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 dark:text-gray-300">
-                        {selectedVendor.notes}
-                      </p>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <p className="text-xs text-gray-500">Business Type</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                          {selectedVendor.businessType}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Company Size</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                          {selectedVendor.companySize} employees
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-2">
+                          Specialization
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedVendor.specialization.map((spec, index) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="text-xs border-0"
+                            >
+                              {spec}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
-                )}
+
+                  <Card className="border-0 shadow-sm bg-gray-50 dark:bg-gray-900 rounded-none">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                        <Activity className="h-5 w-5" />
+                        Partnership Metrics
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
+                          <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                            {selectedVendor.totalOrders}
+                          </p>
+                          <p className="text-xs text-gray-500">Total Orders</p>
+                        </div>
+                        <div className="text-center p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
+                          <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                            {formatCurrency(selectedVendor.totalSpent)}
+                          </p>
+                          <p className="text-xs text-gray-500">Total Spent</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">
+                          Average Order Value
+                        </p>
+                        <p className="text-base font-bold text-purple-600 dark:text-purple-400">
+                          {formatCurrency(selectedVendor.averageOrderValue)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Last Order</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                          {formatDate(selectedVendor.lastOrderDate)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Additional Information */}
+                <div className="space-y-4">
+                  <Card className="border-0 shadow-sm bg-gray-50 dark:bg-gray-900 rounded-none">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                        <ShieldCheckIcon className="h-5 w-5" />
+                        Certifications & Contract
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-2">
+                          Certifications
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedVendor.certifications.map((cert, index) => (
+                            <Badge
+                              key={index}
+                              className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800 border-0"
+                            >
+                              <ShieldCheckIcon className="h-3 w-3 mr-1" />
+                              {cert}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      {selectedVendor.contractExpiry && (
+                        <div>
+                          <p className="text-xs text-gray-500">
+                            Contract Expiry
+                          </p>
+                          <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                            {formatDate(selectedVendor.contractExpiry)}
+                          </p>
+                        </div>
+                      )}
+                      {selectedVendor.walletAddress && (
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">
+                            Blockchain Wallet
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
+                              {selectedVendor.walletAddress}
+                            </code>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  selectedVendor.walletAddress || ""
+                                );
+                                toast.success("Wallet address copied!");
+                              }}
+                              className="h-7 w-7 p-0 cursor-pointer"
+                            >
+                              <DocumentDuplicateIcon className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {selectedVendor.notes && (
+                    <Card className="border-0 shadow-sm bg-gray-50 dark:bg-gray-900 rounded-none">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                          <ChatBubbleLeftIcon className="h-5 w-5" />
+                          Notes
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                          {selectedVendor.notes}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-          <DialogFooter className="gap-3">
+            )}
+          </div>
+          <DialogFooter className="gap-3 px-6 pb-6 pt-2">
             <Button
               variant="outline"
               onClick={() => setIsDetailsOpen(false)}
-              className="shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+              className="shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer rounded-none"
             >
               Close
             </Button>
@@ -1206,7 +1254,7 @@ export default function SupplierVendorsPage() {
                 setIsDetailsOpen(false);
                 toast.success("Vendor contact initiated");
               }}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+              className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer rounded-none"
             >
               <ChatBubbleLeftIcon className="h-4 w-4 mr-2" />
               Contact Vendor

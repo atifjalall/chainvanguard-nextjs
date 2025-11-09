@@ -13,42 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   CubeIcon,
   UsersIcon,
-  ArrowTrendingUpIcon,
   CurrencyDollarIcon,
   ExclamationTriangleIcon,
   PlusIcon,
-  EyeIcon,
-  PencilIcon,
-  TrashIcon,
-  BuildingOffice2Icon,
-  ArrowsUpDownIcon,
-  GlobeAltIcon,
-  BuildingLibraryIcon,
-  TruckIcon,
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
@@ -57,30 +28,14 @@ import {
   ChartBarIcon,
   ArrowRightIcon,
   ShoppingCartIcon,
-  ArrowTrendingDownIcon,
   BoltIcon,
-  ChartPieIcon,
-  ArrowPathIcon,
-  ArrowDownTrayIcon,
-  FunnelIcon,
-  MagnifyingGlassIcon,
-  CalendarIcon,
-  MapPinIcon,
-  PhoneIcon,
-  EnvelopeIcon,
   StarIcon,
   TrophyIcon,
   ShieldCheckIcon,
+  UserGroupIcon,
   SparklesIcon,
-  ArrowUpRightIcon,
-  ArrowDownRightIcon,
-  EllipsisHorizontalIcon,
-  Squares2X2Icon,
-  ListBulletIcon,
-  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
-import { Product } from "@/types";
 import { toast } from "sonner";
 import SupplierDashboardSkeleton from "@/components/skeletons/supplierDashboardSkeleton";
 
@@ -529,13 +484,13 @@ export default function SupplierDashboard() {
               Manage your inventory, vendors, and supply operations
             </p>
             <div className="flex items-center gap-2 mt-2">
-              <Badge className="bg-transparent border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-none">
+              <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
                 {metrics.totalInventory} Inventory Items
               </Badge>
-              <Badge className="bg-transparent border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-none">
+              <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
                 {metrics.totalVendors} Vendors
               </Badge>
-              <Badge className="bg-transparent border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-1 text-xs rounded-none">
+              <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 flex items-center gap-1 text-xs rounded-none">
                 <ShieldCheckIcon className="h-3 w-3" />
                 Blockchain Secured
               </Badge>
@@ -587,7 +542,7 @@ export default function SupplierDashboard() {
               title: "Inventory Value",
               value: formatCurrency(metrics.totalInventoryValue || 137000),
               subtitle: "Current stock value",
-              icon: BuildingStorefrontIcon,
+              icon: CubeIcon,
               iconColor: "text-gray-900 dark:text-white",
               iconBg: "bg-gray-100 dark:bg-gray-800",
             },
@@ -649,7 +604,7 @@ export default function SupplierDashboard() {
           <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 xl:col-span-2 hover:shadow-lg transition-all duration-300 rounded-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
-                <ChartPieIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+                <ClockIcon className="h-5 w-5 text-gray-900 dark:text-white" />
                 Recent Activity
               </CardTitle>
               <CardDescription className="text-xs">
@@ -672,9 +627,7 @@ export default function SupplierDashboard() {
                       <div
                         className={`h-10 w-10 flex items-center justify-center rounded-none`}
                       >
-                        <Icon
-                          className={`h-5 w-5 ${getActivityColor(activity.status)}`}
-                        />
+                        <Icon className="h-5 w-5 text-gray-900 dark:text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
@@ -683,7 +636,7 @@ export default function SupplierDashboard() {
                           </p>
                           <div className="flex items-center gap-2">
                             {activity.amount && (
-                              <Badge className="bg-transparent border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-none">
+                              <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
                                 {formatCurrency(activity.amount)}
                               </Badge>
                             )}
@@ -710,7 +663,8 @@ export default function SupplierDashboard() {
                   variant="ghost"
                   size="sm"
                   onClick={() => router.push("/supplier/transactions")}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                  className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900 rounded-none border-0"
+                  style={{ borderRadius: 0 }}
                 >
                   View All Transactions
                   <ArrowRightIcon className="h-4 w-4 ml-2" />
@@ -786,7 +740,7 @@ export default function SupplierDashboard() {
           <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 rounded-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
-                <SparklesIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+                <UserGroupIcon className="h-5 w-5 text-gray-900 dark:text-white" />
                 Top Vendors
               </CardTitle>
               <CardDescription className="text-xs">
@@ -829,7 +783,15 @@ export default function SupplierDashboard() {
                             {vendor.name}
                           </h4>
                           <Badge
-                            className={`${statusConfig.color} flex items-center gap-1 text-xs border-0 rounded-none`}
+                            className={
+                              vendor.status === "active"
+                                ? "bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 flex items-center gap-1 text-xs rounded-none"
+                                : vendor.status === "pending"
+                                  ? "bg-yellow-100/10 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900 text-yellow-700 dark:text-yellow-400 flex items-center gap-1 text-xs rounded-none"
+                                  : vendor.status === "inactive"
+                                    ? "bg-red-100/10 dark:bg-red-900/10 border border-red-100 dark:border-red-900 text-red-700 dark:text-red-400 flex items-center gap-1 text-xs rounded-none"
+                                    : "flex items-center gap-1 text-xs rounded-none"
+                            }
                           >
                             <StatusIcon className="h-3 w-3" />
                             {statusConfig.label}
@@ -873,7 +835,7 @@ export default function SupplierDashboard() {
           <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 rounded-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
-                <ArrowTrendingUpIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+                <StarIcon className="h-5 w-5 text-gray-900 dark:text-white" />
                 Top Products
               </CardTitle>
               <CardDescription className="text-xs">
@@ -899,7 +861,15 @@ export default function SupplierDashboard() {
                             {product.name}
                           </h4>
                           <Badge
-                            className={`${statusConfig.color} flex items-center gap-1 text-xs border-0 rounded-none`}
+                            className={
+                              product.status === "active"
+                                ? "bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 flex items-center gap-1 text-xs rounded-none"
+                                : product.status === "low_stock"
+                                  ? "bg-yellow-100/10 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900 text-yellow-700 dark:text-yellow-400 flex items-center gap-1 text-xs rounded-none"
+                                  : product.status === "out_of_stock"
+                                    ? "bg-red-100/10 dark:bg-red-900/10 border border-red-100 dark:border-red-900 text-red-700 dark:text-red-400 flex items-center gap-1 text-xs rounded-none"
+                                    : "flex items-center gap-1 text-xs rounded-none"
+                            }
                           >
                             <StatusIcon className="h-3 w-3" />
                             {statusConfig.label}

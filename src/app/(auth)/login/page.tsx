@@ -18,17 +18,19 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  Package,
-  Wallet,
-  Eye,
-  EyeOff,
-  RefreshCw,
-  AlertTriangle,
-  LogIn,
-  Lock,
-  Edit3,
-  XCircle,
-} from "lucide-react";
+  EyeIcon,
+  EyeSlashIcon,
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
+  ArrowRightEndOnRectangleIcon,
+  LockClosedIcon,
+  PencilIcon,
+  XCircleIcon,
+  KeyIcon,
+} from "@heroicons/react/24/outline";
+import { WalletIcon as WalletIconSolid } from "@heroicons/react/24/solid";
+import { WalletIcon as WalletIconOutline } from "@heroicons/react/24/outline";
+
 import { WalletData } from "@/types/web3";
 import { authAPI } from "@/lib/api/auth.api";
 import { AnimatePresence, motion } from "framer-motion";
@@ -228,7 +230,6 @@ export default function LoginPage() {
               href="/"
               className="flex items-center space-x-3 group cursor-pointer"
             >
-              <Package className="h-6 w-6 text-gray-900 dark:text-white" />
               <span className="text-xl font-light text-gray-900 dark:text-white">
                 ChainVanguard
               </span>
@@ -295,13 +296,13 @@ export default function LoginPage() {
                 {/* Optionally, you can show a skeleton for the warning box if needed */}
 
                 {/* Network Status */}
-                  <Skeleton className="h-9 w-full mt-1 rounded-none" />
+                <Skeleton className="h-9 w-full mt-1 rounded-none" />
               </div>
             ) : (
               <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">
                 {/* Header */}
                 <div className="text-center space-y-2 mb-5">
-                  <Wallet className="h-12 w-12 mx-auto text-gray-900 dark:text-white mb-2" />
+                  <WalletIconSolid className="h-12 w-12 mx-auto text-gray-900 dark:text-white mb-2" />
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                     Welcome Back
                   </h1>
@@ -323,7 +324,7 @@ export default function LoginPage() {
                           : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                       }`}
                     >
-                      <Wallet className="h-3.5 w-3.5 inline mr-1.5" />
+                      <WalletIconOutline className="h-3.5 w-3.5 inline mr-1.5" />
                       Select Wallet
                     </button>
                     <button
@@ -335,7 +336,7 @@ export default function LoginPage() {
                           : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                       }`}
                     >
-                      <Edit3 className="h-3.5 w-3.5 inline mr-1.5" />
+                      <PencilIcon className="h-3.5 w-3.5 inline mr-1.5" />
                       Enter Manually
                     </button>
                   </div>
@@ -352,7 +353,7 @@ export default function LoginPage() {
                           className="space-y-1.5 absolute inset-0"
                         >
                           <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                            <Wallet className="h-3 w-3" />
+                            <WalletIconOutline className="h-3 w-3" />
                             Select Your Wallet
                           </Label>
                           <Select
@@ -376,7 +377,7 @@ export default function LoginPage() {
                                   className="cursor-pointer py-2 px-2.5"
                                 >
                                   <div className="flex items-center gap-2">
-                                    <Wallet className="h-4 w-4 text-gray-900 dark:text-white" />
+                                    <WalletIconOutline className="h-4 w-4 text-gray-900 dark:text-white" />
                                     <div className="flex-1 text-left">
                                       <div className="font-medium text-xs text-gray-900 dark:text-gray-100 leading-tight">
                                         {wallet.name}
@@ -397,7 +398,7 @@ export default function LoginPage() {
                           </Select>
                           {walletError && (
                             <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
-                              <XCircle className="h-3 w-3" />
+                              <XCircleIcon className="h-3 w-3" />
                               {walletError}
                             </p>
                           )}
@@ -412,7 +413,7 @@ export default function LoginPage() {
                           className="space-y-1.5 absolute inset-0"
                         >
                           <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                            <Edit3 className="h-3 w-3" />
+                            <PencilIcon className="h-3 w-3" />
                             Enter Wallet Address
                           </Label>
                           <Input
@@ -430,7 +431,7 @@ export default function LoginPage() {
                           />
                           {walletError && (
                             <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
-                              <XCircle className="h-3 w-3" />
+                              <XCircleIcon className="h-3 w-3" />
                               {walletError}
                             </p>
                           )}
@@ -442,7 +443,7 @@ export default function LoginPage() {
                   {/* Password */}
                   <div className="space-y-1">
                     <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                      <Lock className="h-3 w-3" />
+                      <LockClosedIcon className="h-3 w-3" />
                       Wallet Password
                     </Label>
                     <div className="relative">
@@ -466,15 +467,15 @@ export default function LoginPage() {
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-3.5 w-3.5 text-gray-500" />
+                          <EyeSlashIcon className="h-3.5 w-3.5 text-gray-500" />
                         ) : (
-                          <Eye className="h-3.5 w-3.5 text-gray-500" />
+                          <EyeIcon className="h-3.5 w-3.5 text-gray-500" />
                         )}
                       </Button>
                     </div>
                     {passwordError && (
                       <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                        <XCircle className="h-3 w-3" />
+                        <XCircleIcon className="h-3 w-3" />
                         {passwordError}
                       </p>
                     )}
@@ -488,13 +489,13 @@ export default function LoginPage() {
                   >
                     {isLoading ? (
                       <>
-                        <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        <ArrowPathIcon className="mr-2 h-3.5 w-3.5 animate-spin" />
                         Connecting to Network...
                       </>
                     ) : (
                       <>
                         Connect Wallet
-                        <LogIn className="ml-2 h-3.5 w-3.5" />
+                        <ArrowRightEndOnRectangleIcon className="ml-2 h-3.5 w-3.5" />
                       </>
                     )}
                   </Button>
@@ -507,7 +508,7 @@ export default function LoginPage() {
                     size="sm"
                     onClick={() => router.push("/forgot-password")}
                   >
-                    <Lock className="mr-2 h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
+                    <KeyIcon className="mr-2 h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
                     Forgot Password?
                   </Button>
                 </form>
@@ -531,7 +532,7 @@ export default function LoginPage() {
                     <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+                          <ExclamationTriangleIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
                           <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
                             No Hyperledger Fabric wallets found. Create a new
                             wallet or enter your wallet address manually.
@@ -543,7 +544,7 @@ export default function LoginPage() {
                           className="w-full h-8 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-none cursor-pointer text-xs font-medium"
                           onClick={() => router.push("/register")}
                         >
-                          <Wallet className="mr-2 h-3.5 w-3.5" />
+                          <WalletIconOutline className="mr-2 h-3.5 w-3.5" />
                           Create Wallet
                         </Button>
                       </div>

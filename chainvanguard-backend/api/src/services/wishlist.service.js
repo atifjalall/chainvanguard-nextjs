@@ -11,9 +11,9 @@ class WishlistService {
       let wishlist = await Wishlist.findOne({ userId }).populate({
         path: "items.productId",
         select:
-          "name price images category subcategory stock status seller description",
+          "name price images category subcategory quantity status sellerId description",
         populate: {
-          path: "seller",
+          path: "sellerId",
           select: "name companyName",
         },
       });
@@ -97,9 +97,9 @@ class WishlistService {
       // Populate the wishlist for response
       await wishlist.populate({
         path: "items.productId",
-        select: "name price images category stock status seller",
+        select: "name price images category quantity status sellerId",
         populate: {
-          path: "seller",
+          path: "sellerId",
           select: "name companyName",
         },
       });
@@ -237,7 +237,7 @@ class WishlistService {
 
         if (item) {
           const product = await Product.findById(productId);
-          if (product && product.status === "active" && product.stock > 0) {
+          if (product && product.status === "active" && product.quantity > 0) {
             products.push({
               productId,
               name: product.name,
@@ -360,7 +360,7 @@ class WishlistService {
     try {
       const wishlist = await Wishlist.findOne({ userId }).populate(
         "items.productId",
-        "price category stock status"
+        "price category quantity status"
       );
 
       if (!wishlist) {
@@ -386,10 +386,10 @@ class WishlistService {
         ),
         availableItems: validItems.filter(
           (item) =>
-            item.productId?.status === "active" && item.productId?.stock > 0
+            item.productId?.status === "active" && item.productId?.quantity > 0
         ).length,
         outOfStockItems: validItems.filter(
-          (item) => item.productId?.stock === 0
+          (item) => item.productId?.quantity === 0
         ).length,
         categoryCounts: {},
       };
@@ -409,6 +409,33 @@ class WishlistService {
     } catch (error) {
       console.error("❌ Get wishlist stats error:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Notify price drop for wishlist items
+   */
+  async notifyPriceDrop(productId, oldPrice, newPrice) {
+    try {
+      const wishlists = await Wishlist.find({ "items.productId": productId });
+      const product = await Product.findById(productId);
+
+      for (const wishlist of wishlists) {
+        await notificationService.createNotification({
+          userId: wishlist.userId,
+          userRole: "customer",
+          type: "product_price_changed",
+          category: "product",
+          title: "Price Drop Alert!",
+          message: `"${product.name}" price dropped from $${oldPrice.toFixed(2)} to $${newPrice.toFixed(2)}`,
+          productId: product._id,
+          priority: "medium",
+          actionType: "view_product",
+          actionUrl: `/products/${product._id}`,
+        });
+      }
+    } catch (error) {
+      logger.error("Error notifying price drop:", error);
     }
   }
 }

@@ -3,7 +3,7 @@ import User from "../models/User.js";
 import BlockchainLog from "../models/BlockchainLog.js";
 import mongoose from "mongoose";
 import logger from "../utils/logger.js";
-
+import notificationService from "./notification.service.js";
 class WalletBalanceService {
   /**
    * 💰 Get or Create Wallet for User
@@ -13,21 +13,39 @@ class WalletBalanceService {
       let wallet = await Wallet.findOne({ userId });
 
       if (!wallet) {
-        // Get user's wallet address
-        const user = await User.findById(userId).select("walletAddress");
+        // ✅ AUTO-CREATE WALLET
+        const user = await User.findById(userId);
+
         if (!user) {
           throw new Error("User not found");
         }
 
         wallet = new Wallet({
-          userId,
+          userId: user._id,
           walletAddress: user.walletAddress,
           balance: 0,
           currency: "USD",
+          isActive: true,
+          isFrozen: false,
         });
 
         await wallet.save();
-        console.log(`✅ Created new wallet for user: ${userId}`);
+
+        console.log(`✅ Wallet auto-created for user: ${userId}`);
+
+        // Log wallet creation
+        await logger.logWallet({
+          type: "wallet_created",
+          action: "Wallet automatically created",
+          walletId: wallet._id,
+          userId,
+          userDetails: {
+            walletAddress: user.walletAddress,
+            role: user.role,
+            name: user.name,
+          },
+          status: "success",
+        });
       }
 
       return wallet;
@@ -42,7 +60,12 @@ class WalletBalanceService {
    */
   async getBalance(userId) {
     try {
-      const wallet = await this.getOrCreateWallet(userId);
+      // 🆕 USE EXISTING WALLET ONLY
+      const wallet = await Wallet.findOne({ userId });
+
+      if (!wallet) {
+        throw new Error("Wallet not found. Please create wallet first.");
+      }
 
       return {
         success: true,
@@ -86,7 +109,12 @@ class WalletBalanceService {
         throw new Error("Amount must be greater than 0");
       }
 
-      const wallet = await this.getOrCreateWallet(userId);
+      // 🆕 USE EXISTING WALLET ONLY
+      const wallet = await Wallet.findOne({ userId });
+
+      if (!wallet) {
+        throw new Error("Wallet not found. Please create wallet first.");
+      }
 
       if (!wallet.isActive) {
         throw new Error("Wallet is not active");
@@ -120,7 +148,22 @@ class WalletBalanceService {
 
       await wallet.save({ session });
 
-      // 🆕 LOG FUNDS ADDED
+      await notificationService.createNotification({
+        userId,
+        userRole: user.role,
+        type: "wallet_credited",
+        category: "payment",
+        title: "Wallet Credited",
+        message: `$${amount.toFixed(2)} has been added to your wallet. New balance: $${wallet.balance.toFixed(2)}`,
+        priority: "medium",
+        relatedEntity: {
+          entityType: "wallet",
+          entityId: wallet._id,
+          entityData: { amount, newBalance: wallet.balance },
+        },
+      });
+
+      // LOG FUNDS ADDED
       const user = await User.findById(userId);
       await logger.logWallet({
         type: "wallet_funds_added",
@@ -186,11 +229,15 @@ class WalletBalanceService {
         throw new Error("Cannot transfer to yourself");
       }
 
-      // Get both wallets
+      // 🆕 USE EXISTING WALLETS ONLY
       const [senderWallet, receiverWallet] = await Promise.all([
-        this.getOrCreateWallet(fromUserId),
-        this.getOrCreateWallet(toUserId),
+        Wallet.findOne({ fromUserId }),
+        Wallet.findOne({ toUserId }),
       ]);
+
+      if (!senderWallet || !receiverWallet) {
+        throw new Error("One or both wallets not found.");
+      }
 
       // Validate sender wallet
       if (!senderWallet.isActive || senderWallet.isFrozen) {
@@ -337,7 +384,12 @@ class WalletBalanceService {
         throw new Error("Amount must be greater than 0");
       }
 
-      const wallet = await this.getOrCreateWallet(userId);
+      // 🆕 USE EXISTING WALLET ONLY
+      const wallet = await Wallet.findOne({ userId });
+
+      if (!wallet) {
+        throw new Error("Wallet not found. Please create wallet first.");
+      }
 
       // Check if withdrawal is allowed
       if (!wallet.canWithdraw(amount)) {
@@ -550,7 +602,12 @@ class WalletBalanceService {
       localSession.startTransaction();
     }
     try {
-      const wallet = await this.getOrCreateWallet(userId);
+      // 🆕 USE EXISTING WALLET ONLY
+      const wallet = await Wallet.findOne({ userId }).session(localSession);
+
+      if (!wallet) {
+        throw new Error("Wallet not found");
+      }
 
       if (wallet.balance < amount) {
         throw new Error(
@@ -630,131 +687,6 @@ class WalletBalanceService {
   /**
    * 💵 Process Refund
    */
-  async processRefund(userId, orderId, amount, description) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-      const wallet = await this.getOrCreateWallet(userId);
-
-      // Add refund amount
-      const { balanceBefore, balanceAfter } = wallet.updateBalance(
-        amount,
-        "refund"
-      );
-
-      wallet.addTransaction({
-        type: "refund",
-        amount,
-        balanceBefore,
-        balanceAfter,
-        relatedOrderId: orderId,
-        description: description || `Refund for order`,
-        status: "completed",
-      });
-
-      await wallet.save({ session });
-
-      await session.commitTransaction();
-
-      return {
-        success: true,
-        newBalance: wallet.balance,
-        message: "Refund processed successfully",
-      };
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
-  }
-
-  /**
-   * 🔒 Freeze Wallet (Admin/Expert only)
-   */
-  async freezeWallet(userId, reason) {
-    try {
-      const wallet = await this.getOrCreateWallet(userId);
-      wallet.freeze(reason);
-      await wallet.save();
-
-      return {
-        success: true,
-        message: "Wallet frozen successfully",
-      };
-    } catch (error) {
-      console.error("❌ Freeze wallet failed:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * 🔓 Unfreeze Wallet (Admin/Expert only)
-   */
-  async unfreezeWallet(userId) {
-    try {
-      const wallet = await this.getOrCreateWallet(userId);
-      wallet.unfreeze();
-      await wallet.save();
-
-      return {
-        success: true,
-        message: "Wallet unfrozen successfully",
-      };
-    } catch (error) {
-      console.error("❌ Unfreeze wallet failed:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * 🔄 Update Transaction with Order ID
-   * Used after order creation to link the payment transaction
-   */
-  async updateTransactionOrderId(userId, orderId, session) {
-    try {
-      // Use findOneAndUpdate with atomic operation to avoid version conflicts
-      const result = await Wallet.findOneAndUpdate(
-        {
-          userId,
-          "transactions.type": "payment",
-          "transactions.relatedOrderId": { $exists: false },
-        },
-        {
-          $set: {
-            "transactions.$[elem].relatedOrderId": orderId,
-          },
-        },
-        {
-          arrayFilters: [
-            {
-              "elem.type": "payment",
-              "elem.relatedOrderId": { $exists: false },
-            },
-          ],
-          sort: { "transactions.timestamp": -1 },
-          session: session,
-          new: true,
-        }
-      );
-
-      if (result) {
-        console.log(`✅ Updated transaction with orderId: ${orderId}`);
-      } else {
-        console.warn(
-          `⚠️ No pending payment transaction found for user: ${userId}`
-        );
-      }
-    } catch (error) {
-      console.error("⚠️ Failed to update transaction orderId:", error);
-      // Don't throw - this is not critical
-    }
-  }
-
-  /**
-   * 💵 Process Refund
-   */
   async processRefund(userId, orderId, amount, description, session) {
     let localSession = session;
     let shouldCommit = false;
@@ -766,16 +698,11 @@ class WalletBalanceService {
     }
 
     try {
-      const wallet = await this.getOrCreateWallet(userId);
+      // 🆕 USE EXISTING WALLET ONLY
+      const wallet = await Wallet.findOne({ userId });
 
-      if (!wallet.isActive) {
-        throw new Error("Wallet is not active");
-      }
-
-      if (wallet.isFrozen) {
-        throw new Error(
-          `Wallet is frozen. Reason: ${wallet.frozenReason || "N/A"}`
-        );
+      if (!wallet) {
+        throw new Error("Wallet not found");
       }
 
       // Add refund amount
@@ -854,6 +781,148 @@ class WalletBalanceService {
       if (shouldCommit) {
         localSession.endSession();
       }
+    }
+  }
+
+  /**
+   * 🔒 Freeze Wallet (Admin/Expert only)
+   */
+  async freezeWallet(userId, reason) {
+    try {
+      // 🆕 USE EXISTING WALLET ONLY
+      const wallet = await Wallet.findOne({ userId });
+
+      if (!wallet) {
+        throw new Error("Wallet not found");
+      }
+
+      wallet.freeze(reason);
+      await wallet.save();
+
+      return {
+        success: true,
+        message: "Wallet frozen successfully",
+      };
+    } catch (error) {
+      console.error("❌ Freeze wallet failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * 🔓 Unfreeze Wallet (Admin/Expert only)
+   */
+  async unfreezeWallet(userId) {
+    try {
+      // 🆕 USE EXISTING WALLET ONLY
+      const wallet = await Wallet.findOne({ userId });
+
+      if (!wallet) {
+        throw new Error("Wallet not found");
+      }
+
+      wallet.unfreeze();
+      await wallet.save();
+
+      return {
+        success: true,
+        message: "Wallet unfrozen successfully",
+      };
+    } catch (error) {
+      console.error("❌ Unfreeze wallet failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * 🔄 Update Transaction with Order ID
+   * Used after order creation to link the payment transaction
+   */
+  async updateTransactionOrderId(userId, orderId, session) {
+    try {
+      // Use findOneAndUpdate with atomic operation to avoid version conflicts
+      const result = await Wallet.findOneAndUpdate(
+        {
+          userId,
+          "transactions.type": "payment",
+          "transactions.relatedOrderId": { $exists: false },
+        },
+        {
+          $set: {
+            "transactions.$[elem].relatedOrderId": orderId,
+          },
+        },
+        {
+          arrayFilters: [
+            {
+              "elem.type": "payment",
+              "elem.relatedOrderId": { $exists: false },
+            },
+          ],
+          sort: { "transactions.timestamp": -1 },
+          session: session,
+          new: true,
+        }
+      );
+
+      if (result) {
+        console.log(`✅ Updated transaction with orderId: ${orderId}`);
+      } else {
+        console.warn(
+          `⚠️ No pending payment transaction found for user: ${userId}`
+        );
+      }
+    } catch (error) {
+      console.error("⚠️ Failed to update transaction orderId:", error);
+      // Don't throw - this is not critical
+    }
+  }
+
+  /**
+   * 💵 Process Refund
+   */
+  async processRefund(userId, orderId, amount, description) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // 🆕 USE EXISTING WALLET ONLY
+      const wallet = await Wallet.findOne({ userId });
+
+      if (!wallet) {
+        throw new Error("Wallet not found");
+      }
+
+      // Add refund amount
+      const { balanceBefore, balanceAfter } = wallet.updateBalance(
+        amount,
+        "refund"
+      );
+
+      wallet.addTransaction({
+        type: "refund",
+        amount,
+        balanceBefore,
+        balanceAfter,
+        relatedOrderId: orderId,
+        description: description || `Refund for order`,
+        status: "completed",
+      });
+
+      await wallet.save({ session });
+
+      await session.commitTransaction();
+
+      return {
+        success: true,
+        newBalance: wallet.balance,
+        message: "Refund processed successfully",
+      };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
   }
 }

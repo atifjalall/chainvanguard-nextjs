@@ -6,6 +6,7 @@ import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import notificationService from "./notification.service.js";
 
 const JWT_SECRET =
   process.env.JWT_SECRET ||
@@ -26,7 +27,7 @@ class WalletService {
    * Generate a new wallet with mnemonic phrase
    * @returns {Object} - { mnemonic, address, privateKey }
    */
-  generateWallet() {
+  async generateWallet() {
     try {
       // Generate 12-word mnemonic (industry standard)
       const mnemonic = bip39.generateMnemonic();
@@ -45,6 +46,18 @@ class WalletService {
 
       console.log("✅ New Fabric wallet generated");
 
+      if (userId) {
+        await notificationService.createNotification({
+          userId: userId,
+          type: "wallet_created",
+          title: "Wallet Created Successfully",
+          message:
+            "Your new wallet has been created. Keep your mnemonic phrase safe!",
+          priority: "high",
+          category: "wallet",
+        });
+      }
+
       return {
         mnemonic: mnemonic,
         address: `0x${address}`,
@@ -61,7 +74,7 @@ class WalletService {
    * @param {string} mnemonic - 12 or 24 word mnemonic phrase
    * @returns {Object} - { address, privateKey, mnemonic }
    */
-  recoverFromMnemonic(mnemonic) {
+  async recoverFromMnemonic(mnemonic) {
     try {
       // Validate mnemonic
       if (!bip39.validateMnemonic(mnemonic.trim())) {
@@ -81,6 +94,18 @@ class WalletService {
         .substring(0, 40);
 
       console.log("✅ Wallet recovered from mnemonic");
+
+      // Note: userId will be set by the calling function
+      if (userId) {
+        await notificationService.createNotification({
+          userId: userId,
+          type: "wallet_recovered",
+          title: "Wallet Recovered Successfully",
+          message: "Your wallet has been successfully recovered from mnemonic",
+          priority: "high",
+          category: "wallet",
+        });
+      }
 
       return {
         address: `0x${address}`,

@@ -5,6 +5,7 @@ import { readFileSync, readdirSync } from "fs";
 import { resolve } from "path";
 import * as crypto from "crypto";
 import BlockchainLog from "../models/BlockchainLog.js";
+import notificationService from "./notification.service.js";
 
 class FabricService {
   constructor() {

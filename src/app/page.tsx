@@ -3,8 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/_ui/button";
-import { Package } from "lucide-react";
 import {
+  CubeIcon,
   ShieldCheckIcon,
   BoltIcon,
   EyeIcon,
@@ -16,6 +16,7 @@ import {
   BuildingStorefrontIcon,
   ArrowRightIcon,
 } from "@heroicons/react/24/outline";
+import { motion } from "framer-motion";
 
 export default function LandingPage() {
   return (
@@ -28,7 +29,6 @@ export default function LandingPage() {
             href="/"
             className="flex items-center space-x-3 group cursor-pointer"
           >
-            <Package className="h-6 w-6 text-gray-900 dark:text-white" />
             <span className="text-xl font-light text-gray-900 dark:text-white">
               ChainVanguard
             </span>
@@ -58,7 +58,13 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-16">
+      <motion.section
+        className="relative min-h-screen flex items-center justify-center pt-16"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        viewport={{ once: true }}
+      >
         <div className="max-w-5xl mx-auto px-6 text-center">
           <div className="space-y-8">
             {/* Badge */}
@@ -122,10 +128,16 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Features Section */}
-      <section className="py-24 border-t border-gray-200 dark:border-gray-800">
+      <motion.section
+        className="py-24 border-t border-gray-200 dark:border-gray-800"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        viewport={{ once: true }}
+      >
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-2xl font-light text-gray-900 dark:text-white mb-2">
@@ -193,15 +205,21 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Statistics */}
-      <section className="py-24 border-y border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+      <motion.section
+        className="py-24 border-y border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        viewport={{ once: true }}
+      >
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-12">
             {[
               {
-                icon: Package,
+                icon: CubeIcon,
                 value: "10M+",
                 label: "Products Tracked",
                 desc: "Across global supply chains",
@@ -240,10 +258,16 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Roles Section */}
-      <section className="py-24">
+      <motion.section
+        className="py-24"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        viewport={{ once: true }}
+      >
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-2xl font-light text-gray-900 dark:text-white mb-2">
@@ -267,7 +291,7 @@ export default function LandingPage() {
                 title: "Vendor",
                 desc: "Add products, sell to customers, view transaction history and comprehensive analytics",
                 access: "Write Access",
-                icon: Package,
+                icon: CubeIcon,
               },
               {
                 title: "Customer",
@@ -302,10 +326,16 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Why Choose Us */}
-      <section className="py-32">
+      <motion.section
+        className="py-32"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        viewport={{ once: true }}
+      >
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-24 items-center">
             <div>
@@ -364,10 +394,16 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* CTA Section */}
-      <section className="py-24 border-t border-gray-200 dark:border-gray-800">
+      <motion.section
+        className="py-24 border-t border-gray-200 dark:border-gray-800"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        viewport={{ once: true }}
+      >
         <div className="max-w-3xl mx-auto px-6 text-center">
           <div className="space-y-6">
             <h2 className="text-3xl font-light text-gray-900 dark:text-white">
@@ -399,7 +435,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-gray-800 py-12">
@@ -409,7 +445,7 @@ export default function LandingPage() {
               href="/"
               className="flex items-center space-x-3 group cursor-pointer"
             >
-              <Package className="h-6 w-6 text-gray-900 dark:text-white" />
+              <CubeIcon className="h-6 w-6 text-gray-900 dark:text-white" />
               <span className="text-xl font-light text-gray-900 dark:text-white">
                 ChainVanguard
               </span>

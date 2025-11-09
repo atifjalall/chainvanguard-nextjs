@@ -11,6 +11,10 @@ import {
 } from "../config/categories.js";
 import qrService from "./qr.service.js";
 import logger from "../utils/logger.js";
+import notificationService from "./notification.service.js";
+import Cart from "../models/Cart.js";
+import Wishlist from "../models/Wishlist.js";
+
 
 class ProductService {
   // ========================================
@@ -292,6 +296,19 @@ class ProductService {
 
       await product.save();
       console.log(`✅ Product saved to MongoDB: ${product._id}`);
+
+      await notificationService.createNotification({
+        userId: product.seller,
+        userRole: supplierData.role,
+        type: "product_approved",
+        category: "product",
+        title: "Product Created Successfully",
+        message: `Your product "${product.name}" has been created and is now live`,
+        productId: product._id,
+        priority: "medium",
+        actionType: "view_product",
+        actionUrl: `/products/${product._id}`,
+      });
 
       // 9. Generate QR code image asynchronously (don't block response)
       if (product._id) {
@@ -764,6 +781,68 @@ class ProductService {
 
       console.log(`✅ Product updated successfully: ${productId}`);
       console.log(`✅ Final image count: ${product.images.length}`);
+
+      if (updates.price && updates.price !== product.price) {
+        // Notify customers who have this in cart or wishlist
+        const carts = await Cart.find({ "items.productId": product._id });
+        for (const cart of carts) {
+          if (cart.userId) {
+            await notificationService.createNotification({
+              userId: cart.userId,
+              userRole: "customer",
+              type: "cart_item_price_changed",
+              category: "cart",
+              title: "Price Update",
+              message: `The price of "${product.name}" in your cart has changed`,
+              productId: product._id,
+              priority: "low",
+              actionType: "view_product",
+              actionUrl: `/products/${product._id}`,
+            });
+          }
+        }
+      }
+
+      // Notify for out of stock
+      if (
+        updates.quantity !== undefined &&
+        updates.quantity === 0 &&
+        product.quantity > 0
+      ) {
+        await notificationService.createNotification({
+          userId: product.seller,
+          userRole: "vendor",
+          type: "product_out_of_stock",
+          category: "product",
+          title: "Product Out of Stock",
+          message: `"${product.name}" is now out of stock`,
+          productId: product._id,
+          priority: "high",
+          isUrgent: true,
+        });
+      }
+
+      // Notify for back in stock
+      if (updates.quantity > 0 && product.quantity === 0) {
+        // Notify wishlist users
+        const wishlists = await Wishlist.find({
+          "items.productId": product._id,
+        });
+        for (const wishlist of wishlists) {
+          await notificationService.createNotification({
+            userId: wishlist.userId,
+            userRole: "customer",
+            type: "product_back_in_stock",
+            category: "product",
+            title: "Back in Stock!",
+            message: `"${product.name}" is back in stock. Get it before it's gone!`,
+            productId: product._id,
+            priority: "medium",
+            actionType: "view_product",
+            actionUrl: `/products/${product._id}`,
+          });
+        }
+      }
 
       // Log all image URLs for debugging
       if (product.images.length > 0) {

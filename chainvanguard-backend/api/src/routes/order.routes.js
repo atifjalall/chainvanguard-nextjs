@@ -148,42 +148,89 @@ router.post(
  * Get customer's orders with filters
  * Query params: status, page, limit, sortBy, sortOrder
  */
-router.get(
-  "/",
-  verifyToken,
-  requireVerification,
-  checkRole("customer"),
-  async (req, res) => {
-    try {
-      const filters = {
-        status: req.query.status,
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 20,
-        sortBy: req.query.sortBy || "createdAt",
-        sortOrder: req.query.sortOrder || "desc",
-        startDate: req.query.startDate,
-        endDate: req.query.endDate,
-      };
+router.get("/", verifyToken, requireVerification, async (req, res) => {
+  try {
+    const filters = {
+      status: req.query.status,
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 20,
+      sortBy: req.query.sortBy || "createdAt",
+      sortOrder: req.query.sortOrder || "desc",
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+    };
 
-      const result = await orderService.getCustomerOrders(req.userId, filters);
-
-      res.json({
-        success: true,
-        ...result,
-      });
-    } catch (error) {
-      console.error("GET /api/orders error:", error);
-      res.status(500).json({
+    // 🆕 ROLE-BASED QUERY LOGIC
+    let query = {};
+    if (req.userRole === "customer") {
+      query.customerId = req.userId;
+    } else if (req.userRole === "vendor" || req.userRole === "supplier") {
+      query.sellerId = req.userId;
+    } else if (req.userRole === "expert") {
+      // Experts can see all, but add filters if needed
+      query = {};
+    } else {
+      return res.status(403).json({
         success: false,
-        message: error.message,
+        message: "Unauthorized role",
       });
     }
-  }
-);
 
-// ========================================
-// SELLER/VENDOR ENDPOINTS
-// ========================================
+    // Apply additional filters
+    if (filters.status) {
+      query.status = filters.status;
+    }
+
+    if (filters.startDate || filters.endDate) {
+      query.createdAt = {};
+      if (filters.startDate) {
+        query.createdAt.$gte = new Date(filters.startDate);
+      }
+      if (filters.endDate) {
+        query.createdAt.$lte = new Date(filters.endDate);
+      }
+    }
+
+    const page = filters.page || 1;
+    const limit = filters.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const sortBy = filters.sortBy || "createdAt";
+    const sortOrder = filters.sortOrder === "asc" ? 1 : -1;
+
+    const [orders, total] = await Promise.all([
+      Order.find(query)
+        .sort({ [sortBy]: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .populate("items.productId", "name images price status")
+        .populate("sellerId", "name companyName email"),
+      Order.countDocuments(query),
+    ]);
+
+    // 🆕 STANDARDIZED RESPONSE
+    res.json({
+      success: true,
+      data: {
+        orders,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: parseInt(limit),
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("GET /api/orders error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 
 /**
  * GET /api/orders/seller
@@ -455,7 +502,72 @@ router.get(
 );
 
 // ========================================
-// CUSTOMER ENDPOINTS (/:id routes)
+// ENHANCED ORDER TRACKING ENDPOINTS (static routes moved up)
+// ========================================
+
+/**
+ * GET /api/orders/history
+ * Get comprehensive order history with advanced filters
+ */
+router.get("/history", verifyToken, requireVerification, async (req, res) => {
+  try {
+    const filters = {
+      status: req.query.status,
+      paymentStatus: req.query.paymentStatus,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      minAmount: req.query.minAmount ? parseFloat(req.query.minAmount) : null,
+      maxAmount: req.query.maxAmount ? parseFloat(req.query.maxAmount) : null,
+      search: req.query.search,
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 20,
+      sortBy: req.query.sortBy || "createdAt",
+      sortOrder: req.query.sortOrder || "desc",
+    };
+
+    const result = await orderService.getOrderHistory(req.userId, filters);
+
+    res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    console.error("GET /api/orders/history error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * GET /api/orders/stats/customer
+ * Get customer's order statistics
+ */
+router.get(
+  "/stats/customer",
+  verifyToken,
+  requireVerification,
+  async (req, res) => {
+    try {
+      const stats = await orderService.getCustomerOrderStats(req.userId);
+
+      res.json({
+        success: true,
+        stats,
+      });
+    } catch (error) {
+      console.error("GET /api/orders/stats/customer error:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+// ========================================
+// CUSTOMER ENDPOINTS (/:id routes) - MOVED TO END
 // ========================================
 
 /**
@@ -475,19 +587,29 @@ router.get("/:id", verifyToken, requireVerification, async (req, res) => {
       });
     }
 
-    // DEBUG: Log what we're sending
-    console.log("[ORDER ROUTE] Sending order:", {
-      _id: order._id,
-      id: order._id.toString(),
-      orderNumber: order.orderNumber,
-    });
+    // Check authorization based on role
+    const isCustomer = order.customerId._id.toString() === req.userId;
+    const isSeller =
+      order.sellerId._id.toString() === req.userId ||
+      order.items.some((item) => item.sellerId.toString() === req.userId);
+    const isExpert = req.userRole === "expert";
 
+    if (!isCustomer && !isSeller && !isExpert) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized: You don't have access to this order",
+      });
+    }
+
+    // 🆕 STANDARDIZED RESPONSE
     res.json({
       success: true,
-      order: {
-        ...order.toObject(),
-        id: order._id.toString(), // ENSURE id is a string
-        _id: order._id.toString(), // ENSURE _id is a string
+      data: {
+        order: {
+          ...order.toObject(),
+          id: order._id.toString(),
+          _id: order._id.toString(),
+        },
       },
     });
   } catch (error) {
@@ -707,7 +829,7 @@ router.post(
 );
 
 // ========================================
-// SELLER/VENDOR ENDPOINTS (/:id routes)
+// SELLER/VENDOR ENDPOINTS (/:id routes) - MOVED TO END
 // ========================================
 
 /**
@@ -1004,10 +1126,6 @@ router.patch(
   }
 );
 
-// ========================================
-// BLOCKCHAIN ENDPOINTS (/:id routes)
-// ========================================
-
 /**
  * GET /api/orders/:id/blockchain
  * Get order blockchain history
@@ -1186,6 +1304,463 @@ router.post(
       res.status(500).json({
         success: false,
         message: error.message || "Failed to process refund",
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/orders/:id/tracking
+ * Get comprehensive tracking details for an order
+ */
+router.get(
+  "/:id/tracking",
+  verifyToken,
+  requireVerification,
+  async (req, res) => {
+    try {
+      const trackingData = await orderService.getOrderTracking(
+        req.params.id,
+        req.userId,
+        req.userRole
+      );
+
+      res.json({
+        success: true,
+        data: trackingData,
+      });
+    } catch (error) {
+      console.error("GET /api/orders/:id/tracking error:", error);
+
+      if (error.message === "Order not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      if (error.message.includes("Unauthorized")) {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/orders/:id/tracking/live
+ * Get real-time tracking updates (polling endpoint)
+ */
+router.get(
+  "/:id/tracking/live",
+  verifyToken,
+  requireVerification,
+  async (req, res) => {
+    try {
+      const { lastEventId } = req.query;
+
+      const liveData = await orderService.getLiveTrackingUpdates(
+        req.params.id,
+        req.userId,
+        req.userRole,
+        lastEventId
+      );
+
+      res.json({
+        success: true,
+        data: liveData,
+      });
+    } catch (error) {
+      console.error("GET /api/orders/:id/tracking/live error:", error);
+
+      if (error.message === "Order not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/orders/track/:orderNumber
+ * Public order tracking by order number (guest tracking)
+ */
+router.get("/track/:orderNumber", async (req, res) => {
+  try {
+    const { email } = req.query;
+    const { orderNumber } = req.params;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required for order tracking",
+      });
+    }
+
+    const trackingData = await orderService.trackOrderByNumber(
+      orderNumber,
+      email
+    );
+
+    res.json({
+      success: true,
+      data: trackingData,
+    });
+  } catch (error) {
+    console.error("GET /api/orders/track/:orderNumber error:", error);
+
+    if (error.message === "Order not found") {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found with this number",
+      });
+    }
+
+    if (error.message.includes("Email does not match")) {
+      return res.status(403).json({
+        success: false,
+        message: "Email does not match order records",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/orders/:id/tracking/event
+ * Add manual tracking event (Seller/Expert only)
+ */
+router.post(
+  "/:id/tracking/event",
+  verifyToken,
+  requireVerification,
+  checkRole("vendor", "supplier", "expert"),
+  async (req, res) => {
+    try {
+      const { stage, location, description, coordinates } = req.body;
+
+      if (!stage || !location || !description) {
+        return res.status(400).json({
+          success: false,
+          message: "Stage, location, and description are required",
+        });
+      }
+
+      const result = await orderService.addTrackingEvent(
+        req.params.id,
+        {
+          stage,
+          location,
+          description,
+          coordinates,
+        },
+        req.userId
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("POST /api/orders/:id/tracking/event error:", error);
+
+      if (error.message === "Order not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * PATCH /api/orders/:id/tracking/update
+ * Update tracking information (Seller only)
+ */
+router.patch(
+  "/:id/tracking/update",
+  verifyToken,
+  requireVerification,
+  checkRole("vendor", "supplier"),
+  async (req, res) => {
+    try {
+      const {
+        trackingNumber,
+        courierName,
+        estimatedDeliveryDate,
+        trackingUrl,
+      } = req.body;
+
+      const result = await orderService.updateTrackingInfo(
+        req.params.id,
+        {
+          trackingNumber,
+          courierName,
+          estimatedDeliveryDate,
+          trackingUrl,
+        },
+        req.userId,
+        req.userRole
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("PATCH /api/orders/:id/tracking/update error:", error);
+
+      if (error.message === "Order not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      if (error.message.includes("Unauthorized")) {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/orders/:id/tracking/map
+ * Get tracking map data for visualization
+ */
+router.get(
+  "/:id/tracking/map",
+  verifyToken,
+  requireVerification,
+  async (req, res) => {
+    try {
+      const mapData = await orderService.getTrackingMapData(
+        req.params.id,
+        req.userId,
+        req.userRole
+      );
+
+      res.json({
+        success: true,
+        data: mapData,
+      });
+    } catch (error) {
+      console.error("GET /api/orders/:id/tracking/map error:", error);
+
+      if (error.message === "Order not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/orders/:id/tracking/progress
+ * Get delivery progress percentage
+ */
+router.get(
+  "/:id/tracking/progress",
+  verifyToken,
+  requireVerification,
+  async (req, res) => {
+    try {
+      const progress = await orderService.getDeliveryProgress(
+        req.params.id,
+        req.userId,
+        req.userRole
+      );
+
+      res.json({
+        success: true,
+        data: progress,
+      });
+    } catch (error) {
+      console.error("GET /api/orders/:id/tracking/progress error:", error);
+
+      if (error.message === "Order not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/orders/:id/timeline
+ * Get detailed order timeline with all status changes and events
+ */
+router.get(
+  "/:id/timeline",
+  verifyToken,
+  requireVerification,
+  async (req, res) => {
+    try {
+      const timeline = await orderService.getOrderTimeline(
+        req.params.id,
+        req.userId,
+        req.userRole
+      );
+
+      res.json({
+        success: true,
+        data: timeline,
+      });
+    } catch (error) {
+      console.error("GET /api/orders/:id/timeline error:", error);
+
+      if (error.message === "Order not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      if (error.message.includes("Unauthorized")) {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/orders/:id/cancellation-eligibility
+ * Check if order can be cancelled
+ */
+router.get(
+  "/:id/cancellation-eligibility",
+  verifyToken,
+  requireVerification,
+  async (req, res) => {
+    try {
+      const eligibility = await orderService.checkCancellationEligibility(
+        req.params.id,
+        req.userId
+      );
+
+      res.json({
+        success: true,
+        data: eligibility,
+      });
+    } catch (error) {
+      console.error(
+        "GET /api/orders/:id/cancellation-eligibility error:",
+        error
+      );
+
+      if (error.message === "Order not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/orders/:id/cancel/request
+ * Request cancellation with detailed reason (for orders in processing)
+ */
+router.post(
+  "/:id/cancel/request",
+  verifyToken,
+  requireVerification,
+  checkRole("customer"),
+  async (req, res) => {
+    try {
+      const { reason, reasonDetails } = req.body;
+
+      if (!reason || reason.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          message: "Cancellation reason is required",
+        });
+      }
+
+      const result = await orderService.requestOrderCancellation(
+        req.params.id,
+        req.userId,
+        {
+          reason,
+          reasonDetails: reasonDetails || "",
+        }
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("POST /api/orders/:id/cancel/request error:", error);
+
+      if (error.message === "Order not found") {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      if (error.message.includes("cannot request cancellation")) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
       });
     }
   }

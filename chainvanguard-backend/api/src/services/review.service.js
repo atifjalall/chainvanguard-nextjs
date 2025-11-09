@@ -370,6 +370,31 @@ class ReviewService {
 
       await review.save();
 
+      await notificationService.createNotification({
+        userId: review.vendorId,
+        userRole: "vendor",
+        type: "product_review_received",
+        category: "product",
+        title: "New Review Received",
+        message: `${customer.name} left a ${review.rating}-star review for "${product.name}"`,
+        productId: review.productId,
+        priority: review.rating <= 2 ? "high" : "medium",
+        actionType: "review_product",
+        actionUrl: `/products/${product._id}/reviews`,
+      });
+
+      // Thank customer for review
+      await notificationService.createNotification({
+        userId: customerId,
+        userRole: "customer",
+        type: "general",
+        category: "product",
+        title: "Thank You for Your Review",
+        message: `Thank you for reviewing "${product.name}". Your feedback helps us improve!`,
+        productId: review.productId,
+        priority: "low",
+      });
+
       return {
         success: true,
         message: "Review updated successfully",

@@ -132,6 +132,13 @@ class ReturnService {
         refundAmount += shippingRefund;
       }
 
+      // Generate returnNumber before saving
+      const returnNumber = `RTN-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 6)
+        .toUpperCase()}`;
+      returnData.returnNumber = returnNumber;
+
       // Create return request
       const returnRequest = new Return({
         orderId: order._id,
@@ -150,9 +157,41 @@ class ReturnService {
         shippingRefund,
         images: images || [],
         status: "requested",
+        returnNumber,
       });
 
       await returnRequest.save({ session });
+
+      await notificationService.createNotification({
+        userId: customerId,
+        userRole: "customer",
+        type: "order_returned",
+        category: "order",
+        title: "Return Request Submitted",
+        message: `Your return request for order #${order.orderNumber} has been submitted`,
+        orderId: order._id,
+        priority: "high",
+        actionType: "view_order",
+        actionUrl: `/returns/${returnRequest._id}`,
+        relatedEntity: {
+          entityType: "order",
+          entityId: order._id,
+        },
+      });
+
+      // Notify vendor
+      await notificationService.createNotification({
+        userId: order.sellerId,
+        userRole: "vendor",
+        type: "order_returned",
+        category: "order",
+        title: "Return Request Received",
+        message: `Return request received for order #${order.orderNumber}`,
+        orderId: order._id,
+        priority: "high",
+        actionType: "view_order",
+        actionUrl: `/returns/${returnRequest._id}`,
+      });
 
       // Update order status
       order.returnRequested = true;
@@ -180,22 +219,26 @@ class ReturnService {
       }
 
       // Send notification to vendor
-      await notificationService.createNotification({
-        recipientId: order.sellerId,
-        title: "New Return Request",
-        message: `Customer ${order.customerName} requested a return for order ${order.orderNumber}`,
-        category: "returns",
-        priority: "high",
-        action: {
-          type: "view_return",
-          url: `/vendor/returns/${returnRequest._id}`,
-        },
-        metadata: {
-          returnId: returnRequest._id,
-          orderId: order._id,
-          returnAmount,
-        },
-      });
+      try {
+        await notificationService.createNotification({
+          recipientId: order.sellerId,
+          title: "New Return Request",
+          message: `Customer ${order.customerName} requested a return for order ${order.orderNumber}`,
+          category: "returns",
+          priority: "high",
+          action: {
+            type: "view_return",
+            url: `/vendor/returns/${returnRequest._id}`,
+          },
+          metadata: {
+            returnId: returnRequest._id,
+            orderId: order._id,
+            returnAmount,
+          },
+        });
+      } catch (error) {
+        console.error("Notification failed:", error);
+      }
 
       await session.commitTransaction();
 
@@ -374,6 +417,17 @@ class ReturnService {
 
       await returnRequest.save({ session });
 
+      await notificationService.createNotification({
+        userId: returnRequest.customerId,
+        userRole: "customer",
+        type: "order_refunded",
+        category: "payment",
+        title: "Return Approved",
+        message: `Your return request has been approved. Refund of $${returnRequest.refundAmount.toFixed(2)} will be processed shortly`,
+        orderId: returnRequest.orderId,
+        priority: "high",
+      });
+
       // Update order
       await Order.findByIdAndUpdate(
         returnRequest.orderId,
@@ -440,6 +494,17 @@ class ReturnService {
       returnRequest.addStatusHistory("rejected", vendorId, rejectionReason);
 
       await returnRequest.save({ session });
+
+      await notificationService.createNotification({
+        userId: returnRequest.customerId,
+        userRole: "customer",
+        type: "general",
+        category: "order",
+        title: "Return Request Declined",
+        message: `Your return request has been declined. Reason: ${reason}`,
+        orderId: returnRequest.orderId,
+        priority: "high",
+      });
 
       // Update order
       await Order.findByIdAndUpdate(

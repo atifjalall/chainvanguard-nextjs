@@ -24,14 +24,48 @@ router.get("/", optionalAuth, async (req, res) => {
       const cart = await cartService.getCart(req.userId, null);
       return res.json({
         success: true,
-        cart,
+        data: {
+          _id: cart._id,
+          userId: cart.userId,
+          items: cart.items.map((item) => ({
+            _id: item._id.toString(), // 🆕 ENSURE STRING
+            productId: item.productId._id || item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            subtotal: item.subtotal,
+            productName: item.productName,
+            productImage: item.productImage,
+            // ... other fields
+          })),
+          totalAmount: cart.totalAmount,
+          totalItems: cart.totalItems,
+          totalQuantity: cart.totalQuantity,
+          subtotal: cart.subtotal,
+        },
       });
     } else if (sessionId) {
       // Guest user
       const cart = await cartService.getCart(null, sessionId);
       return res.json({
         success: true,
-        cart,
+        data: {
+          _id: cart._id,
+          sessionId: cart.sessionId,
+          items: cart.items.map((item) => ({
+            _id: item._id.toString(), // 🆕 ENSURE STRING
+            productId: item.productId._id || item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            subtotal: item.subtotal,
+            productName: item.productName,
+            productImage: item.productImage,
+            // ... other fields
+          })),
+          totalAmount: cart.totalAmount,
+          totalItems: cart.totalItems,
+          totalQuantity: cart.totalQuantity,
+          subtotal: cart.subtotal,
+        },
       });
     } else {
       return res.status(400).json({

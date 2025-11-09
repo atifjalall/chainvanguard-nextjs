@@ -296,7 +296,17 @@ const orderSchema = new Schema(
     trackingUrl: { type: String, default: "" },
     courierName: {
       type: String,
-      enum: ["FedEx", "UPS", "USPS", "DHL", "Local", "Other", "TCS", "Leopard", ""],
+      enum: [
+        "FedEx",
+        "UPS",
+        "USPS",
+        "DHL",
+        "Local",
+        "Other",
+        "TCS",
+        "Leopard",
+        "",
+      ],
       default: "",
     },
 
@@ -343,6 +353,29 @@ const orderSchema = new Schema(
       type: String,
       enum: ["wallet", "original", ""],
       default: "",
+    },
+
+    // Cancellation request (for processing orders)
+    cancellationRequest: {
+      requested: { type: Boolean, default: false },
+      requestedAt: { type: Date },
+      requestedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+      reason: { type: String, default: "" },
+      reasonDetails: { type: String, default: "" },
+      status: {
+        type: String,
+        enum: ["", "pending", "approved", "rejected"],
+        default: "",
+      },
+      reviewedAt: { type: Date },
+      reviewedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+      reviewNotes: { type: String, default: "" },
     },
 
     // ========================================
