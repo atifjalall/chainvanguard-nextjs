@@ -17,7 +17,6 @@ import { Progress } from "@/components/ui/progress";
 import {
   CubeIcon,
   UsersIcon,
-  CurrencyDollarIcon,
   ExclamationTriangleIcon,
   PlusIcon,
   CheckCircleIcon,
@@ -30,14 +29,21 @@ import {
   ShoppingCartIcon,
   BoltIcon,
   StarIcon,
-  TrophyIcon,
   ShieldCheckIcon,
   UserGroupIcon,
-  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
 import SupplierDashboardSkeleton from "@/components/skeletons/supplierDashboardSkeleton";
+import { badgeColors, colors } from "@/lib/colorConstants";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 interface DashboardMetrics {
   totalInventory: number;
@@ -250,6 +256,37 @@ const mockTopProducts: TopProduct[] = [
   },
 ];
 
+// Custom Rs Icon component
+const RsIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    className="h-5 w-5"
+  >
+    <text
+      x="12"
+      y="15"
+      textAnchor="middle"
+      fontSize="8"
+      fontWeight="600"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="0.2"
+      fontFamily="Arial, sans-serif"
+    >
+      Rs
+    </text>
+    <path
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
+
 export default function SupplierDashboard() {
   const { user } = useAuth();
   const router = useRouter();
@@ -428,9 +465,9 @@ export default function SupplierDashboard() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "USD",
+      currency: "PKR",
     }).format(amount);
   };
 
@@ -468,534 +505,609 @@ export default function SupplierDashboard() {
   }
 
   return (
-    <div className="relative z-10 p-6 space-y-6">
-      {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-        }`}
-      >
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Supplier Dashboard
-            </h1>
-            <p className="text-base text-gray-600 dark:text-gray-400">
-              Manage your inventory, vendors, and supply operations
-            </p>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
-                {metrics.totalInventory} Inventory Items
-              </Badge>
-              <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
-                {metrics.totalVendors} Vendors
-              </Badge>
-              <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 flex items-center gap-1 text-xs rounded-none">
-                <ShieldCheckIcon className="h-3 w-3" />
-                Blockchain Secured
-              </Badge>
-            </div>
-          </div>
-          <button
-            onClick={() => router.push("/supplier/add-inventory")}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-sm text-white dark:text-gray-900 font-medium transition-colors cursor-pointer rounded-none"
-          >
-            <PlusIcon className="h-4 w-4" />
-            Add Inventory
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div
-        className={`transform transition-all duration-700 delay-200 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-          {[
-            {
-              title: "Total Revenue",
-              value: formatCurrency(metrics.totalRevenue || 389000),
-              subtitle: "+12.5% vs last month",
-              icon: CurrencyDollarIcon,
-              iconColor: "text-gray-900 dark:text-white",
-              iconBg: "bg-gray-100 dark:bg-gray-800",
-            },
-            {
-              title: "Active Vendors",
-              value: metrics.totalVendors,
-              subtitle: `${metrics.pendingVendors} pending`,
-              icon: UsersIcon,
-              iconColor: "text-gray-900 dark:text-white",
-              iconBg: "bg-gray-100 dark:bg-gray-800",
-            },
-            {
-              title: "Total Inventory",
-              value: metrics.totalInventory,
-              subtitle: `${metrics.activeInventory} active`,
-              icon: BuildingStorefrontIcon,
-              iconColor: "text-gray-900 dark:text-white",
-              iconBg: "bg-gray-100 dark:bg-gray-800",
-            },
-            {
-              title: "Inventory Value",
-              value: formatCurrency(metrics.totalInventoryValue || 137000),
-              subtitle: "Current stock value",
-              icon: CubeIcon,
-              iconColor: "text-gray-900 dark:text-white",
-              iconBg: "bg-gray-100 dark:bg-gray-800",
-            },
-            {
-              title: "Low Stock Items",
-              value: metrics.lowStockInventory,
-              subtitle: "Need reordering",
-              icon: ExclamationTriangleIcon,
-              iconColor: "text-gray-900 dark:text-white",
-              iconBg: "bg-gray-100 dark:bg-gray-800",
-            },
-            {
-              title: "Avg Order Value",
-              value: formatCurrency(metrics.avgOrderValue || 1547),
-              subtitle: "+3.8% vs last month",
-              icon: TagIcon,
-              iconColor: "text-gray-900 dark:text-white",
-              iconBg: "bg-gray-100 dark:bg-gray-800",
-            },
-          ].map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card
-                key={index}
-                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] rounded-none"
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {stat.title}
-                  </CardTitle>
-                  <div
-                    className={`h-10 w-10 flex items-center justify-center rounded-none`}
-                  >
-                    <Icon className={`h-5 w-5 ${stat.iconColor}`} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                    {stat.value}
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    {stat.subtitle}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div
-        className={`transform transition-all duration-700 delay-400 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Recent Activity */}
-          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 xl:col-span-2 hover:shadow-lg transition-all duration-300 rounded-none">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-base">
-                <ClockIcon className="h-5 w-5 text-gray-900 dark:text-white" />
-                Recent Activity
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Latest updates from your supply chain
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivity.slice(0, 6).map((activity) => {
-                  const Icon = getActivityIcon(activity.type);
-                  return (
-                    <div
-                      key={activity.id}
-                      className="flex items-center gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all cursor-pointer border border-gray-200 dark:border-gray-700 hover:shadow-md"
-                      style={{
-                        minHeight: "90px",
-                        alignItems: "center",
-                      }}
-                    >
-                      <div
-                        className={`h-10 w-10 flex items-center justify-center rounded-none`}
-                      >
-                        <Icon className="h-5 w-5 text-gray-900 dark:text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100">
-                            {activity.title}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            {activity.amount && (
-                              <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
-                                {formatCurrency(activity.amount)}
-                              </Badge>
-                            )}
-                            <span className="text-xs text-gray-500 dark:text-gray-500">
-                              {getTimeAgo(activity.timestamp)}
-                            </span>
-                          </div>
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          {activity.description}
-                        </p>
-                        {activity.customer && (
-                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            Customer: {activity.customer}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-6 text-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push("/supplier/transactions")}
-                  className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900 rounded-none border-0"
-                  style={{ borderRadius: 0 }}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="relative z-10 p-6 space-y-6">
+        {/* Header */}
+        <div
+          className={`transform transition-all duration-700 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+          }`}
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="space-y-2">
+              <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
+                Supplier Dashboard
+              </h1>
+              <p className={`text-base ${colors.texts.secondary}`}>
+                Manage your inventory, vendors, and supply operations
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
                 >
-                  View All Transactions
-                  <ArrowRightIcon className="h-4 w-4 ml-2" />
-                </Button>
+                  {metrics.totalInventory} Inventory Items
+                </Badge>
+                <Badge
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                >
+                  {metrics.totalVendors} Vendors
+                </Badge>
+                <Badge
+                  className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} flex items-center gap-1 text-xs rounded-none`}
+                >
+                  <ShieldCheckIcon
+                    className={`h-3 w-3 ${badgeColors.blue.icon}`}
+                  />
+                  Blockchain Secured
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Performance Overview */}
-          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 rounded-none">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-base">
-                <ChartBarIcon className="h-5 w-5 text-gray-900 dark:text-white" />
-                Performance
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                    Revenue Goal
-                  </span>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    {formatCurrency(389000)} / {formatCurrency(500000)}
-                  </span>
-                </div>
-                <Progress value={78} className="h-2" />
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  78% completed
-                </p>
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                    Vendor Satisfaction
-                  </span>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    4.7/5
-                  </span>
-                </div>
-                <Progress value={94} className="h-2" />
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  94% satisfaction rate
-                </p>
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                    Stock Turnover
-                  </span>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    6.2x
-                  </span>
-                </div>
-                <Progress value={85} className="h-2" />
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  Above industry average
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Bottom Section */}
-      <div
-        className={`transform transition-all duration-700 delay-600 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Vendors */}
-          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 rounded-none">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-base">
-                <UserGroupIcon className="h-5 w-5 text-gray-900 dark:text-white" />
-                Top Vendors
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Your highest performing vendor partners
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockTopVendors.map((vendor, index) => {
-                  const statusConfig = getStatusConfig(vendor.status);
-                  const StatusIcon = statusConfig.icon;
-                  return (
-                    <div
-                      key={vendor.id}
-                      className="flex items-center gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all cursor-pointer border border-gray-200 dark:border-gray-700 hover:shadow-md"
-                    >
-                      <div className="relative">
-                        <Avatar className="h-12 w-12 border-2 border-gray-200 dark:border-gray-700 rounded-none">
-                          <AvatarImage src="" alt={vendor.name} />
-                          <AvatarFallback className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold rounded-none">
-                            {getInitials(vendor.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="absolute -top-1 -right-1">
-                          {index === 0 && (
-                            <div className="h-6 w-6 bg-gray-100 dark:bg-gray-800 flex items-center justify-center rounded-none">
-                              <SparklesIcon className="h-3 w-3 text-gray-900 dark:text-white" />
-                            </div>
-                          )}
-                          {index === 1 && (
-                            <div className="h-5 w-5 bg-gray-100 dark:bg-gray-800 flex items-center justify-center rounded-none">
-                              <TrophyIcon className="h-2 w-2 text-gray-600" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                            {vendor.name}
-                          </h4>
-                          <Badge
-                            className={
-                              vendor.status === "active"
-                                ? "bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 flex items-center gap-1 text-xs rounded-none"
-                                : vendor.status === "pending"
-                                  ? "bg-yellow-100/10 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900 text-yellow-700 dark:text-yellow-400 flex items-center gap-1 text-xs rounded-none"
-                                  : vendor.status === "inactive"
-                                    ? "bg-red-100/10 dark:bg-red-900/10 border border-red-100 dark:border-red-900 text-red-700 dark:text-red-400 flex items-center gap-1 text-xs rounded-none"
-                                    : "flex items-center gap-1 text-xs rounded-none"
-                            }
-                          >
-                            <StatusIcon className="h-3 w-3" />
-                            {statusConfig.label}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 text-xs">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                              {formatCurrency(vendor.totalSpent)}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Total Spent
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                              {vendor.totalOrders}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Orders
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                              {vendor.rating}/5
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Rating
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Top Products */}
-          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 rounded-none">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-base">
-                <StarIcon className="h-5 w-5 text-gray-900 dark:text-white" />
-                Top Products
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Your best performing supply items
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockTopProducts.map((product) => {
-                  const statusConfig = getStatusConfig(product.status);
-                  const StatusIcon = statusConfig.icon;
-                  return (
-                    <div
-                      key={product.id}
-                      className="flex items-center gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all cursor-pointer border border-gray-200 dark:border-gray-700 hover:shadow-md"
-                    >
-                      <div className="h-12 w-12 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-900 dark:text-white font-bold rounded-none">
-                        {getInitials(product.name)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                            {product.name}
-                          </h4>
-                          <Badge
-                            className={
-                              product.status === "active"
-                                ? "bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 flex items-center gap-1 text-xs rounded-none"
-                                : product.status === "low_stock"
-                                  ? "bg-yellow-100/10 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900 text-yellow-700 dark:text-yellow-400 flex items-center gap-1 text-xs rounded-none"
-                                  : product.status === "out_of_stock"
-                                    ? "bg-red-100/10 dark:bg-red-900/10 border border-red-100 dark:border-red-900 text-red-700 dark:text-red-400 flex items-center gap-1 text-xs rounded-none"
-                                    : "flex items-center gap-1 text-xs rounded-none"
-                            }
-                          >
-                            <StatusIcon className="h-3 w-3" />
-                            {statusConfig.label}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 text-xs">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                              {formatCurrency(product.revenue)}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Revenue
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                              {product.totalSold}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Sold
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
-                              {product.currentStock}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              In Stock
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div
-        className={`transform transition-all duration-700 delay-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-2xl transition-all duration-300 mt-6 rounded-none">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-base">
-              <BoltIcon className="h-5 w-5 text-gray-900 dark:text-white" />
-              Quick Actions
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Manage your supply chain efficiently
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <button
-                onClick={() => router.push("/supplier/add-inventory")}
-                className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-lg cursor-pointer group rounded-none"
-              >
-                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                  <PlusIcon className="h-6 w-6 text-gray-900 dark:text-white" />
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                    Add Inventory
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    New supply item
-                  </p>
-                </div>
-              </button>
-              <button
-                onClick={() => router.push("/supplier/vendors")}
-                className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-lg cursor-pointer group rounded-none"
-              >
-                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                  <UsersIcon className="h-6 w-6 text-gray-900 dark:text-white" />
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                    Manage Vendors
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Vendor partners
-                  </p>
-                </div>
-              </button>
-              <button
-                onClick={() => router.push("/supplier/inventory")}
-                className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-lg cursor-pointer group rounded-none"
-              >
-                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                  <BuildingStorefrontIcon className="h-6 w-6 text-gray-900 dark:text-white" />
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                    Check Inventory
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Stock overview
-                  </p>
-                </div>
-              </button>
-              <button
-                onClick={() => router.push("/supplier/insights")}
-                className="h-32 flex flex-col gap-3 items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-lg cursor-pointer group rounded-none"
-              >
-                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                  <ChartBarIcon className="h-6 w-6 text-gray-900 dark:text-white" />
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                    View Analytics
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Supply insights
-                  </p>
-                </div>
-              </button>
             </div>
-          </CardContent>
-        </Card>
+            <button
+              onClick={() => router.push("/supplier/add-inventory")}
+              className={`flex items-center gap-2 px-4 py-2 ${colors.buttons.primary} font-medium transition-colors cursor-pointer rounded-none`}
+            >
+              <PlusIcon className="h-4 w-4" />
+              Add Inventory
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div
+          className={`transform transition-all duration-700 delay-200 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+            {[
+              {
+                title: "Total Revenue",
+                value: formatCurrency(metrics.totalRevenue || 389000),
+                subtitle: "+12.5% vs last month",
+                icon: RsIcon,
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
+              },
+              {
+                title: "Active Vendors",
+                value: metrics.totalVendors,
+                subtitle: `${metrics.pendingVendors} pending`,
+                icon: UsersIcon,
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
+              },
+              {
+                title: "Total Inventory",
+                value: metrics.totalInventory,
+                subtitle: `${metrics.activeInventory} active`,
+                icon: BuildingStorefrontIcon,
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
+              },
+              {
+                title: "Inventory Value",
+                value: formatCurrency(metrics.totalInventoryValue || 137000),
+                subtitle: "Current stock value",
+                icon: CubeIcon,
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
+              },
+              {
+                title: "Low Stock Items",
+                value: metrics.lowStockInventory,
+                subtitle: "Need reordering",
+                icon: ExclamationTriangleIcon,
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
+              },
+              {
+                title: "Avg Order Value",
+                value: formatCurrency(metrics.avgOrderValue || 1547),
+                subtitle: "+3.8% vs last month",
+                icon: TagIcon,
+                iconColor: "",
+                iconBg: "bg-gray-100 dark:bg-gray-800",
+              },
+            ].map((stat, index) => {
+              const Icon = stat.icon;
+              const isPercentage = stat.subtitle.includes("%");
+              const [percentagePart, restPart] = isPercentage
+                ? stat.subtitle.split(" vs ")
+                : [stat.subtitle, ""];
+              return (
+                <Card
+                  key={index}
+                  className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle
+                      className={`text-xs font-medium ${colors.texts.secondary}`}
+                    >
+                      {stat.title}
+                    </CardTitle>
+                    <div
+                      className={`h-10 w-10 flex items-center justify-center rounded-none`}
+                    >
+                      <Icon className={`h-5 w-5 ${colors.icons.primary}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div
+                      className={`text-lg font-bold ${colors.texts.primary} mb-1`}
+                    >
+                      {stat.value}
+                    </div>
+                    <p className="text-xs">
+                      {isPercentage ? (
+                        <>
+                          <span className={colors.texts.success}>
+                            {percentagePart}
+                          </span>
+                          <span className={colors.texts.secondary}>
+                            {" "}
+                            vs {restPart}
+                          </span>
+                        </>
+                      ) : (
+                        <span className={colors.texts.secondary}>
+                          {stat.subtitle}
+                        </span>
+                      )}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div
+          className={`transform transition-all duration-700 delay-400 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Recent Activity */}
+            <Card
+              className={`${colors.cards.base} xl:col-span-2 transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
+            >
+              <CardHeader>
+                <CardTitle
+                  className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                >
+                  <ClockIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                  Recent Activity
+                </CardTitle>
+                <CardDescription
+                  className={`text-xs ${colors.texts.secondary}`}
+                >
+                  Latest updates from your supply chain
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentActivity.slice(0, 6).map((activity) => {
+                    const Icon = getActivityIcon(activity.type);
+                    return (
+                      <div
+                        key={activity.id}
+                        className={`flex items-center gap-4 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.backgrounds.hover} transition-all cursor-pointer ${colors.borders.primary} hover:shadow-none`}
+                        style={{ minHeight: "90px", alignItems: "center" }}
+                      >
+                        <div
+                          className={`h-10 w-10 flex items-center justify-center rounded-none`}
+                        >
+                          <Icon className={`h-5 w-5 ${colors.icons.primary}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p
+                              className={`font-semibold ${colors.texts.primary}`}
+                            >
+                              {activity.title}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              {activity.amount && (
+                                <Badge
+                                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                                >
+                                  {formatCurrency(activity.amount)}
+                                </Badge>
+                              )}
+                              <span className={`text-xs ${colors.texts.muted}`}>
+                                {getTimeAgo(activity.timestamp)}
+                              </span>
+                            </div>
+                          </div>
+                          <p
+                            className={`text-xs ${colors.texts.secondary} mt-1`}
+                          >
+                            {activity.description}
+                          </p>
+                          {activity.customer && (
+                            <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                              Customer: {activity.customer}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-6 text-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push("/supplier/transactions")}
+                    className={`${colors.texts.primary} hover:${colors.backgrounds.hover} rounded-none border-0`}
+                    style={{ borderRadius: 0 }}
+                  >
+                    View All Transactions
+                    <ArrowRightIcon className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Performance Overview */}
+            <Card
+              className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
+            >
+              <CardHeader>
+                <CardTitle
+                  className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                >
+                  <ChartBarIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                  Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      Revenue Goal
+                    </span>
+                    <span className={`text-xs ${colors.texts.secondary}`}>
+                      {formatCurrency(389000)} / {formatCurrency(500000)}
+                    </span>
+                  </div>
+                  <Progress value={78} className="h-2 rounded-none" />
+                  <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                    78% completed
+                  </p>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                      Vendor Satisfaction
+                    </span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      4.7/5
+                    </span>
+                  </div>
+                  <Progress value={94} className="h-2 rounded-none" />
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    94% satisfaction rate
+                  </p>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                      Stock Turnover
+                    </span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      6.2x
+                    </span>
+                  </div>
+                  <Progress value={85} className="h-2 rounded-none" />
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    Above industry average
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Bottom Section */}
+        <div
+          className={`transform transition-all duration-700 delay-600 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Vendors */}
+            <Card
+              className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
+            >
+              <CardHeader>
+                <CardTitle
+                  className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                >
+                  <UserGroupIcon
+                    className={`h-5 w-5 ${colors.icons.primary}`}
+                  />
+                  Top Vendors
+                </CardTitle>
+                <CardDescription
+                  className={`text-xs ${colors.texts.secondary}`}
+                >
+                  Your highest performing vendor partners
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {mockTopVendors.map((vendor, index) => {
+                    const statusConfig = getStatusConfig(vendor.status);
+                    const StatusIcon = statusConfig.icon;
+                    return (
+                      <div
+                        key={vendor.id}
+                        className={`flex items-center gap-4 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.backgrounds.hover} transition-all cursor-pointer ${colors.borders.primary} hover:shadow-none`}
+                      >
+                        <div className="relative">
+                          <Avatar
+                            className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
+                          >
+                            <AvatarImage src="" alt={vendor.name} />
+                            <AvatarFallback
+                              className={`${colors.texts.primary} font-bold rounded-none`}
+                            >
+                              {getInitials(vendor.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4
+                              className={`font-semibold ${colors.texts.primary} text-sm`}
+                            >
+                              {vendor.name}
+                            </h4>
+                            <Badge
+                              className={
+                                vendor.status === "active"
+                                  ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} flex items-center gap-1 text-xs rounded-none`
+                                  : vendor.status === "pending"
+                                    ? `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text} flex items-center gap-1 text-xs rounded-none`
+                                    : vendor.status === "inactive"
+                                      ? `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} flex items-center gap-1 text-xs rounded-none`
+                                      : "flex items-center gap-1 text-xs rounded-none"
+                              }
+                            >
+                              <StatusIcon className="h-3 w-3" />
+                              {statusConfig.label}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 text-xs">
+                            <div>
+                              <p
+                                className={`font-medium ${colors.texts.primary} text-xs`}
+                              >
+                                {formatCurrency(vendor.totalSpent)}
+                              </p>
+                              <p className={`${colors.texts.muted}`}>
+                                Total Spent
+                              </p>
+                            </div>
+                            <div>
+                              <p
+                                className={`font-medium ${colors.texts.primary} text-xs`}
+                              >
+                                {vendor.totalOrders}
+                              </p>
+                              <p className={`${colors.texts.muted}`}>Orders</p>
+                            </div>
+                            <div>
+                              <p
+                                className={`font-medium ${colors.texts.primary} text-xs`}
+                              >
+                                {vendor.rating}/5
+                              </p>
+                              <p className={`${colors.texts.muted}`}>Rating</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Top Products */}
+            <Card
+              className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
+            >
+              <CardHeader>
+                <CardTitle
+                  className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                >
+                  <StarIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                  Top Products
+                </CardTitle>
+                <CardDescription
+                  className={`text-xs ${colors.texts.secondary}`}
+                >
+                  Your best performing supply items
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {mockTopProducts.map((product) => {
+                    const statusConfig = getStatusConfig(product.status);
+                    const StatusIcon = statusConfig.icon;
+                    return (
+                      <div
+                        key={product.id}
+                        className={`flex items-center gap-4 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.backgrounds.hover} transition-all cursor-pointer ${colors.borders.primary} hover:shadow-none`}
+                      >
+                        <div
+                          className={`h-12 w-12 ${colors.backgrounds.tertiary} flex items-center justify-center text-gray-900 dark:text-white font-bold rounded-none`}
+                        >
+                          {getInitials(product.name)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4
+                              className={`font-semibold ${colors.texts.primary} text-sm`}
+                            >
+                              {product.name}
+                            </h4>
+                            <Badge
+                              className={
+                                product.status === "active"
+                                  ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} flex items-center gap-1 text-xs rounded-none`
+                                  : product.status === "low_stock"
+                                    ? `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text} flex items-center gap-1 text-xs rounded-none`
+                                    : product.status === "out_of_stock"
+                                      ? `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} flex items-center gap-1 text-xs rounded-none`
+                                      : "flex items-center gap-1 text-xs rounded-none"
+                              }
+                            >
+                              <StatusIcon className="h-3 w-3" />
+                              {statusConfig.label}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 text-xs">
+                            <div>
+                              <p
+                                className={`font-medium ${colors.texts.primary} text-xs`}
+                              >
+                                {formatCurrency(product.revenue)}
+                              </p>
+                              <p className={`${colors.texts.muted}`}>Revenue</p>
+                            </div>
+                            <div>
+                              <p
+                                className={`font-medium ${colors.texts.primary} text-xs`}
+                              >
+                                {product.totalSold}
+                              </p>
+                              <p className={`${colors.texts.muted}`}>Sold</p>
+                            </div>
+                            <div>
+                              <p
+                                className={`font-medium ${colors.texts.primary} text-xs`}
+                              >
+                                {product.currentStock}
+                              </p>
+                              <p className={`${colors.texts.muted}`}>
+                                In Stock
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div
+          className={`transform transition-all duration-700 delay-700 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <Card
+            className={`${colors.cards.base} transition-all duration-300 mt-6 rounded-none !shadow-none hover:!shadow-none`}
+          >
+            <CardHeader>
+              <CardTitle
+                className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+              >
+                <BoltIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                Quick Actions
+              </CardTitle>
+              <CardDescription className={`text-xs ${colors.texts.secondary}`}>
+                Manage your supply chain efficiently
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <button
+                  className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
+                >
+                  <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                    <PlusIcon className={`h-6 w-6 ${colors.texts.primary}`} />
+                  </div>
+                  <div className="text-center">
+                    <p
+                      className={`font-semibold ${colors.texts.primary} text-xs`}
+                    >
+                      Add Inventory
+                    </p>
+                    <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                      New supply item
+                    </p>
+                  </div>
+                </button>
+                <button
+                  className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
+                >
+                  <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                    <UsersIcon className={`h-6 w-6 ${colors.texts.primary}`} />
+                  </div>
+                  <div className="text-center">
+                    <p
+                      className={`font-semibold ${colors.texts.primary} text-xs`}
+                    >
+                      Manage Vendors
+                    </p>
+                    <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                      Vendor partners
+                    </p>
+                  </div>
+                </button>
+                <button
+                  className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
+                >
+                  <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                    <BuildingStorefrontIcon
+                      className={`h-6 w-6 ${colors.texts.primary}`}
+                    />
+                  </div>
+                  <div className="text-center">
+                    <p
+                      className={`font-semibold ${colors.texts.primary} text-xs`}
+                    >
+                      Check Inventory
+                    </p>
+                    <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                      Stock overview
+                    </p>
+                  </div>
+                </button>
+                <button
+                  className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
+                >
+                  <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                    <ChartBarIcon
+                      className={`h-6 w-6 ${colors.texts.primary}`}
+                    />
+                  </div>
+                  <div className="text-center">
+                    <p
+                      className={`font-semibold ${colors.texts.primary} text-xs`}
+                    >
+                      View Analytics
+                    </p>
+                    <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                      Supply insights
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

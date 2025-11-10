@@ -170,7 +170,7 @@ class OrderService {
         originalAmount: pricing.total,
         discountAmount: loyaltyDiscount.discount,
         discountPercentage: loyaltyDiscount.discountPercentage,
-        currency: "USD",
+        currency: "PKR",
 
         shippingAddress: orderData.shippingAddress,
         billingAddress: orderData.billingAddress || orderData.shippingAddress,
@@ -1396,7 +1396,6 @@ class OrderService {
       await this.releaseProductStock(order.items);
 
       await order.save();
-
 
       await notificationService.createNotification({
         userId: order.customerId,

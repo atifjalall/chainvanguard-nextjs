@@ -170,7 +170,7 @@ ITEM1=$(curl -s -X POST "$BASE_URL/inventory" \
       "washability": "Machine washable"
     },
     "weight": 0.18,
-    "countryOfOrigin": "India",
+    "countryOfOrigin": "Pakistan",
     "manufacturer": "EcoTextiles Ltd",
     "isSustainable": true,
     "certifications": ["GOTS", "OEKO-TEX Standard 100"],

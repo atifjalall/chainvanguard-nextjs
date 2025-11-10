@@ -24,7 +24,7 @@ class WalletBalanceService {
           userId: user._id,
           walletAddress: user.walletAddress,
           balance: 0,
-          currency: "USD",
+          currency: "PKR",
           isActive: true,
           isFrozen: false,
         });

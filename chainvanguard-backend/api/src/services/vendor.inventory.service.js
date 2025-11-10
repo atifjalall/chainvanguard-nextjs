@@ -103,7 +103,7 @@ class VendorInventoryService {
           cost: {
             perUnit: item.price,
             totalCost: item.subtotal,
-            currency: order.currency || "USD",
+            currency: order.currency || "PKR",
           },
           dates: {
             purchased: vendorRequest?.createdAt || order.createdAt,

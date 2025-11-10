@@ -9,17 +9,17 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Input } from "@/components/_ui/input";
-import { Badge } from "@/components/_ui/badge";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/_ui/select";
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -27,7 +27,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/_ui/table";
+} from "@/components/ui/table";
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -36,7 +36,6 @@ import {
   ArrowDownIcon,
   ArrowDownTrayIcon,
   ArrowPathIcon,
-  CurrencyDollarIcon,
   ArrowTrendingUpIcon,
   CalendarIcon,
   EyeIcon,
@@ -53,10 +52,50 @@ import {
   BanknotesIcon,
   ReceiptPercentIcon,
   ArrowTrendingDownIcon,
+  CreditCardIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
 import SupplierTransactionsSkeleton from "@/components/skeletons/supplierTransactionsSkeleton";
+import { badgeColors, colors } from "@/lib/colorConstants";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+
+const RsIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    className="h-5 w-5"
+  >
+    <text
+      x="12"
+      y="15"
+      textAnchor="middle"
+      fontSize="8"
+      fontWeight="600"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="0.2"
+      fontFamily="Arial, sans-serif"
+    >
+      Rs
+    </text>
+    <path
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
 
 const transactionTypes = [
   "All Types",
@@ -75,55 +114,55 @@ const sortOptions = [
   { value: "amount-asc", label: "Amount: Low to High" },
 ];
 
-// BADGE COLOR MAP
-const badgeColorMap: Record<
-  string,
-  { bg: string; border: string; text: string; icon: string }
-> = {
-  green: {
-    bg: "bg-green-100/10 dark:bg-green-900/10",
-    border: "border border-green-200 dark:border-green-900",
-    text: "text-green-700 dark:text-green-400",
-    icon: "text-green-700 dark:text-green-400",
-  },
-  blue: {
-    bg: "bg-blue-100/10 dark:bg-blue-900/10",
-    border: "border border-blue-200 dark:border-blue-900",
-    text: "text-blue-700 dark:text-blue-400",
-    icon: "text-blue-700 dark:text-blue-400",
-  },
-  yellow: {
-    bg: "bg-yellow-100/10 dark:bg-yellow-900/10",
-    border: "border border-yellow-200 dark:border-yellow-900",
-    text: "text-yellow-700 dark:text-yellow-400",
-    icon: "text-yellow-700 dark:text-yellow-400",
-  },
-  red: {
-    bg: "bg-red-100/10 dark:bg-red-900/10",
-    border: "border border-red-200 dark:border-red-900",
-    text: "text-red-700 dark:text-red-400",
-    icon: "text-red-700 dark:text-red-400",
-  },
-};
+// BADGE COLOR MAP - Replaced with imported constants
+// const badgeColors: Record<
+//   string,
+//   { bg: string; border: string; text: string; icon: string }
+// > = {
+//   green: {
+//     bg: "bg-green-100/10 dark:bg-green-900/10",
+//     border: "border border-green-200 dark:border-green-900",
+//     text: "text-green-700 dark:text-green-400",
+//     icon: "text-green-700 dark:text-green-400",
+//   },
+//   blue: {
+//     bg: "bg-blue-100/10 dark:bg-blue-900/10",
+//     border: "border border-blue-200 dark:border-blue-900",
+//     text: "text-blue-700 dark:text-blue-400",
+//     icon: "text-blue-700 dark:text-blue-400",
+//   },
+//   yellow: {
+//     bg: "bg-yellow-100/10 dark:bg-yellow-900/10",
+//     border: "border border-yellow-200 dark:border-yellow-900",
+//     text: "text-yellow-700 dark:text-yellow-400",
+//     icon: "text-yellow-700 dark:text-yellow-400",
+//   },
+//   red: {
+//     bg: "bg-red-100/10 dark:bg-red-900/10",
+//     border: "border border-red-200 dark:border-red-900",
+//     text: "text-red-700 dark:text-red-400",
+//     icon: "text-red-700 dark:text-red-400",
+//   },
+// };
 
-// Helper to get badge color by status/type
+// Helper to get badge color by status/type - Updated to use imported constants
 function getBadgeColor(type: string) {
   switch (type) {
     case "completed":
     case "sale":
-      return badgeColorMap.green;
+      return badgeColors.green;
     case "pending":
     case "adjustment":
-      return badgeColorMap.yellow;
+      return badgeColors.yellow;
     case "cancelled":
     case "purchase":
-      return badgeColorMap.red;
+      return badgeColors.red;
     case "transfer":
     case "blue":
     case "Blockchain Verified":
-      return badgeColorMap.blue;
+      return badgeColors.blue;
     default:
-      return badgeColorMap.blue;
+      return badgeColors.blue;
   }
 }
 
@@ -357,9 +396,9 @@ export default function SupplierTransactionsPage() {
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "USD",
+      currency: "PKR",
     }).format(Math.abs(amount));
   };
 
@@ -383,6 +422,18 @@ export default function SupplierTransactionsPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <div className="relative z-10 p-6 space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/supplier">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Transactions</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         {/* Header */}
         <div
           className={`transform transition-all duration-700 ${
@@ -391,10 +442,10 @@ export default function SupplierTransactionsPage() {
         >
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
                 Supply Chain Transactions
               </h1>
-              <p className="text-base text-gray-600 dark:text-gray-400">
+              <p className={`text-base ${colors.texts.secondary}`}>
                 Track all blockchain transactions and financial activities
               </p>
             </div>
@@ -402,16 +453,18 @@ export default function SupplierTransactionsPage() {
               <Button
                 onClick={loadTransactions}
                 variant="outline"
-                className="hidden lg:flex items-center gap-2 text-xs cursor-pointer !rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+                className={`hidden lg:flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.secondary} transition-all`}
               >
-                <ArrowPathIcon className="h-4 w-4" />
+                <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
                 Refresh
               </Button>
               <Button
                 variant="outline"
-                className="flex items-center gap-2 text-xs cursor-pointer !rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+                className={`flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.secondary} transition-all`}
               >
-                <ArrowDownTrayIcon className="h-4 w-4" />
+                <ArrowDownTrayIcon
+                  className={`h-4 w-4 ${colors.icons.primary}`}
+                />
                 Export
               </Button>
             </div>
@@ -436,7 +489,7 @@ export default function SupplierTransactionsPage() {
                 title: "Total Volume",
                 value: formatCurrency(totalVolume),
                 subtitle: "Transaction volume",
-                icon: CurrencyDollarIcon,
+                icon: RsIcon,
               },
               {
                 title: "Total Sales",
@@ -448,7 +501,7 @@ export default function SupplierTransactionsPage() {
                 title: "Total Purchases",
                 value: formatCurrency(totalPurchases),
                 subtitle: "Supply investments",
-                icon: BanknotesIcon,
+                icon: CreditCardIcon,
               },
               {
                 title: "Completed",
@@ -459,21 +512,25 @@ export default function SupplierTransactionsPage() {
             ].map((stat, index) => (
               <Card
                 key={index}
-                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] !rounded-none"
+                className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 !rounded-none">
-                  <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  <CardTitle
+                    className={`text-xs font-medium ${colors.texts.secondary}`}
+                  >
                     {stat.title}
                   </CardTitle>
                   <div className="h-10 w-10 flex items-center justify-center !rounded-none">
-                    <stat.icon className="h-5 w-5 text-black dark:text-white" />
+                    <stat.icon className={`h-5 w-5 ${colors.icons.primary}`} />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                  <div
+                    className={`text-lg font-bold ${colors.texts.primary} mb-1`}
+                  >
                     {stat.value}
                   </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <p className={`text-xs ${colors.texts.secondary}`}>
                     {stat.subtitle}
                   </p>
                 </CardContent>
@@ -488,28 +545,29 @@ export default function SupplierTransactionsPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <Card className="border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 !rounded-none">
+          <Card className={`${colors.cards.base} !rounded-none`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
-                {/* Remove color and background from icon */}
                 <div className="h-8 w-8 !rounded-none flex items-center justify-center">
-                  <FunnelIcon className="h-4 w-4" />
+                  <FunnelIcon className={`h-4 w-4 ${colors.icons.primary}`} />
                 </div>
                 Filters & Search
               </CardTitle>
-              <CardDescription className="text-xs">
+              <CardDescription className={`text-xs ${colors.texts.secondary}`}>
                 Filter and search through your transactions
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="relative w-full">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <MagnifyingGlassIcon
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                  />
                   <Input
                     placeholder="Search by reference, vendor or product"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 !rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+                    className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
                   />
                 </div>
                 <Select value={selectedType} onValueChange={setSelectedType}>
@@ -569,7 +627,7 @@ export default function SupplierTransactionsPage() {
                   {searchTerm && (
                     <Badge
                       variant="outline"
-                      className={`${badgeColorMap.blue.bg} ${badgeColorMap.blue.border} ${badgeColorMap.blue.text} text-xs !rounded-none`}
+                      className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs !rounded-none`}
                     >
                       &quot;{searchTerm}&quot;
                       <button
@@ -588,22 +646,22 @@ export default function SupplierTransactionsPage() {
                       {/* Icon for type */}
                       {selectedType === "sale" && (
                         <ArrowUpIcon
-                          className={`h-3 w-3 ${badgeColorMap.green.icon}`}
+                          className={`h-3 w-3 ${badgeColors.green.icon}`}
                         />
                       )}
                       {selectedType === "purchase" && (
                         <ArrowDownIcon
-                          className={`h-3 w-3 ${badgeColorMap.red.icon}`}
+                          className={`h-3 w-3 ${badgeColors.red.icon}`}
                         />
                       )}
                       {selectedType === "adjustment" && (
                         <ArrowsUpDownIcon
-                          className={`h-3 w-3 ${badgeColorMap.yellow.icon}`}
+                          className={`h-3 w-3 ${badgeColors.yellow.icon}`}
                         />
                       )}
                       {selectedType === "transfer" && (
                         <ArrowsUpDownIcon
-                          className={`h-3 w-3 ${badgeColorMap.blue.icon}`}
+                          className={`h-3 w-3 ${badgeColors.blue.icon}`}
                         />
                       )}
                       {selectedType}
@@ -623,17 +681,17 @@ export default function SupplierTransactionsPage() {
                       {/* Icon for status */}
                       {selectedStatus === "completed" && (
                         <CheckCircleIcon
-                          className={`h-3 w-3 ${badgeColorMap.green.icon}`}
+                          className={`h-3 w-3 ${badgeColors.green.icon}`}
                         />
                       )}
                       {selectedStatus === "pending" && (
                         <ClockIcon
-                          className={`h-3 w-3 ${badgeColorMap.yellow.icon}`}
+                          className={`h-3 w-3 ${badgeColors.yellow.icon}`}
                         />
                       )}
                       {selectedStatus === "cancelled" && (
                         <XCircleIcon
-                          className={`h-3 w-3 ${badgeColorMap.red.icon}`}
+                          className={`h-3 w-3 ${badgeColors.red.icon}`}
                         />
                       )}
                       {selectedStatus}
@@ -661,14 +719,21 @@ export default function SupplierTransactionsPage() {
           }`}
         >
           {filteredAndSortedTransactions.length > 0 ? (
-            <Card className="border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 !rounded-none">
-              <CardHeader className="border-b border-gray-200 dark:border-gray-700 !rounded-none">
+            <Card
+              className={`${colors.cards.base} !rounded-none !shadow-none hover:!shadow-none`}
+            >
+              <CardHeader
+                className={`border-b ${colors.borders.primary} !rounded-none`}
+              >
                 <div className="flex flex-row items-center gap-4">
                   <div className="flex flex-col">
-                    <CardTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
-                      {/* Remove color and background from icon */}
+                    <CardTitle
+                      className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                    >
                       <div className="h-8 w-8 !rounded-none flex items-center justify-center">
-                        <ChartPieIcon className="h-4 w-4" />
+                        <BanknotesIcon
+                          className={`h-4 w-4 ${colors.icons.primary}`}
+                        />
                       </div>
                       Transaction History
                     </CardTitle>
@@ -677,10 +742,10 @@ export default function SupplierTransactionsPage() {
                   <div>
                     <Badge
                       variant="secondary"
-                      className={`${badgeColorMap.blue.bg} ${badgeColorMap.blue.border} ${badgeColorMap.blue.text} text-xs !rounded-none flex items-center`}
+                      className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs !rounded-none flex items-center`}
                     >
                       <ShieldCheckIcon
-                        className={`h-3 w-3 mr-1 ${badgeColorMap.blue.icon}`}
+                        className={`h-3 w-3 mr-1 ${badgeColors.blue.icon}`}
                       />
                       Blockchain Verified
                     </Badge>
@@ -691,32 +756,52 @@ export default function SupplierTransactionsPage() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-b border-gray-200/50 dark:border-gray-800/50 py-4 !rounded-none">
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold min-w-[140px]">
+                      <TableRow
+                        className={`border-b ${colors.borders.secondary} py-4 !rounded-none`}
+                      >
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold min-w-[140px]`}
+                        >
                           Reference
                         </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold min-w-[140px]">
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold min-w-[140px]`}
+                        >
                           Date
                         </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold min-w-[120px]">
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold min-w-[120px]`}
+                        >
                           Type
                         </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold min-w-[120px]">
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold min-w-[120px]`}
+                        >
                           Status
                         </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold min-w-[140px]">
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold min-w-[140px]`}
+                        >
                           Vendor
                         </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold min-w-[140px]">
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold min-w-[140px]`}
+                        >
                           Product
                         </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold min-w-[120px]">
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold min-w-[120px]`}
+                        >
                           Amount
                         </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold min-w-[160px]">
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold min-w-[160px]`}
+                        >
                           Blockchain
                         </TableHead>
-                        <TableHead className="text-gray-900 dark:text-gray-100 font-semibold min-w-[120px]">
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold min-w-[120px]`}
+                        >
                           Actions
                         </TableHead>
                       </TableRow>
@@ -725,13 +810,14 @@ export default function SupplierTransactionsPage() {
                       {filteredAndSortedTransactions.map((transaction: any) => (
                         <TableRow
                           key={transaction.id}
-                          className="border-b border-gray-200/30 dark:border-gray-800/30 hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors py-4 !rounded-none"
+                          className={`border-b ${colors.borders.secondary} ${colors.backgrounds.hover} transition-colors py-4 !rounded-none`}
                         >
                           <TableCell className="px-2">
                             <div className="flex items-center gap-3">
-                              {/* Removed gradient background and icon */}
                               <div>
-                                <code className="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                                <code
+                                  className={`text-sm font-mono ${colors.backgrounds.tertiary} px-2 py-1 rounded-none`}
+                                >
                                   {transaction.reference}
                                 </code>
                               </div>
@@ -739,8 +825,12 @@ export default function SupplierTransactionsPage() {
                           </TableCell>
                           <TableCell className="px-2">
                             <div className="flex items-center gap-2">
-                              <CalendarIcon className="h-3 w-3 text-gray-500" />
-                              <span className="text-sm text-gray-900 dark:text-gray-100">
+                              <CalendarIcon
+                                className={`h-3 w-3 ${colors.icons.muted}`}
+                              />
+                              <span
+                                className={`text-sm ${colors.texts.primary}`}
+                              >
                                 {formatDate(transaction.date)}
                               </span>
                             </div>
@@ -754,22 +844,22 @@ export default function SupplierTransactionsPage() {
                               >
                                 {transaction.type === "sale" && (
                                   <ArrowUpIcon
-                                    className={`h-3 w-3 ${badgeColorMap.green.icon}`}
+                                    className={`h-3 w-3 ${badgeColors.green.icon}`}
                                   />
                                 )}
                                 {transaction.type === "purchase" && (
                                   <ArrowDownIcon
-                                    className={`h-3 w-3 ${badgeColorMap.red.icon}`}
+                                    className={`h-3 w-3 ${badgeColors.red.icon}`}
                                   />
                                 )}
                                 {transaction.type === "adjustment" && (
                                   <ArrowsUpDownIcon
-                                    className={`h-3 w-3 ${badgeColorMap.yellow.icon}`}
+                                    className={`h-3 w-3 ${badgeColors.yellow.icon}`}
                                   />
                                 )}
                                 {transaction.type === "transfer" && (
                                   <ArrowsUpDownIcon
-                                    className={`h-3 w-3 ${badgeColorMap.blue.icon}`}
+                                    className={`h-3 w-3 ${badgeColors.blue.icon}`}
                                   />
                                 )}
                                 {transaction.type}
@@ -785,17 +875,17 @@ export default function SupplierTransactionsPage() {
                               >
                                 {transaction.status === "completed" && (
                                   <CheckCircleIcon
-                                    className={`h-3 w-3 ${badgeColorMap.green.icon}`}
+                                    className={`h-3 w-3 ${badgeColors.green.icon}`}
                                   />
                                 )}
                                 {transaction.status === "pending" && (
                                   <ClockIcon
-                                    className={`h-3 w-3 ${badgeColorMap.yellow.icon}`}
+                                    className={`h-3 w-3 ${badgeColors.yellow.icon}`}
                                   />
                                 )}
                                 {transaction.status === "cancelled" && (
                                   <XCircleIcon
-                                    className={`h-3 w-3 ${badgeColorMap.red.icon}`}
+                                    className={`h-3 w-3 ${badgeColors.red.icon}`}
                                   />
                                 )}
                                 {transaction.status}
@@ -842,7 +932,7 @@ export default function SupplierTransactionsPage() {
                           <TableCell className="px-2">
                             <div className="flex items-center gap-2">
                               <HashtagIcon className="h-3 w-3 text-gray-500" />
-                              <code className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded block">
+                              <code className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-none block">
                                 {transaction.blockchainHash.substring(0, 16)}...
                               </code>
                             </div>
@@ -855,8 +945,7 @@ export default function SupplierTransactionsPage() {
                                 onClick={() =>
                                   toast.info("Transaction details coming soon")
                                 }
-                                // Remove blue hover, keep neutral/gray
-                                className="h-8 px-3 hover:bg-gray-50 hover:border-gray-200 dark:hover:bg-gray-900/20 cursor-pointer !rounded-none"
+                                className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer !rounded-none`}
                               >
                                 <EyeIcon className="h-3 w-3 mr-1" />
                                 View
@@ -870,7 +959,7 @@ export default function SupplierTransactionsPage() {
                                     "Blockchain hash"
                                   )
                                 }
-                                className="h-8 w-8 p-0 hover:bg-gray-50 hover:border-gray-200 dark:hover:bg-gray-900/20 cursor-pointer !rounded-none"
+                                className={`h-8 w-8 p-0 ${colors.buttons.outline} cursor-pointer !rounded-none`}
                               >
                                 <DocumentDuplicateIcon className="h-3 w-3" />
                               </Button>
@@ -884,17 +973,27 @@ export default function SupplierTransactionsPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="text-center py-16 border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 overflow-hidden !rounded-none">
+            <Card
+              className={`text-center py-16 ${colors.cards.base} overflow-hidden !rounded-none !shadow-none hover:!shadow-none`}
+            >
               <CardContent>
-                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm !rounded-none flex items-center justify-center">
-                  <ArrowsUpDownIcon className="h-10 w-10 text-gray-400" />
+                <div
+                  className={`h-20 w-20 mx-auto mb-6 ${colors.backgrounds.accent} backdrop-blur-sm !rounded-none flex items-center justify-center`}
+                >
+                  <ArrowsUpDownIcon
+                    className={`h-10 w-10 ${colors.icons.muted}`}
+                  />
                 </div>
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                <h3
+                  className={`text-base font-semibold ${colors.texts.primary} mb-2`}
+                >
                   {totalTransactions === 0
                     ? "No Transactions Yet"
                     : "No Transactions Found"}
                 </h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                <p
+                  className={`text-xs ${colors.texts.secondary} mb-6 max-w-md mx-auto`}
+                >
                   {totalTransactions === 0
                     ? "Start selling your supply products to see transactions here."
                     : "Try adjusting your search terms or filters to find transactions."}
@@ -902,9 +1001,11 @@ export default function SupplierTransactionsPage() {
                 {totalTransactions === 0 ? (
                   <Button
                     onClick={() => router.push("/supplier/products")}
-                    className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer !rounded-none"
+                    className={`${colors.buttons.primary} shadow-none transition-all duration-300 text-xs cursor-pointer !rounded-none`}
                   >
-                    <CubeIcon className="h-4 w-4 mr-2 text-white dark:text-black" />
+                    <CubeIcon
+                      className={`h-4 w-4 mr-2 ${colors.texts.inverse}`}
+                    />
                     View Products
                   </Button>
                 ) : (
@@ -915,7 +1016,7 @@ export default function SupplierTransactionsPage() {
                       setSelectedType("All Types");
                       setSelectedStatus("All Status");
                     }}
-                    className="inline-flex items-center gap-2 text-xs cursor-pointer rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+                    className={`inline-flex items-center gap-2 text-xs cursor-pointer ${colors.buttons.outline} transition-all`}
                   >
                     Clear Filters
                   </Button>
