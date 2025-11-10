@@ -15,7 +15,6 @@ import notificationService from "./notification.service.js";
 import Cart from "../models/Cart.js";
 import Wishlist from "../models/Wishlist.js";
 
-
 class ProductService {
   // ========================================
   // CREATE PRODUCT
@@ -212,7 +211,7 @@ class ProductService {
 
         // Pricing
         price: parseFloat(productData.price),
-        currency: productData.currency || "USD",
+        currency: productData.currency || "PKR",
         costPrice: parseFloat(productData.costPrice) || 0,
         wholesalePrice: parseFloat(productData.wholesalePrice) || 0,
         markup: parseFloat(productData.markup) || 0,

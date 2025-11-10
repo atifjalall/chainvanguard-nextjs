@@ -104,7 +104,7 @@ class OrderContract extends Contract {
       tax: order.tax || 0,
       discount: order.discount || 0,
       total: order.total,
-      currency: order.currency || "USD",
+      currency: order.currency || "PKR",
 
       // Payment
       paymentMethod: order.paymentMethod || "wallet",

@@ -71,8 +71,8 @@ const WalletSchema = new mongoose.Schema(
     },
     currency: {
       type: String,
-      default: "USD",
-      enum: ["USD", "EUR", "GBP", "PKR", "CVG"],
+      default: "PKR",
+      enum: ["PKR", "USD", "EUR"],
     },
     isActive: {
       type: Boolean,

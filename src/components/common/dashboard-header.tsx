@@ -25,15 +25,41 @@ import {
   HeartIcon,
   BellIcon,
   ShoppingCartIcon,
+  CheckCircleIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "@/components/common/dashboard-sidebar";
+import { useState } from "react";
 
 export function DashboardHeader() {
   const { user, logout } = useAuth();
   const { currentWallet, balance, disconnectWallet } = useWallet();
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const router = useRouter();
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Mock notifications data with icons and timestamps
+  const mockNotifications = [
+    {
+      id: 1,
+      message: "New order received from Vendor A",
+      icon: ShoppingCartIcon,
+      time: "2 min ago",
+    },
+    {
+      id: 2,
+      message: "Payment confirmed for Order #123",
+      icon: CheckCircleIcon,
+      time: "5 min ago",
+    },
+    {
+      id: 3,
+      message: "Blockchain transaction completed",
+      icon: CubeIcon,
+      time: "10 min ago",
+    },
+  ];
 
   const handleLogout = () => {
     disconnectWallet();
@@ -175,13 +201,61 @@ export function DashboardHeader() {
           </div>
 
           {/* Notifications (Everyone sees this) */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded-none"
-          >
-            <BellIcon className="h-4 w-4 cursor-pointer" />
-          </Button>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded-none"
+            >
+              <BellIcon className="h-4 w-4 cursor-pointer" />
+            </Button>
+            {showNotifications && (
+              <div className="absolute top-10 right-0 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-none shadow-lg z-50 w-64">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                    Notifications
+                  </h3>
+                </div>
+                <div className="p-4 max-h-64 overflow-y-auto">
+                  {mockNotifications.map((notif) => {
+                    const IconComponent = notif.icon;
+                    return (
+                      <div
+                        key={notif.id}
+                        className="flex items-start mb-4 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-none cursor-pointer"
+                      >
+                        <IconComponent className="h-4 w-4 mr-3 mt-0.5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-900 dark:text-gray-100 leading-tight">
+                            {notif.message}
+                          </p>
+                          <div className="flex items-center mt-1">
+                            <ClockIcon className="h-3 w-3 mr-1 text-gray-500 dark:text-gray-400" />
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {notif.time}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-gray-200 dark:border-gray-700 p-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full text-xs rounded-none"
+                    onClick={() => {
+                      setShowNotifications(false);
+                      // Add navigation to notifications page if needed
+                    }}
+                  >
+                    View all notifications
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Wishlist (Only CUSTOMER) */}
           {(isCustomer || isVendor) && (

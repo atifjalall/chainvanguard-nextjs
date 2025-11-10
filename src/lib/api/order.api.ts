@@ -236,7 +236,7 @@ function transformOrder(order: any): Order | null {
 
       // Order metadata
       orderNumber: order.orderNumber || orderId,
-      currency: order.currency || "USD",
+      currency: order.currency || "PKR",
       customerNotes: order.customerNotes || "",
       specialInstructions: order.specialInstructions || "",
       isGift: order.isGift || false,

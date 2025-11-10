@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -9,17 +9,17 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Input } from "@/components/_ui/input";
-import { Badge } from "@/components/_ui/badge";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/_ui/select";
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/_ui/dialog";
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -35,42 +35,40 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/_ui/table";
-import { Label } from "@/components/_ui/label";
-import { Textarea } from "@/components/_ui/textarea";
+} from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
   PlusIcon,
   PencilIcon,
   ExclamationCircleIcon,
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
   BuildingStorefrontIcon,
   CubeIcon,
   ArrowPathIcon,
   ArrowDownTrayIcon,
-  ArrowUpTrayIcon,
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
-  CurrencyDollarIcon,
-  ChartBarIcon,
   ChartPieIcon,
   EyeIcon,
-  ArrowUpRightIcon,
-  ArrowDownRightIcon,
-  SparklesIcon,
-  BuildingLibraryIcon,
-  BuildingOffice2Icon,
-  ShieldCheckIcon,
-  BoltIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Product } from "@/types";
 import { toast } from "sonner";
 import SupplierInventorySkeleton from "@/components/skeletons/supplierInventorySkeleton";
+import { badgeColors, colors } from "@/lib/colorConstants";
+// Add breadcrumb imports
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 const statusOptions = [
   "All Status",
@@ -88,6 +86,37 @@ const sortOptions = [
   { value: "value-asc", label: "Value: Low to High" },
   { value: "value-desc", label: "Value: High to Low" },
 ];
+
+// Custom Rs Icon component
+const RsIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    className="h-5 w-5"
+  >
+    <text
+      x="12"
+      y="15"
+      textAnchor="middle"
+      fontSize="8"
+      fontWeight="600"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="0.2"
+      fontFamily="Arial, sans-serif"
+    >
+      Rs
+    </text>
+    <path
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
 
 export default function SupplierInventoryPage() {
   const { user } = useAuth();
@@ -360,9 +389,9 @@ export default function SupplierInventoryPage() {
   ).length;
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "USD",
+      currency: "PKR",
     }).format(amount);
   };
 
@@ -374,58 +403,27 @@ export default function SupplierInventoryPage() {
     });
   };
 
-  // BADGE COLOR MAP
-  const badgeColorMap: Record<
-    string,
-    { bg: string; border: string; text: string; icon: string }
-  > = {
-    green: {
-      bg: "bg-green-100/10 dark:bg-green-900/10",
-      border: "border border-green-200 dark:border-green-900",
-      text: "text-green-700 dark:text-green-400",
-      icon: "text-green-700 dark:text-green-400",
-    },
-    blue: {
-      bg: "bg-blue-100/10 dark:bg-blue-900/10",
-      border: "border border-blue-200 dark:border-blue-900",
-      text: "text-blue-700 dark:text-blue-400",
-      icon: "text-blue-700 dark:text-blue-400",
-    },
-    yellow: {
-      bg: "bg-yellow-100/10 dark:bg-yellow-900/10",
-      border: "border border-yellow-200 dark:border-yellow-900",
-      text: "text-yellow-700 dark:text-yellow-400",
-      icon: "text-yellow-700 dark:text-yellow-400",
-    },
-    red: {
-      bg: "bg-red-100/10 dark:bg-red-900/10",
-      border: "border border-red-200 dark:border-red-900",
-      text: "text-red-700 dark:text-red-400",
-      icon: "text-red-700 dark:text-red-400",
-    },
-  };
-
   // Helper to get badge color by status/type
   function getBadgeColor(type: string) {
     switch (type) {
       case "in-stock":
       case "active":
       case "Items":
-        return badgeColorMap.green;
+        return badgeColors.green;
       case "low-stock":
       case "yellow":
       case "pending":
-        return badgeColorMap.yellow;
+        return badgeColors.yellow;
       case "out-of-stock":
       case "red":
-        return badgeColorMap.red;
+        return badgeColors.red;
       case "reserved":
       case "blue":
       case "Inventory Tracked":
       case "Live Data":
-        return badgeColorMap.blue;
+        return badgeColors.blue;
       default:
-        return badgeColorMap.blue;
+        return badgeColors.blue;
     }
   }
 
@@ -434,7 +432,21 @@ export default function SupplierInventoryPage() {
   }
 
   return (
-    <div className="relative z-10 p-6 space-y-6 bg-white dark:bg-gray-950 min-h-screen">
+    <div
+      className={`relative z-10 p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
+    >
+      {/* Breadcrumb */}
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/supplier">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Inventory</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       {/* Header */}
       <div
         className={`transform transition-all duration-700 ${
@@ -443,24 +455,24 @@ export default function SupplierInventoryPage() {
       >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
               Supply Chain Inventory
             </h1>
-            <p className="text-base text-gray-600 dark:text-gray-400">
+            <p className={`text-base ${colors.texts.secondary}`}>
               Manage stock levels and track inventory across your supply chain
             </p>
             {/* Header badges */}
             <div className="flex items-center gap-2 mt-2">
               <Badge
-                className={`${getBadgeColor("Items").bg} ${getBadgeColor("Items").border} ${getBadgeColor("Items").text} text-xs rounded-none`}
+                className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
               >
                 {totalItems} Items
               </Badge>
               <Badge
-                className={`${getBadgeColor("blue").bg} ${getBadgeColor("blue").border} ${getBadgeColor("blue").text} flex items-center gap-1 text-xs rounded-none`}
+                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} flex items-center gap-1 text-xs rounded-none`}
               >
                 <CheckCircleIcon
-                  className={`h-3 w-3 text-blue-700 dark:text-blue-400`}
+                  className={`h-3 w-3 ${badgeColors.green.icon}`}
                 />
                 Inventory Tracked
               </Badge>
@@ -470,23 +482,25 @@ export default function SupplierInventoryPage() {
             <Button
               onClick={loadInventory}
               variant="outline"
-              className="hidden lg:flex items-center gap-2 text-xs cursor-pointer rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+              className={`hidden lg:flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
             >
-              <ArrowPathIcon className="h-4 w-4 text-black dark:text-white" />
+              <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
               Refresh
             </Button>
             <Button
               variant="outline"
-              className="flex items-center gap-2 text-xs cursor-pointer rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
             >
-              <ArrowDownTrayIcon className="h-4 w-4 text-black dark:text-white" />
+              <ArrowDownTrayIcon
+                className={`h-4 w-4 ${colors.icons.primary}`}
+              />
               Export
             </Button>
             <Button
               onClick={() => router.push("/supplier/add-inventory")}
-              className="flex items-center gap-2 px-4 py-2 rounded-none bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 font-medium text-xs cursor-pointer transition-all"
+              className={`flex items-center gap-2 px-4 py-2 rounded-none ${colors.buttons.primary} font-medium text-xs cursor-pointer transition-all`}
             >
-              <PlusIcon className="h-4 w-4 text-white dark:text-black" />
+              <PlusIcon className={`h-4 w-4 ${colors.texts.inverse}`} />
               Add Inventory
             </Button>
           </div>
@@ -494,11 +508,7 @@ export default function SupplierInventoryPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div
-        className={`transform transition-all duration-700 delay-200 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
+      <div className={`transform transition-all duration-700 delay-200`}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {[
             {
@@ -511,7 +521,7 @@ export default function SupplierInventoryPage() {
               title: "Total Value",
               value: formatCurrency(totalValue),
               subtitle: "Inventory worth",
-              icon: CurrencyDollarIcon,
+              icon: RsIcon,
             },
             {
               title: "In Stock",
@@ -533,22 +543,26 @@ export default function SupplierInventoryPage() {
             },
           ].map((stat, index) => (
             <Card
-              key={index}
-              className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] rounded-none"
+              key={stat.title || index}
+              className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle
+                  className={`text-xs font-medium ${colors.texts.secondary}`}
+                >
                   {stat.title}
                 </CardTitle>
                 <div className="h-10 w-10 flex items-center justify-center rounded-none">
-                  <stat.icon className="h-5 w-5 text-black dark:text-white" />
+                  <stat.icon className={`h-5 w-5 ${colors.icons.primary}`} />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                <div
+                  className={`text-lg font-bold ${colors.texts.primary} mb-1`}
+                >
                   {stat.value}
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
+                <p className={`text-xs ${colors.texts.secondary}`}>
                   {stat.subtitle}
                 </p>
               </CardContent>
@@ -558,32 +572,30 @@ export default function SupplierInventoryPage() {
       </div>
 
       {/* Filters Card */}
-      <div
-        className={`transform transition-all duration-700 delay-300 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <Card className="border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 rounded-none">
+      <div className={`transform transition-all duration-700 delay-300`}>
+        <Card className={`${colors.cards.base} rounded-none shadow-none`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-base">
               <div className="h-8 w-8 rounded-none flex items-center justify-center">
-                <FunnelIcon className="h-4 w-4 text-black dark:text-white" />
+                <FunnelIcon className={`h-4 w-4 ${colors.icons.primary}`} />
               </div>
               Filters & Search
             </CardTitle>
-            <CardDescription className="text-xs">
+            <CardDescription className={`text-xs ${colors.texts.secondary}`}>
               Filter and search through your inventory
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="relative w-full">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <MagnifyingGlassIcon
+                  className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                />
                 <Input
                   placeholder="Search inventory by name, SKU, or category"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+                  className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
                 />
               </div>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
@@ -624,7 +636,7 @@ export default function SupplierInventoryPage() {
                 {searchTerm && (
                   <Badge
                     variant="outline"
-                    className={`${badgeColorMap.blue.bg} ${badgeColorMap.blue.border} ${badgeColorMap.blue.text} text-xs rounded-none`}
+                    className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
                   >
                     &quot;{searchTerm}&quot;
                     <button
@@ -643,22 +655,22 @@ export default function SupplierInventoryPage() {
                     {/* Optionally, add icon for status badge if you want */}
                     {selectedStatus === "in-stock" && (
                       <CheckCircleIcon
-                        className={`h-3 w-3 ${badgeColorMap.green.icon} dark:text-white`}
+                        className={`h-3 w-3 ${badgeColors.green.icon} dark:text-white`}
                       />
                     )}
                     {selectedStatus === "low-stock" && (
                       <ExclamationCircleIcon
-                        className={`h-3 w-3 ${badgeColorMap.yellow.icon} dark:text-white`}
+                        className={`h-3 w-3 ${badgeColors.yellow.icon} dark:text-white`}
                       />
                     )}
                     {selectedStatus === "out-of-stock" && (
                       <XCircleIcon
-                        className={`h-3 w-3 ${badgeColorMap.red.icon} dark:text-white`}
+                        className={`h-3 w-3 ${badgeColors.red.icon} dark:text-white`}
                       />
                     )}
                     {selectedStatus === "reserved" && (
                       <ClockIcon
-                        className={`h-3 w-3 ${badgeColorMap.red.icon} dark:text-white`}
+                        className={`h-3 w-3 ${badgeColors.red.icon} dark:text-white`}
                       />
                     )}
                     {selectedStatus}
@@ -680,19 +692,21 @@ export default function SupplierInventoryPage() {
       </div>
 
       {/* Inventory Table */}
-      <div
-        className={`transform transition-all duration-700 delay-400 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
+      <div className={`transform transition-all duration-700 delay-400`}>
         {filteredAndSortedInventory.length > 0 ? (
-          <Card className="border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 rounded-none">
-            <CardHeader className="border-b border-gray-200 dark:border-gray-700">
+          <Card
+            className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+          >
+            <CardHeader className={`border-b ${colors.borders.primary}`}>
               <div className="flex flex-row items-center gap-4">
                 <div className="flex flex-col">
-                  <CardTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
+                  <CardTitle
+                    className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                  >
                     <div className="h-8 w-8 rounded-none flex items-center justify-center">
-                      <BuildingStorefrontIcon className="h-4 w-4 text-black dark:text-white" />
+                      <BuildingStorefrontIcon
+                        className={`h-4 w-4 ${colors.icons.primary}`}
+                      />
                     </div>
                     Inventory Overview
                   </CardTitle>
@@ -702,10 +716,10 @@ export default function SupplierInventoryPage() {
                   {/* "Live Data" badge */}
                   <Badge
                     variant="secondary"
-                    className={`${badgeColorMap.blue.bg} ${badgeColorMap.blue.border} ${badgeColorMap.blue.text} text-xs rounded-none flex items-center`}
+                    className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none flex items-center`}
                   >
                     <ChartPieIcon
-                      className={`h-3 w-3 mr-1 ${badgeColorMap.blue.icon}`}
+                      className={`h-3 w-3 mr-1 ${badgeColors.blue.icon}`}
                     />
                     Live Data
                   </Badge>
@@ -716,32 +730,52 @@ export default function SupplierInventoryPage() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-b border-gray-200/50 dark:border-gray-800/50">
-                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                    <TableRow
+                      className={`border-b ${colors.borders.secondary}`}
+                    >
+                      <TableHead
+                        className={`${colors.texts.primary} font-semibold`}
+                      >
                         Product
                       </TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                      <TableHead
+                        className={`${colors.texts.primary} font-semibold`}
+                      >
                         SKU
                       </TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                      <TableHead
+                        className={`${colors.texts.primary} font-semibold`}
+                      >
                         Category
                       </TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                      <TableHead
+                        className={`${colors.texts.primary} font-semibold`}
+                      >
                         Stock
                       </TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                      <TableHead
+                        className={`${colors.texts.primary} font-semibold`}
+                      >
                         Status
                       </TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                      <TableHead
+                        className={`${colors.texts.primary} font-semibold`}
+                      >
                         Unit Price
                       </TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                      <TableHead
+                        className={`${colors.texts.primary} font-semibold`}
+                      >
                         Total Value
                       </TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                      <TableHead
+                        className={`${colors.texts.primary} font-semibold`}
+                      >
                         Last Updated
                       </TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100 font-semibold">
+                      <TableHead
+                        className={`${colors.texts.primary} font-semibold`}
+                      >
                         Actions
                       </TableHead>
                     </TableRow>
@@ -750,18 +784,24 @@ export default function SupplierInventoryPage() {
                     {filteredAndSortedInventory.map((item: any) => (
                       <TableRow
                         key={item.id}
-                        className="border-b border-gray-200/30 dark:border-gray-800/30 hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors rounded-none"
+                        className={`border-b ${colors.borders.secondary} ${colors.backgrounds.hover} transition-colors rounded-none`}
                       >
                         <TableCell className="pl-8 pr-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-none bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                              <CubeIcon className="h-5 w-5 text-black dark:text-white" />
+                            <div
+                              className={`h-10 w-10 rounded-none ${colors.backgrounds.primary} flex items-center justify-center`}
+                            >
+                              <CubeIcon
+                                className={`h-5 w-5 ${colors.texts.primary}`}
+                              />
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                              <p
+                                className={`font-medium ${colors.texts.primary} text-xs`}
+                              >
                                 {item.name}
                               </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
+                              <p className={`text-xs ${colors.texts.muted}`}>
                                 Origin: {item.origin}
                               </p>
                             </div>
@@ -799,35 +839,35 @@ export default function SupplierInventoryPage() {
                             <Badge
                               className={`text-xs px-2 py-1 font-medium ${
                                 item.inventoryStatus === "in-stock"
-                                  ? `${badgeColorMap.green.bg} ${badgeColorMap.green.border} ${badgeColorMap.green.text}`
+                                  ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text}`
                                   : item.inventoryStatus === "low-stock"
-                                    ? `${badgeColorMap.yellow.bg} ${badgeColorMap.yellow.border} ${badgeColorMap.yellow.text}`
+                                    ? `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text}`
                                     : item.inventoryStatus === "out-of-stock"
-                                      ? `${badgeColorMap.red.bg} ${badgeColorMap.red.border} ${badgeColorMap.red.text}`
+                                      ? `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text}`
                                       : item.inventoryStatus === "reserved"
-                                        ? `${badgeColorMap.blue.bg} ${badgeColorMap.blue.border} ${badgeColorMap.blue.text}`
-                                        : `${badgeColorMap.blue.bg} ${badgeColorMap.blue.border} ${badgeColorMap.blue.text}`
+                                        ? `${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text}`
+                                        : `${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text}`
                               } flex items-center gap-1 rounded-none`}
                               variant="secondary"
                             >
                               {item.inventoryStatus === "in-stock" && (
                                 <CheckCircleIcon
-                                  className={`h-3 w-3 ${badgeColorMap.green.icon} dark:text-white`}
+                                  className={`h-3 w-3 ${badgeColors.green.icon} dark:text-white`}
                                 />
                               )}
                               {item.inventoryStatus === "low-stock" && (
                                 <ExclamationCircleIcon
-                                  className={`h-3 w-3 ${badgeColorMap.yellow.icon} dark:text-white`}
+                                  className={`h-3 w-3 ${badgeColors.yellow.icon} dark:text-white`}
                                 />
                               )}
                               {item.inventoryStatus === "out-of-stock" && (
                                 <XCircleIcon
-                                  className={`h-3 w-3 ${badgeColorMap.red.icon} dark:text-white`}
+                                  className={`h-3 w-3 ${badgeColors.red.icon} dark:text-white`}
                                 />
                               )}
                               {item.inventoryStatus === "reserved" && (
                                 <ClockIcon
-                                  className={`h-3 w-3 ${badgeColorMap.blue.icon} dark:text-white`}
+                                  className={`h-3 w-3 ${badgeColors.blue.icon} dark:text-white`}
                                 />
                               )}
                               {![
@@ -837,7 +877,7 @@ export default function SupplierInventoryPage() {
                                 "reserved",
                               ].includes(item.inventoryStatus) && (
                                 <CubeIcon
-                                  className={`h-3 w-3 ${badgeColorMap.blue.icon} dark:text-white`}
+                                  className={`h-3 w-3 ${badgeColors.blue.icon} dark:text-white`}
                                 />
                               )}
                               {item.inventoryStatus.replace("-", " ")}
@@ -867,7 +907,7 @@ export default function SupplierInventoryPage() {
                               onClick={() =>
                                 router.push(`/supplier/inventory/${item.id}/`)
                               }
-                              className="h-8 px-3 hover:bg-gray-50 hover:border-gray-200 dark:hover:bg-gray-900/20 text-xs cursor-pointer rounded-none"
+                              className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none`}
                             >
                               <EyeIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
                               View
@@ -880,7 +920,7 @@ export default function SupplierInventoryPage() {
                                   `/supplier/inventory/${item.id}/edit`
                                 )
                               }
-                              className="h-8 px-3 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 text-xs cursor-pointer rounded-none"
+                              className={`h-8 px-3 ${colors.buttons.secondary} cursor-pointer rounded-none`}
                             >
                               <PencilIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
                               Edit
@@ -895,15 +935,23 @@ export default function SupplierInventoryPage() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="text-center py-16 border border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-900 overflow-hidden rounded-none">
+          <Card
+            className={`text-center py-16 ${colors.cards.base} overflow-hidden rounded-none !shadow-none hover:!shadow-none`}
+          >
             <CardContent>
-              <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-none flex items-center justify-center">
-                <CubeIcon className="h-10 w-10 text-black dark:text-white" />
+              <div
+                className={`h-20 w-20 mx-auto mb-6 ${colors.backgrounds.accent} backdrop-blur-sm rounded-none flex items-center justify-center`}
+              >
+                <CubeIcon className={`h-10 w-10 ${colors.texts.primary}`} />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              <h3
+                className={`text-base font-semibold ${colors.texts.primary} mb-2`}
+              >
                 {totalItems === 0 ? "No Inventory Items" : "No Items Found"}
               </h3>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              <p
+                className={`text-xs ${colors.texts.secondary} mb-6 max-w-md mx-auto`}
+              >
                 {totalItems === 0
                   ? "Start by adding your first supply product to track inventory."
                   : "Try adjusting your search terms or filters to find items."}
@@ -911,9 +959,11 @@ export default function SupplierInventoryPage() {
               {totalItems === 0 ? (
                 <Button
                   onClick={() => router.push("/supplier/add-product")}
-                  className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer rounded-none"
+                  className={`${colors.buttons.primary} shadow-none hover:shadow-none transition-all duration-300 text-xs cursor-pointer rounded-none`}
                 >
-                  <PlusIcon className="h-4 w-4 mr-2 text-white dark:text-black" />
+                  <PlusIcon
+                    className={`h-4 w-4 mr-2 ${colors.texts.inverse}`}
+                  />
                   Add First Item
                 </Button>
               ) : (
@@ -923,9 +973,8 @@ export default function SupplierInventoryPage() {
                     setSearchTerm("");
                     setSelectedStatus("All Status");
                   }}
-                  className="inline-flex items-center gap-2 text-xs cursor-pointer rounded-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+                  className={`inline-flex items-center gap-2 text-xs cursor-pointer ${colors.buttons.outline} transition-all`}
                 >
-                  {/* No icon here, but if you add one, use text-black */}
                   Clear Filters
                 </Button>
               )}
@@ -936,27 +985,33 @@ export default function SupplierInventoryPage() {
 
       {/* Stock Adjustment Dialog */}
       <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
-        <DialogContent className="max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md rounded-none">
+        <DialogContent
+          className={`max-w-md ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none !shadow-none hover:!shadow-none`}
+        >
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
+            <DialogTitle
+              className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+            >
               <div className="h-8 w-8 rounded-none flex items-center justify-center">
-                <PencilIcon className="h-4 w-4 text-black dark:text-white" />
+                <PencilIcon className={`h-4 w-4 ${colors.icons.primary}`} />
               </div>
               Edit Stock Level
             </DialogTitle>
-            <DialogDescription className="text-xs text-gray-600 dark:text-gray-400">
+            <DialogDescription className={`text-xs ${colors.texts.secondary}`}>
               Edit inventory for &quot;{adjustingItem?.name}&quot;
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
-            <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-none border border-gray-200 dark:border-gray-700">
-              <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+            <div
+              className={`p-4 ${colors.backgrounds.secondary} rounded-none ${colors.borders.primary}`}
+            >
+              <Label className={`text-xs font-medium ${colors.texts.accent}`}>
                 Current Stock
               </Label>
               <div className="flex items-center gap-2 mt-1">
-                <CubeIcon className="h-4 w-4 text-black" />
-                <span className="text-base font-bold text-gray-900 dark:text-gray-100">
+                <CubeIcon className={`h-4 w-4 ${colors.texts.primary}`} />
+                <span className={`text-base font-bold ${colors.texts.primary}`}>
                   {adjustingItem?.quantity?.toLocaleString() || 0} units
                 </span>
               </div>
@@ -965,7 +1020,7 @@ export default function SupplierInventoryPage() {
             <div>
               <Label
                 htmlFor="adjustment-quantity"
-                className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                className={`text-xs font-medium ${colors.texts.accent}`}
               >
                 Adjustment Amount
               </Label>
@@ -980,9 +1035,9 @@ export default function SupplierInventoryPage() {
                     quantity: e.target.value,
                   }))
                 }
-                className="mt-1 h-12 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none rounded-none"
+                className={`mt-1 h-12 ${colors.inputs.base} ${colors.inputs.focus} rounded-none`}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className={`text-xs ${colors.texts.muted} mt-1`}>
                 Use + for additions, - for reductions (e.g., +100, -25)
               </p>
             </div>
@@ -1036,16 +1091,18 @@ export default function SupplierInventoryPage() {
             <Button
               variant="outline"
               onClick={() => setIsAdjustOpen(false)}
-              className="shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer rounded-none"
+              className={`shadow-none hover:shadow-none transition-all duration-300 text-xs cursor-pointer ${colors.buttons.outline}`}
             >
               Cancel
             </Button>
             <Button
               onClick={handleSaveAdjustment}
               disabled={!adjustForm.quantity || !adjustForm.reason}
-              className="bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 text-xs cursor-pointer rounded-none"
+              className={`${colors.buttons.primary} shadow-none hover:shadow-none transition-all duration-300 text-xs cursor-pointer rounded-none`}
             >
-              <CheckCircleIcon className="h-4 w-4 mr-2 text-black dark:text-white" />
+              <CheckCircleIcon
+                className={`h-4 w-4 mr-2 ${colors.texts.inverse}`}
+              />
               Save Adjustment
             </Button>
           </DialogFooter>

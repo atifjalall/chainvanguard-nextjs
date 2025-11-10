@@ -100,7 +100,7 @@ export const buildPaginationResponse = (data, page, limit, total) => {
 /**
  * Format currency
  */
-export const formatCurrency = (amount, currency = "USD", locale = "en-US") => {
+export const formatCurrency = (amount, currency = "PKR", locale = "en-PK") => {
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: currency,

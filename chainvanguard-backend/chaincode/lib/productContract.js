@@ -394,7 +394,7 @@ class ProductContract extends Contract {
       toOwnerRole: transfer.newOwnerRole,
       transferType: transfer.transferType || "sale",
       price: transfer.price || 0,
-      currency: transfer.currency || "USD",
+      currency: transfer.currency || "PKR",
       location: transfer.location || "",
       timestamp: timestamp,
       transactionId: txId,

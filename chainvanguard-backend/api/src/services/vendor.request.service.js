@@ -1278,7 +1278,7 @@ class VendorRequestService {
         originalAmount: vendorRequest.total,
         discountAmount: 0,
         discountPercentage: 0,
-        currency: "USD",
+        currency: "PKR",
 
         // ========================================
         // PAYMENT INFO

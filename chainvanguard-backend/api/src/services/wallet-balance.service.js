@@ -23,7 +23,7 @@ class WalletBalanceService {
           userId,
           walletAddress: user.walletAddress,
           balance: 0,
-          currency: "USD",
+          currency: "PKR",
         });
 
         await wallet.save();

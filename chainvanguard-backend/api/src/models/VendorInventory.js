@@ -225,7 +225,7 @@ const vendorInventorySchema = new Schema(
       },
       currency: {
         type: String,
-        default: "USD",
+        default: "PKR",
       },
     },
 
