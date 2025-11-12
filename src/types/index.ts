@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Transaction, WalletData } from "./web3";
 
 // User and Authentication Types
@@ -256,9 +257,11 @@ export interface Product {
     | "draft"
     | "active"
     | "inactive"
+    | "low_stock"
     | "out_of_stock"
     | "discontinued"
     | "archived";
+
   isVerified: boolean;
   isFeatured: boolean;
   isNewArrival: boolean;
@@ -423,6 +426,141 @@ export interface SmartContract {
   name: string;
   version: string;
   deployedAt: string;
+}
+
+// ========================================
+// VENDOR REQUEST TYPES
+// ========================================
+
+export interface VendorRequestItem {
+  inventoryId: string;
+  inventoryName?: string;
+  quantity: number;
+  pricePerUnit: number;
+  subtotal: number;
+  inventory?: {
+    _id: string;
+    name: string;
+    category?: string;
+    unit?: string;
+  };
+}
+
+export interface VendorRequest {
+  _id: string;
+  id: string;
+  requestNumber: string;
+
+  // Parties
+  vendorId:
+    | string
+    | {
+        _id: string;
+        name: string;
+        email: string;
+        companyName?: string;
+        walletAddress?: string;
+      };
+  supplierId:
+    | string
+    | {
+        _id: string;
+        name: string;
+        email: string;
+        companyName?: string;
+        walletAddress?: string;
+      };
+
+  // Items
+  items: VendorRequestItem[];
+
+  // Pricing
+  subtotal: number;
+  tax: number;
+  total: number;
+
+  // Status - matches backend enum
+  status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
+
+  // Notes
+  vendorNotes?: string;
+  supplierNotes?: string;
+
+  // Review info
+  reviewedAt?: string | Date;
+  reviewedBy?: string;
+  rejectionReason?: string;
+  autoApproved?: boolean;
+
+  // Order reference (after payment)
+  orderId?: string;
+
+  // Completion
+  isCompleted: boolean;
+  completedAt?: string | Date;
+
+  // Blockchain
+  blockchainTxId?: string;
+  blockchainVerified: boolean;
+  blockchainRequestId?: string;
+
+  // Dates
+  createdAt: string | Date;
+  updatedAt: string | Date;
+
+  // Frontend extensions
+  urgency?: "low" | "medium" | "high";
+  category?: string;
+}
+
+export interface VendorRequestStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  cancelled: number;
+  completed: number;
+  totalValue: number;
+  avgRequestValue: number;
+}
+
+export interface VendorRequestListResponse {
+  success: boolean;
+  requests: VendorRequest[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface VendorRequestResponse {
+  success: boolean;
+  request: VendorRequest;
+  message?: string;
+}
+
+export interface VendorRequestStatsResponse {
+  success: boolean;
+  stats: VendorRequestStats;
+}
+
+export interface CreateVendorRequestData {
+  supplierId: string;
+  items: {
+    inventoryId: string;
+    quantity: number;
+  }[];
+  vendorNotes?: string;
+}
+
+export interface ApproveRequestData {
+  supplierNotes?: string;
+}
+
+export interface RejectRequestData {
+  rejectionReason: string;
 }
 
 // ========================================
@@ -711,6 +849,583 @@ export interface PerformanceMetric {
   value: number;
   change: number;
   trend: "up" | "down" | "stable";
+}
+
+// ========================================
+// SUPPLIER DASHBOARD TYPES
+// ========================================
+
+export interface SupplierDashboardMetrics {
+  totalInventory: number;
+  totalVendors: number;
+  totalTransactions: number;
+  totalRevenue: number;
+  totalOrders: number;
+  activeInventory: number;
+  lowStockInventory: number;
+  outOfStockInventory: number;
+  pendingVendors: number;
+  completedTransactions: number;
+  totalInventoryValue: number;
+  avgOrderValue: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  type:
+    | "product_added"
+    | "order_received"
+    | "vendor_added"
+    | "stock_low"
+    | "transaction_completed";
+  title: string;
+  description: string;
+  timestamp: string;
+  status?: "success" | "warning" | "info" | "danger";
+  amount?: number;
+  customer?: string;
+}
+
+export interface TopVendor {
+  _id: string;
+  id?: string;
+  name: string;
+  email: string;
+  companyName?: string;
+  totalOrders?: number;
+  orderCount?: number;
+  totalSpent: number;
+  averageOrderValue?: number;
+  avgOrderValue?: number;
+  status: "active" | "pending" | "inactive";
+  joinedDate?: string;
+  lastOrderDate: string;
+  location?: {
+    city: string;
+    country: string;
+  };
+  rating?: number;
+}
+
+export interface TopProduct {
+  id: string;
+  name: string;
+  category: string;
+  totalSold: number;
+  revenue: number;
+  currentStock: number;
+  status: "active" | "low_stock" | "out_of_stock";
+  lastSold: string;
+  averageRating: number;
+}
+
+export interface SupplierAnalyticsResponse {
+  success: boolean;
+  timeframe: string;
+  analytics: {
+    revenue: {
+      daily: Array<{
+        _id: string;
+        revenue: number;
+        orders: number;
+        avgOrderValue: number;
+      }>;
+      totals: {
+        totalRevenue: number;
+        totalOrders: number;
+        avgOrderValue: number;
+      };
+    };
+    topVendors: TopVendor[];
+    inventoryStats: {
+      byCategory: Array<{
+        _id: string;
+        totalValue: number;
+        itemCount: number;
+        totalQuantity: number;
+        avgPrice: number;
+        minStock: number;
+      }>;
+      overall: {
+        totalInventoryValue: number;
+        totalItems: number;
+        totalQuantity: number;
+        lowStockItems: number;
+        outOfStockItems: number;
+      };
+    };
+    requestStats: {
+      byStatus: Array<{
+        _id: string;
+        count: number;
+        totalValue: number;
+      }>;
+      totals: {
+        totalRequests: number;
+        totalValue: number;
+        approved: number;
+        rejected: number;
+        approvalRate: string | number;
+      };
+    };
+    orderTrends: Array<{
+      _id: string;
+      totalOrders: number;
+      pendingOrders: number;
+      completedOrders: number;
+      cancelledOrders: number;
+    }>;
+  };
+}
+
+// ========================================
+// INVENTORY TYPES - BACKEND SYNCED
+// ========================================
+
+export interface TextileDetails {
+  fabricType?: string;
+  composition?: string;
+  gsm?: number;
+  width?: number;
+  color?: string;
+  colorCode?: string;
+  pattern?: string;
+  finish?: string;
+  careInstructions?: string;
+  shrinkage?: string;
+  washability?: string;
+  fabricWeight?: string;
+}
+
+export interface InventoryDimensions {
+  length?: number;
+  width?: number;
+  height?: number;
+  weight?: number;
+  unit: string;
+}
+
+export interface InventorySpecifications {
+  grade?: string;
+  thickness?: string;
+  density?: string;
+  tensileStrength?: string;
+  durability?: string;
+  washability?: string;
+  breathability?: string;
+  stretchability?: string;
+  other?: Record<string, any>;
+}
+
+export interface StorageLocation {
+  warehouse: string;
+  zone?: string;
+  aisle?: string;
+  rack?: string;
+  bin?: string;
+  quantityAtLocation: number;
+  lastUpdated?: Date | string;
+}
+
+export interface BatchData {
+  batchNumber: string;
+  quantity: number;
+  manufactureDate: Date | string;
+  expiryDate?: Date | string;
+  receivedDate?: Date | string;
+  supplierName?: string;
+  costPerUnit?: number;
+  status?: "available" | "reserved" | "depleted" | "quarantined" | "expired";
+  qualityCheckId?: string;
+  blockchainBatchId?: string;
+  _id?: string;
+}
+
+export interface InventoryMovement {
+  type:
+    | "initial_stock"
+    | "restock"
+    | "purchase"
+    | "sale"
+    | "return"
+    | "adjustment"
+    | "damage"
+    | "transfer"
+    | "reservation"
+    | "release"
+    | "quality_rejection"
+    | "production"
+    | "wastage";
+  quantity: number;
+  previousQuantity: number;
+  newQuantity: number;
+  reason?: string;
+  performedBy: string;
+  performedByRole: "supplier" | "vendor" | "expert" | "customer" | "system";
+  relatedOrderId?: string;
+  timestamp: Date | string;
+  notes?: string;
+  transactionHash?: string;
+}
+
+export interface QualityCheck {
+  _id?: string;
+  inspector: string;
+  inspectorName: string;
+  inspectionDate: Date | string;
+  status: "passed" | "failed" | "conditional";
+  batchNumber?: string;
+  checkedQuantity: number;
+  passedQuantity?: number;
+  rejectedQuantity?: number;
+  defectTypes?: string[];
+  qualityScore?: number;
+  findings?: string;
+  images?: Array<{ url: string; description?: string }>;
+  nextInspectionDate?: Date | string;
+}
+
+export interface InventoryImage {
+  url: string;
+  ipfsHash?: string;
+  cloudinaryId?: string;
+  isMain: boolean;
+  caption?: string;
+}
+
+export interface Inventory {
+  _id: string;
+  id: string;
+
+  // Basic Information
+  name: string;
+  description: string;
+
+  // Category System
+  category: string;
+  subcategory: string;
+  materialType?: string;
+
+  // Supplier Information
+  supplierId: string | { _id: string; name?: string; companyName?: string }; // Can be populated
+  supplierName: string;
+  supplierWalletAddress?: string;
+  supplierContact?: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+  };
+
+  // Pricing
+  pricePerUnit: number;
+  costPrice?: number;
+  originalPrice?: number;
+  discount?: number;
+  currency: string;
+
+  // Inventory Details
+  quantity: number;
+  unit: string;
+  minStockLevel: number;
+  reorderLevel: number;
+  reorderQuantity: number;
+  maxStockLevel?: number;
+  maximumQuantity?: number;
+
+  // Reserved/Committed Quantities
+  reservedQuantity?: number;
+  committedQuantity?: number;
+  damagedQuantity?: number;
+
+  // SKU & Tracking
+  sku: string;
+  slug: string;
+  batchNumbers?: string[];
+  serialNumbers?: string[];
+
+  // Product-Specific Details
+  textileDetails?: TextileDetails;
+  dimensions?: InventoryDimensions | string;
+  specifications?: InventorySpecifications;
+  weight?: number | string;
+
+  // Storage & Location
+  storageLocations?: StorageLocation[];
+  defaultLocation?: string;
+
+  // Quality & Compliance
+  qualityGrade?: string;
+  certifications?: string[];
+  complianceStandards?: string[];
+  safetyDataSheet?: string;
+
+  // Images
+  images: InventoryImage[] | string[];
+
+  // Tags & Metadata
+  tags: string[];
+  season?: string;
+  suitableFor?: string[];
+  countryOfOrigin?: string;
+  manufacturer?: string;
+
+  // Status
+  status:
+    | "draft"
+    | "active"
+    | "inactive"
+    | "out_of_stock"
+    | "low_stock"
+    | "discontinued"
+    | "archived";
+
+  // Tracking & Analytics
+  totalConsumed: number;
+  averageMonthlyConsumption: number;
+  lastRestockedAt?: Date | string;
+  lastConsumedAt?: Date | string;
+  turnoverRate?: number;
+
+  // Blockchain
+  blockchainInventoryId?: string;
+  blockchainVerified: boolean;
+  ipfsHash?: string;
+  fabricTransactionId?: string;
+
+  // History
+  movements?: InventoryMovement[];
+  batches?: BatchData[];
+  qualityChecks?: QualityCheck[];
+
+  // Timestamps
+  createdAt: Date | string;
+  updatedAt: Date | string;
+
+  // Virtuals (computed)
+  availableQuantity?: number;
+  stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
+  stockValue?: number;
+  daysUntilReorder?: number;
+  url?: string;
+
+  isBatchTracked?: boolean;
+  isSustainable?: boolean;
+  autoReorderEnabled?: boolean;
+  leadTime?: number;
+  estimatedDeliveryDays?: number;
+  shelfLife?: number;
+  documents?: Array<{ url: string; name: string; type: string }>;
+  notes?: string;
+  internalCode?: string;
+  barcode?: string;
+  carbonFootprint?: number | string;
+  recycledContent?: number | string;
+  scanHistory?: Array<any>;
+  alternativeSuppliers?: Array<string>;
+  qrCodeGenerated?: boolean;
+  totalScans?: number;
+  qrMetadata?: {
+    generatedAt?: Date | string;
+    generatedBy?: string;
+    ipfsHash?: string;
+    cloudinaryUrl?: string;
+    trackingUrl?: string;
+  };
+  lastMovementDate?: Date | string;
+  lastQualityCheckDate?: Date | string;
+  sustainabilityCertifications?: string[];
+  primaryLocation?: string;
+  reorderAlerts?: Array<any>;
+  alerts?: Array<any>;
+  totalReceived?: number;
+  totalRevenue?: number;
+  originTransactionHash?: string;
+  safetyStockLevel?: number;
+  manufactureDate?: Date | string;
+  expiryDate?: Date | string;
+  warehouseLocation?: string;
+
+  qrCodeImageUrl?: string;
+  qrCode?: string;
+}
+
+export interface InventoryFormData {
+  // Basic Information
+  name: string;
+  description: string;
+  category: string;
+  subcategory: string;
+  materialType?: string;
+
+  // Pricing
+  pricePerUnit: number;
+  costPrice?: number;
+  currency: string;
+
+  // Inventory
+  quantity: number;
+  unit: string;
+  minStockLevel: number;
+  reorderLevel: number;
+  reorderQuantity: number;
+
+  // SKU
+  sku: string;
+
+  // Details
+  textileDetails?: TextileDetails;
+  dimensions?: InventoryDimensions;
+  specifications?: InventorySpecifications;
+
+  // Storage
+  storageLocations?: StorageLocation[];
+  defaultLocation?: string;
+
+  // Quality
+  qualityGrade?: string;
+  certifications?: string[];
+
+  // Images
+  images: string[];
+
+  // Tags
+  tags: string[];
+  season?: string;
+  suitableFor?: string[];
+  countryOfOrigin?: string;
+
+  // Status
+  status: string;
+
+  // Supplier Info
+  supplierContact?: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+  };
+  batches?: BatchData[];
+
+  isBatchTracked?: boolean;
+  autoReorderEnabled?: boolean;
+  leadTime?: number;
+  shelfLife?: number;
+  manufactureDate?: string;
+  expiryDate?: string;
+  safetyStockLevel?: number;
+  damagedQuantity?: number;
+  warehouseLocation?: string;
+}
+
+export type UpdateInventoryFormData = Partial<InventoryFormData>;
+
+export interface InventoryListResponse {
+  success: boolean;
+  data: Inventory[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface InventoryResponse {
+  success: boolean;
+  data: Inventory;
+  message?: string;
+}
+
+export interface InventoryStatsResponse {
+  success: boolean;
+  data: {
+    totalItems: number;
+    totalValue: number;
+    inStockItems: number;
+    lowStockItems: number;
+    outOfStockItems: number;
+    reservedItems: number;
+  };
+}
+
+export interface AddStockRequest {
+  quantity: number;
+  notes?: string;
+  batchData?: Partial<BatchData>;
+}
+
+export interface ReduceStockRequest {
+  quantity: number;
+  reason?: string;
+  notes?: string;
+}
+
+export interface ReserveStockRequest {
+  quantity: number;
+  orderId?: string;
+  notes?: string;
+}
+
+export interface TransferInventoryRequest {
+  vendorId: string;
+  quantity: number;
+  pricePerUnit?: number;
+  notes?: string;
+}
+
+// ========================================
+// INVENTORY ITEM TYPES FOR DASHBOARD
+// ========================================
+// In types/index.ts - Find the InventoryItem interface and add these fields:
+
+export interface InventoryItem {
+  _id: string;
+  productId: {
+    _id: string;
+    name: string;
+    category: string;
+    price: number;
+    images?: string[];
+  };
+  supplierId: {
+    _id: string;
+    companyName: string;
+  };
+  sku: string;
+  quantity: number;
+  minimumOrderQuantity: number;
+  status: "in-stock" | "low-stock" | "out-of-stock" | "reserved";
+  totalValue: number;
+  location?: string;
+  lastRestocked?: string;
+  createdAt: string;
+  updatedAt: string;
+
+  manufactureDate: string | Date;
+  expiryDate: string | Date;
+
+  qrCode?: string;
+  qrCodeImageUrl?: string;
+  qrCodeGenerated?: boolean;
+  totalScans?: number;
+  ipfsHash?: string;
+  qrMetadata?: {
+    generatedAt?: string | Date;
+    generatedBy?: string;
+    ipfsHash?: string;
+    cloudinaryUrl?: string;
+    trackingUrl?: string;
+  };
+}
+
+export interface InventoryStats {
+  totalItems: number;
+  totalValue: number;
+  inStockItems: number;
+  lowStockItems: number;
+  outOfStockItems: number;
+  reservedItems: number;
 }
 
 // ========================================

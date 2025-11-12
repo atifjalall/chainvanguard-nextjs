@@ -28,8 +28,7 @@ class AuthService {
     try {
       // 1. Generate wallet
       console.log(`🔐 Generating wallet for: ${userData.name}`);
-      const wallet = this.walletService.generateWallet();
-
+      const wallet = await this.walletService.generateWallet();
       // 2. Hash password
       const passwordHash = await this.walletService.hashPassword(
         userData.password

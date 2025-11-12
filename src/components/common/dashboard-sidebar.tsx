@@ -117,12 +117,12 @@ export function DashboardSidebar() {
             label: "Vendor Requests",
             icon: InboxIcon,
           },
-          { href: "/supplier/vendors", label: "Vendors", icon: UsersIcon },
           {
             href: "/supplier/transactions",
             label: "Transactions",
             icon: CreditCardIcon,
           },
+          { href: "/supplier/vendors", label: "Vendors", icon: UsersIcon },
           { href: "/supplier/insights", label: "Insights", icon: ChartBarIcon },
           { href: "/wallet", label: "Wallet", icon: WalletIcon },
         ];

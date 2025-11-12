@@ -27,12 +27,11 @@ class WalletService {
    * Generate a new wallet with mnemonic phrase
    * @returns {Object} - { mnemonic, address, privateKey }
    */
-  async generateWallet() {
+  // api/src/services/wallet.service.js
+  async generateWallet(userId = null) {
     try {
-      // Generate 12-word mnemonic (industry standard)
       const mnemonic = bip39.generateMnemonic();
 
-      // Generate address deterministically from mnemonic (same as recovery)
       const privateKey = crypto
         .createHash("sha256")
         .update(mnemonic)
@@ -46,9 +45,10 @@ class WalletService {
 
       console.log("✅ New Fabric wallet generated");
 
+      // Only create notification if userId is provided
       if (userId) {
         await notificationService.createNotification({
-          userId: userId,
+          userId,
           type: "wallet_created",
           title: "Wallet Created Successfully",
           message:
@@ -59,9 +59,9 @@ class WalletService {
       }
 
       return {
-        mnemonic: mnemonic,
+        mnemonic,
         address: `0x${address}`,
-        privateKey: privateKey,
+        privateKey,
       };
     } catch (error) {
       console.error("❌ Wallet generation failed:", error);
@@ -74,17 +74,16 @@ class WalletService {
    * @param {string} mnemonic - 12 or 24 word mnemonic phrase
    * @returns {Object} - { address, privateKey, mnemonic }
    */
-  async recoverFromMnemonic(mnemonic) {
+  async recoverFromMnemonic(mnemonic, userId = null) {
     try {
       // Validate mnemonic
-      if (!bip39.validateMnemonic(mnemonic.trim())) {
-        throw new Error("Invalid mnemonic phrase");
+      if (!bip39.validateMnemonic(mnemonic)) {
+        throw new Error("Invalid mnemonic phrase. Please check and try again.");
       }
 
-      // Generate address and private key from mnemonic
       const privateKey = crypto
         .createHash("sha256")
-        .update(mnemonic.trim())
+        .update(mnemonic)
         .digest("hex");
 
       const address = crypto
@@ -95,26 +94,27 @@ class WalletService {
 
       console.log("✅ Wallet recovered from mnemonic");
 
-      // Note: userId will be set by the calling function
+      // ✅ FIX: Only try notification if userId exists
       if (userId) {
         await notificationService.createNotification({
-          userId: userId,
+          userId,
           type: "wallet_recovered",
-          title: "Wallet Recovered Successfully",
-          message: "Your wallet has been successfully recovered from mnemonic",
+          title: "Wallet Recovery Successful",
+          message:
+            "Your wallet has been successfully recovered from your mnemonic phrase.",
           priority: "high",
           category: "wallet",
         });
       }
 
       return {
+        mnemonic,
         address: `0x${address}`,
-        privateKey: privateKey,
-        mnemonic: mnemonic.trim(),
+        privateKey,
       };
     } catch (error) {
       console.error("❌ Wallet recovery failed:", error);
-      throw new Error("Invalid mnemonic phrase. Please check and try again.");
+      throw new Error(error.message || "Wallet recovery failed");
     }
   }
 
@@ -124,10 +124,10 @@ class WalletService {
    * @param {string} mnemonic - 12 or 24 word mnemonic phrase
    * @returns {Object} - { address, privateKey, mnemonic }
    */
-  generateWalletFromMnemonic(mnemonic) {
+  async generateWalletFromMnemonic(mnemonic, userId = null) {
     try {
-      // Use the existing recoverFromMnemonic method
-      return this.recoverFromMnemonic(mnemonic);
+      const wallet = await this.recoverFromMnemonic(mnemonic, userId);
+      return wallet;
     } catch (error) {
       console.error("❌ Generate wallet from mnemonic failed:", error);
       throw new Error("Invalid mnemonic phrase. Please check and try again.");
