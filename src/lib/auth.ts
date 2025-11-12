@@ -227,7 +227,7 @@ export class AuthService {
       supplier: 'SupplierMSP',
       vendor: 'VendorMSP',
       customer: 'CustomerMSP',
-      'blockchain-expert': 'AdminMSP'
+      'expert': 'AdminMSP'
     }
     return mspMappings[role]
   }

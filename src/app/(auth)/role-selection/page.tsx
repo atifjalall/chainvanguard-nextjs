@@ -53,7 +53,7 @@ export default function RoleSelectionPage() {
 
     // If user already has a role, redirect to dashboard
     if (user?.role) {
-      const dashboardPath = `/${user.role === "blockchain-expert" ? "blockchain-expert" : user.role}`;
+      const dashboardPath = `/${user.role === "expert" ? "expert" : user.role}`;
       router.push(dashboardPath);
       return;
     }
@@ -92,7 +92,7 @@ export default function RoleSelectionPage() {
       setUserRole(role);
 
       // Navigate to appropriate dashboard
-      const dashboardPath = `/${role === "blockchain-expert" ? "blockchain-expert" : role}`;
+      const dashboardPath = `/${role === "expert" ? "expert" : role}`;
       router.push(dashboardPath);
 
       toast.success(`Welcome to your ${role} dashboard!`);
@@ -185,7 +185,7 @@ export default function RoleSelectionPage() {
       iconColor: "text-purple-600",
     },
     {
-      role: "blockchain-expert" as UserRole,
+      role: "expert" as UserRole,
       title: "Blockchain Expert",
       description:
         "View all transactions, manage consensus, security settings, fault tolerance",
