@@ -207,7 +207,7 @@ export default function InventoryDetailPage() {
   };
 
   const getStockStatus = () => {
-    if (!inventoryItem) return { label: "Unknown", color: "gray" };
+    if (!inventoryItem) return { label: "Unknown", color: "grey" };
     const qty = inventoryItem.availableQuantity;
     if (qty === 0) return { label: "Out of Stock", color: "red" };
     if (qty < inventoryItem.minStockLevel)
