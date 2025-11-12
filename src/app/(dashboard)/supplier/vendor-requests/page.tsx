@@ -209,13 +209,23 @@ export default function VendorRequestsPage() {
     }
   };
 
-  const handleApprove = (id: string) => {
+    const handleApprove = (id: string) => {
     setRequests(
       requests.map((req) =>
         req.id === id ? { ...req, status: "pending" as const } : req
       )
     );
     toast.success("Request approved and moved to pending");
+  };
+
+  // ADD THIS FUNCTION
+  const handleCancel = (id: string) => {
+    setRequests(
+      requests.map((req) =>
+        req.id === id ? { ...req, status: "cancelled" as const } : req
+      )
+    );
+    toast.error("Request has been cancelled");
   };
 
   const handleUpdateStatus = (id: string, newStatus: string) => {
