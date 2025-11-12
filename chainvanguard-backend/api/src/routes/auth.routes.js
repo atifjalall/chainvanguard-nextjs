@@ -224,7 +224,7 @@ router.post("/wallet/find", async (req, res) => {
     }
 
     // Generate wallet from mnemonic
-    const wallet = walletService.generateWalletFromMnemonic(mnemonic);
+    const wallet = await walletService.generateWalletFromMnemonic(mnemonic);
 
     // Find user
     const user = await User.findOne({
@@ -254,9 +254,9 @@ router.post("/wallet/find", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Wallet find error:", error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      error: "Failed to find wallet",
+      error: error.message || "Failed to find wallet",
     });
   }
 });
@@ -299,7 +299,7 @@ router.post("/wallet/recover", async (req, res) => {
     }
 
     // Verify mnemonic generates the correct address
-    const wallet = walletService.generateWalletFromMnemonic(mnemonic);
+    const wallet = await walletService.generateWalletFromMnemonic(mnemonic);
 
     if (wallet.address.toLowerCase() !== walletAddress.toLowerCase()) {
       return res.status(401).json({
@@ -335,9 +335,9 @@ router.post("/wallet/recover", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Wallet recovery error:", error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      error: "Wallet recovery failed",
+      error: error.message || "Wallet recovery failed",
     });
   }
 });

@@ -8,54 +8,8 @@ import logger from "../utils/logger.js";
 const router = express.Router();
 
 // ========================================
-// CREATE INVENTORY ITEM
+// IMPORTANT: SPECIFIC ROUTES MUST COME BEFORE PARAMETERIZED ROUTES
 // ========================================
-router.post(
-  "/",
-  authenticate,
-  uploadProductFiles,
-  parseJsonFields([
-    "textileDetails",
-    "dimensions",
-    "specifications",
-    "certifications",
-    "storageLocations",
-  ]),
-  async (req, res) => {
-    try {
-      // Only suppliers can create inventory
-      if (req.user.role !== "supplier") {
-        return res.status(403).json({
-          success: false,
-          message: "Only suppliers can create inventory items",
-        });
-      }
-
-      const inventory = await inventoryService.createInventoryItem(
-        req.body,
-        req.user.userId,
-        req.files
-      );
-
-      logger.info("Inventory item created via API", {
-        inventoryId: inventory._id,
-        userId: req.user.userId,
-      });
-
-      res.status(201).json({
-        success: true,
-        message: "Inventory item created successfully",
-        data: inventory,
-      });
-    } catch (error) {
-      logger.error("Error in POST /inventory:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message || "Error creating inventory item",
-      });
-    }
-  }
-);
 
 // ========================================
 // GET ALL INVENTORY ITEMS
@@ -87,9 +41,11 @@ router.get("/", authenticate, async (req, res) => {
 
     const result = await inventoryService.getAllInventory(filters, options);
 
+    // Return items and pagination at top-level for frontend compatibility
     res.json({
       success: true,
-      data: result,
+      data: result.items,
+      pagination: result.pagination,
     });
   } catch (error) {
     logger.error("Error in GET /inventory:", error);
@@ -130,7 +86,8 @@ router.get("/my-inventory", authenticate, async (req, res) => {
 
     res.json({
       success: true,
-      data: result,
+      data: result.items,
+      pagination: result.pagination,
     });
   } catch (error) {
     logger.error("Error in GET /inventory/my-inventory:", error);
@@ -209,6 +166,39 @@ router.get("/analytics", authenticate, async (req, res) => {
 });
 
 // ========================================
+// GET INVENTORY STATS (Global)
+// ========================================
+router.get("/stats", authenticate, async (req, res) => {
+  try {
+    if (
+      req.user.role !== "supplier" &&
+      req.user.role !== "expert" &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    // If supplier, get their stats only; otherwise get global stats
+    const supplierId = req.user.role === "supplier" ? req.user.userId : null;
+    const stats = await inventoryService.getInventoryStats(supplierId);
+
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    logger.error("Error in GET /inventory/stats:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching inventory stats",
+    });
+  }
+});
+
+// ========================================
 // SEARCH INVENTORY
 // ========================================
 router.get("/search", authenticate, async (req, res) => {
@@ -241,6 +231,135 @@ router.get("/search", authenticate, async (req, res) => {
     });
   }
 });
+
+// ========================================
+// GET VENDOR'S CURRENT INVENTORY
+// ========================================
+router.get(
+  "/vendor/current",
+  authenticate,
+  authorizeRoles("vendor"),
+  async (req, res) => {
+    try {
+      const Order = (await import("../models/Order.js")).default;
+
+      // Get all delivered orders where vendor was buyer
+      const orders = await Order.find({
+        customerId: req.userId,
+        sellerRole: "supplier",
+        status: { $in: ["delivered", "completed"] },
+      })
+        .populate("sellerId", "name companyName")
+        .populate("items.productId")
+        .sort({ createdAt: -1 });
+
+      // Calculate inventory summary
+      const inventoryMap = new Map();
+
+      orders.forEach((order) => {
+        order.items.forEach((item) => {
+          if (!item.productId) return;
+
+          const key = item.productId._id.toString();
+
+          if (!inventoryMap.has(key)) {
+            inventoryMap.set(key, {
+              product: item.productId,
+              supplier: order.sellerId,
+              totalReceived: 0,
+              lastPurchaseDate: order.createdAt,
+              totalSpent: 0,
+            });
+          }
+
+          const entry = inventoryMap.get(key);
+          entry.totalReceived += item.quantity;
+          entry.totalSpent += item.subtotal;
+
+          if (order.createdAt > entry.lastPurchaseDate) {
+            entry.lastPurchaseDate = order.createdAt;
+          }
+        });
+      });
+
+      const currentInventory = Array.from(inventoryMap.values());
+
+      res.json({
+        success: true,
+        inventory: currentInventory,
+        summary: {
+          totalItems: currentInventory.length,
+          totalOrders: orders.length,
+          totalSpent: currentInventory.reduce(
+            (sum, item) => sum + item.totalSpent,
+            0
+          ),
+        },
+      });
+    } catch (error) {
+      console.error("❌ GET /api/inventory/vendor/current error:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to get current inventory",
+      });
+    }
+  }
+);
+
+// ========================================
+// SCAN INVENTORY QR CODE (PUBLIC)
+// ========================================
+router.post("/inventory/scan", async (req, res) => {
+  try {
+    const { qrCode, location, device, purpose, notes } = req.body;
+
+    if (!qrCode) {
+      return res.status(400).json({
+        success: false,
+        message: "QR code is required",
+      });
+    }
+
+    const result = await inventoryService.scanInventoryQR(qrCode, {
+      scannedBy: req.userId || null,
+      scannerRole: req.user?.role || "guest",
+      location,
+      device,
+      ipAddress: req.ip,
+      purpose,
+      notes,
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error scanning inventory QR:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to scan QR code",
+    });
+  }
+});
+
+// ========================================
+// TRACK INVENTORY VIA QR CODE (PUBLIC)
+// ========================================
+router.get("/inventory/track/:qrCode", async (req, res) => {
+  try {
+    const result = await inventoryService.trackInventoryByQR(req.params.qrCode);
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error tracking inventory:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to track inventory",
+    });
+  }
+});
+
+// ========================================
+// PARAMETERIZED ROUTES - MUST COME LAST
+// ========================================
 
 // ========================================
 // GET INVENTORY BY ID
@@ -283,6 +402,170 @@ router.get("/:id/history", authenticate, async (req, res) => {
 });
 
 // ========================================
+// GENERATE QR CODE FOR INVENTORY
+// ========================================
+router.post(
+  "/:id/generate-qr",
+  authenticate,
+  authorizeRoles("supplier"),
+  async (req, res) => {
+    try {
+      const result = await inventoryService.generateInventoryQR(
+        req.params.id,
+        req.user.userId
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating inventory QR:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to generate QR code",
+      });
+    }
+  }
+);
+
+// ========================================
+// CREATE INVENTORY ITEM
+// ========================================
+router.post(
+  "/",
+  authenticate,
+  uploadProductFiles,
+  parseJsonFields([
+    "textileDetails",
+    "dimensions",
+    "specifications",
+    "certifications",
+    "storageLocations",
+    "supplierContact",
+    "tags",
+    "suitableFor",
+    "sustainabilityCertifications",
+    "complianceStandards",
+  ]),
+  async (req, res) => {
+    try {
+      // Only suppliers can create inventory
+      if (req.user.role !== "supplier") {
+        return res.status(403).json({
+          success: false,
+          message: "Only suppliers can create inventory items",
+        });
+      }
+
+      // ✅ LOG TO DEBUG
+      logger.info("📥 Received inventory creation request", {
+        userId: req.user.userId,
+        name: req.body.name,
+        filesReceived: req.files?.images?.length || 0,
+        hasFiles: !!req.files,
+        filesStructure: req.files ? Object.keys(req.files) : [],
+      });
+
+      // Prepare inventory data
+      const inventoryData = { ...req.body };
+
+      let uploadedImages = [];
+
+      if (req.files?.images && req.files.images.length > 0) {
+        try {
+          const cloudinaryService = (
+            await import("../services/cloudinary.service.js")
+          ).default;
+
+          logger.info(
+            `📤 Uploading ${req.files.images.length} images to Cloudinary...`
+          );
+
+          const uploadResults = await cloudinaryService.uploadMultipleImages(
+            req.files.images,
+            "inventory"
+          );
+
+          // Format images correctly for the database
+          uploadedImages = uploadResults.map((result, index) => ({
+            url: result.url,
+            cloudinaryId: result.publicId,
+            publicId: result.publicId,
+            isMain: index === 0,
+            viewType: index === 0 ? "front" : "detail",
+          }));
+
+          logger.info(
+            `✅ Successfully uploaded ${uploadedImages.length} images`,
+            {
+              firstImageUrl: uploadedImages[0]?.url,
+              allUrls: uploadedImages.map((img) => img.url),
+            }
+          );
+        } catch (uploadError) {
+          logger.error("❌ Image upload failed:", uploadError);
+          return res.status(500).json({
+            success: false,
+            message: "Failed to upload images",
+            error: uploadError.message,
+          });
+        }
+      } else {
+        logger.warn("⚠️  No image files received in request", {
+          reqFiles: req.files,
+          reqFilesKeys: req.files ? Object.keys(req.files) : [],
+        });
+      }
+
+      // ✅ ASSIGN UPLOADED IMAGES TO INVENTORY DATA
+      inventoryData.images = uploadedImages;
+
+      // Set supplier info from authenticated user
+      inventoryData.supplierId = req.user.userId;
+      inventoryData.supplierName = req.user.name;
+      inventoryData.supplierWalletAddress = req.user.walletAddress;
+
+      logger.info(
+        `📦 Creating inventory with ${inventoryData.images.length} images`,
+        {
+          hasImages: inventoryData.images.length > 0,
+          imageCount: inventoryData.images.length,
+        }
+      );
+
+      // ✅ CREATE INVENTORY (images already in inventoryData)
+      const inventory = await inventoryService.createInventoryItem(
+        inventoryData,
+        req.user.userId
+      );
+
+      logger.info("✅ Inventory item created successfully", {
+        inventoryId: inventory._id,
+        userId: req.user.userId,
+        finalImageCount: inventory.images?.length || 0,
+        finalImages: inventory.images?.map((img) => img.url),
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "Inventory item created successfully",
+        data: inventory,
+      });
+    } catch (error) {
+      logger.error("❌ Error in POST /inventory:", {
+        error: error.message,
+        stack: error.stack,
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error.message || "Error creating inventory item",
+        error: process.env.NODE_ENV === "development" ? error.stack : undefined,
+      });
+    }
+  }
+);
+
+// ========================================
 // UPDATE INVENTORY ITEM
 // ========================================
 router.put(
@@ -294,6 +577,11 @@ router.put(
     "dimensions",
     "specifications",
     "certifications",
+    "supplierContact",
+    "storageLocations",
+    "tags",
+    "suitableFor",
+    "imagesToDelete", // Add this
   ]),
   async (req, res) => {
     try {
@@ -588,160 +876,6 @@ router.post("/:id/release", authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Error releasing quantity",
-    });
-  }
-});
-
-/**
- * GET /api/inventory/vendor/current
- * Get vendor's current inventory (purchased from suppliers)
- */
-router.get(
-  "/vendor/current",
-  authenticate,
-  authorizeRoles("vendor"),
-  async (req, res) => {
-    try {
-      const Order = (await import("../models/Order.js")).default;
-
-      // Get all delivered orders where vendor was buyer
-      const orders = await Order.find({
-        customerId: req.userId, // Note: customerId because vendor is buying
-        sellerRole: "supplier", // Only from suppliers
-        status: { $in: ["delivered", "completed"] },
-      })
-        .populate("sellerId", "name companyName")
-        .populate("items.productId")
-        .sort({ createdAt: -1 });
-
-      // Calculate inventory summary
-      const inventoryMap = new Map();
-
-      orders.forEach((order) => {
-        order.items.forEach((item) => {
-          if (!item.productId) return;
-
-          const key = item.productId._id.toString();
-
-          if (!inventoryMap.has(key)) {
-            inventoryMap.set(key, {
-              product: item.productId,
-              supplier: order.sellerId,
-              totalReceived: 0,
-              lastPurchaseDate: order.createdAt,
-              totalSpent: 0,
-            });
-          }
-
-          const entry = inventoryMap.get(key);
-          entry.totalReceived += item.quantity;
-          entry.totalSpent += item.subtotal;
-
-          if (order.createdAt > entry.lastPurchaseDate) {
-            entry.lastPurchaseDate = order.createdAt;
-          }
-        });
-      });
-
-      const currentInventory = Array.from(inventoryMap.values());
-
-      res.json({
-        success: true,
-        inventory: currentInventory,
-        summary: {
-          totalItems: currentInventory.length,
-          totalOrders: orders.length,
-          totalSpent: currentInventory.reduce(
-            (sum, item) => sum + item.totalSpent,
-            0
-          ),
-        },
-      });
-    } catch (error) {
-      console.error("❌ GET /api/inventory/vendor/current error:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message || "Failed to get current inventory",
-      });
-    }
-  }
-);
-
-/**
- * POST /api/inventory/:id/generate-qr
- * Generate QR code for inventory item
- */
-router.post(
-  "/:id/generate-qr",
-  authenticate,
-  authorizeRoles("supplier"),
-  async (req, res) => {
-    try {
-      const result = await inventoryService.generateInventoryQR(
-        req.params.id,
-        req.user.userId
-      );
-
-      res.json(result);
-    } catch (error) {
-      console.error("Error generating inventory QR:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message || "Failed to generate QR code",
-      });
-    }
-  }
-);
-
-/**
- * POST /api/qr/inventory/scan
- * Scan inventory QR code
- */
-router.post("/inventory/scan", async (req, res) => {
-  try {
-    const { qrCode, location, device, purpose, notes } = req.body;
-
-    if (!qrCode) {
-      return res.status(400).json({
-        success: false,
-        message: "QR code is required",
-      });
-    }
-
-    const result = await inventoryService.scanInventoryQR(qrCode, {
-      scannedBy: req.userId || null,
-      scannerRole: req.user?.role || "guest",
-      location,
-      device,
-      ipAddress: req.ip,
-      purpose,
-      notes,
-    });
-
-    res.json(result);
-  } catch (error) {
-    console.error("Error scanning inventory QR:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message || "Failed to scan QR code",
-    });
-  }
-});
-
-/**
- * GET /api/qr/inventory/track/:qrCode
- * Track inventory via QR code (public)
- */
-router.get("/inventory/track/:qrCode", async (req, res) => {
-  try {
-    const result = await inventoryService.trackInventoryByQR(req.params.qrCode);
-
-    res.json(result);
-  } catch (error) {
-    console.error("Error tracking inventory:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message || "Failed to track inventory",
     });
   }
 });

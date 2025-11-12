@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/lib/api/client.ts
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from "axios";
 
 const API_BASE_URL =

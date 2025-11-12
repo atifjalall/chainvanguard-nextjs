@@ -144,6 +144,69 @@
   }
 }
 
+/* Force consistent form control heights to match original dropdown */
+@layer components {
+  input[data-slot="input"]:not([type="color"]):not([type="range"]),
+  button[data-slot="select-trigger"] {
+    height: 2.25rem !important;
+    min-height: 2.25rem !important;
+    max-height: 2.25rem !important;
+  }
+
+  /* Consistent button styling */
+  button[data-slot="button"] {
+    font-size: 0.75rem !important; /* text-xs */
+    height: 2rem !important; /* h-8 */
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* Icon sizing in buttons */
+  button[data-slot="button"] svg {
+    height: 1rem !important; /* h-4 */
+    width: 1rem !important; /* w-4 */
+  }
+
+  /* Breadcrumb consistent styling */
+  ol[data-slot="breadcrumb-list"] {
+    font-size: 0.75rem !important; /* text-xs */
+  }
+
+  li[data-slot="breadcrumb-separator"] svg {
+    height: 1rem !important; /* size-4 */
+    width: 1rem !important; /* size-4 */
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-10px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(10px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.toaster,
+.toaster * {
+  border-radius: 0 !important;
+}
+
 @keyframes shake {
   0%,
   100% {

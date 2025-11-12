@@ -36,14 +36,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
 import SupplierDashboardSkeleton from "@/components/skeletons/supplierDashboardSkeleton";
 import { badgeColors, colors } from "@/lib/colorConstants";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { analyticsApi } from "@/lib/api/analytics.api";
 
 interface DashboardMetrics {
   totalInventory: number;
@@ -76,22 +69,8 @@ interface RecentActivity {
   customer?: string;
 }
 
-interface TopVendor {
-  id: string;
-  name: string;
-  email: string;
-  totalOrders: number;
-  totalSpent: number;
-  averageOrderValue: number;
-  status: "active" | "pending" | "inactive";
-  joinedDate: string;
-  location: {
-    city: string;
-    country: string;
-  };
-  rating?: number;
-  lastOrderDate?: string;
-}
+// Use the TopVendor type from your shared types to ensure compatibility
+import type { TopVendor } from "@/types";
 
 interface TopProduct {
   id: string;
@@ -104,157 +83,6 @@ interface TopProduct {
   lastSold: string;
   averageRating: number;
 }
-
-// Mock data
-const mockRecentActivity: RecentActivity[] = [
-  {
-    id: "act-001",
-    type: "order_received",
-    title: "New Order Received",
-    description: "TechVendor Pro ordered 50x Industrial Steel Rods",
-    timestamp: "2025-08-16T14:30:00Z",
-    status: "success",
-    amount: 12500,
-    customer: "TechVendor Pro",
-  },
-  {
-    id: "act-002",
-    type: "vendor_added",
-    title: "New Vendor Partnership",
-    description: "Fashion Hub joined as vendor partner",
-    timestamp: "2025-08-16T10:15:00Z",
-    status: "info",
-    customer: "Fashion Hub",
-  },
-  {
-    id: "act-003",
-    type: "stock_low",
-    title: "Low Stock Alert",
-    description: "Electronic Circuit Boards running low (15 units remaining)",
-    timestamp: "2025-08-16T09:45:00Z",
-    status: "warning",
-  },
-  {
-    id: "act-004",
-    type: "transaction_completed",
-    title: "Transaction Completed",
-    description: "Payment received from Manufacturing Corp",
-    timestamp: "2025-08-15T16:20:00Z",
-    status: "success",
-    amount: 8750,
-    customer: "Manufacturing Corp",
-  },
-  {
-    id: "act-005",
-    type: "product_added",
-    title: "New Product Added",
-    description: "Added Precision Machine Parts to supply catalog",
-    timestamp: "2025-08-15T13:10:00Z",
-    status: "info",
-  },
-];
-
-const mockTopVendors: TopVendor[] = [
-  {
-    id: "vend-001",
-    name: "TechVendor Pro",
-    email: "contact@techvendor.com",
-    totalOrders: 85,
-    totalSpent: 125000,
-    averageOrderValue: 1470.59,
-    status: "active",
-    joinedDate: "2024-11-15T00:00:00Z",
-    location: { city: "San Francisco", country: "USA" },
-    rating: 4.8,
-    lastOrderDate: "2025-08-16T14:30:00Z",
-  },
-  {
-    id: "vend-002",
-    name: "Fashion Hub",
-    email: "orders@fashionhub.com",
-    totalOrders: 62,
-    totalSpent: 98000,
-    averageOrderValue: 1580.65,
-    status: "active",
-    joinedDate: "2025-01-22T00:00:00Z",
-    location: { city: "New York", country: "USA" },
-    rating: 4.6,
-    lastOrderDate: "2025-08-15T11:20:00Z",
-  },
-  {
-    id: "vend-003",
-    name: "Industrial Solutions",
-    email: "procurement@industrialsol.com",
-    totalOrders: 54,
-    totalSpent: 87000,
-    averageOrderValue: 1611.11,
-    status: "active",
-    joinedDate: "2024-09-08T00:00:00Z",
-    location: { city: "Chicago", country: "USA" },
-    rating: 4.9,
-    lastOrderDate: "2025-08-14T16:45:00Z",
-  },
-  {
-    id: "vend-004",
-    name: "Manufacturing Corp",
-    email: "supply@mfgcorp.com",
-    totalOrders: 48,
-    totalSpent: 79000,
-    averageOrderValue: 1645.83,
-    status: "pending",
-    joinedDate: "2025-02-10T00:00:00Z",
-    location: { city: "Detroit", country: "USA" },
-    rating: 4.4,
-    lastOrderDate: "2025-08-13T09:30:00Z",
-  },
-];
-
-const mockTopProducts: TopProduct[] = [
-  {
-    id: "prod-001",
-    name: "Industrial Steel Rods",
-    category: "Raw Materials",
-    totalSold: 2250,
-    revenue: 89500,
-    currentStock: 500,
-    status: "active",
-    lastSold: "2025-08-16T14:30:00Z",
-    averageRating: 4.7,
-  },
-  {
-    id: "prod-002",
-    name: "Electronic Circuit Boards",
-    category: "Electronics Components",
-    totalSold: 795,
-    revenue: 71500,
-    currentStock: 15,
-    status: "low_stock",
-    lastSold: "2025-08-15T10:15:00Z",
-    averageRating: 4.9,
-  },
-  {
-    id: "prod-003",
-    name: "Organic Cotton Fabric",
-    category: "Textiles & Fabrics",
-    totalSold: 4960,
-    revenue: 62000,
-    currentStock: 2000,
-    status: "active",
-    lastSold: "2025-08-14T16:20:00Z",
-    averageRating: 4.5,
-  },
-  {
-    id: "prod-004",
-    name: "Precision Machine Parts",
-    category: "Machinery & Equipment",
-    totalSold: 285,
-    revenue: 53800,
-    currentStock: 0,
-    status: "out_of_stock",
-    lastSold: "2025-08-12T12:45:00Z",
-    averageRating: 4.8,
-  },
-];
 
 // Custom Rs Icon component
 const RsIcon = () => (
@@ -290,101 +118,86 @@ const RsIcon = () => (
 export default function SupplierDashboard() {
   const { user } = useAuth();
   const router = useRouter();
-  const [inventory, setInventory] = useState<any[]>([]);
-  const [vendors, setVendors] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [recentActivity, setRecentActivity] =
-    useState<RecentActivity[]>(mockRecentActivity);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [topVendors, setTopVendors] = useState<TopVendor[]>([]);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [isVisible, setIsVisible] = useState(false);
-  const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
-  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [selectedTimeRange, setSelectedTimeRange] = useState("month");
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    totalInventory: 0,
+    totalVendors: 0,
+    totalTransactions: 0,
+    totalRevenue: 0,
+    totalOrders: 0,
+    activeInventory: 0,
+    lowStockInventory: 0,
+    outOfStockInventory: 0,
+    pendingVendors: 0,
+    completedTransactions: 0,
+    totalInventoryValue: 0,
+    avgOrderValue: 0,
+  });
 
   useEffect(() => {
     setIsVisible(true);
     loadDashboardData();
-  }, [user?.id]);
+  }, [user?.id, selectedTimeRange]);
 
   const loadDashboardData = async () => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log("🔄 Fetching analytics from backend...");
 
-      // Load inventory
-      const savedInventory = localStorage.getItem(
-        `supplier_${user?.id}_products`
+      const analyticsData = await analyticsApi.getSupplierAnalytics(
+        selectedTimeRange as "week" | "month" | "quarter" | "year"
       );
-      const inventoryData = savedInventory ? JSON.parse(savedInventory) : [];
-      setInventory(inventoryData);
 
-      // Load vendors
-      const savedVendors = localStorage.getItem(`supplier_${user?.id}_vendors`);
-      const vendorsData = savedVendors ? JSON.parse(savedVendors) : [];
+      console.log("📊 Analytics data received:", analyticsData);
 
-      // Load transactions
-      const savedTransactions = localStorage.getItem(
-        `supplier_${user?.id}_transactions`
-      );
-      const transactionsData = savedTransactions
-        ? JSON.parse(savedTransactions)
-        : [];
+      if (analyticsData.success) {
+        // Transform data to metrics
+        const dashboardMetrics = analyticsApi.transformToMetrics(analyticsData);
+        console.log("✅ Transformed metrics:", dashboardMetrics);
+        setMetrics(dashboardMetrics);
 
-      setVendors(vendorsData);
-      setTransactions(transactionsData);
-    } catch (error) {
-      console.error("Failed to load dashboard data:", error);
-      toast.error("Failed to load dashboard data");
+        // Transform and set top vendors
+        const transformedVendors = analyticsApi.transformTopVendors(
+          analyticsData.analytics.topVendors
+        );
+        console.log("👥 Top vendors:", transformedVendors);
+        setTopVendors(transformedVendors);
+
+        // Generate recent activity
+        const activity = analyticsApi.generateRecentActivity(analyticsData);
+        console.log("📝 Recent activity:", activity);
+        setRecentActivity(activity);
+
+        toast.success("Dashboard loaded successfully");
+      }
+    } catch (error: any) {
+      console.error("❌ Failed to load analytics:", error);
+      toast.error(error.message || "Failed to load dashboard data");
+
+      // Set empty state on error
+      setMetrics({
+        totalInventory: 0,
+        totalVendors: 0,
+        totalTransactions: 0,
+        totalRevenue: 0,
+        totalOrders: 0,
+        activeInventory: 0,
+        lowStockInventory: 0,
+        outOfStockInventory: 0,
+        pendingVendors: 0,
+        completedTransactions: 0,
+        totalInventoryValue: 0,
+        avgOrderValue: 0,
+      });
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Calculate comprehensive metrics
-  const metrics: DashboardMetrics = useMemo(() => {
-    const totalInventory = inventory.length;
-    const activeInventory = inventory.filter(
-      (i) => i.status === "active"
-    ).length;
-    const lowStockInventory = inventory.filter(
-      (i) => i.quantity < (i.minimumOrderQuantity || 10) * 2
-    ).length;
-    const outOfStockInventory = inventory.filter(
-      (i) => i.quantity === 0
-    ).length;
-    const totalInventoryValue = inventory.reduce(
-      (sum, i) => sum + i.price * i.quantity,
-      0
-    );
-
-    const totalVendors = vendors.length;
-    const pendingVendors = vendors.filter((v) => v.status === "pending").length;
-
-    const totalTransactions = transactions.length;
-    const completedTransactions = transactions.filter(
-      (t) => t.status === "completed"
-    ).length;
-    const totalRevenue = transactions
-      .filter((t) => t.status === "completed" && t.type === "sale")
-      .reduce((sum, t) => sum + t.amount, 0);
-    const totalOrders = transactions.filter((t) => t.type === "sale").length;
-    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-    return {
-      totalInventory,
-      totalVendors,
-      totalTransactions,
-      totalRevenue,
-      totalOrders,
-      activeInventory,
-      lowStockInventory,
-      outOfStockInventory,
-      pendingVendors,
-      completedTransactions,
-      totalInventoryValue,
-      avgOrderValue,
-    };
-  }, [inventory, vendors, transactions]);
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -400,21 +213,6 @@ export default function SupplierDashboard() {
         return CheckCircleIcon;
       default:
         return BoltIcon;
-    }
-  };
-
-  const getActivityColor = (status?: string) => {
-    switch (status) {
-      case "success":
-        return "text-green-600 dark:text-green-400";
-      case "warning":
-        return "text-orange-600 dark:text-orange-400";
-      case "info":
-        return "text-blue-600 dark:text-blue-400";
-      case "danger":
-        return "text-red-600 dark:text-red-400";
-      default:
-        return "text-gray-600 dark:text-gray-400";
     }
   };
 
@@ -471,13 +269,14 @@ export default function SupplierDashboard() {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatCurrencyAbbreviated = (amount: number) => {
+    if (amount >= 1e9) {
+      return `${(amount / 1e9).toFixed(2)} B`;
+    } else if (amount >= 1e6) {
+      return `${(amount / 1e6).toFixed(2)} M`;
+    } else {
+      return formatCurrency(amount);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -562,58 +361,42 @@ export default function SupplierDashboard() {
             {[
               {
                 title: "Total Revenue",
-                value: formatCurrency(metrics.totalRevenue || 389000),
-                subtitle: "+12.5% vs last month",
+                value: formatCurrencyAbbreviated(metrics.totalRevenue),
+                subtitle: `${metrics.totalOrders} orders`,
                 icon: RsIcon,
-                iconColor: "",
-                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
               {
                 title: "Active Vendors",
                 value: metrics.totalVendors,
                 subtitle: `${metrics.pendingVendors} pending`,
                 icon: UsersIcon,
-                iconColor: "",
-                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
               {
                 title: "Total Inventory",
                 value: metrics.totalInventory,
                 subtitle: `${metrics.activeInventory} active`,
                 icon: BuildingStorefrontIcon,
-                iconColor: "",
-                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
               {
                 title: "Inventory Value",
-                value: formatCurrency(metrics.totalInventoryValue || 137000),
+                value: formatCurrencyAbbreviated(metrics.totalInventoryValue),
                 subtitle: "Current stock value",
                 icon: CubeIcon,
-                iconColor: "",
-                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
               {
                 title: "Low Stock Items",
                 value: metrics.lowStockInventory,
                 subtitle: "Need reordering",
                 icon: ExclamationTriangleIcon,
-                iconColor: "",
-                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
               {
                 title: "Avg Order Value",
-                value: formatCurrency(metrics.avgOrderValue || 1547),
-                subtitle: "+3.8% vs last month",
+                value: formatCurrencyAbbreviated(metrics.avgOrderValue),
+                subtitle: "Per transaction",
                 icon: TagIcon,
-                iconColor: "",
-                iconBg: "bg-gray-100 dark:bg-gray-800",
               },
             ].map((stat, index) => {
               const Icon = stat.icon;
-              const isPercentage = stat.subtitle.includes("%");
-              const [percentagePart, restPart] = isPercentage
-                ? stat.subtitle.split(" vs ")
-                : [stat.subtitle, ""];
               return (
                 <Card
                   key={index}
@@ -637,22 +420,8 @@ export default function SupplierDashboard() {
                     >
                       {stat.value}
                     </div>
-                    <p className="text-xs">
-                      {isPercentage ? (
-                        <>
-                          <span className={colors.texts.success}>
-                            {percentagePart}
-                          </span>
-                          <span className={colors.texts.secondary}>
-                            {" "}
-                            vs {restPart}
-                          </span>
-                        </>
-                      ) : (
-                        <span className={colors.texts.secondary}>
-                          {stat.subtitle}
-                        </span>
-                      )}
+                    <p className={`text-xs ${colors.texts.secondary}`}>
+                      {stat.subtitle}
                     </p>
                   </CardContent>
                 </Card>
@@ -686,55 +455,75 @@ export default function SupplierDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentActivity.slice(0, 6).map((activity) => {
-                    const Icon = getActivityIcon(activity.type);
-                    return (
-                      <div
-                        key={activity.id}
-                        className={`flex items-center gap-4 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.backgrounds.hover} transition-all cursor-pointer ${colors.borders.primary} hover:shadow-none`}
-                        style={{ minHeight: "90px", alignItems: "center" }}
-                      >
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ClockIcon
+                      className={`h-12 w-12 mx-auto ${colors.icons.secondary} mb-3`}
+                    />
+                    <p className={`text-sm ${colors.texts.secondary}`}>
+                      No recent activity
+                    </p>
+                    <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                      Your activity will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentActivity.slice(0, 6).map((activity) => {
+                      const Icon = getActivityIcon(activity.type);
+                      return (
                         <div
-                          className={`h-10 w-10 flex items-center justify-center rounded-none`}
+                          key={activity.id}
+                          className={`flex items-center gap-4 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.backgrounds.hover} transition-all cursor-pointer ${colors.borders.primary} hover:shadow-none`}
+                          style={{ minHeight: "90px", alignItems: "center" }}
                         >
-                          <Icon className={`h-5 w-5 ${colors.icons.primary}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p
-                              className={`font-semibold ${colors.texts.primary}`}
-                            >
-                              {activity.title}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              {activity.amount && (
-                                <Badge
-                                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
-                                >
-                                  {formatCurrency(activity.amount)}
-                                </Badge>
-                              )}
-                              <span className={`text-xs ${colors.texts.muted}`}>
-                                {getTimeAgo(activity.timestamp)}
-                              </span>
-                            </div>
-                          </div>
-                          <p
-                            className={`text-xs ${colors.texts.secondary} mt-1`}
+                          <div
+                            className={`h-10 w-10 flex items-center justify-center rounded-none`}
                           >
-                            {activity.description}
-                          </p>
-                          {activity.customer && (
-                            <p className={`text-xs ${colors.texts.muted} mt-1`}>
-                              Customer: {activity.customer}
+                            <Icon
+                              className={`h-5 w-5 ${colors.icons.primary}`}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p
+                                className={`font-semibold ${colors.texts.primary}`}
+                              >
+                                {activity.title}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                {activity.amount && (
+                                  <Badge
+                                    className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                                  >
+                                    {formatCurrencyAbbreviated(activity.amount)}
+                                  </Badge>
+                                )}
+                                <span
+                                  className={`text-xs ${colors.texts.muted}`}
+                                >
+                                  {getTimeAgo(activity.timestamp)}
+                                </span>
+                              </div>
+                            </div>
+                            <p
+                              className={`text-xs ${colors.texts.secondary} mt-1`}
+                            >
+                              {activity.description}
                             </p>
-                          )}
+                            {activity.customer && (
+                              <p
+                                className={`text-xs ${colors.texts.muted} mt-1`}
+                              >
+                                Customer: {activity.customer}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="mt-6 text-center">
                   <Button
                     variant="ghost"
@@ -771,12 +560,19 @@ export default function SupplierDashboard() {
                       Revenue Goal
                     </span>
                     <span className={`text-xs ${colors.texts.secondary}`}>
-                      {formatCurrency(389000)} / {formatCurrency(500000)}
+                      {formatCurrencyAbbreviated(metrics.totalRevenue)} /{" "}
+                      {formatCurrencyAbbreviated(500000)}
                     </span>
                   </div>
-                  <Progress value={78} className="h-2 rounded-none" />
+                  <Progress
+                    value={Math.min((metrics.totalRevenue / 500000) * 100, 100)}
+                    className="h-2 rounded-none"
+                  />
                   <p className={`text-xs ${colors.texts.muted} mt-1`}>
-                    78% completed
+                    {Math.round(
+                      Math.min((metrics.totalRevenue / 500000) * 100, 100)
+                    )}
+                    % completed
                   </p>
                 </div>
                 <div>
@@ -839,82 +635,98 @@ export default function SupplierDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockTopVendors.map((vendor, index) => {
-                    const statusConfig = getStatusConfig(vendor.status);
-                    const StatusIcon = statusConfig.icon;
-                    return (
-                      <div
-                        key={vendor.id}
-                        className={`flex items-center gap-4 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.backgrounds.hover} transition-all cursor-pointer ${colors.borders.primary} hover:shadow-none`}
-                      >
-                        <div className="relative">
-                          <Avatar
-                            className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
-                          >
-                            <AvatarImage src="" alt={vendor.name} />
-                            <AvatarFallback
-                              className={`${colors.texts.primary} font-bold rounded-none`}
+                {topVendors.length === 0 ? (
+                  <div className="text-center py-12">
+                    <UsersIcon
+                      className={`h-12 w-12 mx-auto ${colors.icons.secondary} mb-3`}
+                    />
+                    <p className={`text-sm ${colors.texts.secondary}`}>
+                      No vendor data
+                    </p>
+                    <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                      Vendor activity will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {topVendors.map((vendor) => {
+                      const statusConfig = getStatusConfig(vendor.status);
+                      const StatusIcon = statusConfig.icon;
+                      return (
+                        <div
+                          key={vendor.id}
+                          className={`flex items-center gap-4 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.backgrounds.hover} transition-all cursor-pointer ${colors.borders.primary} hover:shadow-none`}
+                        >
+                          <div className="relative">
+                            <Avatar
+                              className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
                             >
-                              {getInitials(vendor.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4
-                              className={`font-semibold ${colors.texts.primary} text-sm`}
-                            >
-                              {vendor.name}
-                            </h4>
-                            <Badge
-                              className={
-                                vendor.status === "active"
-                                  ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} flex items-center gap-1 text-xs rounded-none`
-                                  : vendor.status === "pending"
-                                    ? `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text} flex items-center gap-1 text-xs rounded-none`
-                                    : vendor.status === "inactive"
-                                      ? `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} flex items-center gap-1 text-xs rounded-none`
-                                      : "flex items-center gap-1 text-xs rounded-none"
-                              }
-                            >
-                              <StatusIcon className="h-3 w-3" />
-                              {statusConfig.label}
-                            </Badge>
+                              <AvatarImage src="" alt={vendor.name} />
+                              <AvatarFallback
+                                className={`${colors.texts.primary} font-bold rounded-none`}
+                              >
+                                {getInitials(vendor.name)}
+                              </AvatarFallback>
+                            </Avatar>
                           </div>
-                          <div className="grid grid-cols-3 gap-3 text-xs">
-                            <div>
-                              <p
-                                className={`font-medium ${colors.texts.primary} text-xs`}
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <h4
+                                className={`font-semibold ${colors.texts.primary} text-sm`}
                               >
-                                {formatCurrency(vendor.totalSpent)}
-                              </p>
-                              <p className={`${colors.texts.muted}`}>
-                                Total Spent
-                              </p>
+                                {vendor.name}
+                              </h4>
+                              <Badge
+                                className={
+                                  vendor.status === "active"
+                                    ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} flex items-center gap-1 text-xs rounded-none`
+                                    : vendor.status === "pending"
+                                      ? `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text} flex items-center gap-1 text-xs rounded-none`
+                                      : `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} flex items-center gap-1 text-xs rounded-none`
+                                }
+                              >
+                                <StatusIcon className="h-3 w-3" />
+                                {statusConfig.label}
+                              </Badge>
                             </div>
-                            <div>
-                              <p
-                                className={`font-medium ${colors.texts.primary} text-xs`}
-                              >
-                                {vendor.totalOrders}
-                              </p>
-                              <p className={`${colors.texts.muted}`}>Orders</p>
-                            </div>
-                            <div>
-                              <p
-                                className={`font-medium ${colors.texts.primary} text-xs`}
-                              >
-                                {vendor.rating}/5
-                              </p>
-                              <p className={`${colors.texts.muted}`}>Rating</p>
+                            <div className="grid grid-cols-3 gap-3 text-xs">
+                              <div>
+                                <p
+                                  className={`font-medium ${colors.texts.primary} text-xs`}
+                                >
+                                  {formatCurrencyAbbreviated(vendor.totalSpent)}
+                                </p>
+                                <p className={`${colors.texts.muted}`}>
+                                  Total Spent
+                                </p>
+                              </div>
+                              <div>
+                                <p
+                                  className={`font-medium ${colors.texts.primary} text-xs`}
+                                >
+                                  {vendor.totalOrders}
+                                </p>
+                                <p className={`${colors.texts.muted}`}>
+                                  Orders
+                                </p>
+                              </div>
+                              <div>
+                                <p
+                                  className={`font-medium ${colors.texts.primary} text-xs`}
+                                >
+                                  {vendor.rating || 0}/5
+                                </p>
+                                <p className={`${colors.texts.muted}`}>
+                                  Rating
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -936,75 +748,89 @@ export default function SupplierDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockTopProducts.map((product) => {
-                    const statusConfig = getStatusConfig(product.status);
-                    const StatusIcon = statusConfig.icon;
-                    return (
-                      <div
-                        key={product.id}
-                        className={`flex items-center gap-4 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.backgrounds.hover} transition-all cursor-pointer ${colors.borders.primary} hover:shadow-none`}
-                      >
+                {topProducts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <CubeIcon
+                      className={`h-12 w-12 mx-auto ${colors.icons.secondary} mb-3`}
+                    />
+                    <p className={`text-sm ${colors.texts.secondary}`}>
+                      No product data
+                    </p>
+                    <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                      Product performance will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {topProducts.map((product) => {
+                      const statusConfig = getStatusConfig(product.status);
+                      const StatusIcon = statusConfig.icon;
+                      return (
                         <div
-                          className={`h-12 w-12 ${colors.backgrounds.tertiary} flex items-center justify-center text-gray-900 dark:text-white font-bold rounded-none`}
+                          key={product.id}
+                          className={`flex items-center gap-4 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.backgrounds.hover} transition-all cursor-pointer ${colors.borders.primary} hover:shadow-none`}
                         >
-                          {getInitials(product.name)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4
-                              className={`font-semibold ${colors.texts.primary} text-sm`}
-                            >
-                              {product.name}
-                            </h4>
-                            <Badge
-                              className={
-                                product.status === "active"
-                                  ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} flex items-center gap-1 text-xs rounded-none`
-                                  : product.status === "low_stock"
-                                    ? `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text} flex items-center gap-1 text-xs rounded-none`
-                                    : product.status === "out_of_stock"
-                                      ? `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} flex items-center gap-1 text-xs rounded-none`
-                                      : "flex items-center gap-1 text-xs rounded-none"
-                              }
-                            >
-                              <StatusIcon className="h-3 w-3" />
-                              {statusConfig.label}
-                            </Badge>
+                          <div
+                            className={`h-12 w-12 ${colors.backgrounds.tertiary} flex items-center justify-center text-gray-900 dark:text-white font-bold rounded-none`}
+                          >
+                            {getInitials(product.name)}
                           </div>
-                          <div className="grid grid-cols-3 gap-3 text-xs">
-                            <div>
-                              <p
-                                className={`font-medium ${colors.texts.primary} text-xs`}
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <h4
+                                className={`font-semibold ${colors.texts.primary} text-sm`}
                               >
-                                {formatCurrency(product.revenue)}
-                              </p>
-                              <p className={`${colors.texts.muted}`}>Revenue</p>
+                                {product.name}
+                              </h4>
+                              <Badge
+                                className={
+                                  product.status === "active"
+                                    ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} flex items-center gap-1 text-xs rounded-none`
+                                    : product.status === "low_stock"
+                                      ? `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text} flex items-center gap-1 text-xs rounded-none`
+                                      : `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} flex items-center gap-1 text-xs rounded-none`
+                                }
+                              >
+                                <StatusIcon className="h-3 w-3" />
+                                {statusConfig.label}
+                              </Badge>
                             </div>
-                            <div>
-                              <p
-                                className={`font-medium ${colors.texts.primary} text-xs`}
-                              >
-                                {product.totalSold}
-                              </p>
-                              <p className={`${colors.texts.muted}`}>Sold</p>
-                            </div>
-                            <div>
-                              <p
-                                className={`font-medium ${colors.texts.primary} text-xs`}
-                              >
-                                {product.currentStock}
-                              </p>
-                              <p className={`${colors.texts.muted}`}>
-                                In Stock
-                              </p>
+                            <div className="grid grid-cols-3 gap-3 text-xs">
+                              <div>
+                                <p
+                                  className={`font-medium ${colors.texts.primary} text-xs`}
+                                >
+                                  {formatCurrencyAbbreviated(product.revenue)}
+                                </p>
+                                <p className={`${colors.texts.muted}`}>
+                                  Revenue
+                                </p>
+                              </div>
+                              <div>
+                                <p
+                                  className={`font-medium ${colors.texts.primary} text-xs`}
+                                >
+                                  {product.totalSold}
+                                </p>
+                                <p className={`${colors.texts.muted}`}>Sold</p>
+                              </div>
+                              <div>
+                                <p
+                                  className={`font-medium ${colors.texts.primary} text-xs`}
+                                >
+                                  {product.currentStock}
+                                </p>
+                                <p className={`${colors.texts.muted}`}>
+                                  In Stock
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -1033,6 +859,7 @@ export default function SupplierDashboard() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <button
+                  onClick={() => router.push("/supplier/add-inventory")}
                   className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
                 >
                   <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">

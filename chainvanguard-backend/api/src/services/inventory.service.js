@@ -8,13 +8,113 @@ import cloudinaryService from "./cloudinary.service.js";
 import qrService from "./qr.service.js";
 import redisService from "./redis.service.js";
 import logger from "../utils/logger.js";
+import crypto from "crypto";
 
-// ========================================
-// INVENTORY SERVICE
-// ========================================
+/**
+ * Cache Key Strategy:
+ * - inventory:item:{id} - Single item cache
+ * - inventory:list:{supplierId}:{filters_hash} - List cache per supplier
+ * - inventory:stats:{supplierId} - Stats cache per supplier
+ * - inventory:analytics:{supplierId} - Analytics cache per supplier
+ */
+
 class InventoryService {
   // ========================================
-  // CREATE INVENTORY ITEM
+  // HELPER: Generate consistent cache keys
+  // ========================================
+  generateListCacheKey(filters = {}, options = {}) {
+    const {
+      supplierId,
+      category,
+      subcategory,
+      status,
+      minPrice,
+      maxPrice,
+      search,
+      lowStock,
+    } = filters;
+    const {
+      page = 1,
+      limit = 20,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options;
+
+    // Create a deterministic hash of filters
+    const filterKey = JSON.stringify({
+      supplierId,
+      category,
+      subcategory,
+      status,
+      minPrice,
+      maxPrice,
+      search,
+      lowStock,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+    });
+
+    const hash = crypto
+      .createHash("md5")
+      .update(filterKey)
+      .digest("hex")
+      .substring(0, 8);
+
+    return `inventory:list:${supplierId || "all"}:${hash}`;
+  }
+
+  // ========================================
+  // HELPER: Invalidate all related caches
+  // ========================================
+  async invalidateInventoryCaches(supplierId = null, inventoryId = null) {
+    try {
+      const keysToDelete = [];
+
+      // 1. Invalidate specific item cache
+      if (inventoryId) {
+        keysToDelete.push(`inventory:item:${inventoryId}`);
+      }
+
+      // 2. Invalidate all list caches for this supplier
+      if (supplierId) {
+        const listKeys = await redisService.keys(
+          `inventory:list:${supplierId}:*`
+        );
+        keysToDelete.push(...listKeys);
+
+        // Also invalidate 'all' lists since they include this supplier's items
+        const allListKeys = await redisService.keys(`inventory:list:all:*`);
+        keysToDelete.push(...allListKeys);
+
+        // Invalidate stats and analytics
+        keysToDelete.push(
+          `inventory:stats:${supplierId}`,
+          `inventory:analytics:${supplierId}`
+        );
+      }
+
+      // 3. Invalidate global stats
+      keysToDelete.push("inventory:stats:global");
+
+      // 4. Delete all keys in parallel
+      if (keysToDelete.length > 0) {
+        const uniqueKeys = [...new Set(keysToDelete)];
+        await Promise.all(uniqueKeys.map((key) => redisService.del(key)));
+        logger.info(`✅ Invalidated ${uniqueKeys.length} cache keys`);
+      }
+
+      return true;
+    } catch (error) {
+      logger.error("❌ Error invalidating caches:", error);
+      // Don't throw - cache invalidation failure shouldn't break operations
+      return false;
+    }
+  }
+
+  // ========================================
+  // CREATE INVENTORY ITEM (FIXED)
   // ========================================
   async createInventoryItem(data, userId, files = {}) {
     try {
@@ -26,164 +126,318 @@ class InventoryService {
         throw new Error("Only suppliers can create inventory items");
       }
 
-      // Handle image uploads
-      let imageUrls = [];
-      if (files.images && files.images.length > 0) {
-        imageUrls = await cloudinaryService.uploadMultiple(files.images, {
-          folder: "inventory",
-          resource_type: "image",
-        });
+      // Process images
+      let images = [];
+      if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+        images = data.images;
+        logger.info(`✅ Using ${images.length} pre-processed images from data`);
+      } else {
+        logger.warn("⚠️  No images provided in inventory data");
+        images = [];
       }
 
-      // Handle document uploads
+      // Handle documents
       let documents = [];
       if (files.documents && files.documents.length > 0) {
-        documents = await cloudinaryService.uploadMultiple(files.documents, {
-          folder: "inventory/documents",
-          resource_type: "raw",
-        });
+        try {
+          for (let i = 0; i < files.documents.length; i++) {
+            const doc = files.documents[i];
+            const result = await cloudinaryService.uploadDocument(
+              doc.buffer,
+              doc.originalname,
+              "inventory/documents"
+            );
+            documents.push({
+              name:
+                data.documentNames?.[i] ||
+                doc.originalname ||
+                `Document ${i + 1}`,
+              url: result.url,
+              type: data.documentTypes?.[i] || "specification",
+              uploadedAt: new Date(),
+            });
+          }
+        } catch (uploadError) {
+          logger.error("❌ Document upload failed:", uploadError);
+        }
       }
 
-      // Prepare inventory data
+      // Prepare inventory data (existing code...)
+      let damagedQuantity = 0;
+      if (
+        data.damagedQuantity !== undefined &&
+        data.damagedQuantity !== null &&
+        data.damagedQuantity !== ""
+      ) {
+        const parsed = parseInt(data.damagedQuantity);
+        damagedQuantity = isNaN(parsed) ? 0 : parsed;
+      }
+
       const inventoryData = {
-        ...data,
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        subcategory: data.subcategory,
+        materialType: data.materialType || "Raw Material",
+        brand: data.brand || "",
+        textileDetails: {
+          fabricType: data.textileDetails?.fabricType || "",
+          composition: data.textileDetails?.composition || "",
+          gsm: data.textileDetails?.gsm
+            ? parseInt(data.textileDetails.gsm)
+            : undefined,
+          width: data.textileDetails?.width
+            ? parseInt(data.textileDetails.width)
+            : undefined,
+          fabricWeight: data.textileDetails?.fabricWeight || "",
+          color: data.textileDetails?.color || "",
+          colorCode: data.textileDetails?.colorCode || "",
+          pattern: data.textileDetails?.pattern || "Solid",
+          finish: data.textileDetails?.finish || "",
+          careInstructions: data.textileDetails?.careInstructions || "",
+          shrinkage: data.textileDetails?.shrinkage || "",
+          washability: data.textileDetails?.washability || "",
+        },
+        pricePerUnit: parseFloat(data.pricePerUnit),
+        costPrice: data.costPrice ? parseFloat(data.costPrice) : 0,
+        originalPrice: data.originalPrice
+          ? parseFloat(data.originalPrice)
+          : undefined,
+        discount: data.discount ? parseFloat(data.discount) : 0,
+        quantity: parseInt(data.quantity),
+        reservedQuantity: data.reservedQuantity
+          ? parseInt(data.reservedQuantity)
+          : 0,
+        committedQuantity: data.committedQuantity
+          ? parseInt(data.committedQuantity)
+          : 0,
+        damagedQuantity: damagedQuantity,
+        minStockLevel: parseInt(data.minStockLevel || 10),
+        reorderLevel: parseInt(data.reorderLevel || 20),
+        reorderQuantity: parseInt(data.reorderQuantity || 50),
+        maximumQuantity: data.maximumQuantity
+          ? parseInt(data.maximumQuantity)
+          : undefined,
+        safetyStockLevel: parseInt(data.safetyStockLevel || 15),
+        unit: data.unit || "pieces",
+        sku: data.sku || `INV-${Date.now().toString(36).toUpperCase()}`,
+        images: images,
+        documents: documents,
+        weight: data.weight ? parseFloat(data.weight) : undefined,
+        dimensions: data.dimensions || "",
+        tags: data.tags || [],
+        season: data.season || "All Season",
+        countryOfOrigin: data.countryOfOrigin || "",
+        manufacturer: data.manufacturer || "",
         supplierId: userId,
         supplierName: supplier.name || supplier.email,
-        images: imageUrls.map((url) => ({ url, isPrimary: false })),
-        documents: documents.map((doc, index) => ({
-          name: data.documentNames?.[index] || `Document ${index + 1}`,
-          url: doc.url,
-          type: data.documentTypes?.[index] || "specification",
-        })),
+        supplierWalletAddress: supplier.walletAddress || "",
+        supplierContact: {
+          phone: data.supplierContact?.phone || "",
+          email: data.supplierContact?.email || supplier.email || "",
+          address: data.supplierContact?.address || "",
+        },
+        status: data.status || "active",
+        isVerified: false,
+        isFeatured: false,
+        isSustainable: data.isSustainable || false,
+        certifications: data.certifications || [],
+        sustainabilityCertifications: data.sustainabilityCertifications || [],
+        complianceStandards: data.complianceStandards || [],
+        qualityGrade: data.qualityGrade || "",
+        leadTime: data.leadTime ? parseInt(data.leadTime) : 7,
+        estimatedDeliveryDays: data.estimatedDeliveryDays
+          ? parseInt(data.estimatedDeliveryDays)
+          : 7,
+        shelfLife: data.shelfLife ? parseInt(data.shelfLife) : undefined,
+        storageLocations:
+          data.storageLocations ||
+          (data.defaultLocation
+            ? [
+                {
+                  warehouse: data.defaultLocation,
+                  zone: "",
+                  aisle: "",
+                  rack: "",
+                  bin: "",
+                  quantityAtLocation: parseInt(data.quantity) || 0,
+                  lastUpdated: new Date(),
+                },
+              ]
+            : []),
+        primaryLocation: data.defaultLocation || "",
+        notes: data.notes || "",
+        internalCode: data.internalCode || "",
+        barcode: data.barcode || "",
+        carbonFootprint: data.carbonFootprint
+          ? parseFloat(data.carbonFootprint)
+          : undefined,
+        recycledContent: data.recycledContent
+          ? parseFloat(data.recycledContent)
+          : undefined,
+        autoReorderEnabled: data.autoReorderEnabled || false,
+        isBatchTracked: data.isBatchTracked || false,
+        specifications: data.specifications || {},
+        suitableFor: data.suitableFor || [],
       };
 
-      // Set first image as primary
-      if (inventoryData.images.length > 0) {
-        inventoryData.images[0].isPrimary = true;
-      }
+      // Batch tracking
+      if (data.isBatchTracked !== false) {
+        const batchNumber = `${(data.category || "INV").toUpperCase().substring(0, 3)}-${(data.name || "ITEM").toUpperCase().substring(0, 4).replace(/\s+/g, "")}-${new Date().toISOString().split("T")[0].replace(/-/g, "")}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
 
-      // Create inventory item
-      const inventory = await Inventory.create(inventoryData);
+        // Validate manufactureDate and expiryDate
+        let manufactureDate = undefined;
+        let expiryDate = undefined;
+        if (data.manufactureDate && !isNaN(Date.parse(data.manufactureDate))) {
+          manufactureDate = new Date(data.manufactureDate);
+        }
+        if (data.expiryDate && !isNaN(Date.parse(data.expiryDate))) {
+          expiryDate = new Date(data.expiryDate);
+        } else if (data.shelfLife) {
+          expiryDate = new Date(
+            Date.now() + data.shelfLife * 24 * 60 * 60 * 1000
+          );
+        }
 
-      // Upload metadata to IPFS
-      const ipfsMetadata = {
-        name: inventory.name,
-        description: inventory.description,
-        category: inventory.category,
-        subcategory: inventory.subcategory,
-        supplier: inventory.supplierName,
-        quantity: inventory.quantity,
-        price: inventory.price,
-        unit: inventory.unit,
-        createdAt: inventory.createdAt,
-      };
-
-      // Generate fileName for IPFS upload
-      const ipfsFileName = `inventory-metadata-${inventory._id.toString()}.json`;
-      const ipfsResult = await ipfsService.uploadJSON(
-        ipfsMetadata,
-        ipfsFileName
-      );
-
-      // Handle IPFS result properly
-      if (ipfsResult.success) {
-        inventory.ipfsHash = ipfsResult.ipfsHash;
+        inventoryData.batches = [
+          {
+            batchNumber: batchNumber,
+            quantity: parseInt(data.quantity),
+            manufactureDate: manufactureDate,
+            expiryDate: expiryDate,
+            receivedDate: new Date(),
+            supplierName: supplier.name || supplier.email || "",
+            costPerUnit: data.costPrice
+              ? parseFloat(data.costPrice)
+              : parseFloat(data.pricePerUnit),
+            status: "available",
+            blockchainBatchId: "",
+          },
+        ];
       } else {
-        console.warn("⚠️  IPFS metadata upload failed:", ipfsResult.error);
-        inventory.ipfsHash = ""; // Set empty string instead of error object
+        inventoryData.batches = [];
       }
 
-      // Store on blockchain
-      const blockchainData = {
-        inventoryId: inventory._id.toString(),
-        name: inventory.name,
-        category: inventory.category,
-        supplierId: userId,
-        supplierName: supplier.name || supplier.email,
-        quantity: inventory.quantity,
-        price: inventory.price,
-        ipfsHash: inventory.ipfsHash || "",
-        timestamp: new Date().toISOString(),
-      };
+      // Create inventory
+      const inventory = await Inventory.create(inventoryData);
+      logger.info("✅ Inventory created in database", {
+        inventoryId: inventory._id,
+      });
 
-      // NEW:
+      // IPFS upload
       try {
+        const ipfsMetadata = {
+          name: inventory.name,
+          description: inventory.description,
+          category: inventory.category,
+          subcategory: inventory.subcategory,
+          supplier: inventory.supplierName,
+          quantity: inventory.quantity,
+          pricePerUnit: inventory.pricePerUnit,
+          unit: inventory.unit,
+          sku: inventory.sku,
+          textileDetails: inventory.textileDetails,
+          createdAt: inventory.createdAt,
+        };
+
+        const ipfsFileName = `inventory-metadata-${inventory._id.toString()}.json`;
+        const ipfsResult = await ipfsService.uploadJSON(
+          ipfsMetadata,
+          ipfsFileName
+        );
+
+        if (ipfsResult.success) {
+          inventory.ipfsHash = ipfsResult.ipfsHash;
+        }
+      } catch (ipfsError) {
+        logger.error("❌ IPFS upload error:", ipfsError);
+        inventory.ipfsHash = "";
+      }
+
+      // Blockchain storage
+      try {
+        const blockchainData = {
+          inventoryId: inventory._id.toString(),
+          name: inventory.name,
+          category: inventory.category,
+          subcategory: inventory.subcategory,
+          supplierId: userId,
+          supplierName: supplier.name || supplier.email,
+          quantity: inventory.quantity,
+          pricePerUnit: inventory.pricePerUnit,
+          unit: inventory.unit,
+          sku: inventory.sku,
+          ipfsHash: inventory.ipfsHash || "",
+          timestamp: new Date().toISOString(),
+        };
+
         const blockchainResult = await fabricService.invoke(
           "inventory",
           "createInventoryItem",
           JSON.stringify(blockchainData)
         );
 
-        // Handle both direct txId string or object with txId property
         if (typeof blockchainResult === "string") {
-          inventory.blockchainTxId = blockchainResult;
+          inventory.blockchainInventoryId = blockchainResult;
+          inventory.fabricTransactionId = blockchainResult;
         } else if (blockchainResult && blockchainResult.txId) {
-          inventory.blockchainTxId = blockchainResult.txId;
+          inventory.blockchainInventoryId = blockchainResult.txId;
+          inventory.fabricTransactionId = blockchainResult.txId;
         }
 
+        inventory.blockchainVerified = true;
         await inventory.save();
-
-        if (inventory._id) {
-          // Generate QR in background - don't block response
-          this.generateInventoryQR(inventory._id.toString(), userId)
-            .then((qrResult) => {
-              if (qrResult.success) {
-                console.log(
-                  `✅ QR code generated for inventory: ${inventory._id}`
-                );
-              }
-            })
-            .catch((error) => {
-              console.error(
-                `⚠️  QR generation failed for ${inventory._id}:`,
-                error.message
-              );
-              // Don't fail - QR can be generated later via API
-            });
-        }
-
-        logger.success("Inventory saved to blockchain", {
-          txId: inventory.blockchainTxId,
-        });
       } catch (blockchainError) {
-        logger.warn(
-          "⚠️ Blockchain storage failed, but inventory saved to database",
-          {
-            error: blockchainError.message,
-            inventoryId: inventory._id,
+        logger.warn("⚠️ Blockchain storage failed", {
+          error: blockchainError.message,
+        });
+        inventory.blockchainVerified = false;
+        await inventory.save();
+      }
+
+      // Generate QR code (background)
+      if (inventory._id) {
+        this.generateInventoryQR(inventory._id.toString(), userId).catch(
+          (error) => {
+            logger.error(`⚠️ QR generation failed:`, error.message);
           }
         );
       }
 
-      // Create notification for supplier
-      await this.createNotification({
-        userId,
-        userRole: "supplier",
-        type: "stock_updated",
-        category: "inventory",
-        title: "Inventory Item Created",
-        message: `New inventory item "${inventory.name}" has been created successfully.`,
-        inventoryId: inventory._id,
-        priority: "medium",
-      });
+      // Create notification
+      try {
+        await this.createNotification({
+          userId,
+          userRole: "supplier",
+          type: "stock_updated",
+          category: "inventory",
+          title: "Inventory Item Created",
+          message: `New inventory item "${inventory.name}" has been created successfully.`,
+          inventoryId: inventory._id,
+          priority: "medium",
+        });
+      } catch (notifError) {
+        logger.error("❌ Notification creation failed:", notifError);
+      }
 
-      // Clear cache
-      await redisService.del(`inventory:supplier:${userId}`);
-      await redisService.del("inventory:all");
+      // ✅ CRITICAL: Invalidate caches AFTER successful creation
+      await this.invalidateInventoryCaches(userId, inventory._id.toString());
 
-      logger.info("Inventory item created successfully", {
+      logger.info("✅ Inventory item created successfully", {
         inventoryId: inventory._id,
+        name: inventory.name,
+        sku: inventory.sku,
       });
 
       return inventory;
     } catch (error) {
-      logger.error("Error creating inventory item:", error);
+      logger.error("❌ Error creating inventory item:", error);
       throw error;
     }
   }
 
   // ========================================
-  // GET ALL INVENTORY ITEMS (with filters)
+  // GET ALL INVENTORY ITEMS (FIXED)
   // ========================================
   async getAllInventory(filters = {}, options = {}) {
     try {
@@ -214,13 +468,18 @@ class InventoryService {
       if (status) query.status = status;
 
       if (minPrice || maxPrice) {
-        query.price = {};
-        if (minPrice) query.price.$gte = Number(minPrice);
-        if (maxPrice) query.price.$lte = Number(maxPrice);
+        query.pricePerUnit = {};
+        if (minPrice) query.pricePerUnit.$gte = Number(minPrice);
+        if (maxPrice) query.pricePerUnit.$lte = Number(maxPrice);
       }
 
       if (search) {
-        query.$text = { $search: search };
+        query.$or = [
+          { name: { $regex: search, $options: "i" } },
+          { sku: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+          { category: { $regex: search, $options: "i" } },
+        ];
       }
 
       if (lowStock === "true") {
@@ -237,11 +496,13 @@ class InventoryService {
         };
       }
 
-      // Check cache
-      const cacheKey = `inventory:list:${JSON.stringify(query)}:${page}:${limit}`;
+      // Generate cache key
+      const cacheKey = this.generateListCacheKey(filters, options);
+
+      // Try cache first
       const cached = await redisService.get(cacheKey);
       if (cached) {
-        logger.info("Returning cached inventory list");
+        logger.info("✅ Returning cached inventory list", { cacheKey });
         return cached;
       }
 
@@ -270,8 +531,10 @@ class InventoryService {
         },
       };
 
-      // Cache for 5 minutes
+      // Cache for 5 minutes (this is fine since we invalidate on changes)
       await redisService.set(cacheKey, result, 300);
+
+      logger.info(`✅ Fetched ${items.length} inventory items from database`);
 
       return result;
     } catch (error) {
@@ -281,14 +544,18 @@ class InventoryService {
   }
 
   // ========================================
-  // GET INVENTORY BY ID
+  // GET INVENTORY BY ID (FIXED)
   // ========================================
   async getInventoryById(inventoryId) {
     try {
-      // Check cache
-      const cacheKey = `inventory:${inventoryId}`;
+      const cacheKey = `inventory:item:${inventoryId}`;
+
+      // Try cache first
       const cached = await redisService.get(cacheKey);
-      if (cached) return cached;
+      if (cached) {
+        logger.info("✅ Returning cached inventory item", { inventoryId });
+        return cached;
+      }
 
       const inventory = await Inventory.findById(inventoryId)
         .populate("supplierId", "name email companyName phone")
@@ -301,6 +568,8 @@ class InventoryService {
       // Cache for 10 minutes
       await redisService.set(cacheKey, inventory, 600);
 
+      logger.info(`✅ Fetched inventory ${inventoryId} from database`);
+
       return inventory;
     } catch (error) {
       logger.error("Error fetching inventory by ID:", error);
@@ -309,7 +578,7 @@ class InventoryService {
   }
 
   // ========================================
-  // UPDATE INVENTORY ITEM
+  // UPDATE INVENTORY ITEM (FIXED)
   // ========================================
   async updateInventoryItem(inventoryId, userId, updates, files = {}) {
     try {
@@ -320,40 +589,67 @@ class InventoryService {
         throw new Error("Inventory item not found");
       }
 
-      // Check ownership
       if (inventory.supplierId.toString() !== userId) {
         throw new Error("Unauthorized to update this inventory item");
       }
 
-      // Handle new image uploads
-      if (files.images && files.images.length > 0) {
-        const newImages = await cloudinaryService.uploadMultiple(files.images, {
-          folder: "inventory",
-          resource_type: "image",
-        });
-        inventory.images.push(
-          ...newImages.map((url) => ({ url, isPrimary: false }))
-        );
+      // Handle deleting existing images
+      if (updates.imagesToDelete && Array.isArray(updates.imagesToDelete)) {
+        for (const imageUrl of updates.imagesToDelete) {
+          const imageToDelete = inventory.images.find(img => img.url === imageUrl);
+          if (imageToDelete) {
+            // Delete from Cloudinary
+            try {
+              await cloudinaryService.deleteImage(imageToDelete.cloudinaryId);
+            } catch (deleteError) {
+              logger.warn("Failed to delete image from Cloudinary:", deleteError);
+            }
+            // Remove from inventory
+            inventory.images = inventory.images.filter(img => img.url !== imageUrl);
+          }
+        }
       }
 
-      // Handle new document uploads
+      // Handle new image uploads
+      if (files.images && files.images.length > 0) {
+        const uploadResults = await cloudinaryService.uploadMultipleImages(
+          files.images,
+          "inventory"
+        );
+        const newImages = uploadResults.map((result, index) => ({
+          url: result.url,
+          cloudinaryId: result.publicId,
+          publicId: result.publicId,
+          isMain: inventory.images.length === 0 && index === 0,
+          viewType:
+            inventory.images.length === 0 && index === 0 ? "front" : "detail",
+        }));
+        inventory.images.push(...newImages);
+      }
+
+      // Handle new documents
       if (files.documents && files.documents.length > 0) {
-        const newDocuments = await cloudinaryService.uploadMultiple(
-          files.documents,
-          {
-            folder: "inventory/documents",
-            resource_type: "raw",
+        try {
+          for (let i = 0; i < files.documents.length; i++) {
+            const doc = files.documents[i];
+            const result = await cloudinaryService.uploadDocument(
+              doc.buffer,
+              doc.originalname,
+              "inventory/documents"
+            );
+            inventory.documents.push({
+              name:
+                updates.documentNames?.[i] ||
+                doc.originalname ||
+                `Document ${i + 1}`,
+              url: result.url,
+              type: updates.documentTypes?.[i] || "specification",
+              uploadedAt: new Date(),
+            });
           }
-        );
-        inventory.documents.push(
-          ...newDocuments.map((doc, index) => ({
-            name:
-              updates.documentNames?.[index] ||
-              `Document ${inventory.documents.length + index + 1}`,
-            url: doc.url,
-            type: updates.documentTypes?.[index] || "specification",
-          }))
-        );
+        } catch (uploadError) {
+          logger.error("❌ Document upload failed:", uploadError);
+        }
       }
 
       // Update fields
@@ -367,6 +663,36 @@ class InventoryService {
           inventory[key] = updates[key];
         }
       });
+
+      // Explicitly update manufactureDate and expiryDate if present and valid
+      if (
+        updates.manufactureDate &&
+        !isNaN(Date.parse(updates.manufactureDate))
+      ) {
+        inventory.manufactureDate = updates.manufactureDate;
+      }
+      if (updates.expiryDate && !isNaN(Date.parse(updates.expiryDate))) {
+        inventory.expiryDate = updates.expiryDate;
+      }
+
+      // If batch-tracked, also update batch dates if needed and valid
+      if (
+        inventory.isBatchTracked &&
+        Array.isArray(inventory.batches) &&
+        inventory.batches.length > 0
+      ) {
+        if (
+          updates.manufactureDate &&
+          !isNaN(Date.parse(updates.manufactureDate))
+        ) {
+          inventory.batches[0].manufactureDate = new Date(
+            updates.manufactureDate
+          );
+        }
+        if (updates.expiryDate && !isNaN(Date.parse(updates.expiryDate))) {
+          inventory.batches[0].expiryDate = new Date(updates.expiryDate);
+        }
+      }
 
       // Track quantity changes
       if (updates.quantity !== undefined) {
@@ -383,9 +709,10 @@ class InventoryService {
         inventoryId: inventory._id.toString(),
         name: inventory.name,
         quantity: inventory.quantity,
-        price: inventory.price,
+        price: inventory.pricePerUnit,
         status: inventory.status,
         updatedAt: new Date().toISOString(),
+        images: inventory.images.map((img) => img.url),
       };
 
       await fabricService.invoke(
@@ -394,9 +721,8 @@ class InventoryService {
         JSON.stringify(blockchainData)
       );
 
-      // Clear cache
-      await redisService.del(`inventory:${inventoryId}`);
-      await redisService.del(`inventory:supplier:${userId}`);
+      // ✅ CRITICAL: Invalidate caches AFTER successful update
+      await this.invalidateInventoryCaches(userId, inventoryId);
 
       logger.info("Inventory item updated successfully", { inventoryId });
 
@@ -408,7 +734,7 @@ class InventoryService {
   }
 
   // ========================================
-  // DELETE INVENTORY ITEM
+  // DELETE INVENTORY ITEM (FIXED)
   // ========================================
   async deleteInventoryItem(inventoryId, userId) {
     try {
@@ -417,12 +743,10 @@ class InventoryService {
         throw new Error("Inventory item not found");
       }
 
-      // Check ownership
       if (inventory.supplierId.toString() !== userId) {
         throw new Error("Unauthorized to delete this inventory item");
       }
 
-      // Check if item is in use (has pending orders, etc.)
       if (inventory.reservedQuantity > 0 || inventory.committedQuantity > 0) {
         throw new Error(
           "Cannot delete inventory item with reserved or committed quantities"
@@ -441,9 +765,8 @@ class InventoryService {
         inventoryId
       );
 
-      // Clear cache
-      await redisService.del(`inventory:${inventoryId}`);
-      await redisService.del(`inventory:supplier:${userId}`);
+      // ✅ CRITICAL: Invalidate caches AFTER successful deletion
+      await this.invalidateInventoryCaches(userId, inventoryId);
 
       logger.info("Inventory item deleted", { inventoryId });
 
@@ -455,7 +778,7 @@ class InventoryService {
   }
 
   // ========================================
-  // ADD STOCK (Restock)
+  // ADD STOCK (FIXED)
   // ========================================
   async addStock(inventoryId, userId, quantity, notes = "", batchData = null) {
     try {
@@ -466,12 +789,10 @@ class InventoryService {
         throw new Error("Inventory item not found");
       }
 
-      // Check ownership
       if (inventory.supplierId.toString() !== userId) {
         throw new Error("Unauthorized");
       }
 
-      // Add batch if provided
       if (batchData) {
         inventory.batches.push({
           ...batchData,
@@ -480,11 +801,9 @@ class InventoryService {
         });
       }
 
-      // Update stock
       inventory.addStock(quantity, userId, "supplier", notes);
       await inventory.save();
 
-      // Update blockchain
       await fabricService.invoke(
         "inventory",
         "addStock",
@@ -493,7 +812,6 @@ class InventoryService {
         notes
       );
 
-      // Create notification
       await this.createNotification({
         userId,
         userRole: "supplier",
@@ -505,9 +823,8 @@ class InventoryService {
         priority: "medium",
       });
 
-      // Clear cache
-      await redisService.del(`inventory:${inventoryId}`);
-      await redisService.del(`inventory:supplier:${userId}`);
+      // ✅ CRITICAL: Invalidate caches
+      await this.invalidateInventoryCaches(userId, inventoryId);
 
       return inventory;
     } catch (error) {
@@ -517,7 +834,7 @@ class InventoryService {
   }
 
   // ========================================
-  // REDUCE STOCK (Sale/Usage)
+  // REDUCE STOCK (FIXED)
   // ========================================
   async reduceStock(
     inventoryId,
@@ -534,18 +851,15 @@ class InventoryService {
         throw new Error("Inventory item not found");
       }
 
-      // Check available stock
       if (inventory.availableQuantity < quantity) {
         throw new Error(
           `Insufficient stock. Available: ${inventory.availableQuantity}`
         );
       }
 
-      // Reduce stock
       inventory.reduceStock(quantity, userId, "supplier", reason);
       await inventory.save();
 
-      // Update blockchain
       await fabricService.invoke(
         "inventory",
         "reduceStock",
@@ -554,13 +868,12 @@ class InventoryService {
         reason
       );
 
-      // Check if low stock alert needed
       if (inventory.needsReorder()) {
         await this.createLowStockAlert(inventory);
       }
 
-      // Clear cache
-      await redisService.del(`inventory:${inventoryId}`);
+      // ✅ CRITICAL: Invalidate caches
+      await this.invalidateInventoryCaches(userId, inventoryId);
 
       return inventory;
     } catch (error) {
@@ -569,6 +882,57 @@ class InventoryService {
     }
   }
 
+  // ========================================
+  // GET INVENTORY STATS (FIXED)
+  // ========================================
+  async getInventoryStats(supplierId = null) {
+    try {
+      logger.info("Fetching inventory stats", { supplierId });
+
+      const filter = supplierId ? { supplierId } : {};
+
+      const cacheKey = `inventory:stats:${supplierId || "global"}`;
+
+      // Try cache first
+      const cached = await redisService.get(cacheKey);
+      if (cached) {
+        logger.info("✅ Returning cached inventory stats");
+        return cached;
+      }
+
+      // Fetch fresh data
+      const inventory = await Inventory.find(filter).lean();
+
+      const stats = {
+        totalItems: inventory.length,
+        totalValue: inventory.reduce(
+          (sum, item) =>
+            sum + (item.stockValue || item.pricePerUnit * item.quantity),
+          0
+        ),
+        inStockItems: inventory.filter(
+          (item) => item.quantity > item.minStockLevel
+        ).length,
+        lowStockItems: inventory.filter(
+          (item) => item.quantity > 0 && item.quantity <= item.minStockLevel
+        ).length,
+        outOfStockItems: inventory.filter((item) => item.quantity === 0).length,
+        reservedItems: inventory.filter(
+          (item) => (item.reservedQuantity || 0) > 0
+        ).length,
+      };
+
+      // Cache for 5 minutes (this is fine since we invalidate on changes)
+      await redisService.set(cacheKey, stats, 300);
+
+      logger.info("✅ Inventory stats calculated from fresh data", stats);
+
+      return stats;
+    } catch (error) {
+      logger.error("Error fetching inventory stats:", error);
+      throw error;
+    }
+  }
   // ========================================
   // SELL INVENTORY TO VENDOR
   // ========================================

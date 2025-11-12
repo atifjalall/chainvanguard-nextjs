@@ -56,7 +56,7 @@ class AnalyticsService {
     const revenue = await Order.aggregate([
       {
         $match: {
-          sellerId: mongoose.Types.ObjectId(supplierId),
+          sellerId: new mongoose.Types.ObjectId(supplierId),
           status: { $in: ["delivered", "completed"] },
           createdAt: dateFilter,
         },
@@ -100,7 +100,7 @@ class AnalyticsService {
     const topVendors = await Order.aggregate([
       {
         $match: {
-          sellerId: mongoose.Types.ObjectId(supplierId),
+          sellerId: new mongoose.Types.ObjectId(supplierId),
           status: { $in: ["delivered", "completed"] },
           createdAt: dateFilter,
         },
@@ -148,7 +148,7 @@ class AnalyticsService {
     const inventoryStats = await Inventory.aggregate([
       {
         $match: {
-          supplierId: mongoose.Types.ObjectId(supplierId),
+          supplierId: new mongoose.Types.ObjectId(supplierId),
         },
       },
       {
@@ -172,7 +172,7 @@ class AnalyticsService {
     const overallStats = await Inventory.aggregate([
       {
         $match: {
-          supplierId: mongoose.Types.ObjectId(supplierId),
+          supplierId: new mongoose.Types.ObjectId(supplierId),
         },
       },
       {
@@ -228,7 +228,7 @@ class AnalyticsService {
     const requestStats = await VendorRequest.aggregate([
       {
         $match: {
-          supplierId: mongoose.Types.ObjectId(supplierId),
+          supplierId: new mongoose.Types.ObjectId(supplierId),
           createdAt: dateFilter,
         },
       },
@@ -272,7 +272,7 @@ class AnalyticsService {
     const trends = await Order.aggregate([
       {
         $match: {
-          sellerId: mongoose.Types.ObjectId(supplierId),
+          sellerId: new mongoose.Types.ObjectId(supplierId),
           createdAt: dateFilter,
         },
       },
@@ -345,7 +345,7 @@ class AnalyticsService {
     const sales = await Order.aggregate([
       {
         $match: {
-          sellerId: mongoose.Types.ObjectId(vendorId),
+          sellerId: new mongoose.Types.ObjectId(vendorId),
           status: { $in: ["delivered", "completed"] },
           createdAt: dateFilter,
         },
@@ -391,7 +391,7 @@ class AnalyticsService {
     const topProducts = await Order.aggregate([
       {
         $match: {
-          sellerId: mongoose.Types.ObjectId(vendorId),
+          sellerId: new mongoose.Types.ObjectId(vendorId),
           status: { $in: ["delivered", "completed"] },
           createdAt: dateFilter,
         },
@@ -442,7 +442,7 @@ class AnalyticsService {
     const topCustomers = await Order.aggregate([
       {
         $match: {
-          sellerId: mongoose.Types.ObjectId(vendorId),
+          sellerId: new mongoose.Types.ObjectId(vendorId),
           status: { $in: ["delivered", "completed"] },
           createdAt: dateFilter,
         },
@@ -490,7 +490,7 @@ class AnalyticsService {
     const categoryStats = await Order.aggregate([
       {
         $match: {
-          sellerId: mongoose.Types.ObjectId(vendorId),
+          sellerId: new mongoose.Types.ObjectId(vendorId),
           status: { $in: ["delivered", "completed"] },
           createdAt: dateFilter,
         },
@@ -589,8 +589,8 @@ class AnalyticsService {
       const performance = await Order.aggregate([
         {
           $match: {
-            sellerId: mongoose.Types.ObjectId(vendorId),
-            "items.productId": mongoose.Types.ObjectId(productId),
+            sellerId: new mongoose.Types.ObjectId(vendorId),
+            "items.productId": new mongoose.Types.ObjectId(productId),
             status: { $in: ["delivered", "completed"] },
             createdAt: dateFilter,
           },
@@ -598,7 +598,7 @@ class AnalyticsService {
         { $unwind: "$items" },
         {
           $match: {
-            "items.productId": mongoose.Types.ObjectId(productId),
+            "items.productId": new mongoose.Types.ObjectId(productId),
           },
         },
         {

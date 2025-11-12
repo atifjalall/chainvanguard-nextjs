@@ -30,7 +30,7 @@ import {
   ArchiveBoxIcon,
   ArrowUpTrayIcon,
   XMarkIcon,
-  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
   DocumentDuplicateIcon,
   ArrowPathIcon,
   CheckCircleIcon,
@@ -42,8 +42,10 @@ import {
   DocumentTextIcon,
   EyeIcon,
   EyeSlashIcon,
-  ShoppingCartIcon,
   InboxIcon,
+  CubeIcon,
+  BuildingStorefrontIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -57,6 +59,15 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { badgeColors, colors } from "@/lib/colorConstants";
+import { createInventory } from "@/lib/api/inventory.api";
+import { InventoryFormData } from "@/types";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const RsIcon = () => (
   <svg
@@ -256,6 +267,89 @@ const statuses = [
   "quarantined",
 ];
 
+const currencies = ["PKR", "USD", "EUR"];
+
+const warehouseLocations = [
+  "Karachi Main Warehouse",
+  "Lahore Warehouse",
+  "Islamabad Warehouse",
+  "Faisalabad Warehouse",
+  "Sialkot Warehouse",
+];
+
+const suitableForOptions = [
+  "Shirts",
+  "T-Shirts",
+  "Trousers",
+  "Dresses",
+  "Jackets",
+  "Sportswear",
+  "Formal Wear",
+  "Casual Wear",
+  "Kids Wear",
+  "Home Textiles",
+  "Upholstery",
+];
+
+const categoryCodes: { [key: string]: string } = {
+  "Raw Material": "RM",
+  Fabric: "FB",
+  "Yarn & Thread": "YT",
+  "Dyes & Chemicals": "DC",
+  "Trims & Accessories": "TA",
+  Packaging: "PK",
+  "Semi-Finished": "SF",
+  "Tools & Equipment": "TE",
+};
+
+const subcategoryCodes: { [key: string]: string } = {
+  "Cotton Fabric": "CF",
+  "Polyester Fabric": "PF",
+  "Silk Fabric": "SF",
+  "Wool Fabric": "WF",
+  "Linen Fabric": "LF",
+  "Denim Fabric": "DF",
+  "Jersey Fabric": "JF",
+  "Blended Fabric": "BF",
+  "Cotton Yarn": "CY",
+  "Polyester Yarn": "PY",
+  "Sewing Thread": "ST",
+  "Embroidery Thread": "ET",
+  "Fabric Dye": "FD",
+  Bleach: "BL",
+  Softener: "SO",
+  "Finishing Chemical": "FC",
+  Buttons: "BT",
+  Zippers: "ZP",
+  Elastic: "EL",
+  Lace: "LC",
+  Ribbon: "RB",
+  Labels: "LB",
+  Tags: "TG",
+  "Poly Bags": "PB",
+  Hangers: "HG",
+  Boxes: "BX",
+  "Tissue Paper": "TP",
+  "Cut Fabric": "CU",
+  "Printed Fabric": "PR",
+  "Dyed Fabric": "DY",
+  "Stitched Panels": "SP",
+  Scissors: "SC",
+  Needles: "ND",
+  "Measuring Tools": "MT",
+  Other: "OT",
+};
+
+const materialTypeCodes: { [key: string]: string } = {
+  "Raw Material": "RM",
+  "Semi-Finished": "SF",
+  "Finished Component": "FC",
+  Accessory: "AC",
+  Packaging: "PK",
+  Tool: "TL",
+  Consumable: "CN",
+};
+
 // ================== Types ==================
 type TextileDetails = {
   fabricType: string;
@@ -279,17 +373,38 @@ type SupplierContact = {
 };
 
 type FormDataType = {
+  // Basic
   name: string;
   description: string;
   category: string;
   subcategory: string;
   materialType: string;
-  brand: string;
-  textileDetails: TextileDetails;
+  brand: "";
+
+  // Textile Details
+  textileDetails: {
+    fabricType: string;
+    composition: string;
+    gsm: string;
+    width: string;
+    fabricWeight: string;
+    color: string;
+    colorCode: string;
+    pattern: string;
+    finish: string;
+    careInstructions: string;
+    shrinkage: string;
+    washability: string;
+  };
+
+  // Pricing
   pricePerUnit: string;
   costPrice: string;
   originalPrice: string;
   discount: string;
+  currency: string; // ADD THIS
+
+  // Stock
   quantity: string;
   reservedQuantity: string;
   committedQuantity: string;
@@ -301,24 +416,43 @@ type FormDataType = {
   safetyStockLevel: string;
   unit: string;
   sku: string;
+
+  // Physical
   weight: string;
-  dimensions: string;
+  dimensions: string; // Will be converted to object
+
+  // Metadata
   tags: string[];
   season: string;
   countryOfOrigin: string;
   manufacturer: string;
+
+  // Supplier
   supplierName: string;
-  supplierContact: SupplierContact;
+  supplierContact: {
+    phone: string;
+    email: string;
+    address: string;
+  };
+
+  // Status & Quality
   status: string;
   isSustainable: boolean;
   certifications: string[];
   sustainabilityCertifications: string[];
   complianceStandards: string[];
   qualityGrade: string;
+
+  // Delivery
   leadTime: string;
   estimatedDeliveryDays: string;
   shelfLife: string;
+
+  // Images
   images: string[];
+  imageFiles: File[]; // ADD THIS for actual files
+
+  // Additional
   notes: string;
   internalCode: string;
   barcode: string;
@@ -326,6 +460,36 @@ type FormDataType = {
   recycledContent: string;
   autoReorderEnabled: boolean;
   isBatchTracked: boolean;
+
+  // Storage - ADD THESE
+  warehouseLocation: string;
+  storageLocations: Array<{
+    warehouse: string;
+    zone?: string;
+    aisle?: string;
+    rack?: string;
+    bin?: string;
+    quantityAtLocation: number;
+  }>;
+
+  // Specifications - ADD THIS
+  specifications: {
+    grade?: string;
+    thickness?: string;
+    density?: string;
+    tensileStrength?: string;
+    durability?: string;
+    washability?: string;
+    breathability?: string;
+    stretchability?: string;
+  };
+
+  // Suitable For - ADD THIS
+  suitableFor: string[];
+
+  // ADD THESE:
+  manufactureDate: string;
+  expiryDate: string;
 };
 
 type ErrorsType = {
@@ -346,7 +510,7 @@ const PreviewCard = ({ formData }: { formData: FormDataType }) => {
   return (
     <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300 rounded-none overflow-hidden w-full p-0 shadow-none">
       {/* Image Section - Even Larger */}
-      <div className="relative w-full h-72 bg-gray-100 dark:bg-gray-800 overflow-hidden m-0">
+      <div className="relative w-full h-96 bg-gray-100 dark:bg-gray-800 overflow-hidden m-0">
         {formData.images.length > 0 ? (
           <img
             src={formData.images[0]}
@@ -493,12 +657,15 @@ export default function AddInventoryPage() {
   }, []);
 
   const [formData, setFormData] = useState<FormDataType>({
+    // Basic
     name: "",
     description: "",
     category: "",
     subcategory: "",
-    materialType: "Raw Material",
+    materialType: "",
     brand: "",
+
+    // Textile Details
     textileDetails: {
       fabricType: "",
       composition: "",
@@ -506,7 +673,7 @@ export default function AddInventoryPage() {
       width: "",
       fabricWeight: "",
       color: "",
-      colorCode: "",
+      colorCode: "#000000",
       pattern: "Solid",
       finish: "",
       careInstructions: "",
@@ -518,14 +685,14 @@ export default function AddInventoryPage() {
     originalPrice: "",
     discount: "",
     quantity: "",
-    reservedQuantity: "0",
-    committedQuantity: "0",
-    damagedQuantity: "0",
+    reservedQuantity: "",
+    committedQuantity: "",
+    damagedQuantity: "",
     minStockLevel: "10",
     reorderLevel: "20",
     reorderQuantity: "50",
     maximumQuantity: "",
-    safetyStockLevel: "15",
+    safetyStockLevel: "",
     unit: "pieces",
     sku: "",
     weight: "",
@@ -548,7 +715,7 @@ export default function AddInventoryPage() {
     qualityGrade: "",
     leadTime: "7",
     estimatedDeliveryDays: "7",
-    shelfLife: "",
+    shelfLife: "730",
     images: [],
     notes: "",
     internalCode: "",
@@ -556,8 +723,47 @@ export default function AddInventoryPage() {
     carbonFootprint: "",
     recycledContent: "",
     autoReorderEnabled: false,
-    isBatchTracked: false,
+    isBatchTracked: true,
+    currency: "PKR",
+    imageFiles: [],
+    warehouseLocation: "",
+    storageLocations: [],
+    specifications: {},
+    suitableFor: [],
+    manufactureDate: new Date().toISOString().split("T")[0],
+    expiryDate: "",
   });
+
+  // Add this useEffect to populate supplier fields with current user data
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        supplierName: user.name || prev.supplierName,
+        supplierContact: {
+          ...prev.supplierContact,
+          phone: user.phone || prev.supplierContact.phone,
+          email: user.email || prev.supplierContact.email,
+          // Address can be kept as is or populated if user has it
+          address: user.address || prev.supplierContact.address,
+        },
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    let sku = "";
+    if (formData.category) sku += categoryCodes[formData.category] + "-";
+    if (formData.subcategory)
+      sku += subcategoryCodes[formData.subcategory] + "-";
+    if (formData.materialType)
+      sku += materialTypeCodes[formData.materialType] + "-";
+    if (formData.category && formData.subcategory && formData.materialType) {
+      const randomId = Date.now().toString(36).toUpperCase().substring(0, 6);
+      sku = sku.slice(0, -1) + "-" + randomId;
+    }
+    setFormData((prev) => ({ ...prev, sku }));
+  }, [formData.category, formData.subcategory, formData.materialType]);
 
   const [errors, setErrors] = useState<ErrorsType>({});
   const [tagInput, setTagInput] = useState<string>("");
@@ -565,16 +771,52 @@ export default function AddInventoryPage() {
   const [sustainabilityInput, setSustainabilityInput] = useState<string>("");
 
   const handleInputChange = (field: keyof FormDataType, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let sanitizedValue = value;
+    if (typeof value === "string") {
+      // Sanitize number fields only if not empty
+      if (
+        value !== "" &&
+        [
+          "pricePerUnit",
+          "costPrice",
+          "quantity",
+          "reorderLevel",
+          "minStockLevel",
+          "safetyStockLevel",
+          "reservedQuantity",
+          "committedQuantity",
+          "damagedQuantity",
+          "shelfLife",
+        ].includes(field)
+      ) {
+        sanitizedValue = value.replace(/[^0-9.]/g, "");
+        if (field === "pricePerUnit" || field === "costPrice") {
+          // Allow one decimal point for prices
+          const parts = sanitizedValue.split(".");
+          if (parts.length > 2)
+            sanitizedValue = parts[0] + "." + parts.slice(1).join("");
+        } else {
+          // Remove decimals for integers
+          sanitizedValue = sanitizedValue.replace(/\./g, "");
+        }
+        // Ensure non-negative if not empty
+        const num = parseFloat(sanitizedValue);
+        if (isNaN(num) || num < 0) sanitizedValue = "0";
+      }
+    }
+    setFormData((prev) => ({ ...prev, [field]: sanitizedValue }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
     if (field === "pricePerUnit" || field === "costPrice") {
       const unitPrice =
-        parseFloat(field === "pricePerUnit" ? value : formData.pricePerUnit) ||
-        0;
+        parseFloat(
+          field === "pricePerUnit" ? sanitizedValue : formData.pricePerUnit
+        ) || 0;
       const costPrice =
-        parseFloat(field === "costPrice" ? value : formData.costPrice) || 0;
+        parseFloat(
+          field === "costPrice" ? sanitizedValue : formData.costPrice
+        ) || 0;
       if (unitPrice > 0) {
         const discount = ((unitPrice - costPrice) / unitPrice) * 100;
         setFormData((prev) => ({ ...prev, discount: discount.toFixed(2) }));
@@ -588,20 +830,43 @@ export default function AddInventoryPage() {
     field: keyof TextileDetails,
     value: string
   ) => {
+    let sanitizedValue = value;
+    if (value !== "" && (field === "gsm" || field === "width")) {
+      sanitizedValue = value.replace(/[^0-9.]/g, "").replace(/\./g, ""); // Integers only
+      const num = parseInt(sanitizedValue);
+      if (isNaN(num) || num < 0) sanitizedValue = "0";
+    }
     setFormData((prev) => ({
       ...prev,
-      textileDetails: { ...prev.textileDetails, [field]: value },
+      textileDetails: { ...prev.textileDetails, [field]: sanitizedValue },
     }));
+    if (errors[`textileDetails.${field}`]) {
+      setErrors((prev) => ({ ...prev, [`textileDetails.${field}`]: "" }));
+    }
   };
 
   const handleSupplierContactChange = (
     field: keyof SupplierContact,
     value: string
   ) => {
+    let sanitizedValue = value;
+    if (field === "phone") {
+      if (!value.startsWith("+92 ")) {
+        sanitizedValue = "+92 ";
+      }
+      let rest = sanitizedValue.slice(4).replace(/[^0-9 ]/g, "");
+      rest = rest.replace(/ {2,}/g, " ");
+      rest = rest.replace(/^(\d{3})\s?(\d{0,7})/, "$1 $2").trimEnd();
+      rest = rest.slice(0, 11);
+      sanitizedValue = "+92 " + rest;
+    }
     setFormData((prev) => ({
       ...prev,
-      supplierContact: { ...prev.supplierContact, [field]: value },
+      supplierContact: { ...prev.supplierContact, [field]: sanitizedValue },
     }));
+    if (errors[`supplierContact.${field}`]) {
+      setErrors((prev) => ({ ...prev, [`supplierContact.${field}`]: "" }));
+    }
   };
 
   const addTag = () => {
@@ -676,32 +941,40 @@ export default function AddInventoryPage() {
   const handleImageUpload = async (files: FileList | null) => {
     if (!files) return;
 
+    // Limit to 10 images
+    const limitedFiles = Array.from(files).slice(0, 10);
+
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
-      const newImages: string[] = [];
+      const newImageFiles: File[] = [];
+      const newImagePreviews: string[] = [];
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      for (let i = 0; i < limitedFiles.length; i++) {
+        const file = limitedFiles[i];
 
+        // Simulate progress
         for (let progress = 0; progress <= 100; progress += 10) {
           setUploadProgress(progress);
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
 
-        const mockImageUrl = `https://via.placeholder.com/400x300?text=${encodeURIComponent(
-          file.name
-        )}`;
-        newImages.push(mockImageUrl);
+        // Store actual file
+        newImageFiles.push(file);
+
+        // Create preview URL
+        const previewUrl = URL.createObjectURL(file);
+        newImagePreviews.push(previewUrl);
       }
 
       setFormData((prev) => ({
         ...prev,
-        images: [...prev.images, ...newImages],
+        imageFiles: [...prev.imageFiles, ...newImageFiles],
+        images: [...prev.images, ...newImagePreviews],
       }));
 
-      toast.success(`${files.length} image(s) uploaded successfully!`);
+      toast.success(`${limitedFiles.length} image(s) uploaded successfully!`);
     } catch (error) {
       toast.error("Failed to upload images");
       console.error("Upload error:", error);
@@ -715,6 +988,7 @@ export default function AddInventoryPage() {
     setFormData((prev) => ({
       ...prev,
       images: prev.images.filter((_, index) => index !== indexToRemove),
+      imageFiles: prev.imageFiles.filter((_, index) => index !== indexToRemove),
     }));
   };
 
@@ -727,14 +1001,58 @@ export default function AddInventoryPage() {
     if (!formData.category) newErrors.category = "Category is required";
     if (!formData.subcategory)
       newErrors.subcategory = "Subcategory is required";
+    if (!formData.materialType)
+      newErrors.materialType = "Material type is required";
     if (!formData.pricePerUnit || parseFloat(formData.pricePerUnit) <= 0)
       newErrors.pricePerUnit = "Valid price is required";
+    if (!formData.costPrice || parseFloat(formData.costPrice) <= 0)
+      newErrors.costPrice = "Valid cost price is required";
     if (!formData.quantity || parseInt(formData.quantity) < 0)
       newErrors.quantity = "Valid quantity is required";
-    if (!formData.textileDetails.color.trim())
-      newErrors["textileDetails.color"] = "Color is required";
+    if (!formData.reorderLevel.trim())
+      newErrors.reorderLevel = "Reorder level is required";
+    if (!formData.minStockLevel.trim())
+      newErrors.minStockLevel = "Min stock level is required";
+    if (!formData.safetyStockLevel.trim())
+      newErrors.safetyStockLevel = "Safety stock level is required";
+    if (!formData.damagedQuantity.trim())
+      newErrors.damagedQuantity = "Damaged quantity is required";
+    if (!formData.shelfLife.trim())
+      newErrors.shelfLife = "Shelf life is required";
+    if (
+      formData.autoReorderEnabled === undefined ||
+      formData.autoReorderEnabled === null
+    )
+      newErrors.autoReorderEnabled = "Auto reorder is required";
+    if (!formData.currency) newErrors.currency = "Currency is required";
+    if (!formData.warehouseLocation)
+      newErrors.warehouseLocation = "Warehouse location is required";
+    if (!formData.qualityGrade)
+      newErrors.qualityGrade = "Quality grade is required";
+    if (!formData.countryOfOrigin.trim())
+      newErrors.countryOfOrigin = "Country of origin is required";
     if (!formData.supplierName.trim())
       newErrors.supplierName = "Supplier name is required";
+    if (!formData.supplierContact.phone.trim())
+      newErrors["supplierContact.phone"] = "Phone is required";
+    if (!formData.supplierContact.email.trim())
+      newErrors["supplierContact.email"] = "Email is required";
+    if (!formData.textileDetails.color.trim())
+      newErrors["textileDetails.color"] = "Color is required";
+    if (!formData.textileDetails.fabricType)
+      newErrors["textileDetails.fabricType"] = "Fabric type is required";
+    if (!formData.textileDetails.composition.trim())
+      newErrors["textileDetails.composition"] = "Composition is required";
+    if (!formData.textileDetails.pattern)
+      newErrors["textileDetails.pattern"] = "Pattern is required";
+    if (!formData.textileDetails.gsm.trim())
+      newErrors["textileDetails.gsm"] = "GSM is required";
+    if (!formData.textileDetails.width.trim())
+      newErrors["textileDetails.width"] = "Width is required";
+    if (!formData.textileDetails.colorCode)
+      newErrors["textileDetails.colorCode"] = "Color code is required";
+    if (formData.images.length === 0)
+      newErrors.images = "At least one product image is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -755,11 +1073,12 @@ export default function AddInventoryPage() {
 
   const resetForm = () => {
     setFormData({
+      // Basic
       name: "",
       description: "",
       category: "",
       subcategory: "",
-      materialType: "Raw Material",
+      materialType: "",
       brand: "",
       textileDetails: {
         fabricType: "",
@@ -768,7 +1087,7 @@ export default function AddInventoryPage() {
         width: "",
         fabricWeight: "",
         color: "",
-        colorCode: "",
+        colorCode: "#000000",
         pattern: "Solid",
         finish: "",
         careInstructions: "",
@@ -780,21 +1099,21 @@ export default function AddInventoryPage() {
       originalPrice: "",
       discount: "",
       quantity: "",
-      reservedQuantity: "0",
-      committedQuantity: "0",
-      damagedQuantity: "0",
+      reservedQuantity: "",
+      committedQuantity: "",
+      damagedQuantity: "",
       minStockLevel: "10",
       reorderLevel: "20",
       reorderQuantity: "50",
       maximumQuantity: "",
-      safetyStockLevel: "15",
+      safetyStockLevel: "",
       unit: "pieces",
       sku: "",
       weight: "",
       dimensions: "",
       tags: [],
       season: "All Season",
-      countryOfOrigin: "",
+      countryOfOrigin: "Pakistan",
       manufacturer: "",
       supplierName: "",
       supplierContact: { phone: "", email: "", address: "" },
@@ -806,7 +1125,7 @@ export default function AddInventoryPage() {
       qualityGrade: "",
       leadTime: "7",
       estimatedDeliveryDays: "7",
-      shelfLife: "",
+      shelfLife: "730",
       images: [],
       notes: "",
       internalCode: "",
@@ -814,7 +1133,15 @@ export default function AddInventoryPage() {
       carbonFootprint: "",
       recycledContent: "",
       autoReorderEnabled: false,
-      isBatchTracked: false,
+      isBatchTracked: true,
+      currency: "PKR",
+      imageFiles: [],
+      warehouseLocation: "",
+      storageLocations: [],
+      specifications: {},
+      suitableFor: [],
+      manufactureDate: new Date().toISOString().split("T")[0], // Today's date
+      expiryDate: "",
     });
     setCurrentStep(1);
     setErrors({});
@@ -829,12 +1156,113 @@ export default function AddInventoryPage() {
     setIsLoading(true);
 
     try {
-      // TODO: API call implementation
-      console.log("Submitting form data:", formData);
-      toast.success("Inventory item added successfully!");
-      router.push("/supplier/inventory");
-    } catch (error) {
-      toast.error("Failed to add inventory item");
+      // Prepare data for API
+      const apiData: InventoryFormData = {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        subcategory: formData.subcategory,
+        materialType: formData.materialType,
+
+        // ADD THESE:
+        isBatchTracked: formData.isBatchTracked,
+        manufactureDate:
+          formData.manufactureDate &&
+          !isNaN(Date.parse(formData.manufactureDate))
+            ? formData.manufactureDate
+            : undefined,
+        expiryDate:
+          formData.expiryDate && !isNaN(Date.parse(formData.expiryDate))
+            ? formData.expiryDate
+            : undefined,
+
+        textileDetails: {
+          fabricType: formData.textileDetails.fabricType,
+          composition: formData.textileDetails.composition,
+          gsm: formData.textileDetails.gsm
+            ? parseInt(formData.textileDetails.gsm)
+            : undefined,
+          width: formData.textileDetails.width
+            ? parseInt(formData.textileDetails.width)
+            : undefined,
+          color: formData.textileDetails.color,
+          colorCode: formData.textileDetails.colorCode,
+          pattern: formData.textileDetails.pattern,
+          finish: formData.textileDetails.finish,
+          careInstructions: formData.textileDetails.careInstructions,
+          shrinkage: formData.textileDetails.shrinkage,
+          washability: formData.textileDetails.washability,
+          fabricWeight: formData.textileDetails.fabricWeight,
+        },
+
+        pricePerUnit: parseFloat(formData.pricePerUnit),
+        costPrice: formData.costPrice
+          ? parseFloat(formData.costPrice)
+          : undefined,
+        currency: formData.currency || "PKR",
+
+        quantity: parseInt(formData.quantity),
+        unit: formData.unit,
+        minStockLevel: parseInt(formData.minStockLevel),
+        reorderLevel: parseInt(formData.reorderLevel),
+        reorderQuantity: parseInt(formData.reorderQuantity),
+
+        sku: formData.sku || `SKU-${Date.now()}`,
+
+        dimensions: formData.dimensions
+          ? {
+              unit: "cm",
+              length: 0,
+              width: 0,
+              height: 0,
+            }
+          : undefined,
+
+        specifications: formData.specifications,
+
+        tags: formData.tags,
+        season: formData.season,
+        countryOfOrigin: formData.countryOfOrigin,
+
+        supplierContact: {
+          phone: formData.supplierContact.phone,
+          email: formData.supplierContact.email,
+          address: formData.supplierContact.address,
+        },
+
+        status: formData.status,
+        certifications: formData.certifications,
+        qualityGrade: formData.qualityGrade,
+
+        warehouseLocation: formData.warehouseLocation,
+        storageLocations: formData.storageLocations,
+        suitableFor: formData.suitableFor,
+
+        images: [], // Will be uploaded
+        damagedQuantity:
+          formData.damagedQuantity !== undefined &&
+          formData.damagedQuantity !== null &&
+          formData.damagedQuantity !== ""
+            ? parseInt(formData.damagedQuantity)
+            : 0,
+      };
+
+      // Call API
+      const response = await createInventory(apiData, formData.imageFiles);
+
+      if (response.success) {
+        toast.success("Inventory item added successfully!");
+
+        // Close the confirmation dialog
+        setIsConfirmOpen(false);
+
+        // Redirect immediately after successful insertion
+        router.push("/supplier/inventory");
+      } else {
+        throw new Error(response.message || "Failed to add inventory");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add inventory item");
       console.error("Error adding inventory:", error);
     } finally {
       setIsLoading(false);
@@ -842,6 +1270,11 @@ export default function AddInventoryPage() {
   };
 
   const nextStep = () => {
+    const stepErrors = validateStep(currentStep);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors(stepErrors);
+      return;
+    }
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }
@@ -855,11 +1288,102 @@ export default function AddInventoryPage() {
 
   const getStepProgress = () => (currentStep / totalSteps) * 100;
 
+  // Add this helper for Selects to match the prompt's usage
+  const handleSelectChange = (field: keyof FormDataType, value: any) => {
+    handleInputChange(field, value);
+  };
+
+  const validateStep = (step: number) => {
+    const newErrors: ErrorsType = {};
+
+    if (step === 1) {
+      if (!formData.name.trim()) newErrors.name = "Item name is required";
+      if (!formData.description.trim())
+        newErrors.description = "Description is required";
+      if (!formData.category) newErrors.category = "Category is required";
+      if (!formData.subcategory)
+        newErrors.subcategory = "Subcategory is required";
+      if (!formData.materialType)
+        newErrors.materialType = "Material type is required";
+    } else if (step === 2) {
+      if (!formData.textileDetails.color.trim())
+        newErrors["textileDetails.color"] = "Color is required";
+      if (!formData.textileDetails.fabricType)
+        newErrors["textileDetails.fabricType"] = "Fabric type is required";
+      if (!formData.textileDetails.composition.trim())
+        newErrors["textileDetails.composition"] = "Composition is required";
+      if (!formData.textileDetails.pattern)
+        newErrors["textileDetails.pattern"] = "Pattern is required";
+      if (!formData.textileDetails.gsm.trim())
+        newErrors["textileDetails.gsm"] = "GSM is required";
+      if (!formData.textileDetails.width.trim())
+        newErrors["textileDetails.width"] = "Width is required";
+      if (!formData.textileDetails.colorCode)
+        newErrors["textileDetails.colorCode"] = "Color code is required";
+    } else if (step === 3) {
+      if (!formData.pricePerUnit || parseFloat(formData.pricePerUnit) <= 0)
+        newErrors.pricePerUnit = "Valid price is required";
+      if (!formData.costPrice || parseFloat(formData.costPrice) <= 0)
+        newErrors.costPrice = "Valid cost price is required";
+      if (!formData.quantity || parseInt(formData.quantity) < 0)
+        newErrors.quantity = "Valid quantity is required";
+      if (!formData.reorderLevel.trim())
+        newErrors.reorderLevel = "Reorder level is required";
+      if (!formData.minStockLevel.trim())
+        newErrors.minStockLevel = "Min stock level is required";
+      if (!formData.safetyStockLevel.trim())
+        newErrors.safetyStockLevel = "Safety stock level is required";
+      if (!formData.damagedQuantity.trim())
+        newErrors.damagedQuantity = "Damaged quantity is required";
+      if (!formData.shelfLife.trim())
+        newErrors.shelfLife = "Shelf life is required";
+      if (
+        formData.autoReorderEnabled === undefined ||
+        formData.autoReorderEnabled === null
+      )
+        newErrors.autoReorderEnabled = "Auto reorder is required";
+      if (!formData.currency) newErrors.currency = "Currency is required";
+      if (!formData.warehouseLocation)
+        newErrors.warehouseLocation = "Warehouse location is required";
+      if (formData.isBatchTracked && !formData.manufactureDate)
+        newErrors.manufactureDate =
+          "Manufacture date is required when batch tracking is enabled";
+    } else if (step === 4) {
+      if (!formData.qualityGrade)
+        newErrors.qualityGrade = "Quality grade is required";
+      if (!formData.countryOfOrigin.trim())
+        newErrors.countryOfOrigin = "Country of origin is required";
+    } else if (step === 5) {
+      if (!formData.supplierName.trim())
+        newErrors.supplierName = "Supplier name is required";
+      if (!formData.supplierContact.phone.trim())
+        newErrors["supplierContact.phone"] = "Phone is required";
+      else if (
+        formData.supplierContact.phone.length !== 15 ||
+        !/^\+92 \d{3} \d{7}$/.test(formData.supplierContact.phone)
+      )
+        newErrors["supplierContact.phone"] =
+          "Please enter a valid phone number";
+      if (!formData.supplierContact.email.trim())
+        newErrors["supplierContact.email"] = "Email is required";
+      else if (
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supplierContact.email)
+      )
+        newErrors["supplierContact.email"] =
+          "Please enter a valid email address";
+    } else if (step === 6) {
+      if (formData.images.length === 0)
+        newErrors.images = "At least one product image is required";
+    }
+
+    return newErrors;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="relative z-10 p-6">
+      <div className="relative z-10 p-4 md:p-6">
         {/* Breadcrumbs */}
-        <Breadcrumb className="mb-6">
+        <Breadcrumb className="mb-4 md:mb-6">
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink href="/supplier">Dashboard</BreadcrumbLink>
@@ -873,21 +1397,21 @@ export default function AddInventoryPage() {
 
         {/* Header */}
         <div
-          className={`transform transition-all duration-700 mb-6 ${
+          className={`transform transition-all duration-700 mb-4 md:mb-6 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
                 Add Inventory Item
               </h1>
-              <p className="text-base text-gray-600 dark:text-gray-400">
+              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
                 Add new textile materials and components to inventory
               </p>
               <div className="flex items-center gap-2 mt-2">
                 <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
-                  <ArchiveBoxIcon className="h-3 w-3 mr-1 text-blue-700 dark:text-blue-400" />
+                  <BuildingStorefrontIcon className="h-3 w-3 mr-1 text-blue-700 dark:text-blue-400" />
                   Inventory Management
                 </Badge>
                 <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 flex items-center gap-1 text-xs rounded-none">
@@ -896,7 +1420,7 @@ export default function AddInventoryPage() {
                 </Badge>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3">
               <Button
                 variant="outline"
                 onClick={resetForm}
@@ -905,15 +1429,6 @@ export default function AddInventoryPage() {
               >
                 <ArrowPathIcon className="h-3 w-3 mr-2" />
                 Reset
-              </Button>
-              <Button
-                variant="outline"
-                onClick={saveAsDraft}
-                size="sm"
-                className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
-              >
-                <DocumentDuplicateIcon className="h-3 w-3 mr-2" />
-                Save Draft
               </Button>
               <Button
                 variant="outline"
@@ -939,17 +1454,17 @@ export default function AddInventoryPage() {
 
         {/* Main Content - Form with Preview */}
         <div
-          className={`grid gap-6 ${showPreview ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1"}`}
+          className={`grid gap-4 md:gap-6 ${showPreview ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1"}`}
         >
           {/* Form Section with Progress Bar */}
           <div className={showPreview ? "lg:col-span-9" : "lg:col-span-12"}>
             {/* Progress Bar - Matches Form Width */}
             <Card
-              className={`${colors.cards.base} transition-all duration-300 rounded-none mb-6 shadow-none`}
+              className={`${colors.cards.base} transition-all duration-300 rounded-none mb-4 md:mb-6 shadow-none`}
             >
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                  <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
                     Step {currentStep} of {totalSteps}
                   </h3>
                   <span className="text-xs text-gray-500 dark:text-gray-500">
@@ -960,30 +1475,51 @@ export default function AddInventoryPage() {
                   value={getStepProgress()}
                   className="h-2 mb-4 rounded-none"
                 />
-                <div className="grid grid-cols-6 gap-3">
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
                   {[
                     { step: 1, title: "Basic Info", icon: DocumentTextIcon },
                     { step: 2, title: "Textile Details", icon: SwatchIcon },
-                    { step: 3, title: "Stock & Pricing", icon: ArchiveBoxIcon },
+                    { step: 3, title: "Stock & Pricing", icon: CubeIcon },
                     { step: 4, title: "Quality", icon: ShieldCheckIcon },
-                    { step: 5, title: "Supplier", icon: DocumentTextIcon },
+                    {
+                      step: 5,
+                      title: "Supplier",
+                      icon: BuildingStorefrontIcon,
+                    },
                     { step: 6, title: "Media", icon: CameraIcon },
                   ].map(({ step, title, icon: Icon }) => {
                     const isSelected = step === currentStep;
+                    const isCompleted = step < currentStep;
+                    const canGoToNext =
+                      step === currentStep + 1 &&
+                      Object.keys(validateStep(currentStep)).length === 0;
+                    const isDisabled = step > currentStep && !canGoToNext;
                     return (
                       <button
                         key={step}
-                        onClick={() => setCurrentStep(step)}
-                        className={`flex items-center gap-2 p-2 rounded-none transition-all cursor-pointer
+                        onClick={() => {
+                          if (step < currentStep) {
+                            setCurrentStep(step);
+                          } else if (step === currentStep + 1) {
+                            const stepErrors = validateStep(currentStep);
+                            if (Object.keys(stepErrors).length === 0) {
+                              setCurrentStep(step);
+                            }
+                          }
+                        }}
+                        disabled={isDisabled}
+                        className={`flex items-center gap-1 md:gap-2 p-2 rounded-none transition-all cursor-pointer text-xs md:text-sm
                           ${
                             isSelected
                               ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
-                              : step < currentStep
+                              : isCompleted
                                 ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                                : "bg-gray-50 dark:bg-gray-900 text-gray-500"
+                                : isDisabled
+                                  ? "bg-gray-50 dark:bg-gray-900 text-gray-400 cursor-not-allowed"
+                                  : "bg-gray-50 dark:bg-gray-900 text-gray-500"
                           }
                           ${
-                            !isSelected
+                            !isSelected && !isDisabled
                               ? "border border-transparent hover:border-black dark:hover:border-white"
                               : ""
                           }
@@ -995,13 +1531,18 @@ export default function AddInventoryPage() {
                         type="button"
                       >
                         <Icon
-                          className={`h-4 w-4 ${
+                          className={`h-3 w-3 md:h-4 md:w-4 ${
                             isSelected
                               ? "text-white dark:text-gray-900"
                               : "text-gray-900 dark:text-gray-100"
                           }`}
                         />
-                        <span className="text-xs font-medium">{title}</span>
+                        <span className="text-xs font-medium hidden md:inline">
+                          {title}
+                        </span>
+                        <span className="text-xs font-medium md:hidden">
+                          {title.split(" ")[0]}
+                        </span>
                       </button>
                     );
                   })}
@@ -1013,28 +1554,30 @@ export default function AddInventoryPage() {
             <Card
               className={`${colors.cards.base} transition-all duration-300 rounded-none shadow-none`}
             >
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 {/* Step 1: Basic Information */}
                 {currentStep === 1 && (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
                         <h3
-                          className={`text-base font-semibold ${colors.texts.primary}`}
+                          className={`text-sm md:text-base font-semibold ${colors.texts.primary}`}
                         >
                           Basic Item Information
                         </h3>
-                        <p className={`text-xs ${colors.texts.secondary}`}>
+                        <p
+                          className={`text-xs md:text-sm ${colors.texts.secondary}`}
+                        >
                           Essential details about the inventory item
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6">
-                      <div className="space-y-2">
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="space-y-1">
                         <Label
                           htmlFor="name"
-                          className={`text-xs font-medium ${colors.texts.accent}`}
+                          className={`text-xs md:text-sm font-medium ${colors.texts.accent}`}
                         >
                           Item Name *
                         </Label>
@@ -1045,25 +1588,27 @@ export default function AddInventoryPage() {
                           onChange={(e) =>
                             handleInputChange("name", e.target.value)
                           }
-                          className={`text-sm h-9 ${colors.inputs.base} ${colors.inputs.focus} transition-colors duration-200 ${
+                          className={`text-sm h-9 md:h-10 ${colors.inputs.base} ${colors.inputs.focus} transition-colors duration-200 ${
                             errors.name ? `border-red-500` : ""
-                          }`}
+                          } rounded-none hover:border-black`}
                         />
-                        {errors.name && (
-                          <p
-                            className={`text-xs ${colors.texts.error} flex items-center gap-1`}
-                          >
-                            <ExclamationCircleIcon className="h-3 w-3" />
-                            {errors.name}
-                          </p>
-                        )}
+                        <div className="min-h-4">
+                          {errors.name && (
+                            <p
+                              className={`text-xs ${colors.texts.error} flex items-center gap-1`}
+                            >
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.name}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
                           <Label
                             htmlFor="category"
-                            className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
                             Category *
                           </Label>
@@ -1075,7 +1620,7 @@ export default function AddInventoryPage() {
                             }}
                           >
                             <SelectTrigger
-                              className={`text-sm h-9 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black dark:hover:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
+                              className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
                                 errors.category
                                   ? "border-red-500"
                                   : "border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white"
@@ -1095,18 +1640,20 @@ export default function AddInventoryPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                          {errors.category && (
-                            <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationCircleIcon className="h-3 w-3" />
-                              {errors.category}
-                            </p>
-                          )}
+                          <div className="min-h-4">
+                            {errors.category && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                {errors.category}
+                              </p>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           <Label
                             htmlFor="subcategory"
-                            className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
                             Subcategory *
                           </Label>
@@ -1118,7 +1665,7 @@ export default function AddInventoryPage() {
                             disabled={!formData.category}
                           >
                             <SelectTrigger
-                              className={`text-sm h-9 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black dark:hover:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
+                              className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
                                 errors.subcategory
                                   ? "border-red-500"
                                   : "border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white"
@@ -1141,30 +1688,36 @@ export default function AddInventoryPage() {
                                 )}
                             </SelectContent>
                           </Select>
-                          {errors.subcategory && (
-                            <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationCircleIcon className="h-3 w-3" />
-                              {errors.subcategory}
-                            </p>
-                          )}
+                          <div className="min-h-4">
+                            {errors.subcategory && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                {errors.subcategory}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
                           <Label
                             htmlFor="materialType"
-                            className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
-                            Material Type
+                            Material Type *
                           </Label>
                           <Select
                             value={formData.materialType}
                             onValueChange={(value) =>
-                              handleInputChange("materialType", value)
+                              handleSelectChange("materialType", value)
                             }
                           >
-                            <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                            <SelectTrigger
+                              className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none hover:border-black ${
+                                errors.materialType ? "border-red-500" : ""
+                              }`}
+                            >
                               <SelectValue placeholder="Select material type" />
                             </SelectTrigger>
                             <SelectContent className="max-h-[300px]">
@@ -1179,12 +1732,20 @@ export default function AddInventoryPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <div className="min-h-4">
+                            {errors.materialType && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                {errors.materialType}
+                              </p>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           <Label
                             htmlFor="unit"
-                            className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
                             Unit *
                           </Label>
@@ -1194,7 +1755,7 @@ export default function AddInventoryPage() {
                               handleInputChange("unit", value)
                             }
                           >
-                            <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                            <SelectTrigger className="text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none hover:border-black">
                               <SelectValue placeholder="Select unit" />
                             </SelectTrigger>
                             <SelectContent className="max-h-[300px]">
@@ -1212,32 +1773,53 @@ export default function AddInventoryPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          SKU (Auto-generated)
+                        </Label>
+                        <Input
+                          placeholder="Auto-generated"
+                          value={formData.sku}
+                          readOnly
+                          className="text-sm h-9 md:h-10 bg-gray-100 dark:bg-gray-800 border rounded-none border-gray-200 dark:border-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
                         <Label
                           htmlFor="description"
-                          className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                         >
                           Item Description *
                         </Label>
-                        <Textarea
-                          id="description"
-                          placeholder="Provide a detailed description of the inventory item..."
-                          value={formData.description}
-                          onChange={(e) =>
-                            handleInputChange("description", e.target.value)
-                          }
-                          maxLength={1000}
-                          rows={8}
-                          className={`text-sm resize-none bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
-                            errors.description
-                              ? "border-red-500"
-                              : "border-gray-200 dark:border-gray-700"
-                          }`}
-                        />
+                        <div className="relative group">
+                          <Textarea
+                            id="description"
+                            placeholder="Provide a detailed description of the inventory item..."
+                            value={formData.description}
+                            onChange={(e) =>
+                              handleInputChange("description", e.target.value)
+                            }
+                            maxLength={1000}
+                            rows={8}
+                            className={`text-sm resize-none bg-white dark:bg-gray-900 border rounded-none group-hover:border-black focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
+                              errors.description
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            }`}
+                          />
+                          <Button
+                            type="button"
+                            className="absolute top-1 right-1 h-8 px-2 bg-transparent text-gray-500 border-none rounded-none flex items-center gap-1 hover:text-black hover:bg-transparent focus-visible:ring-0 active:bg-transparent cursor-pointer"
+                          >
+                            <SparklesIcon className="h-4 w-4" />
+                            Generate
+                          </Button>
+                        </div>
                         <div className="flex justify-between items-center">
                           {errors.description ? (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationCircleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-3 w-3" />
                               {errors.description}
                             </p>
                           ) : (
@@ -1248,13 +1830,49 @@ export default function AddInventoryPage() {
                           </p>
                         </div>
                       </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="internalCode"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Internal Code
+                        </Label>
+                        <Input
+                          id="internalCode"
+                          value={formData.internalCode}
+                          onChange={(e) =>
+                            handleInputChange("internalCode", e.target.value)
+                          }
+                          placeholder="Optional internal tracking code"
+                          className="text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="barcode"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Barcode
+                        </Label>
+                        <Input
+                          id="barcode"
+                          value={formData.barcode}
+                          onChange={(e) =>
+                            handleInputChange("barcode", e.target.value)
+                          }
+                          placeholder="Optional product barcode"
+                          className="text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black"
+                        />
+                      </div>
                     </div>
 
                     <div className="flex justify-end">
                       <Button
                         onClick={nextStep}
                         size="sm"
-                        className={`${colors.buttons.primary} text-xs cursor-pointer h-8 rounded-none transition-all`}
+                        className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all`}
                       >
                         Next Step
                         <ArrowRightIcon className="h-3 w-3 ml-2" />
@@ -1265,21 +1883,21 @@ export default function AddInventoryPage() {
 
                 {/* Step 2: Textile Details */}
                 {currentStep === 2 && (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
                           Textile Details & Properties
                         </h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                           Specific textile characteristics
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                           Color *
                         </Label>
                         <Input
@@ -1288,23 +1906,25 @@ export default function AddInventoryPage() {
                           onChange={(e) =>
                             handleTextileDetailChange("color", e.target.value)
                           }
-                          className={`text-sm h-9 bg-white dark:bg-gray-900 border rounded-none hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 ${
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none hover:border-black focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 ${
                             errors["textileDetails.color"]
                               ? "border-red-500"
                               : "border-gray-200 dark:border-gray-700"
                           }`}
                         />
-                        {errors["textileDetails.color"] && (
-                          <p className="text-xs text-red-500 flex items-center gap-1">
-                            <ExclamationCircleIcon className="h-3 w-3" />
-                            {errors["textileDetails.color"]}
-                          </p>
-                        )}
+                        <div className="min-h-4">
+                          {errors["textileDetails.color"] && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors["textileDetails.color"]}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          Fabric Type
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Fabric Type *
                         </Label>
                         <Select
                           value={formData.textileDetails.fabricType}
@@ -1312,7 +1932,13 @@ export default function AddInventoryPage() {
                             handleTextileDetailChange("fabricType", value)
                           }
                         >
-                          <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white">
+                          <SelectTrigger
+                            className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white hover:border-black ${
+                              errors["textileDetails.fabricType"]
+                                ? "border-red-500"
+                                : ""
+                            }`}
+                          >
                             <SelectValue placeholder="Select fabric type" />
                           </SelectTrigger>
                           <SelectContent className="max-h-[300px]">
@@ -1327,11 +1953,19 @@ export default function AddInventoryPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <div className="min-h-4">
+                          {errors["textileDetails.fabricType"] && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors["textileDetails.fabricType"]}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          Composition
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Composition *
                         </Label>
                         <Input
                           placeholder="e.g., 100% Cotton"
@@ -1342,13 +1976,25 @@ export default function AddInventoryPage() {
                               e.target.value
                             )
                           }
-                          className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white"
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black dark:focus:border-white ${
+                            errors["textileDetails.composition"]
+                              ? "border-red-500"
+                              : ""
+                          }`}
                         />
+                        <div className="min-h-4">
+                          {errors["textileDetails.composition"] && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors["textileDetails.composition"]}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          Pattern
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Pattern *
                         </Label>
                         <Select
                           value={formData.textileDetails.pattern}
@@ -1356,26 +2002,36 @@ export default function AddInventoryPage() {
                             handleTextileDetailChange("pattern", value)
                           }
                         >
-                          <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white">
+                          <SelectTrigger
+                            className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white hover:border-black ${
+                              errors["textileDetails.pattern"]
+                                ? "border-red-500"
+                                : ""
+                            }`}
+                          >
                             <SelectValue placeholder="Select pattern" />
                           </SelectTrigger>
-                          <SelectContent className="max-h-[300px]">
+                          <SelectContent>
                             {patterns.map((pattern) => (
-                              <SelectItem
-                                key={pattern}
-                                value={pattern}
-                                className="text-sm"
-                              >
+                              <SelectItem key={pattern} value={pattern}>
                                 {pattern}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        <div className="min-h-4">
+                          {errors["textileDetails.pattern"] && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors["textileDetails.pattern"]}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          GSM
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          GSM *
                         </Label>
                         <Input
                           type="number"
@@ -1384,13 +2040,24 @@ export default function AddInventoryPage() {
                           onChange={(e) =>
                             handleTextileDetailChange("gsm", e.target.value)
                           }
-                          className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700"
+                          min="0"
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                            errors["textileDetails.gsm"] ? "border-red-500" : ""
+                          }`}
                         />
+                        <div className="min-h-4">
+                          {errors["textileDetails.gsm"] && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors["textileDetails.gsm"]}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          Width (cm)
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Width (cm) *
                         </Label>
                         <Input
                           type="number"
@@ -1399,8 +2066,61 @@ export default function AddInventoryPage() {
                           onChange={(e) =>
                             handleTextileDetailChange("width", e.target.value)
                           }
-                          className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700"
+                          min="0"
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                            errors["textileDetails.width"]
+                              ? "border-red-500"
+                              : ""
+                          }`}
                         />
+                        <div className="min-h-4">
+                          {errors["textileDetails.width"] && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors["textileDetails.width"]}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Add Color Code field */}
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="textileDetails.colorCode"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Color Code *
+                        </Label>
+                        <Input
+                          id="textileDetails.colorCode"
+                          name="textileDetails.colorCode"
+                          type="color"
+                          value={
+                            formData.textileDetails?.colorCode || "#000000"
+                          }
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              textileDetails: {
+                                ...prev.textileDetails,
+                                colorCode: e.target.value,
+                              },
+                            }))
+                          }
+                          className={`rounded-none ${
+                            errors["textileDetails.colorCode"]
+                              ? "border-red-500"
+                              : ""
+                          }`}
+                        />
+                        <div className="min-h-4">
+                          {errors["textileDetails.colorCode"] && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors["textileDetails.colorCode"]}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1409,18 +2129,18 @@ export default function AddInventoryPage() {
                         variant="outline"
                         onClick={prevStep}
                         size="sm"
-                        className="text-xs cursor-pointer h-8 rounded-none"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
                       >
-                        <ArrowLeftIcon className="h-4 w-4 mr-2" />
+                        <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                         Previous
                       </Button>
                       <Button
                         onClick={nextStep}
                         size="sm"
-                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none"
+                        className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all`}
                       >
                         Next Step
-                        <ArrowRightIcon className="h-4 w-4 ml-2" />
+                        <ArrowRightIcon className="h-3 w-3 ml-2" />
                       </Button>
                     </div>
                   </div>
@@ -1428,21 +2148,21 @@ export default function AddInventoryPage() {
 
                 {/* Step 3: Stock & Pricing */}
                 {currentStep === 3 && (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
                           Stock Management & Pricing
                         </h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                        <p className="text-xs md:textsm text-gray-600 dark:text-gray-400">
                           Inventory levels and pricing
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                           Unit Price *
                         </Label>
                         <div className="relative">
@@ -1454,23 +2174,57 @@ export default function AddInventoryPage() {
                             onChange={(e) =>
                               handleInputChange("pricePerUnit", e.target.value)
                             }
-                            className={`text-sm h-9 bg-white dark:bg-gray-900 border rounded-none ${
+                            min="0"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
                               errors.pricePerUnit
                                 ? "border-red-500"
                                 : "border-gray-200 dark:border-gray-700"
-                            }`}
+                            } hover:border-black`}
                           />
                         </div>
-                        {errors.pricePerUnit && (
-                          <p className="text-xs text-red-500 flex items-center gap-1">
-                            <ExclamationCircleIcon className="h-3 w-3" />
-                            {errors.pricePerUnit}
-                          </p>
-                        )}
+                        <div className="min-h-4">
+                          {errors.pricePerUnit && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.pricePerUnit}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Cost Price *
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={formData.costPrice}
+                            onChange={(e) =>
+                              handleInputChange("costPrice", e.target.value)
+                            }
+                            min="0"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors.costPrice
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } hover:border-black`}
+                          />
+                        </div>
+                        <div className="min-h-4">
+                          {errors.costPrice && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.costPrice}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                           Current Quantity *
                         </Label>
                         <Input
@@ -1480,23 +2234,26 @@ export default function AddInventoryPage() {
                           onChange={(e) =>
                             handleInputChange("quantity", e.target.value)
                           }
-                          className={`text-sm h-9 bg-white dark:bg-gray-900 border rounded-none ${
+                          min="0"
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
                             errors.quantity
                               ? "border-red-500"
                               : "border-gray-200 dark:border-gray-700"
-                          }`}
+                          } hover:border-black`}
                         />
-                        {errors.quantity && (
-                          <p className="text-xs text-red-500 flex items-center gap-1">
-                            <ExclamationCircleIcon className="h-3 w-3" />
-                            {errors.quantity}
-                          </p>
-                        )}
+                        <div className="min-h-4">
+                          {errors.quantity && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.quantity}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          Reorder Level
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Reorder Level *
                         </Label>
                         <Input
                           type="number"
@@ -1505,13 +2262,21 @@ export default function AddInventoryPage() {
                           onChange={(e) =>
                             handleInputChange("reorderLevel", e.target.value)
                           }
-                          className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700"
+                          className="text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black"
                         />
+                        <div className="min-h-4">
+                          {errors.reorderLevel && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.reorderLevel}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          Min Stock Level
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Min Stock Level *
                         </Label>
                         <Input
                           type="number"
@@ -1520,28 +2285,422 @@ export default function AddInventoryPage() {
                           onChange={(e) =>
                             handleInputChange("minStockLevel", e.target.value)
                           }
-                          className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700"
+                          min="0"
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                            errors.minStockLevel
+                              ? "border-red-500"
+                              : "border-gray-200 dark:border-gray-700"
+                          } hover:border-black`}
                         />
+                        <div className="min-h-4">
+                          {errors.minStockLevel && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.minStockLevel}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="safetyStockLevel"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Safety Stock Level *
+                        </Label>
+                        <Input
+                          id="safetyStockLevel"
+                          name="safetyStockLevel"
+                          type="number"
+                          value={formData.safetyStockLevel}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "safetyStockLevel",
+                              e.target.value
+                            )
+                          }
+                          min="0"
+                          placeholder="Minimum safety stock"
+                          className={`text-sm h-9 md:h-10 rounded-none ${
+                            errors.safetyStockLevel ? "border-red-500" : ""
+                          } hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.safetyStockLevel && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.safetyStockLevel}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Damaged Quantity *
+                        </Label>
+                        <Input
+                          id="damagedQuantity"
+                          name="damagedQuantity"
+                          type="number"
+                          value={formData.damagedQuantity}
+                          onChange={(e) =>
+                            handleInputChange("damagedQuantity", e.target.value)
+                          }
+                          min="0"
+                          placeholder="0"
+                          className={`text-sm h-9 md:h-10 rounded-none ${
+                            errors.damagedQuantity ? "border-red-500" : ""
+                          } hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.damagedQuantity && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.damagedQuantity}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Shelf Life (Days) *
+                        </Label>
+                        <Input
+                          id="shelfLife"
+                          name="shelfLife"
+                          type="number"
+                          value={formData.shelfLife}
+                          onChange={(e) =>
+                            handleInputChange("shelfLife", e.target.value)
+                          }
+                          min="0"
+                          placeholder="e.g., 730"
+                          className={`text-sm h-9 md:h-10 rounded-none ${
+                            errors.shelfLife ? "border-red-500" : ""
+                          } hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.shelfLife && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.shelfLife}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 md:col-span-2">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Auto Reorder *
+                        </Label>
+                        <Select
+                          value={formData.autoReorderEnabled ? "true" : "false"}
+                          onValueChange={(value) =>
+                            handleSelectChange(
+                              "autoReorderEnabled",
+                              value === "true"
+                            )
+                          }
+                        >
+                          <SelectTrigger
+                            className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
+                              errors.autoReorderEnabled
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } hover:border-black`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">Enabled</SelectItem>
+                            <SelectItem value="false">Disabled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="min-h-4">
+                          {errors.autoReorderEnabled && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.autoReorderEnabled}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex justify-between">
+                    {/* Batch Tracking Fields */}
+                    <div className="space-y-4 mt-4 md:mt-6 p-3 md:p-4 border border-gray-200 dark:border-gray-700 rounded-none">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Batch Tracking
+                        </Label>
+                        <Badge className="bg-blue-100/10 border border-blue-200 text-blue-700 text-xs rounded-none">
+                          {formData.isBatchTracked ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1 md:col-span-2">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Enable Batch Tracking
+                          </Label>
+                          <Select
+                            value={formData.isBatchTracked ? "true" : "false"}
+                            onValueChange={(value) =>
+                              handleSelectChange(
+                                "isBatchTracked",
+                                value === "true"
+                              )
+                            }
+                          >
+                            <SelectTrigger className="text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="true">Yes</SelectItem>
+                              <SelectItem value="false">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {/* Manufacture Date and Expiry Date remain as single columns */}
+                        {formData.isBatchTracked && (
+                          <>
+                            <div className="space-y-1">
+                              <Label
+                                htmlFor="manufactureDate"
+                                className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                              >
+                                Manufacture Date *
+                              </Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "text-sm h-9 md:h-10 w-full justify-start text-left font-normal bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black",
+                                      !formData.manufactureDate &&
+                                        "text-muted-foreground"
+                                    )}
+                                  >
+                                    {formData.manufactureDate ? (
+                                      new Date(
+                                        formData.manufactureDate
+                                      ).toLocaleDateString()
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-auto p-0"
+                                  align="start"
+                                >
+                                  <Calendar
+                                    mode="single"
+                                    selected={
+                                      formData.manufactureDate
+                                        ? new Date(formData.manufactureDate)
+                                        : undefined
+                                    }
+                                    onSelect={(date) => {
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        manufactureDate: date
+                                          ? date.toLocaleDateString("en-CA")
+                                          : "",
+                                        expiryDate: "", // Reset expiry date when manufacture date changes
+                                      }));
+                                    }}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <div className="min-h-4">
+                                {errors.manufactureDate && (
+                                  <p className="text-xs text-red-500 flex items-center gap-1">
+                                    <ExclamationTriangleIcon className="h-3 w-3" />
+                                    {errors.manufactureDate}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label
+                                htmlFor="expiryDate"
+                                className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                              >
+                                Expiry Date (Optional)
+                              </Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "text-sm h-9 md:h-10 w-full justify-start text-left font-normal bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black",
+                                      !formData.expiryDate &&
+                                        "text-muted-foreground"
+                                    )}
+                                  >
+                                    {formData.expiryDate ? (
+                                      new Date(
+                                        formData.expiryDate
+                                      ).toLocaleDateString()
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-auto p-0"
+                                  align="start"
+                                >
+                                  <Calendar
+                                    mode="single"
+                                    selected={
+                                      formData.expiryDate
+                                        ? new Date(formData.expiryDate)
+                                        : undefined
+                                    }
+                                    onSelect={(date) => {
+                                      // Only allow expiry date >= manufacture date
+                                      if (
+                                        formData.manufactureDate &&
+                                        date &&
+                                        new Date(date) <
+                                          new Date(formData.manufactureDate)
+                                      ) {
+                                        toast.error(
+                                          "Expiry date cannot be before manufacture date"
+                                        );
+                                        return;
+                                      }
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        expiryDate: date
+                                          ? date.toLocaleDateString("en-CA")
+                                          : "",
+                                      }));
+                                    }}
+                                    // Optionally, set fromDate to manufactureDate for UI restriction
+                                    fromDate={
+                                      formData.manufactureDate
+                                        ? new Date(formData.manufactureDate)
+                                        : undefined
+                                    }
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Auto-calculated from shelf life if not provided
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Currency *
+                      </Label>
+                      <Select
+                        value={formData.currency}
+                        onValueChange={(value) =>
+                          handleInputChange("currency", value)
+                        }
+                      >
+                        <SelectTrigger
+                          className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
+                            errors.currency
+                              ? "border-red-500"
+                              : "border-gray-200 dark:border-gray-700"
+                          } hover:border-black`}
+                        >
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currencies.map((curr) => (
+                            <SelectItem
+                              key={curr}
+                              value={curr}
+                              className="text-sm"
+                            >
+                              {curr}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="min-h-4">
+                        {errors.currency && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="h-3 w-3" />
+                            {errors.currency}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Warehouse Location *
+                      </Label>
+                      <Select
+                        value={formData.warehouseLocation}
+                        onValueChange={(value) =>
+                          handleInputChange("warehouseLocation", value)
+                        }
+                      >
+                        <SelectTrigger
+                          className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
+                            errors.warehouseLocation
+                              ? "border-red-500"
+                              : "border-gray-200 dark:border-gray-700"
+                          } hover:border-black`}
+                        >
+                          <SelectValue placeholder="Select warehouse location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {warehouseLocations.map((loc) => (
+                            <SelectItem
+                              key={loc}
+                              value={loc}
+                              className="text-sm"
+                            >
+                              {loc}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="min-h-4">
+                        {errors.warehouseLocation && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="h-3 w-3" />
+                            {errors.warehouseLocation}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row justify-between gap-2">
                       <Button
                         variant="outline"
                         onClick={prevStep}
                         size="sm"
-                        className="text-xs cursor-pointer h-8 rounded-none"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
                       >
-                        <ArrowLeftIcon className="h-4 w-4 mr-2" />
+                        <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                         Previous
                       </Button>
                       <Button
                         onClick={nextStep}
                         size="sm"
-                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none"
+                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
                       >
                         Next Step
-                        <ArrowRightIcon className="h-4 w-4 ml-2" />
+                        <ArrowRightIcon className="h-3 w-3 ml-2" />
                       </Button>
                     </div>
                   </div>
@@ -1549,22 +2708,22 @@ export default function AddInventoryPage() {
 
                 {/* Step 4: Quality */}
                 {currentStep === 4 && (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
                           Quality & Compliance
                         </h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                           Certifications and quality information
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          Quality Grade
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Quality Grade *
                         </Label>
                         <Select
                           value={formData.qualityGrade}
@@ -1572,7 +2731,13 @@ export default function AddInventoryPage() {
                             handleInputChange("qualityGrade", value)
                           }
                         >
-                          <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white">
+                          <SelectTrigger
+                            className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
+                              errors.qualityGrade
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } focus:border-black dark:focus:border-white hover:border-black`}
+                          >
                             <SelectValue placeholder="Select quality grade" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1583,11 +2748,19 @@ export default function AddInventoryPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {errors.qualityGrade && (
+                          <div className="min-h-4">
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.qualityGrade}
+                            </p>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          Country of Origin
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Country of Origin *
                         </Label>
                         <Input
                           placeholder="e.g., Pakistan"
@@ -1595,20 +2768,32 @@ export default function AddInventoryPage() {
                           onChange={(e) =>
                             handleInputChange("countryOfOrigin", e.target.value)
                           }
-                          className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700"
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                            errors.countryOfOrigin
+                              ? "border-red-500"
+                              : "border-gray-200 dark:border-gray-700"
+                          } hover:border-black`}
                         />
+                        <div className="min-h-4">
+                          {errors.countryOfOrigin && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.countryOfOrigin}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <Label className="text-xs font-medium">
+                    <div className="space-y-1">
+                      <Label className="text-xs md:text-sm font-medium">
                         Certifications
                       </Label>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                         {certifications.map((cert) => (
                           <label
                             key={cert}
-                            className="flex items-center gap-2 p-3 bg-white/50 dark:bg-gray-800/50 border rounded-none cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                            className="flex items-center gap-2 p-2 md:p-3 bg-white/50 dark:bg-gray-800/50 border rounded-none cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors"
                           >
                             <Checkbox
                               checked={formData.certifications.includes(cert)}
@@ -1631,29 +2816,29 @@ export default function AddInventoryPage() {
                                 }
                               }}
                             />
-                            <span className="text-xs">{cert}</span>
+                            <span className="text-xs md:text-sm">{cert}</span>
                           </label>
                         ))}
                       </div>
                     </div>
 
-                    <div className="flex justify-between">
+                    <div className="flex flex-col sm:flex-row justify-between gap-2">
                       <Button
                         variant="outline"
                         onClick={prevStep}
                         size="sm"
-                        className="text-xs cursor-pointer h-8 rounded-none"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
                       >
-                        <ArrowLeftIcon className="h-4 w-4 mr-2" />
+                        <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                         Previous
                       </Button>
                       <Button
                         onClick={nextStep}
                         size="sm"
-                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none"
+                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
                       >
                         Next Step
-                        <ArrowRightIcon className="h-4 w-4 ml-2" />
+                        <ArrowRightIcon className="h-3 w-3 md:h-4 md:w-4 ml-2" />
                       </Button>
                     </div>
                   </div>
@@ -1661,21 +2846,21 @@ export default function AddInventoryPage() {
 
                 {/* Step 5: Supplier */}
                 {currentStep === 5 && (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
                           Supplier Information
                         </h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                           Supplier details and contact
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                           Supplier Name *
                         </Label>
                         <Input
@@ -1684,27 +2869,29 @@ export default function AddInventoryPage() {
                           onChange={(e) =>
                             handleInputChange("supplierName", e.target.value)
                           }
-                          className={`text-sm h-9 bg-white dark:bg-gray-900 border rounded-none ${
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
                             errors.supplierName
                               ? "border-red-500"
                               : "border-gray-200 dark:border-gray-700"
-                          }`}
+                          } hover:border-black`}
                         />
-                        {errors.supplierName && (
-                          <p className="text-xs text-red-500 flex items-center gap-1">
-                            <ExclamationCircleIcon className="h-3 w-3" />
-                            {errors.supplierName}
-                          </p>
-                        )}
+                        <div className="min-h-4">
+                          {errors.supplierName && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.supplierName}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                            Phone
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Phone *
                           </Label>
                           <Input
-                            placeholder="e.g., +1 234 567 8900"
+                            placeholder="e.g., +92 300 1234567"
                             value={formData.supplierContact.phone}
                             onChange={(e) =>
                               handleSupplierContactChange(
@@ -1712,13 +2899,30 @@ export default function AddInventoryPage() {
                                 e.target.value
                               )
                             }
-                            className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700"
+                            type="tel"
+                            required
+                            maxLength={15}
+                            minLength={15}
+                            pattern="\+92\s\d{3}\s\d{7}"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors["supplierContact.phone"]
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } hover:border-black`}
                           />
+                          <div className="min-h-4">
+                            {errors["supplierContact.phone"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                {errors["supplierContact.phone"]}
+                              </p>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                            Email
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Email *
                           </Label>
                           <Input
                             type="email"
@@ -1730,29 +2934,41 @@ export default function AddInventoryPage() {
                                 e.target.value
                               )
                             }
-                            className="text-sm h-9 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors["supplierContact.email"]
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } hover:border-black`}
                           />
+                          <div className="min-h-4">
+                            {errors["supplierContact.email"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                {errors["supplierContact.email"]}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex justify-between">
+                    <div className="flex flex-col sm:flex-row justify-between gap-2">
                       <Button
                         variant="outline"
                         onClick={prevStep}
                         size="sm"
-                        className="text-xs cursor-pointer h-8 rounded-none"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
                       >
-                        <ArrowLeftIcon className="h-4 w-4 mr-2" />
+                        <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                         Previous
                       </Button>
                       <Button
                         onClick={nextStep}
                         size="sm"
-                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs cursor-pointer h-8 rounded-none"
+                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
                       >
                         Next Step
-                        <ArrowRightIcon className="h-4 w-4 ml-2" />
+                        <ArrowRightIcon className="h-3 w-3 md:h-4 md:w-4 ml-2" />
                       </Button>
                     </div>
                   </div>
@@ -1760,29 +2976,29 @@ export default function AddInventoryPage() {
 
                 {/* Step 6: Media & Final */}
                 {currentStep === 6 && (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
                           Media Upload
                         </h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                           Add images and finalize
                         </p>
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <Label className="text-xs font-medium">
-                        Product Images
+                    <div className="space-y-1">
+                      <Label className="text-xs md:text-sm font-medium">
+                        Product Images *
                       </Label>
-                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-none p-6 bg-white/30 dark:bg-gray-800/30">
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-none p-4 md:p-6 bg-white/30 dark:bg-gray-800/30">
                         <div className="text-center">
-                          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-none mb-3">
+                          <div className="mx-auto h-10 w-10 md:h-12 md:w-12 flex items-center justify-center rounded-none mb-3">
                             {isUploading ? (
-                              <Loader2 className="h-6 w-6 text-gray-900 dark:text-gray-100 animate-spin" />
+                              <Loader2 className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-gray-100 animate-spin" />
                             ) : (
-                              <ArrowUpTrayIcon className="h-6 w-6 text-gray-900 dark:text-gray-100" />
+                              <ArrowUpTrayIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-gray-100" />
                             )}
                           </div>
                           <div className="mb-3">
@@ -1806,7 +3022,7 @@ export default function AddInventoryPage() {
                           />
                           <label
                             htmlFor="image-upload"
-                            className={`inline-flex items-center gap-2 px-4 py-2 ${colors.buttons.primary} text-sm font-medium cursor-pointer rounded-none`}
+                            className={`inline-flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 ${colors.buttons.primary} text-sm font-medium cursor-pointer rounded-none`}
                           >
                             Choose Images
                           </label>
@@ -1814,30 +3030,26 @@ export default function AddInventoryPage() {
                       </div>
 
                       {formData.images.length > 0 && (
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="flex flex-wrap gap-2 mt-4">
                           {formData.images.map((image, index) => (
                             <div
                               key={index}
-                              className="relative group aspect-square bg-gray-100 dark:bg-gray-800 rounded-none overflow-hidden"
+                              className="relative w-20 h-16 md:w-28 md:h-28 bg-gray-100 dark:bg-gray-800 rounded-none overflow-hidden group"
                             >
                               <img
                                 src={image}
                                 alt={`Item ${index + 1}`}
                                 className="w-full h-full object-cover"
                               />
-                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  className="opacity-0 group-hover:opacity-100 rounded-none"
-                                  onClick={() => removeImage(index)}
-                                >
-                                  <XMarkIcon className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <button
+                                type="button"
+                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 rounded-none w-5 h-5 md:w-6 md:h-6 p-0 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white transition-opacity"
+                                onClick={() => removeImage(index)}
+                              >
+                                <XMarkIcon className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                              </button>
                               {index === 0 && (
-                                <Badge className="absolute top-2 left-2 bg-blue-100/10 text-blue-700 text-xs rounded-none">
+                                <Badge className="absolute top-1 left-1 bg-blue-100/10 text-blue-700 text-xs rounded-none px-1 py-0 text-[10px]">
                                   Main
                                 </Badge>
                               )}
@@ -1845,23 +3057,32 @@ export default function AddInventoryPage() {
                           ))}
                         </div>
                       )}
+
+                      {errors.images && (
+                        <div className="min-h-4">
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="h-3 w-3" />
+                            {errors.images}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex justify-between">
+                    <div className="flex flex-col sm:flex-row justify-between gap-2">
                       <Button
                         variant="outline"
                         onClick={prevStep}
                         size="sm"
-                        className="text-xs cursor-pointer h-8 rounded-none"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
                       >
-                        <ArrowLeftIcon className="h-4 w-4 mr-2" />
+                        <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                         Previous
                       </Button>
                       <Button
                         onClick={() => setIsConfirmOpen(true)}
                         disabled={isLoading}
                         size="sm"
-                        className={`${colors.buttons.primary} text-xs cursor-pointer h-8 rounded-none`}
+                        className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none`}
                       >
                         {isLoading ? (
                           <Loader2 className="h-3 w-3 mr-2 animate-spin" />
@@ -1890,51 +3111,53 @@ export default function AddInventoryPage() {
         {/* Confirmation Dialog */}
         <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
           <DialogContent
-            className={`${colors.backgrounds.modal} ${colors.borders.primary} rounded-none shadow-none`}
+            className={`${colors.backgrounds.modal} ${colors.borders.primary} rounded-none shadow-none max-w-sm md:max-w-md`}
           >
             <DialogHeader>
               <DialogTitle
-                className={`text-base font-bold flex items-center gap-3 ${colors.texts.primary}`}
+                className={`text-sm md:text-base font-bold flex items-center gap-3 ${colors.texts.primary}`}
               >
-                <ArchiveBoxIcon className="h-4 w-4" />
+                <CubeIcon className="h-4 w-4" />
                 Add to Inventory
               </DialogTitle>
               <DialogDescription
-                className={`text-xs ${colors.texts.secondary}`}
+                className={`text-xs md:text-sm ${colors.texts.secondary}`}
               >
                 Are you ready to add this item to the inventory?
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className={`${badgeColors.blue.bg} rounded-none p-4`}>
-                <ul className={`space-y-2 text-xs ${colors.texts.primary}`}>
+              <div className={`${badgeColors.blue.bg} rounded-none p-3 md:p-4`}>
+                <ul
+                  className={`space-y-2 text-xs md:text-sm ${colors.texts.primary}`}
+                >
                   <li className="flex items-center gap-2">
                     <CheckCircleIcon
-                      className={`h-4 w-4 ${colors.texts.success}`}
+                      className={`h-3 w-3 md:h-4 md:w-4 ${colors.texts.success}`}
                     />
                     Create inventory record on blockchain
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircleIcon
-                      className={`h-4 w-4 ${colors.texts.success}`}
+                      className={`h-3 w-3 md:h-4 md:w-4 ${colors.texts.success}`}
                     />
                     Store item images securely
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircleIcon
-                      className={`h-4 w-4 ${colors.texts.success}`}
+                      className={`h-3 w-3 md:h-4 md:w-4 ${colors.texts.success}`}
                     />
                     Enable stock tracking
                   </li>
                 </ul>
               </div>
             </div>
-            <DialogFooter className="gap-3">
+            <DialogFooter className="gap-2 md:gap-3">
               <Button
                 variant="outline"
                 onClick={() => setIsConfirmOpen(false)}
                 size="sm"
-                className={`text-xs cursor-pointer h-8 ${colors.buttons.outline} shadow-none hover:shadow-none`}
+                className={`text-xs md:text-sm cursor-pointer h-8 md:h-9 ${colors.buttons.outline} shadow-none hover:shadow-none rounded-none`}
               >
                 Cancel
               </Button>
@@ -1942,7 +3165,7 @@ export default function AddInventoryPage() {
                 onClick={handleSubmit}
                 disabled={isLoading}
                 size="sm"
-                className={`${colors.buttons.primary} text-xs cursor-pointer h-8 rounded-none shadow-none hover:shadow-none`}
+                className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none shadow-none hover:shadow-none`}
               >
                 {isLoading ? (
                   <Loader2 className="h-3 w-3 mr-2 animate-spin" />
