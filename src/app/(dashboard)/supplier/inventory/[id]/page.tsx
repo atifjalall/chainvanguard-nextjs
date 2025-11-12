@@ -298,7 +298,7 @@ export default function InventoryDetailPage() {
               </p>
               <div className="flex items-center gap-2">
                 <Badge
-                  className={`${badgeColors[stockStatus.color].bg} ${badgeColors[stockStatus.color].border} ${badgeColors[stockStatus.color].text} text-xs rounded-none`}
+                className={`${badgeColors[stockStatus.color as keyof typeof badgeColors].bg} ${badgeColors[stockStatus.color as keyof typeof badgeColors].border} ${badgeColors[stockStatus.color as keyof typeof badgeColors].text} text-xs rounded-none`}
                 >
                   {stockStatus.label}
                 </Badge>
