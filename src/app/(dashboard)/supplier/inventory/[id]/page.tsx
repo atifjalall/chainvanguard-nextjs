@@ -220,7 +220,7 @@ export default function InventoryDetailPage() {
     setCurrentImageIndex((prev) =>
       prev === inventoryItem.images.length - 1 ? 0 : prev + 1
     );
-  };
+  }; 
 
   const prevImage = () => {
     if (!inventoryItem) return;
