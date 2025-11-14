@@ -40,20 +40,13 @@ import {
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
   TruckIcon,
-  CubeIcon,
-  BuildingOffice2Icon,
   ArrowDownTrayIcon,
   ArrowPathIcon,
   GlobeAltIcon,
   TagIcon,
   ClockIcon,
-  TrophyIcon,
-  BoltIcon,
   ChartBarIcon,
-  ChartPieIcon,
-  BuildingLibraryIcon,
   ShieldCheckIcon,
-  SparklesIcon,
   UsersIcon,
   BuildingStorefrontIcon,
   PlusIcon,
@@ -62,6 +55,7 @@ import {
   CheckBadgeIcon,
   AdjustmentsHorizontalIcon,
   UserGroupIcon,
+  CubeIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
@@ -75,6 +69,14 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import supplierAnalyticsApi, {
+  SupplyData,
+  ProductSupplyPerformance,
+  VendorData,
+  CategoryData,
+  AnalyticsMetrics,
+  SupplierAnalyticsResponse,
+} from "@/lib/api/supplier.analytics.api";
 
 const RsIcon = () => (
   <svg
@@ -106,280 +108,6 @@ const RsIcon = () => (
   </svg>
 );
 
-// Supplier analytics data interfaces
-interface SupplyData {
-  date: string;
-  revenue: number;
-  orders: number;
-  vendors: number;
-  avgOrderValue: number;
-  inventoryValue: number;
-}
-
-interface ProductSupplyPerformance {
-  id: string;
-  name: string;
-  category: string;
-  revenue: number;
-  orders: number;
-  totalSupplied: number;
-  avgOrderSize: number;
-  stock: number;
-}
-
-interface VendorData {
-  name: string;
-  value: number;
-  percentage: number;
-  color: string;
-  orders: number;
-}
-
-interface CategoryData {
-  name: string;
-  value: number;
-  percentage: number;
-  color: string;
-}
-
-// Mock supplier analytics data
-const mockSupplyData: SupplyData[] = [
-  {
-    date: "2025-08-01",
-    revenue: 15250,
-    orders: 12,
-    vendors: 8,
-    avgOrderValue: 1270.83,
-    inventoryValue: 125000,
-  },
-  {
-    date: "2025-08-02",
-    revenue: 18900,
-    orders: 15,
-    vendors: 10,
-    avgOrderValue: 1260.0,
-    inventoryValue: 127000,
-  },
-  {
-    date: "2025-08-03",
-    revenue: 22400,
-    orders: 18,
-    vendors: 12,
-    avgOrderValue: 1244.44,
-    inventoryValue: 124000,
-  },
-  {
-    date: "2025-08-04",
-    revenue: 16800,
-    orders: 14,
-    vendors: 9,
-    avgOrderValue: 1200.0,
-    inventoryValue: 123000,
-  },
-  {
-    date: "2025-08-05",
-    revenue: 28750,
-    orders: 23,
-    vendors: 15,
-    avgOrderValue: 1250.0,
-    inventoryValue: 128000,
-  },
-  {
-    date: "2025-08-06",
-    revenue: 21400,
-    orders: 17,
-    vendors: 11,
-    avgOrderValue: 1258.82,
-    inventoryValue: 126000,
-  },
-  {
-    date: "2025-08-07",
-    revenue: 25600,
-    orders: 20,
-    vendors: 13,
-    avgOrderValue: 1280.0,
-    inventoryValue: 129000,
-  },
-  {
-    date: "2025-08-08",
-    revenue: 31200,
-    orders: 25,
-    vendors: 16,
-    avgOrderValue: 1248.0,
-    inventoryValue: 131000,
-  },
-  {
-    date: "2025-08-09",
-    revenue: 19600,
-    orders: 16,
-    vendors: 10,
-    avgOrderValue: 1225.0,
-    inventoryValue: 130000,
-  },
-  {
-    date: "2025-08-10",
-    revenue: 27300,
-    orders: 21,
-    vendors: 14,
-    avgOrderValue: 1300.0,
-    inventoryValue: 132000,
-  },
-  {
-    date: "2025-08-11",
-    revenue: 34500,
-    orders: 27,
-    vendors: 18,
-    avgOrderValue: 1277.78,
-    inventoryValue: 133000,
-  },
-  {
-    date: "2025-08-12",
-    revenue: 23800,
-    orders: 19,
-    vendors: 12,
-    avgOrderValue: 1252.63,
-    inventoryValue: 131000,
-  },
-  {
-    date: "2025-08-13",
-    revenue: 29400,
-    orders: 23,
-    vendors: 15,
-    avgOrderValue: 1278.26,
-    inventoryValue: 134000,
-  },
-  {
-    date: "2025-08-14",
-    revenue: 36700,
-    orders: 29,
-    vendors: 19,
-    avgOrderValue: 1265.52,
-    inventoryValue: 136000,
-  },
-  {
-    date: "2025-08-15",
-    revenue: 32100,
-    orders: 25,
-    vendors: 16,
-    avgOrderValue: 1284.0,
-    inventoryValue: 135000,
-  },
-  {
-    date: "2025-08-16",
-    revenue: 28900,
-    orders: 22,
-    vendors: 14,
-    avgOrderValue: 1313.64,
-    inventoryValue: 137000,
-  },
-];
-
-const mockProductSupplyPerformance: ProductSupplyPerformance[] = [
-  {
-    id: "1",
-    name: "Industrial Steel Rods",
-    category: "Raw Materials",
-    revenue: 89500,
-    orders: 45,
-    totalSupplied: 2250,
-    avgOrderSize: 50,
-    stock: 500,
-  },
-  {
-    id: "2",
-    name: "Organic Cotton Fabric",
-    category: "Textiles & Fabrics",
-    revenue: 62000,
-    orders: 38,
-    totalSupplied: 4960,
-    avgOrderSize: 130,
-    stock: 2000,
-  },
-  {
-    id: "3",
-    name: "Electronic Circuit Boards",
-    category: "Electronics Components",
-    revenue: 71500,
-    orders: 28,
-    totalSupplied: 795,
-    avgOrderSize: 28,
-    stock: 150,
-  },
-  {
-    id: "4",
-    name: "Chemical Catalysts",
-    category: "Chemical Products",
-    revenue: 45200,
-    orders: 22,
-    totalSupplied: 550,
-    avgOrderSize: 25,
-    stock: 120,
-  },
-  {
-    id: "5",
-    name: "Precision Machine Parts",
-    category: "Machinery & Equipment",
-    revenue: 53800,
-    orders: 19,
-    totalSupplied: 285,
-    avgOrderSize: 15,
-    stock: 85,
-  },
-];
-
-const mockVendorData: VendorData[] = [
-  {
-    name: "TechVendor Pro",
-    value: 125000,
-    percentage: 32.1,
-    color: "#3B82F6",
-    orders: 85,
-  },
-  {
-    name: "Fashion Hub",
-    value: 98000,
-    percentage: 25.2,
-    color: "#10B981",
-    orders: 62,
-  },
-  {
-    name: "Industrial Solutions",
-    value: 87000,
-    percentage: 22.4,
-    color: "#F59E0B",
-    orders: 54,
-  },
-  {
-    name: "Manufacturing Corp",
-    value: 79000,
-    percentage: 20.3,
-    color: "#EF4444",
-    orders: 48,
-  },
-];
-
-const mockCategoryData: CategoryData[] = [
-  { name: "Raw Materials", value: 158000, percentage: 42.5, color: "#3B82F6" },
-  {
-    name: "Electronics Components",
-    value: 89000,
-    percentage: 23.9,
-    color: "#10B981",
-  },
-  {
-    name: "Textiles & Fabrics",
-    value: 76000,
-    percentage: 20.4,
-    color: "#F59E0B",
-  },
-  {
-    name: "Chemical Products",
-    value: 49000,
-    percentage: 13.2,
-    color: "#EF4444",
-  },
-];
-
 const timeRangeOptions = [
   { value: "7d", label: "Last 7 Days" },
   { value: "30d", label: "Last 30 Days" },
@@ -390,14 +118,32 @@ const timeRangeOptions = [
 export default function SupplierAnalyticsPage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [timeRange, setTimeRange] = useState("30d");
+  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">(
+    "30d"
+  );
   const [selectedMetric, setSelectedMetric] = useState<
     "revenue" | "orders" | "vendors"
   >("revenue");
   const [isVisible, setIsVisible] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedTab, setSelectedTab] = useState("supply");
-  const [searchTerm, setSearchTerm] = useState("");
+
+  // State for real data
+  const [analyticsData, setAnalyticsData] =
+    useState<SupplierAnalyticsResponse | null>(null);
+  const [supplyData, setSupplyData] = useState<SupplyData[]>([]);
+  const [productPerformance, setProductPerformance] = useState<
+    ProductSupplyPerformance[]
+  >([]);
+  const [vendorData, setVendorData] = useState<VendorData[]>([]);
+  const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
+  const [metrics, setMetrics] = useState<AnalyticsMetrics>({
+    revenue: { value: 0, growth: 0 },
+    orders: { value: 0, growth: 0 },
+    vendors: { value: 0, growth: 0 },
+    avgOrderValue: { value: 0, growth: 0 },
+    inventoryValue: { value: 0, growth: 0 },
+  });
 
   // Check for dark mode
   useEffect(() => {
@@ -493,45 +239,57 @@ export default function SupplierAnalyticsPage() {
   const loadAnalytics = async () => {
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    } catch (error) {
-      toast.error("Failed to load supplier analytics");
+      console.log("🔄 Loading supplier analytics...");
+
+      // Fetch main analytics data
+      const data = await supplierAnalyticsApi.getAnalytics(timeRange);
+      setAnalyticsData(data);
+
+      // Transform data for charts
+      const transformedSupplyData =
+        supplierAnalyticsApi.transformToSupplyData(data);
+      setSupplyData(transformedSupplyData);
+
+      // Transform vendor data
+      const transformedVendorData =
+        supplierAnalyticsApi.transformVendorData(data);
+      setVendorData(transformedVendorData);
+
+      // Transform category data
+      const transformedCategoryData =
+        supplierAnalyticsApi.transformCategoryData(data);
+      setCategoryData(transformedCategoryData);
+
+      // Get top products
+      const topProducts = data.analytics.topProducts || [];
+      const transformedProducts = topProducts.map((item: any) => ({
+        id: item._id,
+        name: item.name,
+        category: item.category || "Uncategorized",
+        revenue: item.revenue,
+        orders: item.orderCount,
+        totalSupplied: item.totalSupplied,
+        avgOrderSize: Math.round(item.avgOrderSize),
+        stock: item.currentStock,
+        image: item.image || undefined,
+      }));
+      setProductPerformance(transformedProducts);
+      // Calculate metrics with growth
+      const calculatedMetrics = await supplierAnalyticsApi.calculateMetrics(
+        data,
+        timeRange
+      );
+      setMetrics(calculatedMetrics);
+
+      console.log("✅ Analytics loaded successfully");
+      toast.success("Analytics loaded successfully");
+    } catch (error: any) {
+      console.error("❌ Failed to load supplier analytics:", error);
+      toast.error(error.message || "Failed to load analytics");
     } finally {
       setIsLoading(false);
     }
   };
-
-  const currentPeriodData = useMemo(() => {
-    const totalRevenue = mockSupplyData.reduce(
-      (sum, day) => sum + day.revenue,
-      0
-    );
-    const totalOrders = mockSupplyData.reduce(
-      (sum, day) => sum + day.orders,
-      0
-    );
-    const totalVendors =
-      mockSupplyData.reduce((sum, day) => sum + day.vendors, 0) /
-      mockSupplyData.length;
-    const avgOrderValue = totalRevenue / totalOrders;
-    const avgInventoryValue =
-      mockSupplyData.reduce((sum, day) => sum + day.inventoryValue, 0) /
-      mockSupplyData.length;
-
-    const revenueGrowth = 18.7;
-    const ordersGrowth = 14.2;
-    const vendorsGrowth = 22.1;
-    const aovGrowth = 5.3;
-    const inventoryGrowth = 8.9;
-
-    return {
-      revenue: { value: totalRevenue, growth: revenueGrowth },
-      orders: { value: totalOrders, growth: ordersGrowth },
-      vendors: { value: Math.round(totalVendors), growth: vendorsGrowth },
-      avgOrderValue: { value: avgOrderValue, growth: aovGrowth },
-      inventoryValue: { value: avgInventoryValue, growth: inventoryGrowth },
-    };
-  }, [timeRange]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
@@ -584,16 +342,12 @@ export default function SupplierAnalyticsPage() {
     growth,
     icon: Icon,
     formatter = (val: number) => val.toString(),
-    gradient,
-    bgGradient,
   }: {
     title: string;
     value: number;
     growth: number;
     icon: any;
     formatter?: (val: number) => string;
-    gradient: string;
-    bgGradient: string;
   }) => (
     <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300 hover:scale-[1.02] rounded-none !shadow-none hover:!shadow-none">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -631,6 +385,16 @@ export default function SupplierAnalyticsPage() {
     </Card>
   );
 
+  const handleExport = async () => {
+    try {
+      toast.info("Exporting analytics data...");
+      await supplierAnalyticsApi.exportAnalytics("json", "revenue", timeRange);
+      toast.success("Analytics exported successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to export analytics");
+    }
+  };
+
   if (isLoading) {
     return <SupplierInsightsSkeleton />;
   }
@@ -651,6 +415,7 @@ export default function SupplierAnalyticsPage() {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
       {/* Header */}
       <div
         className={`transform transition-all duration-700 ${
@@ -685,7 +450,10 @@ export default function SupplierAnalyticsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Select value={timeRange} onValueChange={setTimeRange}>
+            <Select
+              value={timeRange}
+              onValueChange={(value: any) => setTimeRange(value)}
+            >
               <SelectTrigger
                 className={`w-40 h-10 ${colors.borders.primary} ${colors.backgrounds.primary} text-xs rounded-none`}
               >
@@ -710,6 +478,7 @@ export default function SupplierAnalyticsPage() {
             <Button
               variant="outline"
               className={`flex items-center gap-2 text-xs ${colors.buttons.outline} rounded-none`}
+              onClick={handleExport}
             >
               <ArrowDownTrayIcon
                 className={`h-4 w-4 ${colors.icons.primary}`}
@@ -727,52 +496,39 @@ export default function SupplierAnalyticsPage() {
         }`}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          {[
-            {
-              title: "Total Revenue",
-              value: currentPeriodData.revenue.value,
-              growth: currentPeriodData.revenue.growth,
-              icon: RsIcon,
-              formatter: formatCurrency,
-            },
-            {
-              title: "Supply Orders",
-              value: currentPeriodData.orders.value,
-              growth: currentPeriodData.orders.growth,
-              icon: TruckIcon,
-            },
-            {
-              title: "Active Vendors",
-              value: currentPeriodData.vendors.value,
-              growth: currentPeriodData.vendors.growth,
-              icon: UsersIcon,
-            },
-            {
-              title: "Avg Order Value",
-              value: currentPeriodData.avgOrderValue.value,
-              growth: currentPeriodData.avgOrderValue.growth,
-              icon: TagIcon,
-              formatter: formatCurrency,
-            },
-            {
-              title: "Inventory Value",
-              value: currentPeriodData.inventoryValue.value,
-              growth: currentPeriodData.inventoryValue.growth,
-              icon: BuildingStorefrontIcon,
-              formatter: formatCurrency,
-            },
-          ].map((stat, index) => (
-            <MetricCard
-              key={index}
-              title={stat.title}
-              value={stat.value}
-              growth={stat.growth}
-              icon={stat.icon}
-              formatter={stat.formatter}
-              gradient={""}
-              bgGradient={""}
-            />
-          ))}
+          <MetricCard
+            title="Total Revenue"
+            value={metrics.revenue.value}
+            growth={metrics.revenue.growth}
+            icon={RsIcon}
+            formatter={formatCurrency}
+          />
+          <MetricCard
+            title="Supply Orders"
+            value={metrics.orders.value}
+            growth={metrics.orders.growth}
+            icon={TruckIcon}
+          />
+          <MetricCard
+            title="Active Vendors"
+            value={metrics.vendors.value}
+            growth={metrics.vendors.growth}
+            icon={UsersIcon}
+          />
+          <MetricCard
+            title="Avg Order Value"
+            value={metrics.avgOrderValue.value}
+            growth={metrics.avgOrderValue.growth}
+            icon={TagIcon}
+            formatter={formatCurrency}
+          />
+          <MetricCard
+            title="Inventory Value"
+            value={metrics.inventoryValue.value}
+            growth={metrics.inventoryValue.growth}
+            icon={BuildingStorefrontIcon}
+            formatter={formatCurrency}
+          />
         </div>
       </div>
 
@@ -782,7 +538,11 @@ export default function SupplierAnalyticsPage() {
           isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
         }`}
       >
-        <Tabs defaultValue="supply">
+        <Tabs
+          defaultValue="supply"
+          value={selectedTab}
+          onValueChange={setSelectedTab}
+        >
           <TabsList
             className={`flex w-full max-w-2xl border ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto mb-6`}
           >
@@ -793,7 +553,6 @@ export default function SupplierAnalyticsPage() {
                   ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
                   : `${colors.texts.secondary} hover:${colors.texts.primary}`
               } flex items-center gap-2 justify-center`}
-              onClick={() => setSelectedTab("supply")}
             >
               <ArrowTrendingUpIcon
                 className={`h-4 w-4 ${colors.icons.primary}`}
@@ -807,10 +566,9 @@ export default function SupplierAnalyticsPage() {
                   ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
                   : `${colors.texts.secondary} hover:${colors.texts.primary}`
               } flex items-center gap-2 justify-center`}
-              onClick={() => setSelectedTab("products")}
             >
               <CubeIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-              Products
+              Inventory
             </TabsTrigger>
             <TabsTrigger
               value="vendors"
@@ -819,7 +577,6 @@ export default function SupplierAnalyticsPage() {
                   ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
                   : `${colors.texts.secondary} hover:${colors.texts.primary}`
               } flex items-center gap-2 justify-center`}
-              onClick={() => setSelectedTab("vendors")}
             >
               <UsersIcon className={`h-4 w-4 ${colors.icons.primary}`} />
               Vendors
@@ -831,7 +588,6 @@ export default function SupplierAnalyticsPage() {
                   ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
                   : `${colors.texts.secondary} hover:${colors.texts.primary}`
               } flex items-center gap-2 justify-center`}
-              onClick={() => setSelectedTab("performance")}
             >
               <ChartBarIcon className={`h-4 w-4 ${colors.icons.primary}`} />
               Performance
@@ -874,7 +630,7 @@ export default function SupplierAnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={mockSupplyData}>
+                    <AreaChart data={supplyData}>
                       <defs>
                         <linearGradient
                           id="colorSupplyRevenue"
@@ -939,7 +695,7 @@ export default function SupplierAnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={mockSupplyData}>
+                    <LineChart data={supplyData}>
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke={getGridColor()}
@@ -1004,7 +760,7 @@ export default function SupplierAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={mockSupplyData}>
+                  <BarChart data={supplyData}>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       stroke={getGridColor()}
@@ -1034,81 +790,79 @@ export default function SupplierAnalyticsPage() {
             <Card className={`${colors.cards.base} rounded-none`}>
               <CardHeader>
                 <CardTitle className={`text-base ${colors.texts.primary}`}>
-                  Top Supply Products
+                  Top Supply Inventory
                 </CardTitle>
                 <CardDescription
                   className={`text-sm ${colors.texts.secondary}`}
                 >
-                  Supply products ranked by revenue and performance metrics
+                  Supply Inventory ranked by revenue and performance metrics
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockProductSupplyPerformance.map((product, index) => (
-                    <div
-                      key={product.id}
-                      className="group flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-none bg-white/50 dark:bg-gray-900/50 backdrop-blur hover:bg-white/70 dark:hover:bg-gray-900/70 transition-all duration-300"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`w-10 h-10 rounded-none flex items-center justify-center text-sm font-bold text-white bg-gray-500`}
-                        >
-                          {index + 1}
+                {productPerformance.length > 0 ? (
+                  <div className="space-y-4">
+                    {productPerformance.map((product, index) => (
+                      <div
+                        key={product.id}
+                        className="group flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-none bg-white/50 dark:bg-gray-900/50 backdrop-blur hover:bg-white/70 dark:hover:bg-gray-900/70 transition-all duration-300"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`w-10 h-10 rounded-none flex items-center justify-center text-sm font-bold text-white bg-gray-500`}
+                          >
+                            {index + 1}
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                              {product.name}
+                            </h4>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                              {product.category}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                            {product.name}
-                          </h4>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            {product.category}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-5 gap-6 text-right">
-                        <div>
-                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                            {formatCurrency(product.revenue)}
-                          </p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            Revenue
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                            {product.orders}
-                          </p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            Orders
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                            {product.totalSupplied}
-                          </p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            Total Supplied
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {product.avgOrderSize}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Avg Order Size
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {product.stock}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Current Stock
-                          </p>
+                        <div className="grid grid-cols-4 gap-6 text-right">
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                              {formatCurrency(product.revenue)}
+                            </p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                              Revenue
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                              {product.totalSupplied}
+                            </p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                              Total Supplied
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {product.avgOrderSize || 0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Avg Order Size
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {product.stock}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Current Stock
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No product data available
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -1122,32 +876,38 @@ export default function SupplierAnalyticsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={mockCategoryData} layout="horizontal">
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
-                    />
-                    <XAxis
-                      type="number"
-                      stroke="hsl(var(--muted-foreground))"
-                    />
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      width={150}
-                      stroke="hsl(var(--muted-foreground))"
-                    />
-                    <Tooltip
-                      formatter={(value: any) => [
-                        formatCurrency(value),
-                        "Revenue",
-                      ]}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
-                    />
-                    <Bar dataKey="value" fill="#3B82F6" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {categoryData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={categoryData} layout="horizontal">
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="hsl(var(--border))"
+                      />
+                      <XAxis
+                        type="number"
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        width={150}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <Tooltip
+                        formatter={(value: any) => [
+                          formatCurrency(value),
+                          "Revenue",
+                        ]}
+                        labelStyle={{ color: "hsl(var(--foreground))" }}
+                      />
+                      <Bar dataKey="value" fill="#3B82F6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No category data available
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1164,30 +924,36 @@ export default function SupplierAnalyticsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={mockVendorData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={120}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {mockVendorData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: any) => [
-                          formatCurrency(value),
-                          "Revenue",
-                        ]}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {vendorData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={vendorData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={120}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {vendorData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: any) => [
+                            formatCurrency(value),
+                            "Revenue",
+                          ]}
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No vendor data available
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1201,121 +967,54 @@ export default function SupplierAnalyticsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {mockVendorData.map((vendor, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                  {vendorData.length > 0 ? (
+                    <div className="space-y-4">
+                      {vendorData.map((vendor, index) => (
+                        <div key={index} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: vendor.color }}
+                              />
+                              <span className="font-medium text-foreground">
+                                {vendor.name}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-foreground">
+                                {formatCurrency(vendor.value)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {vendor.orders} orders •{" "}
+                                {vendor.percentage.toFixed(1)}%
+                              </p>
+                            </div>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
                             <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: vendor.color }}
+                              className="h-2 rounded-full transition-all duration-300"
+                              style={{
+                                width: `${vendor.percentage}%`,
+                                backgroundColor: vendor.color,
+                              }}
                             />
-                            <span className="font-medium text-foreground">
-                              {vendor.name}
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium text-foreground">
-                              {formatCurrency(vendor.value)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {vendor.orders} orders • {vendor.percentage}%
-                            </p>
                           </div>
                         </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div
-                            className="h-2 rounded-full transition-all duration-300"
-                            style={{
-                              width: `${vendor.percentage}%`,
-                              backgroundColor: vendor.color,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No vendor data available
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="performance" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className={`${colors.cards.base} rounded-none`}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-foreground">
-                    Order Fulfillment
-                  </CardTitle>
-                  <ClipboardDocumentCheckIcon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg font-bold text-foreground">98.5%</div>
-                  <p className="text-xs text-muted-foreground">
-                    <span className="text-green-600 dark:text-green-400">
-                      +1.2%
-                    </span>{" "}
-                    vs last period
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className={`${colors.cards.base} rounded-none`}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-foreground">
-                    Vendor Satisfaction
-                  </CardTitle>
-                  <FaceSmileIcon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg font-bold text-foreground">4.8</div>
-                  <p className="text-xs text-muted-foreground">
-                    <span className="text-green-600 dark:text-green-400">
-                      +0.2
-                    </span>{" "}
-                    vs last period
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className={`${colors.cards.base} rounded-none`}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-foreground">
-                    Lead Time
-                  </CardTitle>
-                  <ClockIcon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg font-bold text-foreground">3.2d</div>
-                  <p className="text-xs text-muted-foreground">
-                    <span className="text-green-600 dark:text-green-400">
-                      -0.5d
-                    </span>{" "}
-                    vs last period
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className={`${colors.cards.base} rounded-none`}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-foreground">
-                    Quality Score
-                  </CardTitle>
-                  <CheckBadgeIcon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg font-bold text-foreground">96.8%</div>
-                  <p className="text-xs text-muted-foreground">
-                    <span className="text-green-600 dark:text-green-400">
-                      +0.8%
-                    </span>{" "}
-                    vs last period
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className={`${colors.cards.base} rounded-none mt-6`}>
+            <Card className={`${colors.cards.base} rounded-none`}>
               <CardHeader>
                 <CardTitle className="text-base text-foreground">
                   Supply Chain Insights
@@ -1326,47 +1025,58 @@ export default function SupplierAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-none">
-                    <ArrowTrendingUpIcon className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-medium text-green-800 dark:text-green-300">
-                        Excellent Supply Performance
-                      </h4>
-                      <p className="text-xs text-green-700 dark:text-green-400">
-                        Your supply revenue increased by 18.7% this month. Raw
-                        Materials category is driving growth with strong vendor
-                        demand.
-                      </p>
+                  {metrics.revenue.growth > 0 && (
+                    <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-none">
+                      <ArrowTrendingUpIcon className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-medium text-green-800 dark:text-green-300">
+                          Excellent Supply Performance
+                        </h4>
+                        <p className="text-xs text-green-700 dark:text-green-400">
+                          Your supply revenue increased by{" "}
+                          {metrics.revenue.growth.toFixed(1)}% this period. Keep
+                          up the great work!
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-none">
-                    <GlobeAltIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                        Expansion Opportunity
-                      </h4>
-                      <p className="text-xs text-blue-700 dark:text-blue-400">
-                        TechVendor Pro accounts for 32% of your revenue.
-                        Consider diversifying your vendor base or expanding
-                        capacity for this high-value relationship.
-                      </p>
+                  {vendorData.length > 0 && vendorData[0].percentage > 30 && (
+                    <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-none">
+                      <GlobeAltIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                          Expansion Opportunity
+                        </h4>
+                        <p className="text-xs text-blue-700 dark:text-blue-400">
+                          {vendorData[0].name} accounts for{" "}
+                          {vendorData[0].percentage.toFixed(1)}% of your
+                          revenue. Consider diversifying your vendor base.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-none">
-                    <AdjustmentsHorizontalIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-                        Inventory Optimization
-                      </h4>
-                      <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                        Electronic Circuit Boards have low stock (150 units) but
-                        high demand. Consider increasing inventory levels to
-                        avoid stockouts.
-                      </p>
-                    </div>
-                  </div>
+                  {analyticsData &&
+                    analyticsData.analytics.inventoryStats.overall
+                      .lowStockItems > 0 && (
+                      <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-none">
+                        <AdjustmentsHorizontalIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                        <div>
+                          <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                            Inventory Optimization
+                          </h4>
+                          <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                            {
+                              analyticsData.analytics.inventoryStats.overall
+                                .lowStockItems
+                            }{" "}
+                            items running low on stock. Consider increasing
+                            inventory levels.
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                   <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-none">
                     <UserGroupIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
@@ -1375,9 +1085,8 @@ export default function SupplierAnalyticsPage() {
                         Vendor Relationships
                       </h4>
                       <p className="text-xs text-blue-700 dark:text-blue-400">
-                        Vendor satisfaction score of 4.8/5 is excellent.
-                        Continue providing quality products and reliable
-                        delivery to maintain strong partnerships.
+                        Maintain strong partnerships by providing quality
+                        inventory and reliable delivery.
                       </p>
                     </div>
                   </div>
@@ -1402,24 +1111,24 @@ export default function SupplierAnalyticsPage() {
                         Quarterly Revenue Goal
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {formatCurrency(currentPeriodData.revenue.value)} /{" "}
+                        {formatCurrency(metrics.revenue.value)} /{" "}
                         {formatCurrency(750000)}
                       </span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
+                    <div className="w-full bg-muted rounded-none h-2">
                       <div
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        className="bg-blue-500 h-2 rounded-none transition-all duration-300"
                         style={{
-                          width: `${Math.min((currentPeriodData.revenue.value / 750000) * 100, 100)}%`,
+                          width: `${Math.min(
+                            (metrics.revenue.value / 750000) * 100,
+                            100
+                          )}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {(
-                        (currentPeriodData.revenue.value / 750000) *
-                        100
-                      ).toFixed(1)}
-                      % completed
+                      {((metrics.revenue.value / 750000) * 100).toFixed(1)}%
+                      completed
                     </p>
                   </div>
 
@@ -1429,22 +1138,23 @@ export default function SupplierAnalyticsPage() {
                         Vendor Partnerships
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {currentPeriodData.vendors.value} / 25
+                        {metrics.vendors.value} / 25
                       </span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
+                    <div className="w-full bg-muted rounded-none h-2">
                       <div
-                        className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                        className="bg-green-500 h-2 rounded-none transition-all duration-300"
                         style={{
-                          width: `${Math.min((currentPeriodData.vendors.value / 25) * 100, 100)}%`,
+                          width: `${Math.min(
+                            (metrics.vendors.value / 25) * 100,
+                            100
+                          )}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {((currentPeriodData.vendors.value / 25) * 100).toFixed(
-                        1
-                      )}
-                      % completed
+                      {((metrics.vendors.value / 25) * 100).toFixed(1)}%
+                      completed
                     </p>
                   </div>
 
@@ -1454,22 +1164,23 @@ export default function SupplierAnalyticsPage() {
                         Supply Orders
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {currentPeriodData.orders.value} / 500
+                        {metrics.orders.value} / 500
                       </span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
+                    <div className="w-full bg-muted rounded-none h-2">
                       <div
-                        className="bg-yellow-500 h-2 rounded-full transition-all duration-300"
+                        className="bg-yellow-500 h-2 rounded-none transition-all duration-300"
                         style={{
-                          width: `${Math.min((currentPeriodData.orders.value / 500) * 100, 100)}%`,
+                          width: `${Math.min(
+                            (metrics.orders.value / 500) * 100,
+                            100
+                          )}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {((currentPeriodData.orders.value / 500) * 100).toFixed(
-                        1
-                      )}
-                      % completed
+                      {((metrics.orders.value / 500) * 100).toFixed(1)}%
+                      completed
                     </p>
                   </div>
                 </div>
@@ -1488,7 +1199,7 @@ export default function SupplierAnalyticsPage() {
             className={`text-base flex items-center gap-3 ${colors.texts.primary}`}
           >
             <div className="h-8 w-8 flex items-center justify-center rounded-none">
-              <BoltIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+              <ChartBarIcon className={`h-4 w-4 ${colors.icons.primary}`} />
             </div>
             Quick Actions
           </CardTitle>
@@ -1547,6 +1258,7 @@ export default function SupplierAnalyticsPage() {
             </button>
             <button
               className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+              onClick={handleExport}
             >
               <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
                 <ArrowDownTrayIcon

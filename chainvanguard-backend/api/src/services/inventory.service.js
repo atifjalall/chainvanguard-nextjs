@@ -596,16 +596,23 @@ class InventoryService {
       // Handle deleting existing images
       if (updates.imagesToDelete && Array.isArray(updates.imagesToDelete)) {
         for (const imageUrl of updates.imagesToDelete) {
-          const imageToDelete = inventory.images.find(img => img.url === imageUrl);
+          const imageToDelete = inventory.images.find(
+            (img) => img.url === imageUrl
+          );
           if (imageToDelete) {
             // Delete from Cloudinary
             try {
               await cloudinaryService.deleteImage(imageToDelete.cloudinaryId);
             } catch (deleteError) {
-              logger.warn("Failed to delete image from Cloudinary:", deleteError);
+              logger.warn(
+                "Failed to delete image from Cloudinary:",
+                deleteError
+              );
             }
             // Remove from inventory
-            inventory.images = inventory.images.filter(img => img.url !== imageUrl);
+            inventory.images = inventory.images.filter(
+              (img) => img.url !== imageUrl
+            );
           }
         }
       }
@@ -1250,7 +1257,7 @@ class InventoryService {
   // ========================================
   // FIX 1: RESERVE QUANTITY (around line 350)
   // ========================================
-  async reserveQuantity(inventoryId, quantity, orderId, userId) {
+  async reserveQuantity(inventoryId, quantity, userId, session) {
     try {
       const inventory = await Inventory.findById(inventoryId);
 
@@ -1283,9 +1290,7 @@ class InventoryService {
         reason: `Reserved for order`,
         performedBy: userId || inventory.supplierId, // ✅ Use actual user ID
         performedByRole: "system", // ✅ Now valid after schema fix
-        relatedOrderId: mongoose.Types.ObjectId.isValid(orderId)
-          ? new mongoose.Types.ObjectId(orderId)
-          : null, // ✅ Convert to ObjectId or null
+        relatedOrderId: null, // ✅ Set to null since order doesn't exist yet
         timestamp: new Date(),
         notes: `Reserved ${quantity} units for order`,
       };
@@ -1300,7 +1305,7 @@ class InventoryService {
       logger.info("Quantity reserved successfully", {
         inventoryId,
         quantity,
-        orderId,
+        userId,
       });
 
       return inventory;
@@ -1362,6 +1367,7 @@ class InventoryService {
         inventoryId,
         quantity,
         orderId,
+        userId,
       });
 
       return inventory;

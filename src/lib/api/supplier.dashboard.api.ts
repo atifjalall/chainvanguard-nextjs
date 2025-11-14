@@ -8,6 +8,7 @@ import {
   TopProduct,
   RecentActivity,
 } from "@/types";
+import supplierVendorApi from "./supplier.vendor.api";
 
 /**
  * ========================================
@@ -18,7 +19,7 @@ import {
 export const analyticsApi = {
   /**
    * Get supplier analytics dashboard data
-   * @param timeframe - 'week', 'month', 'quarter', 'year', 'all'
+   * @param timeframe - 'week', 'month', 'quarter' | 'year' | 'all'
    * @returns Comprehensive supplier analytics
    */
   getSupplierAnalytics: async (
@@ -44,7 +45,7 @@ export const analyticsApi = {
 
   /**
    * Get vendor analytics dashboard data
-   * @param timeframe - 'week', 'month', 'quarter', 'year', 'all'
+   * @param timeframe - 'week', 'month', 'quarter' | 'year' | 'all'
    * @returns Comprehensive vendor analytics
    */
   getVendorAnalytics: async (
@@ -80,6 +81,24 @@ export const analyticsApi = {
   },
 
   /**
+   * Get the total number of vendors for the supplier.
+   * Uses the vendor-customer API.
+   */
+  getVendorCount: async (): Promise<number> => {
+    try {
+      const res = await supplierVendorApi.getVendorCustomers({ limit: 1 });
+      // Use pagination.total for accurate count if available
+      if (res?.pagination?.total !== undefined) {
+        return res.pagination.total;
+      }
+      // Fallback to vendors array length
+      return Array.isArray(res?.vendors) ? res.vendors.length : 0;
+    } catch {
+      return 0;
+    }
+  },
+
+  /**
    * Transform analytics data to dashboard metrics
    * @param analytics - Raw analytics data from backend
    * @returns Formatted dashboard metrics
@@ -99,7 +118,7 @@ export const analyticsApi = {
 
     return {
       totalInventory: inventoryStats.overall.totalItems || 0,
-      totalVendors: analytics.analytics.topVendors.length || 0,
+      totalVendors: 0, // Placeholder, set in dashboard after fetching
       totalTransactions: latestTrend.totalOrders,
       totalRevenue: revenue.totals.totalRevenue || 0,
       totalOrders: revenue.totals.totalOrders || 0,

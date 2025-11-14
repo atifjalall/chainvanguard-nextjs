@@ -4,10 +4,7 @@ import User from "../models/User.js";
 import notificationService from "./notification.service.js";
 import logger from "../utils/logger.js";
 import mongoose from "mongoose";
-import loyaltyService from "./loyalty.service.js";
 import fabricService from "./fabric.service.js";
-// Added imports
-import Order from "../models/Order.js";
 import walletBalanceService from "./wallet.balance.service.js";
 import inventoryService from "./inventory.service.js";
 class VendorRequestService {
@@ -158,14 +155,13 @@ class VendorRequestService {
         },
       });
 
-      // ✅ ADD: Notify supplier about new request
       await notificationService.createNotification({
         userId: supplierId,
         userRole: "supplier",
         type: "vendor_request_created",
         category: "vendor_requests",
         title: "New Vendor Request",
-        message: `New inventory request #${request.requestNumber} received from ${vendor.name || vendor.companyName}. Total: $${request.total.toFixed(2)}`,
+        message: `New inventory request #${request.requestNumber} received from ${vendor.name || vendor.companyName}. Total: Rs ${request.total.toFixed(2)}`,
         priority: "high",
         isUrgent: true,
         actionType: "view_order",
@@ -207,20 +203,6 @@ class VendorRequestService {
       } catch (error) {
         console.error("❌ Blockchain logging failed:", error);
       }
-
-      await notificationService.createNotification({
-        userId: request.vendorId,
-        userRole: "vendor",
-        type: "vendor_request_created",
-        category: "vendor_requests",
-        title: "New Vendor Request",
-        message: `New vendor request #${request.requestNumber} has been created`,
-        priority: "high",
-        relatedEntity: {
-          entityType: "vendor_request",
-          entityId: request._id,
-        },
-      });
 
       // Populate and return
       await request.populate([
@@ -387,29 +369,6 @@ class VendorRequestService {
         console.error("❌ Blockchain logging failed:", error);
       }
 
-      await notificationService.createNotification({
-        userId: request.vendorId,
-        userRole: "vendor",
-        type: "vendor_request_approved",
-        category: "vendor_requests",
-        title: "Request Approved",
-        message: `Your vendor request #${request.requestNumber} has been approved`,
-        priority: "high",
-        relatedEntity: {
-          entityType: "vendor_request",
-          entityId: request._id,
-        },
-      });
-
-      await request.populate([
-        { path: "vendorId", select: "name email companyName" },
-        { path: "supplierId", select: "name email companyName" },
-        {
-          path: "items.inventoryId",
-          select: "name category unit pricePerUnit",
-        },
-      ]);
-
       return {
         success: true,
         message: "Request approved successfully",
@@ -478,7 +437,7 @@ class VendorRequestService {
           type: "vendor_request_rejected",
           category: "vendor_requests",
           title: "Request Declined",
-          message: `Your request #${request.requestNumber} has been declined by supplier. Reason: ${notes || "Not specified"}`,
+          message: `Your request #${request.requestNumber} has been declined by supplier. Reason: ${rejectionReason || "Not specified"}`,
           priority: "high",
           actionType: "view_order",
           actionUrl: `/vendor/requests/${request._id}`,
@@ -510,29 +469,6 @@ class VendorRequestService {
       } catch (error) {
         console.error("❌ Blockchain logging failed:", error);
       }
-
-      await notificationService.createNotification({
-        userId: request.vendorId,
-        userRole: "vendor",
-        type: "vendor_request_rejected",
-        category: "vendor_requests",
-        title: "Request Rejected",
-        message: `Your vendor request #${request.requestNumber} has been rejected`,
-        priority: "high",
-        relatedEntity: {
-          entityType: "vendor_request",
-          entityId: request._id,
-        },
-      });
-
-      await request.populate([
-        { path: "vendorId", select: "name email companyName" },
-        { path: "supplierId", select: "name email companyName" },
-        {
-          path: "items.inventoryId",
-          select: "name category unit pricePerUnit",
-        },
-      ]);
 
       return {
         success: true,
@@ -572,6 +508,9 @@ class VendorRequestService {
 
       await request.save();
 
+      // Get vendor info for notification - MOVED HERE to ensure vendor is defined
+      const vendor = await User.findById(vendorId);
+
       // ✅ ADD: Record cancellation to blockchain
       try {
         const blockchainResult = await fabricService.cancelVendorRequest(
@@ -590,17 +529,26 @@ class VendorRequestService {
         }
         await request.save();
 
+        // ✅ FIX: Use correct userId for notification (supplierId, not items[0].supplierId)
         await notificationService.createNotification({
-          userId: request.items[0].supplierId, // or get unique supplier IDs
+          userId: request.supplierId, // FIXED: Use request.supplierId
           userRole: "supplier",
           type: "vendor_request_cancelled",
           category: "vendor_requests",
           title: "Request Cancelled",
-          message: `Vendor request #${request.requestNumber} was cancelled by vendor`,
-          priority: "medium",
+          message: `Vendor ${vendor.name} cancelled purchase request ${request.requestNumber}`,
+          priority: "low",
           relatedEntity: {
             entityType: "vendor_request",
             entityId: request._id,
+          },
+          action: {
+            type: "view_request",
+            url: `/supplier/requests/${request._id}`,
+          },
+          metadata: {
+            requestId: request._id.toString(),
+            requestNumber: request.requestNumber,
           },
         });
 
@@ -628,31 +576,6 @@ class VendorRequestService {
       } catch (error) {
         console.error("❌ Blockchain logging failed:", error);
       }
-
-      // Get vendor info for notification
-      const vendor = await User.findById(vendorId);
-
-      await notificationService.createNotification({
-        userId: request.supplierId,
-        userRole: "supplier",
-        type: "vendor_request_cancelled",
-        title: "Request Cancelled",
-        message: `Vendor ${vendor.name} cancelled purchase request ${request.requestNumber}`,
-        category: "vendor_requests",
-        priority: "low",
-        relatedEntity: {
-          entityType: "vendor_request",
-          entityId: request._id,
-        },
-        action: {
-          type: "view_request",
-          url: `/supplier/requests/${request._id}`,
-        },
-        metadata: {
-          requestId: request._id.toString(),
-          requestNumber: request.requestNumber,
-        },
-      });
 
       await request.populate([
         { path: "vendorId", select: "name email companyName" },
@@ -1205,9 +1128,10 @@ class VendorRequestService {
       }
 
       // 6. Process wallet payment
-      await walletBalanceService.processPayment(
+      await walletBalanceService.processPaymentWithCredit(
         vendorId,
-        null,
+        vendorRequest.supplierId._id,
+        null, // FIXED: Pass null since order doesn't exist yet
         vendorRequest.total,
         `Payment for vendor request ${vendorRequest.requestNumber}`,
         session
@@ -1363,7 +1287,7 @@ class VendorRequestService {
 
       // Add supply chain event
       order.supplyChainEvents.push({
-        stage: "order_placed",
+        stage: "vendor_request_updated",
         location: shippingAddress.city || "",
         description: `Order placed for vendor request ${vendorRequest.requestNumber}`,
         timestamp: new Date(),
@@ -1381,6 +1305,7 @@ class VendorRequestService {
         await inventoryService.reserveQuantity(
           item.inventoryId._id,
           item.quantity,
+          vendorId, // FIXED: Pass vendorId as userId
           session
         );
       }
@@ -1403,7 +1328,7 @@ class VendorRequestService {
       await notificationService.createNotification({
         userId: vendorRequest.supplierId._id,
         userRole: "supplier",
-        type: "order_placed",
+        type: "vendor_request_updated",
         category: "vendor_requests",
         title: "New Order from Vendor",
         message: `Vendor ${vendorRequest.vendorId.name} has paid for request ${vendorRequest.requestNumber}. Order ${order.orderNumber} created.`,
@@ -1424,7 +1349,7 @@ class VendorRequestService {
       await notificationService.createNotification({
         userId: vendorId,
         userRole: "vendor",
-        type: "payment_received",
+        type: "vendor_request_payment_received",
         category: "vendor_requests",
         title: "Payment Successful",
         message: `Payment of $${order.total} processed successfully. Order ${order.orderNumber} created and will be processed by supplier.`,
@@ -1572,8 +1497,8 @@ class VendorRequestService {
       await notificationService.createNotification({
         userId: vendorRequest.supplierId._id,
         userRole: "supplier",
-        type: "order_cancelled",
-        category: "orders",
+        type: "vendor_request_cancelled",
+        category: "vendor_requests", // FIXED: Change from "orders" to "vendor_requests"
         title: "Vendor Request Cancelled",
         message: `Vendor cancelled approved request ${vendorRequest.requestNumber}. Reason: ${cancellationReason}`,
         priority: "low",

@@ -21,14 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   Table,
   TableBody,
   TableCell,
@@ -36,8 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -72,15 +62,14 @@ import {
 import {
   getSupplierInventory,
   getInventoryStats,
-  updateInventoryQuantity,
 } from "@/lib/api/inventory.api";
 
 const statusOptions = [
   "All Status",
-  "active",
-  "low_stock",
-  "out_of_stock",
-  "inactive",
+  "Active",
+  "Low Stock",
+  "Out of Stock",
+  "Inactive",
 ];
 
 const sortOptions = [
@@ -184,6 +173,13 @@ export default function SupplierInventoryPage() {
   };
 
   const filteredAndSortedInventory = useMemo(() => {
+    const statusMapping: Record<string, string> = {
+      Active: "active",
+      "Low Stock": "low_stock",
+      "Out of Stock": "out_of_stock",
+      Inactive: "inactive",
+    };
+
     const filtered = inventory.filter((item) => {
       const matchesSearch =
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -191,10 +187,13 @@ export default function SupplierInventoryPage() {
         item.category.toLowerCase().includes(searchTerm.toLowerCase());
 
       const itemStatus = getStatusDisplay(item);
+      const normalizedSelectedStatus =
+        statusMapping[selectedStatus] ||
+        selectedStatus.toLowerCase().replace(/ /g, "_");
       const matchesStatus =
         selectedStatus === "All Status" ||
-        itemStatus === selectedStatus ||
-        item.status === selectedStatus;
+        itemStatus === normalizedSelectedStatus ||
+        item.status === normalizedSelectedStatus;
 
       return matchesSearch && matchesStatus;
     });
@@ -266,6 +265,14 @@ export default function SupplierInventoryPage() {
       default:
         return badgeColors.blue;
     }
+  };
+
+  const capitalizeStatus = (status: string) => {
+    return status
+      .replace(/_/g, " ")
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
 
   if (isLoading) {
@@ -712,7 +719,7 @@ export default function SupplierInventoryPage() {
                                   className={`h-3 w-3 ${badgeColor.icon}`}
                                 />
                               )}
-                              {itemStatus.replace("_", " ")}
+                              {capitalizeStatus(itemStatus)}
                             </Badge>
                           </TableCell>
                           <TableCell className="pl-4 pr-4">
@@ -809,7 +816,7 @@ export default function SupplierInventoryPage() {
                     setSearchTerm("");
                     setSelectedStatus("All Status");
                   }}
-                  className={`inline-flex items-center gap-2 text-xs cursor-pointer ${colors.buttons.outline} transition-all`}
+                  className={`inline-flex items-center gap-2 text-xs cursor-pointer ${colors.buttons.outline} transition-all rounded-none`}
                 >
                   Clear Filters
                 </Button>

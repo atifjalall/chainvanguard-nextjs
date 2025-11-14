@@ -21,7 +21,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/_ui/dialog";
 import {
@@ -32,7 +31,6 @@ import {
   SelectValue,
 } from "@/components/_ui/select";
 import {
-  ChartBarIcon,
   WalletIcon,
   PlusIcon,
   ArrowUpRightIcon,
@@ -52,15 +50,12 @@ import {
   BoltIcon,
   ChartPieIcon,
   SparklesIcon,
-  ArrowDownTrayIcon,
-  FunnelIcon,
   BanknotesIcon,
   CurrencyDollarIcon,
   BuildingStorefrontIcon,
   PaperAirplaneIcon,
   ReceiptPercentIcon,
   StarIcon,
-  ArrowsRightLeftIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWallet } from "@/components/providers/wallet-provider";

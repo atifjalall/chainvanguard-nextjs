@@ -13,7 +13,6 @@ class WalletBalanceService {
       let wallet = await Wallet.findOne({ userId });
 
       if (!wallet) {
-        // ✅ AUTO-CREATE WALLET
         const user = await User.findById(userId);
 
         if (!user) {
@@ -60,12 +59,8 @@ class WalletBalanceService {
    */
   async getBalance(userId) {
     try {
-      // 🆕 USE EXISTING WALLET ONLY
-      const wallet = await Wallet.findOne({ userId });
-
-      if (!wallet) {
-        throw new Error("Wallet not found. Please create wallet first.");
-      }
+      // 🆕 AUTO-CREATE WALLET IF NOT EXISTS
+      const wallet = await this.getOrCreateWallet(userId);
 
       return {
         success: true,
@@ -923,6 +918,174 @@ class WalletBalanceService {
       throw error;
     } finally {
       session.endSession();
+    }
+  }
+
+  /**
+   * 💰 Process Payment WITH Supplier Credit
+   * Deducts from buyer AND credits seller
+   */
+  async processPaymentWithCredit(
+    buyerId,
+    sellerId,
+    orderId,
+    amount,
+    description,
+    session
+  ) {
+    let localSession = session;
+    if (!localSession) {
+      localSession = await mongoose.startSession();
+      localSession.startTransaction();
+    }
+
+    try {
+      // 1. Get both wallets
+      const [buyerWallet, sellerWallet] = await Promise.all([
+        this.getOrCreateWallet(buyerId),
+        this.getOrCreateWallet(sellerId),
+      ]);
+
+      // 2. Validate buyer wallet
+      if (buyerWallet.balance < amount) {
+        throw new Error(
+          `Insufficient balance. Available: ${buyerWallet.balance}, Required: ${amount}`
+        );
+      }
+
+      if (!buyerWallet.isActive || buyerWallet.isFrozen) {
+        throw new Error("Buyer wallet is not available");
+      }
+
+      // 3. Validate seller wallet
+      if (!sellerWallet.isActive || sellerWallet.isFrozen) {
+        throw new Error("Seller wallet cannot receive payments");
+      }
+
+      // 4. Get user details
+      const [buyer, seller] = await Promise.all([
+        User.findById(buyerId).select("name email walletAddress role"),
+        User.findById(sellerId).select("name email walletAddress role"),
+      ]);
+
+      // 5. DEDUCT from buyer
+      const buyerBalanceBefore = buyerWallet.balance;
+      const { balanceAfter: buyerBalanceAfter } = buyerWallet.updateBalance(
+        amount,
+        "payment"
+      );
+
+      buyerWallet.addTransaction({
+        type: "payment",
+        amount,
+        balanceBefore: buyerBalanceBefore,
+        balanceAfter: buyerBalanceAfter,
+        relatedOrderId: orderId,
+        relatedUserId: sellerId,
+        description: description || `Payment to ${seller.name}`,
+        status: "completed",
+        metadata: {
+          sellerName: seller.name,
+          sellerWalletAddress: seller.walletAddress,
+          orderReference: orderId,
+        },
+      });
+
+      // 6. ✅ CREDIT to seller (THIS WAS MISSING!)
+      const sellerBalanceBefore = sellerWallet.balance;
+      const { balanceAfter: sellerBalanceAfter } = sellerWallet.updateBalance(
+        amount,
+        "sale"
+      );
+
+      sellerWallet.addTransaction({
+        type: "sale",
+        amount,
+        balanceBefore: sellerBalanceBefore,
+        balanceAfter: sellerBalanceAfter,
+        relatedOrderId: orderId,
+        relatedUserId: buyerId,
+        description: description || `Payment from ${buyer.name}`,
+        status: "completed",
+        metadata: {
+          buyerName: buyer.name,
+          buyerWalletAddress: buyer.walletAddress,
+          orderReference: orderId,
+        },
+      });
+
+      // 7. Save both wallets
+      await Promise.all([
+        buyerWallet.save({ session: localSession }),
+        sellerWallet.save({ session: localSession }),
+      ]);
+
+      // 8. Log the transaction
+      await logger.logWallet({
+        type: "payment_processed",
+        action: `Payment: $${amount} from ${buyer.name} to ${seller.name}`,
+        walletId: buyerWallet._id,
+        userId: buyerId,
+        userDetails: {
+          walletAddress: buyer.walletAddress,
+          role: buyer.role,
+          name: buyer.name,
+        },
+        status: "success",
+        data: {
+          amount,
+          orderId,
+          buyer: {
+            userId: buyerId,
+            name: buyer.name,
+            balanceBefore: buyerBalanceBefore,
+            balanceAfter: buyerBalanceAfter,
+          },
+          seller: {
+            userId: sellerId,
+            name: seller.name,
+            balanceBefore: sellerBalanceBefore,
+            balanceAfter: sellerBalanceAfter,
+          },
+        },
+      });
+
+      // Commit if we created the session
+      if (!session) {
+        await localSession.commitTransaction();
+      }
+
+      console.log(
+        `✅ Payment processed: Vendor paid $${amount}, Supplier credited $${amount}`
+      );
+
+      return {
+        success: true,
+        message: "Payment processed and seller credited",
+        data: {
+          amount,
+          buyer: {
+            userId: buyerId,
+            name: buyer.name,
+            newBalance: buyerBalanceAfter,
+          },
+          seller: {
+            userId: sellerId,
+            name: seller.name,
+            newBalance: sellerBalanceAfter,
+          },
+        },
+      };
+    } catch (error) {
+      if (!session) {
+        await localSession.abortTransaction();
+      }
+      console.error("❌ Process payment with credit failed:", error);
+      throw error;
+    } finally {
+      if (!session) {
+        localSession.endSession();
+      }
     }
   }
 }

@@ -36,7 +36,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
 import SupplierDashboardSkeleton from "@/components/skeletons/supplierDashboardSkeleton";
 import { badgeColors, colors } from "@/lib/colorConstants";
-import { analyticsApi } from "@/lib/api/analytics.api";
+import { analyticsApi } from "@/lib/api/supplier.dashboard.api";
 
 interface DashboardMetrics {
   totalInventory: number;
@@ -155,9 +155,17 @@ export default function SupplierDashboard() {
 
       console.log("📊 Analytics data received:", analyticsData);
 
+      let vendorCount = 0;
+      try {
+        vendorCount = await analyticsApi.getVendorCount();
+      } catch {
+        vendorCount = 0;
+      }
+
       if (analyticsData.success) {
         // Transform data to metrics
         const dashboardMetrics = analyticsApi.transformToMetrics(analyticsData);
+        dashboardMetrics.totalVendors = vendorCount; // Set correct vendor count
         console.log("✅ Transformed metrics:", dashboardMetrics);
         setMetrics(dashboardMetrics);
 
@@ -341,13 +349,13 @@ export default function SupplierDashboard() {
                 </Badge>
               </div>
             </div>
-            <button
+            <Button
               onClick={() => router.push("/supplier/add-inventory")}
-              className={`flex items-center gap-2 px-4 py-2 ${colors.buttons.primary} font-medium transition-colors cursor-pointer rounded-none`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-none ${colors.buttons.primary} font-medium text-xs cursor-pointer transition-all`}
             >
-              <PlusIcon className="h-4 w-4" />
+              <PlusIcon className={`h-4 w-4 ${colors.texts.inverse}`} />
               Add Inventory
-            </button>
+            </Button>
           </div>
         </div>
 
