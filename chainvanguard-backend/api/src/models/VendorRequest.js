@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 
 const vendorRequestSchema = new mongoose.Schema(
   {
@@ -193,10 +194,13 @@ vendorRequestSchema.index({ supplierId: 1, blockchainVerified: 1 });
 // Auto-generate request number before saving
 vendorRequestSchema.pre("save", async function (next) {
   if (!this.requestNumber) {
-    const count = await mongoose.model("VendorRequest").countDocuments();
-    const year = new Date().getFullYear();
-    const month = String(new Date().getMonth() + 1).padStart(2, "0");
-    this.requestNumber = `REQ-${year}${month}-${String(count + 1).padStart(6, "0")}`;
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const time = now.getTime().toString().slice(-5);
+    const randomPart = crypto.randomBytes(2).toString("hex").toUpperCase();
+    this.requestNumber = `REQ-${year}${month}${day}-${time}${randomPart}`;
   }
   next();
 });

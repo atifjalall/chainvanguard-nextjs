@@ -7,6 +7,7 @@ export const NOTIFICATION_TYPES = {
     CANCELLED: "vendor_request_cancelled",
     UPDATED: "vendor_request_updated",
     FULFILLED: "vendor_request_fulfilled",
+    PAYMENT_RECEIVED: "vendor_request_payment_received",
   },
 
   // Loyalty

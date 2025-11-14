@@ -10,6 +10,7 @@ const WalletTransactionSchema = new mongoose.Schema({
       "transfer_out",
       "payment",
       "refund",
+      "sale", // ✅ ADD THIS
     ],
     required: true,
   },
@@ -159,22 +160,33 @@ WalletSchema.methods.addTransaction = function (transactionData) {
 WalletSchema.methods.updateBalance = function (amount, type) {
   const balanceBefore = this.balance;
 
-  if (["deposit", "transfer_in", "refund"].includes(type)) {
-    this.balance += amount;
+  switch (type) {
+    case "deposit":
+    case "transfer_in":
+    case "refund":
+    case "sale": // ✅ ADD THIS
+      this.balance += amount;
+      if (type === "deposit") this.totalDeposited += amount;
+      if (type === "refund") this.totalReceived += amount;
+      if (type === "sale") this.totalReceived += amount;
+      break;
 
-    // Update statistics
-    if (type === "deposit") this.totalDeposited += amount;
-    if (type === "transfer_in") this.totalReceived += amount;
-  } else {
-    this.balance -= amount;
+    case "withdrawal":
+    case "transfer_out":
+    case "payment":
+      this.balance -= amount;
+      if (type === "withdrawal") this.totalWithdrawn += amount;
+      if (type === "payment") this.totalSpent += amount;
+      break;
 
-    // Update statistics
-    if (type === "withdrawal") this.totalWithdrawn += amount;
-    if (type === "payment") this.totalSpent += amount;
+    default:
+      throw new Error(`Unknown transaction type: ${type}`);
   }
 
   this.lastActivity = new Date();
-  return { balanceBefore, balanceAfter: this.balance };
+  const balanceAfter = this.balance;
+
+  return { balanceBefore, balanceAfter };
 };
 
 // Method to check if withdrawal is allowed

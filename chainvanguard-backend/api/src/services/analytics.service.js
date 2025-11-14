@@ -23,14 +23,23 @@ class AnalyticsService {
     try {
       const dateFilter = this.getDateFilter(timeframe);
 
-      const [revenue, topVendors, inventoryStats, requestStats, orderTrends] =
-        await Promise.all([
-          this.getSupplierRevenue(supplierId, dateFilter),
-          this.getTopVendors(supplierId, dateFilter),
-          this.getInventoryStats(supplierId),
-          this.getRequestStats(supplierId, dateFilter),
-          this.getOrderTrends(supplierId, dateFilter, timeframe),
-        ]);
+      const [
+        revenue,
+        topVendors,
+        inventoryStats,
+        requestStats,
+        orderTrends,
+        topProducts,
+        categoryRevenue,
+      ] = await Promise.all([
+        this.getSupplierRevenue(supplierId, dateFilter),
+        this.getTopVendors(supplierId, dateFilter),
+        this.getInventoryStats(supplierId),
+        this.getRequestStats(supplierId, dateFilter),
+        this.getOrderTrends(supplierId, dateFilter, timeframe),
+        this.getTopSupplyProducts(supplierId, dateFilter),
+        this.getCategoryRevenue(supplierId, dateFilter),
+      ]);
 
       return {
         success: true,
@@ -41,6 +50,8 @@ class AnalyticsService {
           inventoryStats,
           requestStats,
           orderTrends,
+          topProducts,
+          categoryRevenue,
         },
       };
     } catch (error) {
@@ -51,13 +62,30 @@ class AnalyticsService {
 
   /**
    * Get supplier revenue trends
+   * FIXED: Uses VendorRequest collection instead of Order
    */
   async getSupplierRevenue(supplierId, dateFilter) {
-    const revenue = await Order.aggregate([
+    // Get VendorRequest model
+    let VendorRequest;
+    try {
+      VendorRequest = mongoose.model("VendorRequest");
+    } catch (e) {
+      // Model not registered yet, return empty data
+      return {
+        daily: [],
+        totals: {
+          totalRevenue: 0,
+          totalOrders: 0,
+          avgOrderValue: 0,
+        },
+      };
+    }
+
+    const revenue = await VendorRequest.aggregate([
       {
         $match: {
-          sellerId: new mongoose.Types.ObjectId(supplierId),
-          status: { $in: ["delivered", "completed"] },
+          supplierId: new mongoose.Types.ObjectId(supplierId),
+          status: "completed", // Only count completed orders
           createdAt: dateFilter,
         },
       },
@@ -95,19 +123,28 @@ class AnalyticsService {
 
   /**
    * Get top vendors by revenue
+   * FIXED: Uses VendorRequest collection and groups by vendorId
    */
   async getTopVendors(supplierId, dateFilter) {
-    const topVendors = await Order.aggregate([
+    // Get VendorRequest model
+    let VendorRequest;
+    try {
+      VendorRequest = mongoose.model("VendorRequest");
+    } catch (e) {
+      return [];
+    }
+
+    const topVendors = await VendorRequest.aggregate([
       {
         $match: {
-          sellerId: new mongoose.Types.ObjectId(supplierId),
-          status: { $in: ["delivered", "completed"] },
+          supplierId: new mongoose.Types.ObjectId(supplierId),
+          status: "completed", // Only count completed orders
           createdAt: dateFilter,
         },
       },
       {
         $group: {
-          _id: "$customerId",
+          _id: "$vendorId", // Group by vendor, not customer
           totalSpent: { $sum: "$total" },
           orderCount: { $sum: 1 },
           lastOrderDate: { $max: "$createdAt" },
@@ -265,14 +302,23 @@ class AnalyticsService {
 
   /**
    * Get order trends over time
+   * FIXED: Uses VendorRequest collection for supplier trends
    */
   async getOrderTrends(supplierId, dateFilter, timeframe) {
+    // Get VendorRequest model
+    let VendorRequest;
+    try {
+      VendorRequest = mongoose.model("VendorRequest");
+    } catch (e) {
+      return [];
+    }
+
     const groupByFormat = this.getGroupByFormat(timeframe);
 
-    const trends = await Order.aggregate([
+    const trends = await VendorRequest.aggregate([
       {
         $match: {
-          sellerId: new mongoose.Types.ObjectId(supplierId),
+          supplierId: new mongoose.Types.ObjectId(supplierId),
           createdAt: dateFilter,
         },
       },
@@ -287,11 +333,13 @@ class AnalyticsService {
           },
           completedOrders: {
             $sum: {
-              $cond: [{ $in: ["$status", ["delivered", "completed"]] }, 1, 0],
+              $cond: [{ $eq: ["$status", "completed"] }, 1, 0], // Only completed
             },
           },
           cancelledOrders: {
-            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
+            $sum: {
+              $cond: [{ $in: ["$status", ["cancelled", "rejected"]] }, 1, 0],
+            },
           },
         },
       },
@@ -318,7 +366,7 @@ class AnalyticsService {
           this.getTopProducts(vendorId, dateFilter),
           this.getTopCustomers(vendorId, dateFilter),
           this.getCategoryPerformance(vendorId, dateFilter),
-          this.getOrderTrends(vendorId, dateFilter, timeframe),
+          this.getVendorOrderTrends(vendorId, dateFilter, timeframe),
         ]);
 
       return {
@@ -531,6 +579,44 @@ class AnalyticsService {
     }));
   }
 
+  /**
+   * Get vendor order trends over time
+   */
+  async getVendorOrderTrends(vendorId, dateFilter, timeframe) {
+    const groupByFormat = this.getGroupByFormat(timeframe);
+
+    const trends = await Order.aggregate([
+      {
+        $match: {
+          sellerId: new mongoose.Types.ObjectId(vendorId),
+          createdAt: dateFilter,
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: groupByFormat, date: "$createdAt" },
+          },
+          totalOrders: { $sum: 1 },
+          pendingOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+          },
+          completedOrders: {
+            $sum: {
+              $cond: [{ $in: ["$status", ["delivered", "completed"]] }, 1, 0],
+            },
+          },
+          cancelledOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
+          },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    return trends;
+  }
+
   // ========================================
   // HELPER METHODS
   // ========================================
@@ -668,6 +754,110 @@ class AnalyticsService {
   calculateGrowth(current, previous) {
     if (previous === 0) return current > 0 ? 100 : 0;
     return (((current - previous) / previous) * 100).toFixed(2);
+  }
+
+  /**
+   * Get top supply products from completed vendor requests
+   */
+  async getTopSupplyProducts(supplierId, dateFilter) {
+    let VendorRequest;
+    try {
+      VendorRequest = mongoose.model("VendorRequest");
+    } catch (e) {
+      return [];
+    }
+
+    const topProducts = await VendorRequest.aggregate([
+      {
+        $match: {
+          supplierId: new mongoose.Types.ObjectId(supplierId),
+          status: "completed",
+          createdAt: dateFilter,
+        },
+      },
+      { $unwind: "$items" },
+      {
+        $group: {
+          _id: "$items.inventoryId",
+          revenue: {
+            $sum: { $multiply: ["$items.quantity", "$items.pricePerUnit"] },
+          },
+          totalSupplied: { $sum: "$items.quantity" },
+          orderCount: { $sum: 1 },
+        },
+      },
+      { $sort: { revenue: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "inventories",
+          localField: "_id",
+          foreignField: "_id",
+          as: "inventory",
+        },
+      },
+      { $unwind: "$inventory" },
+      {
+        $project: {
+          _id: 1,
+          name: "$inventory.name",
+          category: "$inventory.category",
+          image: { $arrayElemAt: ["$inventory.images", 0] },
+          revenue: 1,
+          totalSupplied: 1,
+          orderCount: 1,
+          currentStock: "$inventory.quantity",
+          avgOrderSize: { $divide: ["$totalSupplied", "$orderCount"] },
+        },
+      },
+    ]);
+
+    return topProducts;
+  }
+
+  /**
+   * Get category revenue distribution from completed vendor requests
+   */
+  async getCategoryRevenue(supplierId, dateFilter) {
+    let VendorRequest;
+    try {
+      VendorRequest = mongoose.model("VendorRequest");
+    } catch (e) {
+      return [];
+    }
+
+    const categoryStats = await VendorRequest.aggregate([
+      {
+        $match: {
+          supplierId: new mongoose.Types.ObjectId(supplierId),
+          status: "completed",
+          createdAt: dateFilter,
+        },
+      },
+      { $unwind: "$items" },
+      {
+        $lookup: {
+          from: "inventories",
+          localField: "items.inventoryId",
+          foreignField: "_id",
+          as: "inventory",
+        },
+      },
+      { $unwind: "$inventory" },
+      {
+        $group: {
+          _id: "$inventory.category",
+          revenue: {
+            $sum: { $multiply: ["$items.quantity", "$items.pricePerUnit"] },
+          },
+          itemCount: { $sum: 1 },
+          totalQuantity: { $sum: "$items.quantity" },
+        },
+      },
+      { $sort: { revenue: -1 } },
+    ]);
+
+    return categoryStats;
   }
 }
 

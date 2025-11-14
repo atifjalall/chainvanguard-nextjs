@@ -19,9 +19,17 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   const isCustomer = user?.role === "customer";
 
+  const handleMarkAllAsRead = () => {
+    window.dispatchEvent(new Event("notifications:markAllAsRead"));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
-      {isCustomer ? <CustomerHeader /> : <DashboardHeader />}
+      {isCustomer ? (
+        <CustomerHeader />
+      ) : (
+        <DashboardHeader onMarkAllAsRead={handleMarkAllAsRead} />
+      )}
       <div className="flex">
         {!isCustomer && <DashboardSidebar />}
         <main

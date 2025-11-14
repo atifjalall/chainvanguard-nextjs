@@ -120,8 +120,9 @@ class OrderService {
       if (paymentMethod === "wallet") {
         try {
           // Check and deduct wallet balance
-          await walletBalanceService.processPayment(
+          await walletBalanceService.processPaymentWithCredit(
             customerId,
+            primarySeller._id,
             null,
             pricing.total,
             `Payment for order with ${validatedItems.length} items`,
@@ -202,6 +203,12 @@ class OrderService {
 
       // 9. Save order
       await order.save({ session });
+
+      await walletBalanceService.updateTransactionOrderId(
+        customerId,
+        order._id,
+        session
+      );
 
       await notificationService.createNotification({
         userId: customerId,

@@ -29,6 +29,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   MagnifyingGlassIcon,
   FunnelIcon,
   ArrowsUpDownIcon,
@@ -66,6 +73,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  getSupplierRequests,
+  getRequestStats,
+  getRequestById,
+} from "@/lib/api/vendor.request.api";
 
 const RsIcon = () => (
   <svg
@@ -114,38 +126,6 @@ const sortOptions = [
   { value: "amount-asc", label: "Amount: Low to High" },
 ];
 
-// BADGE COLOR MAP - Replaced with imported constants
-// const badgeColors: Record<
-//   string,
-//   { bg: string; border: string; text: string; icon: string }
-// > = {
-//   green: {
-//     bg: "bg-green-100/10 dark:bg-green-900/10",
-//     border: "border border-green-200 dark:border-green-900",
-//     text: "text-green-700 dark:text-green-400",
-//     icon: "text-green-700 dark:text-green-400",
-//   },
-//   blue: {
-//     bg: "bg-blue-100/10 dark:bg-blue-900/10",
-//     border: "border border-blue-200 dark:border-blue-900",
-//     text: "text-blue-700 dark:text-blue-400",
-//     icon: "text-blue-700 dark:text-blue-400",
-//   },
-//   yellow: {
-//     bg: "bg-yellow-100/10 dark:bg-yellow-900/10",
-//     border: "border border-yellow-200 dark:border-yellow-900",
-//     text: "text-yellow-700 dark:text-yellow-400",
-//     icon: "text-yellow-700 dark:text-yellow-400",
-//   },
-//   red: {
-//     bg: "bg-red-100/10 dark:bg-red-900/10",
-//     border: "border border-red-200 dark:border-red-900",
-//     text: "text-red-700 dark:text-red-400",
-//     icon: "text-red-700 dark:text-red-400",
-//   },
-// };
-
-// Helper to get badge color by status/type - Updated to use imported constants
 function getBadgeColor(type: string) {
   switch (type) {
     case "completed":
@@ -176,105 +156,65 @@ export default function SupplierTransactionsPage() {
   const [selectedType, setSelectedType] = useState("All Types");
   const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [sortBy, setSortBy] = useState("date-desc");
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
     loadTransactions();
   }, [user?.id]);
 
-  const loadTransactions = () => {
+  const loadTransactions = async () => {
     setIsLoading(true);
     try {
-      // Load transactions from localStorage or use sample data
-      const savedTransactions = localStorage.getItem(
-        `supplier_${user?.id}_transactions`
-      );
-      if (savedTransactions) {
-        setTransactions(JSON.parse(savedTransactions));
-      } else {
-        // Sample transaction data
-        const sampleTransactions = [
-          {
-            id: "txn_001",
-            reference: "TXN-2025-001",
-            date: "2025-08-28T10:30:00Z",
+      // Fetch completed requests from backend
+      const response = await getSupplierRequests({
+        status: "completed",
+        page: 1,
+        limit: 100,
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      });
+
+      if (response.success && response.requests) {
+        // Transform backend data to match UI structure
+        const transformedTransactions = response.requests.map((req: any) => {
+          const vendorInfo =
+            typeof req.vendorId === "object" ? req.vendorId : null;
+
+          return {
+            id: req._id,
+            reference: req.requestNumber,
+            date: req.createdAt,
             type: "sale",
             status: "completed",
-            amount: 2500.0,
-            vendor: "TechCorp Industries",
-            product: "Silicon Wafers",
-            quantity: 20,
-            blockchainHash:
-              "0x742d35cc6e4c1c4b2c4e8f8a9c5d8e7f6a5b4c3d2e1f0g9h8i7j6k5l4m3n2o1p",
+            amount: req.total || 0,
+            vendor:
+              vendorInfo?.name || vendorInfo?.companyName || "Unknown Vendor",
+            product:
+              req.items?.length > 0
+                ? req.items[0].inventoryName || "Multiple Items"
+                : "Items",
+            quantity:
+              req.items?.reduce(
+                (sum: number, item: any) => sum + item.quantity,
+                0
+              ) || 0,
+            blockchainHash: req.blockchainTxId || "0x" + "0".repeat(64),
             gasUsed: 21000,
-            description: "Bulk supply of premium silicon wafers",
-          },
-          {
-            id: "txn_002",
-            reference: "TXN-2025-002",
-            date: "2025-08-27T14:15:00Z",
-            type: "purchase",
-            status: "completed",
-            amount: -1200.5,
-            vendor: "Raw Materials Co.",
-            product: "Industrial Steel Rods",
-            quantity: 50,
-            blockchainHash:
-              "0xa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2g",
-            gasUsed: 19500,
-            description: "Raw materials procurement for manufacturing",
-          },
-          {
-            id: "txn_003",
-            reference: "TXN-2025-003",
-            date: "2025-08-26T09:45:00Z",
-            type: "sale",
-            status: "pending",
-            amount: 1850.75,
-            vendor: "Green Textiles Ltd",
-            product: "Organic Cotton Rolls",
-            quantity: 100,
-            blockchainHash:
-              "0xf1e2d3c4b5a6978e5d4c3b2a1f0e9d8c7b6a5948372615a4b3c2d1e0f9e8d7c6b",
-            gasUsed: 22500,
-            description: "Sustainable textile supply order",
-          },
-          {
-            id: "txn_004",
-            reference: "TXN-2025-004",
-            date: "2025-08-25T16:20:00Z",
-            type: "adjustment",
-            status: "completed",
-            amount: -450.0,
-            vendor: "Internal Adjustment",
-            product: "Chemical Catalyst X1",
-            quantity: -5,
-            blockchainHash:
-              "0x9z8y7x6w5v4u3t2s1r0q9p8o7n6m5l4k3j2i1h0g9f8e7d6c5b4a3928170g5f4e3d",
-            gasUsed: 18000,
-            description: "Inventory adjustment - damaged goods write-off",
-          },
-          {
-            id: "txn_005",
-            reference: "TXN-2025-005",
-            date: "2025-08-24T11:10:00Z",
-            type: "transfer",
-            status: "completed",
-            amount: 0,
-            vendor: "Warehouse B",
-            product: "Mixed Components",
-            quantity: 75,
-            blockchainHash:
-              "0x1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7a8b9c0d1e2f3g",
-            gasUsed: 25000,
-            description: "Inter-warehouse inventory transfer",
-          },
-        ];
-        setTransactions(sampleTransactions);
+            description: req.vendorNotes || "Completed vendor request",
+          };
+        });
+
+        setTransactions(transformedTransactions);
+      } else {
+        setTransactions([]);
       }
     } catch (error) {
       console.error("Error loading transactions:", error);
       toast.error("Failed to load transactions");
+      setTransactions([]);
     } finally {
       setIsLoading(false);
     }
@@ -415,12 +355,69 @@ export default function SupplierTransactionsPage() {
     toast.success(`${type} copied to clipboard`);
   };
 
+  const exportToCSV = () => {
+    const headers = [
+      "Reference",
+      "Date",
+      "Type",
+      "Status",
+      "Vendor",
+      "Product",
+      "Quantity",
+      "Amount",
+      "Blockchain Hash",
+    ];
+
+    const rows = filteredAndSortedTransactions.map((t) => [
+      t.reference,
+      formatDate(t.date),
+      t.type,
+      t.status,
+      t.vendor,
+      t.product,
+      t.quantity,
+      t.amount,
+      t.blockchainHash,
+    ]);
+
+    const csv = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transactions_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast.success("Transactions exported successfully");
+  };
+
+  const handleViewDetails = async (transactionId: string) => {
+    setLoadingDetails(true);
+    try {
+      const response = await getRequestById(transactionId);
+      if (response.success) {
+        setSelectedRequest(response.request);
+        setIsDetailsOpen(true);
+      }
+    } catch (error: any) {
+      console.error("Error loading request details:", error);
+      toast.error(error.message || "Failed to load request details");
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   if (isLoading) {
     return <SupplierTransactionsSkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className={`min-h-screen ${colors.backgrounds.secondary}`}>
       <div className="relative z-10 p-6 space-y-6">
         {/* Breadcrumb */}
         <Breadcrumb className="mb-6">
@@ -459,6 +456,7 @@ export default function SupplierTransactionsPage() {
                 Refresh
               </Button>
               <Button
+                onClick={exportToCSV}
                 variant="outline"
                 className={`flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.secondary} transition-all`}
               >
@@ -643,7 +641,6 @@ export default function SupplierTransactionsPage() {
                       variant="outline"
                       className={`${getBadgeColor(selectedType).bg} ${getBadgeColor(selectedType).border} ${getBadgeColor(selectedType).text} text-xs !rounded-none flex items-center gap-1`}
                     >
-                      {/* Icon for type */}
                       {selectedType === "sale" && (
                         <ArrowUpIcon
                           className={`h-3 w-3 ${badgeColors.green.icon}`}
@@ -678,7 +675,6 @@ export default function SupplierTransactionsPage() {
                       variant="outline"
                       className={`${getBadgeColor(selectedStatus).bg} ${getBadgeColor(selectedStatus).border} ${getBadgeColor(selectedStatus).text} text-xs !rounded-none flex items-center gap-1`}
                     >
-                      {/* Icon for status */}
                       {selectedStatus === "completed" && (
                         <CheckCircleIcon
                           className={`h-3 w-3 ${badgeColors.green.icon}`}
@@ -837,7 +833,6 @@ export default function SupplierTransactionsPage() {
                           </TableCell>
                           <TableCell className="px-2">
                             <div className="flex items-center gap-2">
-                              {/* REMOVE redundant icon, keep only badge with icon inside */}
                               <Badge
                                 className={`text-xs px-2 py-1 font-medium ${getBadgeColor(transaction.type).bg} ${getBadgeColor(transaction.type).border} ${getBadgeColor(transaction.type).text} flex items-center gap-1 !rounded-none`}
                                 variant="secondary"
@@ -868,7 +863,6 @@ export default function SupplierTransactionsPage() {
                           </TableCell>
                           <TableCell className="px-2">
                             <div className="flex items-center gap-2">
-                              {/* REMOVE redundant icon, keep only badge with icon inside */}
                               <Badge
                                 className={`text-xs px-2 py-1 font-medium ${getBadgeColor(transaction.status).bg} ${getBadgeColor(transaction.status).border} ${getBadgeColor(transaction.status).text} flex items-center gap-1 !rounded-none`}
                                 variant="secondary"
@@ -943,7 +937,7 @@ export default function SupplierTransactionsPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() =>
-                                  toast.info("Transaction details coming soon")
+                                  handleViewDetails(transaction.id)
                                 }
                                 className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer !rounded-none`}
                               >
@@ -1026,6 +1020,308 @@ export default function SupplierTransactionsPage() {
           )}
         </div>
       </div>
+
+      {/* Transaction Details Modal */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent
+          style={{ width: "100%", maxWidth: "900px" }}
+          className={`w-full max-w-[900px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none p-0 !shadow-none hover:!shadow-none`}
+        >
+          <div className="p-6">
+            <DialogHeader>
+              <DialogTitle
+                className={`flex items-center gap-3 text-xl font-bold ${colors.texts.primary}`}
+              >
+                <EyeIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                Transaction Details
+              </DialogTitle>
+              <DialogDescription
+                className={`text-base ${colors.texts.secondary}`}
+              >
+                Detailed information about the completed transaction
+              </DialogDescription>
+            </DialogHeader>
+            {selectedRequest && (
+              <div className="space-y-6 mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card
+                    className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                  >
+                    <CardHeader className="pb-3">
+                      <CardTitle
+                        className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                      >
+                        <CubeIcon
+                          className={`h-5 w-5 ${colors.icons.primary}`}
+                        />
+                        Request Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Request Number
+                        </p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {selectedRequest.requestNumber}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Total Items
+                        </p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {selectedRequest.items?.length || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Subtotal
+                        </p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {formatCurrency(selectedRequest.subtotal)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>Tax</p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {formatCurrency(selectedRequest.tax)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Total Price
+                        </p>
+                        <p
+                          className={`font-bold ${colors.texts.success} text-sm`}
+                        >
+                          {formatCurrency(selectedRequest.total)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card
+                    className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                  >
+                    <CardHeader className="pb-3">
+                      <CardTitle
+                        className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                      >
+                        <BuildingOffice2Icon
+                          className={`h-5 w-5 ${colors.icons.primary}`}
+                        />
+                        Vendor Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Vendor Name
+                        </p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {typeof selectedRequest.vendorId === "object"
+                            ? selectedRequest.vendorId?.name
+                            : "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Company Name
+                        </p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {typeof selectedRequest.vendorId === "object"
+                            ? selectedRequest.vendorId?.companyName
+                            : "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>Email</p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {typeof selectedRequest.vendorId === "object"
+                            ? selectedRequest.vendorId?.email
+                            : "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Status
+                        </p>
+                        <Badge
+                          className={`${getBadgeColor(selectedRequest.status).bg} ${getBadgeColor(selectedRequest.status).border} ${getBadgeColor(selectedRequest.status).text} text-xs !rounded-none`}
+                        >
+                          {selectedRequest.status}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Items Table */}
+                <Card
+                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle
+                      className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                    >
+                      <CubeIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                      Requested Items
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className={colors.tables.header}>
+                            <TableHead className="px-2">Item Name</TableHead>
+                            <TableHead className="px-2">Quantity</TableHead>
+                            <TableHead className="px-2">Price/Unit</TableHead>
+                            <TableHead className="px-2">Subtotal</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedRequest.items?.map(
+                            (item: any, index: number) => (
+                              <TableRow
+                                key={index}
+                                className={colors.tables.row}
+                              >
+                                <TableCell className="px-2">
+                                  <p
+                                    className={`font-medium ${colors.texts.primary}`}
+                                  >
+                                    {item.inventoryName || item.inventory?.name}
+                                  </p>
+                                </TableCell>
+                                <TableCell className="px-2">
+                                  {item.quantity}
+                                </TableCell>
+                                <TableCell className="px-2">
+                                  {formatCurrency(item.pricePerUnit)}
+                                </TableCell>
+                                <TableCell className="px-2">
+                                  <span className="font-bold">
+                                    {formatCurrency(item.subtotal)}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Blockchain Info */}
+                {selectedRequest.blockchainTxId && (
+                  <Card
+                    className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                  >
+                    <CardHeader className="pb-3">
+                      <CardTitle
+                        className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                      >
+                        <ShieldCheckIcon
+                          className={`h-5 w-5 ${colors.icons.primary}`}
+                        />
+                        Blockchain Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Transaction Hash
+                        </p>
+                        <code
+                          className={`text-xs font-mono ${colors.backgrounds.tertiary} px-2 py-1 rounded-none block break-all`}
+                        >
+                          {selectedRequest.blockchainTxId}
+                        </code>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Verification Status
+                        </p>
+                        <Badge
+                          className={`${selectedRequest.blockchainVerified ? badgeColors.blue.bg + " " + badgeColors.blue.border + " " + badgeColors.blue.text : badgeColors.yellow.bg + " " + badgeColors.yellow.border + " " + badgeColors.yellow.text} text-xs !rounded-none`}
+                        >
+                          {selectedRequest.blockchainVerified
+                            ? "Verified"
+                            : "Pending"}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Notes */}
+                {(selectedRequest.vendorNotes ||
+                  selectedRequest.supplierNotes) && (
+                  <Card
+                    className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                  >
+                    <CardHeader className="pb-3">
+                      <CardTitle
+                        className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                      >
+                        Notes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {selectedRequest.vendorNotes && (
+                        <div>
+                          <p className={`text-xs ${colors.texts.muted}`}>
+                            Vendor Notes
+                          </p>
+                          <p className={`text-sm ${colors.texts.primary}`}>
+                            {selectedRequest.vendorNotes}
+                          </p>
+                        </div>
+                      )}
+                      {selectedRequest.supplierNotes && (
+                        <div>
+                          <p className={`text-xs ${colors.texts.muted}`}>
+                            Supplier Notes
+                          </p>
+                          <p className={`text-sm ${colors.texts.primary}`}>
+                            {selectedRequest.supplierNotes}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDetailsOpen(false)}
+                    className={`${colors.buttons.outline} !rounded-none`}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -343,6 +343,221 @@ export async function verifyRequestOnBlockchain(id: string): Promise<{
 }
 
 // ========================================
+// VENDOR TRANSACTION API
+// ========================================
+
+export interface VendorTransaction {
+  requestId: string;
+  requestNumber: string;
+  requestStatus: string;
+  requestDate: string;
+  supplier: {
+    id: string;
+    name: string;
+    email: string;
+    companyName: string;
+  };
+  amount: {
+    subtotal: number;
+    tax: number;
+    total: number;
+  };
+  items: Array<{
+    inventoryId: string;
+    name: string;
+    quantity: number;
+    pricePerUnit: number;
+    total: number;
+  }>;
+  itemCount: number;
+  vendorNotes?: string;
+  supplierNotes?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  order?: {
+    orderId: string;
+    orderNumber: string;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+    shippingAddress: any;
+    trackingNumber?: string;
+    trackingUrl?: string;
+    courierName?: string;
+    estimatedDeliveryDate?: string;
+    actualDeliveryDate?: string;
+    statusHistory: any[];
+    currentStatus: {
+      status: string;
+      lastUpdate: string;
+    };
+  };
+  inventory: {
+    created: boolean;
+    itemCount: number;
+    items: Array<{
+      inventoryId: string;
+      name: string;
+      quantity: number;
+      status: string;
+    }>;
+  };
+  blockchain: {
+    verified: boolean;
+    txId?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TransactionListResponse {
+  success: boolean;
+  data: VendorTransaction[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface TransactionStatsResponse {
+  success: boolean;
+  stats: {
+    statusBreakdown: Array<{
+      _id: string;
+      count: number;
+      totalAmount: number;
+    }>;
+    totalSpent: number;
+    pendingRequests: number;
+    ordersInTransit: number;
+    recentTransactions: Array<{
+      requestId: string;
+      requestNumber: string;
+      supplier: string;
+      amount: number;
+      status: string;
+      date: string;
+    }>;
+  };
+  timeframe: string;
+}
+
+export interface OrderTrackingResponse {
+  success: boolean;
+  data: Array<{
+    requestId: string;
+    requestNumber: string;
+    order: {
+      orderId: string;
+      orderNumber: string;
+      status: string;
+      createdAt: string;
+      items: any[];
+      shippingAddress: any;
+      trackingNumber?: string;
+      trackingUrl?: string;
+      courierName?: string;
+      estimatedDeliveryDate?: string;
+      actualDeliveryDate?: string;
+      statusHistory: any[];
+      currentStatus: {
+        status: string;
+        lastUpdate: string;
+      };
+    };
+    supplier: {
+      name: string;
+      companyName: string;
+    };
+  }>;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+/**
+ * Get all vendor transactions (completed requests with orders)
+ * @param params - Query parameters for filtering and pagination
+ */
+export async function getVendorTransactions(params?: {
+  status?: string;
+  orderStatus?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  startDate?: string;
+  endDate?: string;
+  supplierId?: string;
+}): Promise<TransactionListResponse> {
+  const response = await apiClient.get<TransactionListResponse>(
+    "/vendor/transactions",
+    { params }
+  );
+  return response;
+}
+
+/**
+ * Get detailed transaction information by request ID
+ * @param requestId - The vendor request ID
+ */
+export async function getTransactionById(requestId: string): Promise<{
+  success: boolean;
+  data: {
+    request: any;
+    order: any;
+    inventory: any;
+    timeline: any[];
+  };
+}> {
+  const response = await apiClient.get<{
+    success: boolean;
+    data: {
+      request: any;
+      order: any;
+      inventory: any;
+      timeline: any[];
+    };
+  }>(`/vendor/transactions/${requestId}`);
+  return response;
+}
+
+/**
+ * Get vendor transaction statistics
+ * @param timeframe - Time period for stats (week, month, year)
+ */
+export async function getTransactionStats(
+  timeframe: "week" | "month" | "year" = "month"
+): Promise<TransactionStatsResponse> {
+  const response = await apiClient.get<TransactionStatsResponse>(
+    "/vendor/stats",
+    { params: { timeframe } }
+  );
+  return response;
+}
+
+/**
+ * Get all orders with tracking information
+ * @param params - Query parameters for filtering
+ */
+export async function getOrderTracking(params?: {
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<OrderTrackingResponse> {
+  const response = await apiClient.get<OrderTrackingResponse>(
+    "/vendor/orders/tracking",
+    { params }
+  );
+  return response;
+}
+
+// ========================================
 // EXPORT DEFAULT
 // ========================================
 
@@ -369,4 +584,9 @@ export default {
   // Blockchain
   getRequestHistory,
   verifyRequestOnBlockchain,
+
+  getVendorTransactions,
+  getTransactionById,
+  getTransactionStats,
+  getOrderTracking,
 };

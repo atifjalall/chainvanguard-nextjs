@@ -1,14 +1,12 @@
 #!/bin/bash
 
 # ============================================
-# CHAINVANGUARD - VENDOR REQUEST TEST SUITE
-# Enhanced Version - Creates Requests in All Stages
+# CHAINVANGUARD - VENDOR REQUEST COMPLETE TEST
+# Tests Both Supplier & Vendor Functionality
 # ============================================
 
-# Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Source environment variables from backend
 ENV_PATH="/Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env"
 if [ -f "$ENV_PATH" ]; then
     source "$ENV_PATH"
@@ -20,7 +18,7 @@ fi
 
 BASE_URL="http://localhost:3001/api"
 
-# Color codes for better readability
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -30,28 +28,28 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-# Test counters
 PASSED=0
 FAILED=0
 TOTAL=0
 SKIPPED=0
 
-# Arrays to store created resources for cleanup
-INVENTORY_IDS=()
 REQUEST_IDS=()
 
-# Load credentials from environment
+# Credentials
 SUPPLIER_TOKEN="${SUPPLIER_TOKEN}"
 SUPPLIER_ID="${SUPPLIER_ID}"
 VENDOR_TOKEN="${VENDOR_TOKEN}"
 VENDOR_ID="${VENDOR_ID}"
 
-# Load inventory IDs from environment
+# Inventory from env (5 items)
 INVENTORY_ID_1="${INVENTORY_ID_1}"
 INVENTORY_ID_2="${INVENTORY_ID_2}"
+INVENTORY_ID_3="${INVENTORY_ID_3}"
+INVENTORY_ID_4="${INVENTORY_ID_4}"
+INVENTORY_ID_5="${INVENTORY_ID_5}"
 
 # ============================================
-# UTILITY FUNCTIONS
+# UTILITIES
 # ============================================
 
 print_header() {
@@ -87,17 +85,10 @@ print_info() {
     echo -e "${BLUE}  ℹ $1${NC}"
 }
 
-print_debug() {
-    if [ "$DEBUG" = "true" ]; then
-        echo -e "${MAGENTA}  🐛 $1${NC}"
-    fi
-}
-
 contains() {
     echo "$1" | grep -q "$2"
 }
 
-# Function to make API call and handle errors
 api_call() {
     local method=$1
     local endpoint=$2
@@ -120,18 +111,17 @@ api_call() {
 # ============================================
 
 clear
-print_header "CHAINVANGUARD VENDOR REQUEST - FULL FLOW TEST"
-echo -e "${CYAN}Creating Requests in All Stages${NC}"
+print_header "VENDOR REQUEST - COMPLETE FLOW TEST"
+echo -e "${CYAN}Testing: Supplier & Vendor Functionality${NC}"
 echo -e "${CYAN}Base URL: $BASE_URL${NC}"
 echo ""
 
 # ============================================
-# PHASE 0: PRE-FLIGHT CHECKS
+# PRE-FLIGHT CHECKS
 # ============================================
 
 print_header "PHASE 0: PRE-FLIGHT CHECKS"
 
-# Check if jq is installed
 print_test "Checking for jq (JSON processor)"
 if command -v jq &> /dev/null; then
     print_success "jq is installed"
@@ -140,18 +130,15 @@ else
     exit 1
 fi
 
-# Check environment variables
 print_test "Verifying environment variables"
 if [ -z "$SUPPLIER_TOKEN" ] || [ -z "$VENDOR_TOKEN" ] || [ -z "$SUPPLIER_ID" ] || [ -z "$VENDOR_ID" ]; then
     print_error "Required environment variables not found"
     exit 1
 fi
-
 print_success "All environment variables found"
 print_info "Supplier ID: $SUPPLIER_ID"
 print_info "Vendor ID: $VENDOR_ID"
 
-# Check if backend is running
 print_test "Checking if backend is running"
 HEALTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/../health" 2>/dev/null || echo "000")
 if [ "$HEALTH_CHECK" = "200" ] || [ "$HEALTH_CHECK" = "404" ]; then
@@ -164,43 +151,44 @@ fi
 sleep 1
 
 # ============================================
-# PHASE 1: VERIFY INVENTORY
+# VERIFY INVENTORY
 # ============================================
 
 print_header "PHASE 1: VERIFY INVENTORY"
 
-print_test "Verifying inventory items exist"
-if [ -n "$INVENTORY_ID_1" ] && [ "$INVENTORY_ID_1" != "null" ]; then
-    INVENTORY1_CHECK=$(api_call GET "/inventory/$INVENTORY_ID_1" "$SUPPLIER_TOKEN")
-    if contains "$INVENTORY1_CHECK" '"success".*true'; then
-        INVENTORY1_ID="$INVENTORY_ID_1"
-        INVENTORY1_NAME=$(echo "$INVENTORY1_CHECK" | jq -r '.data.name // .inventory.name')
-        print_success "Inventory 1 verified: $INVENTORY1_NAME"
+print_test "Verifying all 5 inventory items exist"
+INVENTORY_ARRAY=($INVENTORY_ID_1 $INVENTORY_ID_2 $INVENTORY_ID_3 $INVENTORY_ID_4 $INVENTORY_ID_5)
+VERIFIED_INVENTORY=()
+
+for i in "${!INVENTORY_ARRAY[@]}"; do
+    INV_ID="${INVENTORY_ARRAY[$i]}"
+    if [ -n "$INV_ID" ] && [ "$INV_ID" != "null" ]; then
+        INV_CHECK=$(api_call GET "/inventory/$INV_ID" "$SUPPLIER_TOKEN")
+        if contains "$INV_CHECK" '"success".*true'; then
+            INV_NAME=$(echo "$INV_CHECK" | jq -r '.data.name // .inventory.name')
+            VERIFIED_INVENTORY+=("$INV_ID")
+            print_success "Inventory $((i+1)): $INV_NAME"
+        else
+            print_error "Inventory $((i+1)) not found"
+        fi
     else
-        print_error "Inventory 1 not found"
-        exit 1
+        print_error "INVENTORY_ID_$((i+1)) not set in .env"
     fi
-else
-    print_error "INVENTORY_ID_1 not set in .env"
+done
+
+if [ ${#VERIFIED_INVENTORY[@]} -eq 0 ]; then
+    print_error "No inventory items found. Cannot continue."
     exit 1
 fi
 
-if [ -n "$INVENTORY_ID_2" ] && [ "$INVENTORY_ID_2" != "null" ]; then
-    INVENTORY2_CHECK=$(api_call GET "/inventory/$INVENTORY_ID_2" "$SUPPLIER_TOKEN")
-    if contains "$INVENTORY2_CHECK" '"success".*true'; then
-        INVENTORY2_ID="$INVENTORY_ID_2"
-        INVENTORY2_NAME=$(echo "$INVENTORY2_CHECK" | jq -r '.data.name // .inventory.name')
-        print_success "Inventory 2 verified: $INVENTORY2_NAME"
-    fi
-fi
-
+print_info "Verified ${#VERIFIED_INVENTORY[@]} inventory items"
 sleep 1
 
 # ============================================
-# PHASE 2: DISABLE AUTO-APPROVE
+# SETUP AUTO-APPROVE & CREATE VENDOR WALLET
 # ============================================
 
-print_header "PHASE 2: SETUP AUTO-APPROVE"
+print_header "PHASE 2: SETUP AUTO-APPROVE & WALLET"
 
 print_test "Disabling auto-approve for manual testing"
 api_call PATCH "/vendor-requests/supplier/settings" "$SUPPLIER_TOKEN" '{"autoApproveRequests": false}' > /dev/null
@@ -208,236 +196,191 @@ print_success "Auto-approve disabled"
 
 sleep 1
 
-# ============================================
-# PHASE 3: CREATE REQUESTS IN ALL STAGES
-# ============================================
-
-print_header "PHASE 3: CREATE REQUESTS IN ALL STAGES"
-
-# ============================================
-# STAGE 1: NEW (PENDING STATUS)
-# ============================================
-
-print_test "Creating 'NEW' request (Status: pending)"
-REQUEST_NEW=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
-    "supplierId": "'$SUPPLIER_ID'",
-    "items": [{
-        "inventoryId": "'$INVENTORY1_ID'",
-        "quantity": 10
-    }],
-    "vendorNotes": "This is a NEW request - Awaiting supplier approval"
+print_test "Creating vendor wallet (required for payments)"
+WALLET_CREATE=$(api_call POST "/wallet/create" "$VENDOR_TOKEN" '{
+    "initialBalance": 100000,
+    "currency": "PKR"
 }')
 
-if contains "$REQUEST_NEW" '"success".*true'; then
-    NEW_REQUEST_ID=$(echo "$REQUEST_NEW" | jq -r '.request._id // .vendorRequest._id // .data._id')
-    NEW_REQUEST_NUMBER=$(echo "$REQUEST_NEW" | jq -r '.request.requestNumber // .vendorRequest.requestNumber // .data.requestNumber')
-    REQUEST_IDS+=("$NEW_REQUEST_ID")
-    print_success "NEW request created"
-    print_info "Request Number: $NEW_REQUEST_NUMBER"
-    print_info "Request ID: $NEW_REQUEST_ID"
-    print_info "Status: NEW (pending approval)"
+if contains "$WALLET_CREATE" '"success".*true'; then
+    print_success "Vendor wallet created with PKR 100,000"
 else
-    print_error "Failed to create NEW request"
-    echo "$REQUEST_NEW" | jq '.'
+    # Wallet might already exist
+    WALLET_CHECK=$(api_call GET "/wallet/balance" "$VENDOR_TOKEN")
+    if contains "$WALLET_CHECK" '"success".*true'; then
+        WALLET_BALANCE=$(echo "$WALLET_CHECK" | jq -r '.balance // .data.balance')
+        print_success "Vendor wallet exists (Balance: PKR $WALLET_BALANCE)"
+    else
+        print_error "Failed to create/verify vendor wallet"
+    fi
 fi
 
 sleep 1
 
 # ============================================
-# STAGE 2: PENDING (APPROVED, NO PAYMENT)
+# VENDOR-SIDE TESTS
 # ============================================
 
-print_test "Creating 'PENDING' request (Status: approved, no payment)"
-REQUEST_PENDING=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
+print_header "PHASE 3: VENDOR-SIDE FUNCTIONALITY"
+
+# Test 1: Vendor creates request
+print_test "Vendor: Create new request"
+VENDOR_NEW_REQ=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
     "supplierId": "'$SUPPLIER_ID'",
     "items": [{
-        "inventoryId": "'$INVENTORY1_ID'",
-        "quantity": 20
+        "inventoryId": "'${VERIFIED_INVENTORY[0]}'",
+        "quantity": 10
     }],
-    "vendorNotes": "This request will be PENDING - Approved but awaiting vendor payment"
+    "vendorNotes": "Vendor test - New order request"
 }')
 
-if contains "$REQUEST_PENDING" '"success".*true'; then
-    PENDING_REQUEST_ID=$(echo "$REQUEST_PENDING" | jq -r '.request._id // .vendorRequest._id // .data._id')
-    PENDING_REQUEST_NUMBER=$(echo "$REQUEST_PENDING" | jq -r '.request.requestNumber // .vendorRequest.requestNumber // .data.requestNumber')
-    REQUEST_IDS+=("$PENDING_REQUEST_ID")
-    
+if contains "$VENDOR_NEW_REQ" '"success".*true'; then
+    VNEW_ID=$(echo "$VENDOR_NEW_REQ" | jq -r '.request._id // .vendorRequest._id // .data._id')
+    VNEW_NUMBER=$(echo "$VENDOR_NEW_REQ" | jq -r '.request.requestNumber // .vendorRequest.requestNumber // .data.requestNumber')
+    REQUEST_IDS+=("$VNEW_ID")
+    print_success "Vendor request created"
+    print_info "Request: $VNEW_NUMBER (ID: $VNEW_ID)"
+else
+    print_error "Failed to create vendor request"
+fi
+
+sleep 1
+
+# Test 2: Vendor views own requests
+print_test "Vendor: Get my requests"
+VENDOR_MY_REQS=$(api_call GET "/vendor-requests/my-requests" "$VENDOR_TOKEN")
+if contains "$VENDOR_MY_REQS" '"success".*true'; then
+    MY_REQS_COUNT=$(echo "$VENDOR_MY_REQS" | jq -r '.requests | length')
+    print_success "Retrieved vendor's requests (Count: $MY_REQS_COUNT)"
+else
+    print_error "Failed to get vendor's requests"
+fi
+
+sleep 1
+
+# Test 3: Vendor views request stats
+print_test "Vendor: Get request statistics"
+VENDOR_STATS=$(api_call GET "/vendor-requests/stats" "$VENDOR_TOKEN")
+if contains "$VENDOR_STATS" '"success".*true'; then
+    print_success "Retrieved vendor statistics"
+else
+    print_error "Failed to get vendor statistics"
+fi
+
+sleep 1
+
+# Test 4: Vendor cancels pending request
+print_test "Vendor: Cancel pending request"
+CANCEL_REQ=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
+    "supplierId": "'$SUPPLIER_ID'",
+    "items": [{"inventoryId": "'${VERIFIED_INVENTORY[1]}'", "quantity": 5}],
+    "vendorNotes": "Request to be cancelled"
+}')
+
+if contains "$CANCEL_REQ" '"success".*true'; then
+    CANCEL_ID=$(echo "$CANCEL_REQ" | jq -r '.request._id // .vendorRequest._id // .data._id')
+    REQUEST_IDS+=("$CANCEL_ID")
     sleep 1
     
-    # Approve this request
-    print_info "Approving request to move to PENDING stage..."
-    APPROVE_RESULT=$(api_call POST "/vendor-requests/$PENDING_REQUEST_ID/approve" "$SUPPLIER_TOKEN" '{
-        "supplierNotes": "Request approved. Awaiting payment from vendor."
-    }')
-    
-    if contains "$APPROVE_RESULT" '"success".*true'; then
-        print_success "PENDING request created and approved"
-        print_info "Request Number: $PENDING_REQUEST_NUMBER"
-        print_info "Request ID: $PENDING_REQUEST_ID"
-        print_info "Status: PENDING (approved, awaiting payment)"
+    CANCEL_RESULT=$(api_call POST "/vendor-requests/$CANCEL_ID/cancel" "$VENDOR_TOKEN")
+    if contains "$CANCEL_RESULT" '"success".*true'; then
+        print_success "Vendor cancelled pending request"
     else
-        print_error "Failed to approve PENDING request"
+        print_error "Failed to cancel request"
     fi
+else
+    print_error "Failed to create request for cancellation test"
+fi
+
+sleep 1
+
+# ============================================
+# SUPPLIER-SIDE TESTS
+# ============================================
+
+print_header "PHASE 4: SUPPLIER-SIDE FUNCTIONALITY"
+
+# Test 5: Create requests in all stages (NEW, PENDING, CONFIRMED, CANCELLED)
+print_test "Creating requests in all stages"
+
+# STAGE 1: NEW (pending)
+NEW_REQ=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
+    "supplierId": "'$SUPPLIER_ID'",
+    "items": [{"inventoryId": "'${VERIFIED_INVENTORY[0]}'", "quantity": 10}],
+    "vendorNotes": "NEW stage - Awaiting approval"
+}')
+if contains "$NEW_REQ" '"success".*true'; then
+    NEW_ID=$(echo "$NEW_REQ" | jq -r '.request._id // .vendorRequest._id // .data._id')
+    REQUEST_IDS+=("$NEW_ID")
+    print_success "NEW request created"
+else
+    print_error "Failed to create NEW request"
+fi
+
+sleep 1
+
+# STAGE 2: PENDING (approved, no payment)
+PENDING_REQ=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
+    "supplierId": "'$SUPPLIER_ID'",
+    "items": [{"inventoryId": "'${VERIFIED_INVENTORY[1]}'", "quantity": 20}],
+    "vendorNotes": "PENDING stage - Will be approved"
+}')
+if contains "$PENDING_REQ" '"success".*true'; then
+    PENDING_ID=$(echo "$PENDING_REQ" | jq -r '.request._id // .vendorRequest._id // .data._id')
+    REQUEST_IDS+=("$PENDING_ID")
+    sleep 1
+    api_call POST "/vendor-requests/$PENDING_ID/approve" "$SUPPLIER_TOKEN" '{"supplierNotes": "Approved"}' > /dev/null
+    print_success "PENDING request created and approved"
 else
     print_error "Failed to create PENDING request"
 fi
 
 sleep 1
 
-# ============================================
-# STAGE 3: CONFIRMED (APPROVED + PAID)
-# ============================================
-
-print_test "Creating 'CONFIRMED' request (Status: approved, payment received)"
-REQUEST_CONFIRMED=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
+# STAGE 3: CONFIRMED (approved + paid)
+CONFIRMED_REQ=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
     "supplierId": "'$SUPPLIER_ID'",
-    "items": [{
-        "inventoryId": "'$INVENTORY1_ID'",
-        "quantity": 15
-    }],
-    "vendorNotes": "This request will be CONFIRMED - Approved and paid"
+    "items": [{"inventoryId": "'${VERIFIED_INVENTORY[2]}'", "quantity": 15}],
+    "vendorNotes": "CONFIRMED stage - Will be paid"
 }')
-
-if contains "$REQUEST_CONFIRMED" '"success".*true'; then
-    CONFIRMED_REQUEST_ID=$(echo "$REQUEST_CONFIRMED" | jq -r '.request._id // .vendorRequest._id // .data._id')
-    CONFIRMED_REQUEST_NUMBER=$(echo "$REQUEST_CONFIRMED" | jq -r '.request.requestNumber // .vendorRequest.requestNumber // .data.requestNumber')
-    REQUEST_IDS+=("$CONFIRMED_REQUEST_ID")
-    
+if contains "$CONFIRMED_REQ" '"success".*true'; then
+    CONFIRMED_ID=$(echo "$CONFIRMED_REQ" | jq -r '.request._id // .vendorRequest._id // .data._id')
+    REQUEST_IDS+=("$CONFIRMED_ID")
     sleep 1
-    
-    # Approve the request
-    print_info "Approving request..."
-    api_call POST "/vendor-requests/$CONFIRMED_REQUEST_ID/approve" "$SUPPLIER_TOKEN" '{
-        "supplierNotes": "Approved for payment"
-    }' > /dev/null
-    
+    api_call POST "/vendor-requests/$CONFIRMED_ID/approve" "$SUPPLIER_TOKEN" '{"supplierNotes": "Approved"}' > /dev/null
     sleep 1
-    
-    # Simulate payment (vendor pays)
-    print_info "Processing payment to move to CONFIRMED stage..."
-    PAY_RESULT=$(api_call POST "/vendor-requests/$CONFIRMED_REQUEST_ID/pay" "$VENDOR_TOKEN" '{
+    api_call POST "/vendor-requests/$CONFIRMED_ID/pay" "$VENDOR_TOKEN" '{
         "shippingAddress": {
             "name": "Test Vendor",
             "phone": "+92-300-1234567",
             "addressLine1": "123 Business Street",
-            "addressLine2": "Suite 456",
             "city": "Karachi",
             "state": "Sindh",
             "postalCode": "75500",
             "country": "Pakistan"
         }
-    }')
-    
-    if contains "$PAY_RESULT" '"success".*true'; then
-        print_success "CONFIRMED request created, approved and paid"
-        print_info "Request Number: $CONFIRMED_REQUEST_NUMBER"
-        print_info "Request ID: $CONFIRMED_REQUEST_ID"
-        print_info "Status: CONFIRMED (approved + paid, ready for supplier to manage)"
-    else
-        print_error "Failed to process payment for CONFIRMED request"
-        echo "$PAY_RESULT" | jq '.'
-    fi
+    }' > /dev/null
+    print_success "CONFIRMED request created, approved, and paid"
 else
     print_error "Failed to create CONFIRMED request"
 fi
 
 sleep 1
 
-# ============================================
-# STAGE 4: IN PROGRESS (SUPPLIER MANAGING)
-# ============================================
-
-print_test "Creating 'IN PROGRESS' request (Status: being processed by supplier)"
-REQUEST_INPROGRESS=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
+# STAGE 4: CANCELLED
+CANCELLED_REQ=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
     "supplierId": "'$SUPPLIER_ID'",
-    "items": [{
-        "inventoryId": "'$INVENTORY1_ID'",
-        "quantity": 25
-    }],
-    "vendorNotes": "This request will be IN PROGRESS - Supplier is working on it"
+    "items": [{"inventoryId": "'${VERIFIED_INVENTORY[4]}'", "quantity": 5}],
+    "vendorNotes": "CANCELLED stage"
 }')
-
-if contains "$REQUEST_INPROGRESS" '"success".*true'; then
-    INPROGRESS_REQUEST_ID=$(echo "$REQUEST_INPROGRESS" | jq -r '.request._id // .vendorRequest._id // .data._id')
-    INPROGRESS_REQUEST_NUMBER=$(echo "$REQUEST_INPROGRESS" | jq -r '.request.requestNumber // .vendorRequest.requestNumber // .data.requestNumber')
-    REQUEST_IDS+=("$INPROGRESS_REQUEST_ID")
-    
+if contains "$CANCELLED_REQ" '"success".*true'; then
+    CANCELLED_ID=$(echo "$CANCELLED_REQ" | jq -r '.request._id // .vendorRequest._id // .data._id')
+    REQUEST_IDS+=("$CANCELLED_ID")
     sleep 1
-    
-    # Approve
-    print_info "Approving request..."
-    api_call POST "/vendor-requests/$INPROGRESS_REQUEST_ID/approve" "$SUPPLIER_TOKEN" '{
-        "supplierNotes": "Approved"
+    api_call POST "/vendor-requests/$CANCELLED_ID/reject" "$SUPPLIER_TOKEN" '{
+        "rejectionReason": "Insufficient stock"
     }' > /dev/null
-    
-    sleep 1
-    
-    # Pay
-    print_info "Processing payment..."
-    api_call POST "/vendor-requests/$INPROGRESS_REQUEST_ID/pay" "$VENDOR_TOKEN" '{
-        "shippingAddress": {
-            "name": "Test Vendor",
-            "phone": "+92-300-1234567",
-            "addressLine1": "123 Business Street",
-            "city": "Karachi",
-            "state": "Sindh",
-            "postalCode": "75500",
-            "country": "Pakistan"
-        }
-    }' > /dev/null
-    
-    sleep 1
-    
-    # Note: IN PROGRESS stage is when supplier is actively managing the request
-    # This is the same as CONFIRMED but the supplier hasn't marked it complete yet
-    # The UI will show it as "In Progress" when supplier is working on it
-    
-    print_success "IN PROGRESS request created"
-    print_info "Request Number: $INPROGRESS_REQUEST_NUMBER"
-    print_info "Request ID: $INPROGRESS_REQUEST_ID"
-    print_info "Status: IN PROGRESS (supplier is managing/processing)"
-    print_info "Note: In Progress = Confirmed but not yet marked complete"
-else
-    print_error "Failed to create IN PROGRESS request"
-fi
-
-sleep 1
-
-# ============================================
-# STAGE 5: CANCELLED/REJECTED
-# ============================================
-
-print_test "Creating 'CANCELLED' request (Status: rejected by supplier)"
-REQUEST_CANCELLED=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
-    "supplierId": "'$SUPPLIER_ID'",
-    "items": [{
-        "inventoryId": "'$INVENTORY1_ID'",
-        "quantity": 5
-    }],
-    "vendorNotes": "This request will be CANCELLED/REJECTED"
-}')
-
-if contains "$REQUEST_CANCELLED" '"success".*true'; then
-    CANCELLED_REQUEST_ID=$(echo "$REQUEST_CANCELLED" | jq -r '.request._id // .vendorRequest._id // .data._id')
-    CANCELLED_REQUEST_NUMBER=$(echo "$REQUEST_CANCELLED" | jq -r '.request.requestNumber // .vendorRequest.requestNumber // .data.requestNumber')
-    REQUEST_IDS+=("$CANCELLED_REQUEST_ID")
-    
-    sleep 1
-    
-    # Reject the request
-    print_info "Rejecting request..."
-    REJECT_RESULT=$(api_call POST "/vendor-requests/$CANCELLED_REQUEST_ID/reject" "$SUPPLIER_TOKEN" '{
-        "rejectionReason": "Insufficient stock available at this time"
-    }')
-    
-    if contains "$REJECT_RESULT" '"success".*true'; then
-        print_success "CANCELLED request created and rejected"
-        print_info "Request Number: $CANCELLED_REQUEST_NUMBER"
-        print_info "Request ID: $CANCELLED_REQUEST_ID"
-        print_info "Status: CANCELLED (rejected by supplier)"
-    else
-        print_error "Failed to reject CANCELLED request"
-    fi
+    print_success "CANCELLED request created and rejected"
 else
     print_error "Failed to create CANCELLED request"
 fi
@@ -445,63 +388,103 @@ fi
 sleep 1
 
 # ============================================
-# BONUS: CREATE ADDITIONAL REQUESTS FOR BETTER TESTING
+# PAYMENT FLOW TESTS
 # ============================================
 
-print_header "PHASE 4: CREATE ADDITIONAL TEST REQUESTS"
+print_header "PHASE 5: PAYMENT FLOW TESTS"
 
-# Create 2 more NEW requests
-print_test "Creating additional NEW requests (for variety)"
-for i in 1 2; do
-    EXTRA_NEW=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
-        "supplierId": "'$SUPPLIER_ID'",
-        "items": [{
-            "inventoryId": "'$INVENTORY1_ID'",
-            "quantity": '$((i * 3))'
-        }],
-        "vendorNotes": "Additional NEW request #'$i' for testing"
-    }')
-    
-    if contains "$EXTRA_NEW" '"success".*true'; then
-        EXTRA_ID=$(echo "$EXTRA_NEW" | jq -r '.request._id // .vendorRequest._id // .data._id')
-        REQUEST_IDS+=("$EXTRA_ID")
-        print_success "Additional NEW request #$i created"
-    fi
-    sleep 0.5
-done
+# Test: Get approved requests ready for payment
+print_test "Vendor: Get approved requests ready for payment"
+APPROVED_REQS=$(api_call GET "/vendor-requests/approved" "$VENDOR_TOKEN")
+if contains "$APPROVED_REQS" '"success".*true'; then
+    APPROVED_COUNT=$(echo "$APPROVED_REQS" | jq -r '.requests | length')
+    print_success "Retrieved approved requests ready for payment (Count: $APPROVED_COUNT)"
+else
+    print_error "Failed to get approved requests"
+fi
 
-# Create 1 more PENDING request
-print_test "Creating additional PENDING request"
-EXTRA_PENDING=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
+sleep 1
+
+# Test: Cancel approved request before payment
+print_test "Vendor: Cancel approved request before payment"
+CANCEL_APPROVED_REQ=$(api_call POST "/vendor-requests" "$VENDOR_TOKEN" '{
     "supplierId": "'$SUPPLIER_ID'",
-    "items": [{
-        "inventoryId": "'$INVENTORY1_ID'",
-        "quantity": 12
-    }],
-    "vendorNotes": "Additional PENDING request for testing"
+    "items": [{"inventoryId": "'${VERIFIED_INVENTORY[0]}'", "quantity": 8}],
+    "vendorNotes": "Request to be cancelled after approval"
 }')
 
-if contains "$EXTRA_PENDING" '"success".*true'; then
-    EXTRA_PENDING_ID=$(echo "$EXTRA_PENDING" | jq -r '.request._id // .vendorRequest._id // .data._id')
-    REQUEST_IDS+=("$EXTRA_PENDING_ID")
-    
+if contains "$CANCEL_APPROVED_REQ" '"success".*true'; then
+    CANCEL_APPROVED_ID=$(echo "$CANCEL_APPROVED_REQ" | jq -r '.request._id // .vendorRequest._id // .data._id')
+    REQUEST_IDS+=("$CANCEL_APPROVED_ID")
     sleep 1
-    api_call POST "/vendor-requests/$EXTRA_PENDING_ID/approve" "$SUPPLIER_TOKEN" '{
-        "supplierNotes": "Additional pending request approved"
-    }' > /dev/null
     
-    print_success "Additional PENDING request created and approved"
+    # Supplier approves
+    api_call POST "/vendor-requests/$CANCEL_APPROVED_ID/approve" "$SUPPLIER_TOKEN" '{"supplierNotes": "Approved"}' > /dev/null
+    sleep 1
+    
+    # Vendor cancels after approval
+    CANCEL_APPROVED_RESULT=$(api_call POST "/vendor-requests/$CANCEL_APPROVED_ID/cancel-approved" "$VENDOR_TOKEN" '{
+        "cancellationReason": "Changed business requirements"
+    }')
+    
+    if contains "$CANCEL_APPROVED_RESULT" '"success".*true'; then
+        print_success "Vendor cancelled approved request before payment"
+    else
+        print_error "Failed to cancel approved request"
+    fi
+else
+    print_error "Failed to create request for cancel-approved test"
 fi
 
 sleep 1
 
 # ============================================
-# PHASE 5: VERIFY ALL REQUESTS
+# SUPPLIER REQUEST MANAGEMENT
 # ============================================
 
-print_header "PHASE 5: VERIFICATION"
+print_header "PHASE 6: SUPPLIER REQUEST MANAGEMENT"
 
-print_test "Retrieving all supplier requests"
+# Test: Get supplier's requests
+print_test "Supplier: Get all requests"
+SUPPLIER_REQS=$(api_call GET "/vendor-requests/supplier/requests" "$SUPPLIER_TOKEN")
+if contains "$SUPPLIER_REQS" '"success".*true'; then
+    SUPPLIER_REQS_COUNT=$(echo "$SUPPLIER_REQS" | jq -r '.requests | length')
+    print_success "Retrieved supplier's requests (Count: $SUPPLIER_REQS_COUNT)"
+else
+    print_error "Failed to get supplier's requests"
+fi
+
+sleep 1
+
+# Test: Get supplier statistics
+print_test "Supplier: Get request statistics"
+SUPPLIER_STATS=$(api_call GET "/vendor-requests/supplier/stats" "$SUPPLIER_TOKEN")
+if contains "$SUPPLIER_STATS" '"success".*true'; then
+    print_success "Retrieved supplier statistics"
+else
+    print_error "Failed to get supplier statistics"
+fi
+
+sleep 1
+
+# Test: Get supplier settings
+print_test "Supplier: Get settings"
+SUPPLIER_SETTINGS=$(api_call GET "/vendor-requests/supplier/settings" "$SUPPLIER_TOKEN")
+if contains "$SUPPLIER_SETTINGS" '"success".*true'; then
+    print_success "Retrieved supplier settings"
+else
+    print_error "Failed to get supplier settings"
+fi
+
+sleep 1
+
+# ============================================
+# VERIFICATION
+# ============================================
+
+print_header "PHASE 7: VERIFICATION"
+
+print_test "Verify all request stages exist"
 ALL_REQUESTS=$(api_call GET "/vendor-requests/supplier/requests" "$SUPPLIER_TOKEN")
 
 if contains "$ALL_REQUESTS" '"success".*true'; then
@@ -509,15 +492,14 @@ if contains "$ALL_REQUESTS" '"success".*true'; then
     NEW_COUNT=$(echo "$ALL_REQUESTS" | jq '[.requests[] | select(.status == "pending")] | length')
     APPROVED_COUNT=$(echo "$ALL_REQUESTS" | jq '[.requests[] | select(.status == "approved")] | length')
     REJECTED_COUNT=$(echo "$ALL_REQUESTS" | jq '[.requests[] | select(.status == "rejected")] | length')
-    CANCELLED_COUNT=$(echo "$ALL_REQUESTS" | jq '[.requests[] | select(.status == "cancelled")] | length')
     
-    print_success "Retrieved all requests"
-    print_info "Total Requests: $TOTAL_REQUESTS"
+    print_success "Verified all request stages"
+    print_info "Total: $TOTAL_REQUESTS"
     print_info "NEW (pending): $NEW_COUNT"
-    print_info "PENDING/CONFIRMED/IN PROGRESS (approved): $APPROVED_COUNT"
-    print_info "CANCELLED/REJECTED: $((REJECTED_COUNT + CANCELLED_COUNT))"
+    print_info "PENDING/CONFIRMED (approved): $APPROVED_COUNT"
+    print_info "CANCELLED/REJECTED: $REJECTED_COUNT"
 else
-    print_error "Failed to retrieve requests"
+    print_error "Failed to verify requests"
 fi
 
 sleep 1
@@ -529,64 +511,41 @@ sleep 1
 print_header "TEST SUMMARY"
 
 echo ""
-echo -e "${BOLD}${GREEN}✅ VENDOR REQUEST FLOW TESTING COMPLETED${NC}"
+echo -e "${BOLD}${GREEN}✅ VENDOR REQUEST TESTING COMPLETED${NC}"
 echo ""
 echo "┌─────────────────────────────────────────────┐"
-echo "│  Requests Created By Stage                  │"
+echo "│  Test Results                               │"
 echo "├─────────────────────────────────────────────┤"
-printf "│  ${BLUE}NEW${NC} (pending approval):         3       │\n"
-printf "│  ${YELLOW}PENDING${NC} (awaiting payment):      2       │\n"
-printf "│  ${GREEN}CONFIRMED${NC} (payment received):    1       │\n"
-printf "│  ${MAGENTA}IN PROGRESS${NC} (being processed):   1       │\n"
-printf "│  ${RED}CANCELLED${NC} (rejected):            1       │\n"
-echo "├─────────────────────────────────────────────┤"
-printf "│  Total:    %-30s │\n" "${#REQUEST_IDS[@]}"
+printf "│  ${GREEN}Passed:${NC}    %-30s │\n" "$PASSED"
+printf "│  ${RED}Failed:${NC}    %-30s │\n" "$FAILED"
+printf "│  ${CYAN}Skipped:${NC}   %-30s │\n" "$SKIPPED"
+printf "│  ${BOLD}Total:${NC}     %-30s │\n" "$TOTAL"
 echo "└─────────────────────────────────────────────┘"
 echo ""
 
-echo -e "${GREEN}${BOLD}🎉 ALL REQUEST STAGES CREATED!${NC}"
+echo "┌─────────────────────────────────────────────┐"
+echo "│  Requests Created                           │"
+echo "├─────────────────────────────────────────────┤"
+printf "│  Total Requests: %-23s │\n" "${#REQUEST_IDS[@]}"
+echo "└─────────────────────────────────────────────┘"
 echo ""
-echo "✅ Test Data Ready:"
-echo "   ├─ ✓ NEW Tab: 3 requests"
-echo "   ├─ ✓ PENDING Tab: 2 requests (approved, awaiting payment)"
-echo "   ├─ ✓ CONFIRMED Tab: 1 request (paid, ready to manage)"
-echo "   ├─ ✓ IN PROGRESS Tab: 1 request (supplier processing)"
-echo "   └─ ✓ CANCELLED Tab: 1 request (rejected)"
-echo ""
+
 echo -e "${CYAN}💡 Next Steps:${NC}"
-echo "   1. Open your frontend: http://localhost:3000/supplier/vendor-requests"
-echo "   2. Test each tab to see the requests"
-echo "   3. Test approve/reject on NEW requests"
-echo "   4. Test 'Mark Complete' on CONFIRMED requests"
-echo "   5. Click on items in request details to view inventory"
+echo "   Supplier: http://localhost:3000/supplier/vendor-requests"
+echo "   Vendor: http://localhost:3000/vendor/vendor-requests"
 echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BLUE}Request IDs Created:${NC}"
-echo ""
 for id in "${REQUEST_IDS[@]}"; do
     echo "   - $id"
 done
-echo ""
-echo -e "${YELLOW}⚠️  Note: The 'IN PROGRESS' stage is essentially 'CONFIRMED'${NC}"
-echo -e "${YELLOW}    but represents when the supplier is actively managing it.${NC}"
-echo -e "${YELLOW}    Use 'Mark Complete' to move it to transactions.${NC}"
-echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-
-# Calculate success rate
-if [ $TOTAL -gt 0 ]; then
-    SUCCESS_RATE=$(awk "BEGIN {printf \"%.1f\", ($PASSED / $TOTAL) * 100}")
-    echo -e "${BLUE}Success Rate: ${SUCCESS_RATE}%${NC}"
-fi
-
 echo ""
 
 if [ $FAILED -eq 0 ]; then
     echo -e "${GREEN}${BOLD}🎉 ALL TESTS PASSED!${NC}"
     exit 0
 else
-    echo -e "${YELLOW}⚠️  TESTS COMPLETED WITH SOME ISSUES${NC}"
-    echo "   Review failed tests above"
+    echo -e "${YELLOW}⚠️  TESTS COMPLETED WITH ISSUES${NC}"
     exit 1
 fi

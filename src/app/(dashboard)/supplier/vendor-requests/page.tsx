@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as vendorRequestApi from "@/lib/api/vendor.request.api";
 import type { VendorRequest, VendorRequestStats } from "@/types";
 import { toast } from "sonner";
@@ -42,6 +42,8 @@ import {
   Squares2X2Icon,
   InboxIcon,
   ArrowTopRightOnSquareIcon,
+  InboxStackIcon,
+  InboxArrowDownIcon,
 } from "@heroicons/react/24/outline";
 import { colors, badgeColors } from "@/lib/colorConstants";
 import {
@@ -94,6 +96,7 @@ const RsIcon = () => (
 
 export default function VendorRequestsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [allRequests, setAllRequests] = useState<VendorRequest[]>([]);
   const [stats, setStats] = useState<VendorRequestStats | null>(null);
   const [autoApprove, setAutoApprove] = useState(false);
@@ -120,6 +123,30 @@ export default function VendorRequestsPage() {
     setIsVisible(true);
     fetchAllData();
   }, []);
+
+  // New effect to update searchTerm from URL params
+  useEffect(() => {
+    const searchParam = searchParams ? searchParams.get("search") : null;
+    if (searchParam) {
+      console.log("📝 Setting search from URL param:", searchParam);
+      setSearchTerm(searchParam);
+    } else {
+      setSearchTerm(""); // Clear if no param
+    }
+  }, [searchParams]);
+
+  // New effect to update URL on searchTerm change
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (searchTerm.trim()) {
+        params.set("search", searchTerm.trim());
+      } else {
+        params.delete("search");
+      }
+      router.replace(`${window.location.pathname}?${params.toString()}`);
+    }
+  }, [searchTerm, router]);
 
   const fetchAllData = async () => {
     try {
@@ -287,14 +314,6 @@ export default function VendorRequestsPage() {
     ) {
       return "bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400";
     }
-    // In Progress = has order and being managed
-    if (
-      request.status === "approved" &&
-      request.orderId &&
-      request.isCompleted === false
-    ) {
-      return "bg-purple-100/10 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-900 text-purple-700 dark:text-purple-400";
-    }
     // Cancelled/Rejected
     if (request.status === "cancelled" || request.status === "rejected") {
       return "bg-red-100/10 dark:bg-red-900/10 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400";
@@ -311,12 +330,6 @@ export default function VendorRequestsPage() {
       !request.isCompleted
     )
       return "confirmed";
-    if (
-      request.status === "approved" &&
-      request.orderId &&
-      request.isCompleted === false
-    )
-      return "in_progress";
     if (request.status === "cancelled") return "cancelled";
     if (request.status === "rejected") return "rejected";
     return request.status;
@@ -366,11 +379,10 @@ export default function VendorRequestsPage() {
 
   const statusOptions = [
     "All Status",
-    "new",
-    "pending",
-    "confirmed",
-    "in_progress",
-    "cancelled",
+    "New",
+    "Pending",
+    "Confirmed",
+    "Cancelled",
   ];
 
   const sortOptions = [
@@ -392,10 +404,6 @@ export default function VendorRequestsPage() {
     if (selectedTab === "confirmed")
       return allRequests.filter(
         (r) => r.status === "approved" && r.orderId && !r.isCompleted
-      );
-    if (selectedTab === "in_progress")
-      return allRequests.filter(
-        (r) => r.status === "approved" && r.orderId && r.isCompleted === false
       );
     if (selectedTab === "cancelled")
       return allRequests.filter(
@@ -458,9 +466,6 @@ export default function VendorRequestsPage() {
   const confirmedRequests = allRequests.filter(
     (r) => r.status === "approved" && r.orderId && !r.isCompleted
   ).length;
-  const inProgressRequests = allRequests.filter(
-    (r) => r.status === "approved" && r.orderId && r.isCompleted === false
-  ).length;
   const cancelledRequests = allRequests.filter(
     (r) => r.status === "cancelled" || r.status === "rejected"
   ).length;
@@ -516,19 +521,19 @@ export default function VendorRequestsPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
                 title: "Total Requests",
                 value: totalRequests.toString(),
                 subtitle: "All requests",
-                icon: InboxIcon,
+                icon: InboxStackIcon,
               },
               {
                 title: "New Requests",
                 value: newRequests.toString(),
                 subtitle: "Recently submitted",
-                icon: InboxIcon,
+                icon: InboxArrowDownIcon,
               },
               {
                 title: "Pending",
@@ -541,12 +546,6 @@ export default function VendorRequestsPage() {
                 value: confirmedRequests.toString(),
                 subtitle: "Payment confirmed",
                 icon: CheckCircleIcon,
-              },
-              {
-                title: "In Progress",
-                value: inProgressRequests.toString(),
-                subtitle: "Being processed",
-                icon: TruckIcon,
               },
             ].map((stat, index) => (
               <Card
@@ -724,7 +723,9 @@ export default function VendorRequestsPage() {
                       : `${colors.texts.secondary} hover:${colors.texts.primary}`
                   } flex items-center gap-2 justify-center`}
                 >
-                  <InboxIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                  <InboxArrowDownIcon
+                    className={`h-4 w-4 ${colors.icons.primary}`}
+                  />
                   New
                 </TabsTrigger>
                 <TabsTrigger
@@ -752,18 +753,6 @@ export default function VendorRequestsPage() {
                     className={`h-4 w-4 ${colors.icons.primary}`}
                   />
                   Confirmed
-                </TabsTrigger>
-                <TabsTrigger
-                  value="in_progress"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
-                  ${
-                    selectedTab === "in_progress"
-                      ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
-                      : `${colors.texts.secondary} hover:${colors.texts.primary}`
-                  } flex items-center gap-2 justify-center`}
-                >
-                  <TruckIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-                  In Progress
                 </TabsTrigger>
                 <TabsTrigger
                   value="cancelled"
@@ -919,7 +908,7 @@ export default function VendorRequestsPage() {
                             setIsApproveDialogOpen(true);
                           }}
                           disabled={actionLoading}
-                          className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none`}
+                          className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
                         >
                           <CheckCircleIcon
                             className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
@@ -934,7 +923,7 @@ export default function VendorRequestsPage() {
                             setIsRejectDialogOpen(true);
                           }}
                           disabled={actionLoading}
-                          className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none`}
+                          className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
                         >
                           <XCircleIcon
                             className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
@@ -949,13 +938,12 @@ export default function VendorRequestsPage() {
                       !request.isCompleted && (
                         <Button
                           size="sm"
-                          variant="outline"
                           onClick={() => handleComplete(request)}
                           disabled={actionLoading}
-                          className={`flex-1 h-8 px-3 ${colors.buttons.primary} cursor-pointer rounded-none`}
+                          className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all`}
                         >
                           <CheckCircleIcon
-                            className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
+                            className={`h-3 w-3 mr-1 text-white dark:text-gray-900`}
                           />
                           Mark Complete
                         </Button>
@@ -968,7 +956,7 @@ export default function VendorRequestsPage() {
                         setSelectedRequest(request);
                         setIsDetailsOpen(true);
                       }}
-                      className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none`}
+                      className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
                     >
                       <EyeIcon
                         className={`h-3 w-3 mr-1 ${colors.icons.primary}`}

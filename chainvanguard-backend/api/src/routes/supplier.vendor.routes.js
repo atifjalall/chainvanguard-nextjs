@@ -103,7 +103,10 @@ router.get("/", authenticate, authorizeRoles("supplier"), async (req, res) => {
 
         // Calculate statistics
         requests.forEach((request) => {
-          stats.totalAmount += request.total || 0;
+          // Only add to totalAmount for completed requests
+          if (request.status === "completed") {
+            stats.totalAmount += request.total || 0;
+          }
 
           switch (request.status) {
             case "approved":
@@ -123,6 +126,9 @@ router.get("/", authenticate, authorizeRoles("supplier"), async (req, res) => {
               break;
           }
         });
+
+        // Set totalRequests to only completed requests
+        stats.totalRequests = stats.completedCount;
 
         stats.avgRequestValue =
           stats.totalRequests > 0 ? stats.totalAmount / stats.totalRequests : 0;
@@ -359,7 +365,10 @@ router.get(
       };
 
       requests.forEach((request) => {
-        stats.totalAmount += request.total || 0;
+        // Only add to totalAmount for completed requests
+        if (request.status === "completed") {
+          stats.totalAmount += request.total || 0;
+        }
 
         switch (request.status) {
           case "approved":
@@ -379,6 +388,9 @@ router.get(
             break;
         }
       });
+
+      // Set totalRequests to only completed requests
+      stats.totalRequests = stats.completedCount;
 
       stats.avgRequestValue =
         stats.totalRequests > 0 ? stats.totalAmount / stats.totalRequests : 0;
