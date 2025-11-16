@@ -29,6 +29,24 @@ export const badgeColors = {
     text: "text-gray-700 dark:text-gray-400",
     icon: "text-gray-700 dark:text-gray-400",
   },
+  amber: {
+    bg: "bg-amber-100/10 dark:bg-amber-900/10",
+    border: "border border-amber-200 dark:border-amber-900",
+    text: "text-amber-700 dark:text-amber-400",
+    icon: "text-amber-700 dark:text-amber-400",
+  },
+  cyan: {
+    bg: "bg-cyan-100/10 dark:bg-cyan-900/10",
+    border: "border border-cyan-200 dark:border-cyan-900",
+    text: "text-cyan-700 dark:text-cyan-400",
+    icon: "text-cyan-700 dark:text-cyan-400",
+  },
+  purple: {
+    bg: "bg-purple-100/10 dark:bg-purple-900/10",
+    border: "border border-purple-200 dark:border-purple-900",
+    text: "text-purple-700 dark:text-purple-400",
+    icon: "text-purple-700 dark:text-purple-400",
+  },
 };
 
 export const colors = {
@@ -65,11 +83,12 @@ export const colors = {
     primary: "text-gray-900 dark:text-white",
     secondary: "text-gray-600 dark:text-gray-400",
     muted: "text-gray-500 dark:text-gray-500",
-    accent: "text-gray-700 dark:text-gray-300", // ✅ ADDED THIS
+    accent: "text-gray-700 dark:text-gray-300",
     success: "text-green-500",
     warning: "text-yellow-500",
     error: "text-red-500",
     info: "text-blue-500",
+    white: "text-white dark:text-gray-900",
   },
   buttons: {
     primary:

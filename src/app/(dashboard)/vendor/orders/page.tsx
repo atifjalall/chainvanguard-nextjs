@@ -8,18 +8,18 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Input } from "@/components/_ui/input";
-import { Badge } from "@/components/_ui/badge";
-import { Progress } from "@/components/_ui/progress";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/_ui/select";
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -27,37 +27,41 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/_ui/dialog";
-import { Label } from "@/components/_ui/label";
-import { Textarea } from "@/components/_ui/textarea";
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  Search,
-  Package,
-  Truck,
-  CheckCircle,
-  Clock,
-  XCircle,
-  Eye,
-  MessageCircle,
-  MapPin,
-  User,
-  DollarSign,
-  Filter,
-  Download,
-  RefreshCw,
-  Home,
-  Shield,
-  Activity,
-  TrendingUp,
-  ArrowUpDown,
-  Loader2,
-  ChevronRight,
-  Sparkles,
-} from "lucide-react";
+  MagnifyingGlassIcon,
+  CubeIcon,
+  TruckIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  XCircleIcon,
+  EyeIcon,
+  MapPinIcon,
+  UserIcon,
+  CurrencyDollarIcon,
+  FunnelIcon,
+  ArrowDownTrayIcon,
+  ArrowPathIcon,
+  HomeIcon,
+  ChartBarIcon,
+  ArrowPathIcon as LoaderIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Order, OrderStatus } from "@/types";
 import { toast } from "sonner";
 import { orderApi, OrderFilters } from "@/lib/api/order.api";
+import { colors } from "@/lib/colorConstants";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 const statusOptions: Array<OrderStatus | "All Status"> = [
   "All Status",
@@ -217,56 +221,56 @@ export default function VendorOrdersPage() {
         return {
           color:
             "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-900/30",
-          icon: Clock,
+          icon: ClockIcon,
           label: "Pending",
         };
       case "confirmed":
         return {
           color:
             "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30",
-          icon: CheckCircle,
+          icon: CheckCircleIcon,
           label: "Confirmed",
         };
       case "processing":
         return {
           color:
             "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-200/50 dark:border-indigo-900/30",
-          icon: Activity,
+          icon: ChartBarIcon,
           label: "Processing",
         };
       case "shipped":
         return {
           color:
             "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400 border-green-200/50 dark:border-green-900/30",
-          icon: Truck,
+          icon: TruckIcon,
           label: "Shipped",
         };
       case "delivered":
         return {
           color:
             "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-900/30",
-          icon: CheckCircle,
+          icon: CheckCircleIcon,
           label: "Delivered",
         };
       case "cancelled":
         return {
           color:
             "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 border-red-200/50 dark:border-red-900/30",
-          icon: XCircle,
+          icon: XCircleIcon,
           label: "Cancelled",
         };
       case "refunded":
         return {
           color:
             "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400 border-orange-200/50 dark:border-orange-900/30",
-          icon: DollarSign,
+          icon: CurrencyDollarIcon,
           label: "Refunded",
         };
       default:
         return {
           color:
             "bg-gray-100 text-gray-700 dark:bg-gray-800/60 dark:text-gray-300 border-gray-200/50 dark:border-gray-700/50",
-          icon: Package,
+          icon: CubeIcon,
           label: "Unknown",
         };
     }
@@ -352,6 +356,25 @@ export default function VendorOrdersPage() {
     }
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-PK", {
+      style: "currency",
+      currency: "PKR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatCurrencyAbbreviated = (amount: number) => {
+    if (amount >= 1e9) {
+      return `Rs ${(amount / 1e9).toFixed(2)} B`;
+    } else if (amount >= 1e6) {
+      return `Rs ${(amount / 1e6).toFixed(2)} M`;
+    } else {
+      return formatCurrency(amount);
+    }
+  };
+
   const OrderCard = ({ order }: { order: Order }) => {
     const statusConfig = getStatusConfig(order.status);
     const StatusIcon = statusConfig.icon;
@@ -360,14 +383,12 @@ export default function VendorOrdersPage() {
     const orderId = order._id?.toString() || order.id?.toString() || "";
 
     return (
-      <Card className="group border border-white/20 dark:border-gray-700/30 shadow-xl hover:shadow-2xl transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden hover:scale-[1.01]">
+      <Card className="group border border-white/20 dark:border-gray-700/30 transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden hover:scale-[1.01] rounded-none">
         <CardContent className="p-6">
           {/* Order Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <div
-                className={`w-12 h-12 rounded-full ${statusConfig.color.split(" ")[0].replace("100", "100/80").replace("950/30", "950/30")} flex items-center justify-center shadow-md`}
-              >
+              <div className={`w-12 h-12 flex items-center justify-center`}>
                 <StatusIcon className="h-6 w-6" />
               </div>
               <div>
@@ -375,14 +396,14 @@ export default function VendorOrdersPage() {
                   {order.orderNumber || order.id || order._id}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                  <Clock className="h-3 w-3" />
+                  <ClockIcon className="h-3 w-3" />
                   {formatDate(order.createdAt)}
                 </p>
               </div>
             </div>
 
             <Badge
-              className={`${statusConfig.color} flex items-center gap-1.5 border shadow-sm backdrop-blur-sm`}
+              className={`${statusConfig.color} flex items-center gap-1.5 border backdrop-blur-sm rounded-none`}
               variant="outline"
             >
               <StatusIcon className="h-3 w-3" />
@@ -391,10 +412,10 @@ export default function VendorOrdersPage() {
           </div>
 
           {/* Customer Info */}
-          <div className="flex items-center justify-between mb-4 p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50">
+          <div className="flex items-center justify-between mb-4 p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-none">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-md">
-                <User className="h-5 w-5 text-white" />
+              <div className="w-10 h-10 flex items-center justify-center">
+                <UserIcon className="h-5 w-5 text-white" />
               </div>
               <div>
                 <span className="font-medium text-gray-900 dark:text-gray-100 block">
@@ -407,7 +428,7 @@ export default function VendorOrdersPage() {
             </div>
             <div className="text-right">
               <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                ${order.totalAmount?.toFixed(2) || "0.00"}
+                Rs {order.totalAmount?.toFixed(2) || "0.00"}
               </span>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {order.products?.length || 0} item
@@ -437,7 +458,7 @@ export default function VendorOrdersPage() {
               {/* Products */}
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                  <Package className="h-4 w-4" />
+                  <CubeIcon className="h-4 w-4" />
                   Products
                 </h4>
                 {order.products && order.products.length > 0 ? (
@@ -451,11 +472,11 @@ export default function VendorOrdersPage() {
                     return (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-3 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition-shadow"
+                        className="flex items-center justify-between p-3 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 transition-shadow rounded-none"
                       >
                         <div className="flex items-center gap-3">
                           {productImage ? (
-                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200/80 dark:bg-gray-700/60 backdrop-blur-sm shadow-md">
+                            <div className="w-12 h-12 bg-gray-200/80 dark:bg-gray-700/60 backdrop-blur-sm">
                               <img
                                 src={productImage}
                                 alt={item.productName}
@@ -463,8 +484,8 @@ export default function VendorOrdersPage() {
                               />
                             </div>
                           ) : (
-                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-md">
-                              <Package className="h-6 w-6 text-white" />
+                            <div className="w-12 h-12 flex items-center justify-center">
+                              <CubeIcon className="h-6 w-6 text-white" />
                             </div>
                           )}
                           <div>
@@ -472,7 +493,7 @@ export default function VendorOrdersPage() {
                               {item.productName}
                             </span>
                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                              Qty: {item.quantity} @ $
+                              Qty: {item.quantity} @ Rs
                               {item.price?.toFixed(2) || "0.00"}
                             </p>
                             {item.sku && (
@@ -483,7 +504,7 @@ export default function VendorOrdersPage() {
                           </div>
                         </div>
                         <span className="font-bold text-gray-900 dark:text-gray-100">
-                          $
+                          Rs
                           {item.subtotal?.toFixed(2) ||
                             (item.quantity * (item.price || 0)).toFixed(2)}
                         </span>
@@ -501,10 +522,10 @@ export default function VendorOrdersPage() {
               {order.shippingAddress && (
                 <div className="space-y-2">
                   <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <Home className="h-4 w-4" />
+                    <HomeIcon className="h-4 w-4" />
                     Shipping Address
                   </h4>
-                  <div className="p-3 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+                  <div className="p-3 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-none">
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {formatAddress(order.shippingAddress)}
                     </p>
@@ -516,10 +537,10 @@ export default function VendorOrdersPage() {
               {order.trackingId && (
                 <div className="space-y-2">
                   <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
+                    <MapPinIcon className="h-4 w-4" />
                     Tracking Information
                   </h4>
-                  <div className="p-3 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+                  <div className="p-3 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-none">
                     <p className="font-mono text-sm text-gray-900 dark:text-gray-100">
                       {order.trackingId}
                     </p>
@@ -534,10 +555,10 @@ export default function VendorOrdersPage() {
             <Button
               onClick={() => toggleOrderExpansion(orderId)}
               variant="outline"
-              className="hidden lg:flex items-center gap-2"
+              className="hidden lg:flex items-center gap-2 rounded-none"
             >
               {isExpanded ? "Show Less" : "View Details"}
-              <ChevronRight
+              <ChevronRightIcon
                 className={`h-4 w-4 ml-1 transition-transform duration-300 ${isExpanded ? "rotate-90" : ""}`}
               />
             </Button>
@@ -552,9 +573,9 @@ export default function VendorOrdersPage() {
                   }
                 }}
                 variant="outline"
-                className="hidden lg:flex items-center gap-2"
+                className="hidden lg:flex items-center gap-2 rounded-none"
               >
-                <Eye className="h-4 w-4" />
+                <EyeIcon className="h-4 w-4" />
                 View Order
               </Button>
 
@@ -569,7 +590,7 @@ export default function VendorOrdersPage() {
                         toast.error("Invalid order ID");
                       }
                     }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer shadow-lg hover:shadow-xl"
+                    className="flex items-center gap-2 px-4 h-9 bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer rounded-none"
                   >
                     Edit Order
                   </button>
@@ -583,63 +604,64 @@ export default function VendorOrdersPage() {
 
   if (isLoading && currentPage === 1) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
-          <p className="text-muted-foreground">Loading orders...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading orders...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
-      {/* Animated Background Effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl animate-pulse"></div>
-        <div
-          className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-400/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "2s" }}
-        ></div>
-      </div>
-
+    <div className={`min-h-screen ${colors.backgrounds.secondary}`}>
       <div className="relative z-10 p-6 space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/vendor">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Orders</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         {/* Header */}
         <div
-          className={`transform transition-all duration-700 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+          className={`transform transition-all duration-700 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+          }`}
         >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+              <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
                 Order Management
               </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400">
+              <p className={`text-base ${colors.texts.secondary}`}>
                 Manage customer orders and track fulfillment
               </p>
             </div>
             <div className="flex items-center gap-3">
               <Button
-                onClick={() => {
-                  loadOrders();
-                  loadStats();
-                }}
-                variant="outline"
-                className="hidden lg:flex items-center gap-2"
+                className={`flex items-center gap-2 ${colors.buttons.primary} cursor-pointer rounded-none transition-all`}
               >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </Button>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer shadow-lg hover:shadow-xl">
-                <Download className="h-4 w-4" />
+                <ArrowDownTrayIcon
+                  className={`h-4 w-4 text-white dark:text-gray-900`}
+                />
                 Export
-              </button>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Stats Grid */}
         <div
-          className={`transform transition-all duration-700 delay-200 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
+          className={`transform transition-all duration-700 delay-200 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
@@ -647,64 +669,54 @@ export default function VendorOrdersPage() {
                 title: "Total Orders",
                 value: stats?.totalOrders || 0,
                 subtitle: "All time",
-                icon: Package,
-                iconColor: "text-blue-600",
-                iconBg: "bg-blue-100 dark:bg-blue-900/30",
+                icon: CubeIcon,
               },
               {
                 title: "Pending",
                 value: stats?.pendingOrders || 0,
                 subtitle: "Need attention",
-                icon: Clock,
-                iconColor: "text-yellow-600",
-                iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
+                icon: ClockIcon,
               },
               {
                 title: "Active",
                 value: stats?.activeOrders || 0,
                 subtitle: "In progress",
-                icon: Truck,
-                iconColor: "text-green-600",
-                iconBg: "bg-green-100 dark:bg-green-900/30",
+                icon: TruckIcon,
               },
               {
                 title: "Completed",
                 value: stats?.completedOrders || 0,
                 subtitle: "Delivered",
-                icon: CheckCircle,
-                iconColor: "text-emerald-600",
-                iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
+                icon: CheckCircleIcon,
               },
               {
                 title: "Revenue",
-                value: `$${(stats?.totalRevenue || 0).toFixed(0)}`,
+                value: formatCurrencyAbbreviated(stats?.totalRevenue || 0),
                 subtitle: "Total earnings",
-                icon: DollarSign,
-                iconColor: "text-purple-600",
-                iconBg: "bg-purple-100 dark:bg-purple-900/30",
+                icon: CurrencyDollarIcon,
               },
             ].map((stat, index) => {
               const Icon = stat.icon;
               return (
                 <Card
                   key={index}
-                  className="border border-white/20 dark:border-gray-700/30 shadow-xl hover:shadow-2xl transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:scale-[1.02]"
+                  className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
                 >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <CardTitle
+                      className={`text-xs font-medium ${colors.texts.secondary}`}
+                    >
                       {stat.title}
                     </CardTitle>
-                    <div
-                      className={`h-10 w-10 rounded-full ${stat.iconBg} flex items-center justify-center shadow-md`}
-                    >
-                      <Icon className={`h-5 w-5 ${stat.iconColor}`} />
-                    </div>
+                    <Icon className={`h-5 w-5 ${colors.icons.primary}`} />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    <div
+                      className={`text-lg font-bold ${colors.texts.primary} mb-1`}
+                    >
                       {stat.value}
                     </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                    <p className={`text-xs ${colors.texts.secondary}`}>
                       {stat.subtitle}
                     </p>
                   </CardContent>
@@ -716,157 +728,176 @@ export default function VendorOrdersPage() {
 
         {/* Filters Card */}
         <div
-          className={`transform transition-all duration-700 delay-300 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
+          className={`transform transition-all duration-700 delay-300 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
         >
-          <Card className="border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+          <Card
+            className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+          >
             <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <Filter className="h-4 w-4 text-purple-600" />
-                </div>
+              <CardTitle className="flex items-center gap-3 text-base">
+                <FunnelIcon className={`h-4 w-4 ${colors.icons.primary}`} />
                 Filters & Search
               </CardTitle>
-              <CardDescription>
+              <CardDescription className={`text-xs ${colors.texts.secondary}`}>
                 Filter and search through your orders
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Tab Navigation */}
-              <div className="flex items-center gap-2 p-1 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg border border-gray-200/50 dark:border-gray-700/50 w-fit">
-                {[
-                  { key: "all", label: "All Orders", count: null },
-                  {
-                    key: "pending",
-                    label: "Pending",
-                    count: stats?.pendingOrders || 0,
-                    icon: Clock,
-                  },
-                  {
-                    key: "active",
-                    label: "Active",
-                    count: stats?.activeOrders || 0,
-                    icon: Truck,
-                  },
-                ].map((tab) => {
-                  const TabIcon = tab.icon;
-                  return (
-                    <button
-                      key={tab.key}
-                      onClick={() => setSelectedTab(tab.key as any)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                        selectedTab === tab.key
-                          ? "bg-blue-600 text-white shadow-lg"
-                          : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-700/50"
-                      }`}
-                    >
-                      {TabIcon && (
-                        <TabIcon className="h-4 w-4 inline-block mr-1.5" />
-                      )}
-                      {tab.label}
-                      {tab.count !== null && (
-                        <span className="ml-1.5 text-xs">({tab.count})</span>
-                      )}
-                    </button>
-                  );
-                })}
+              {/* Search Bar - Full Width */}
+              <div className="relative w-full">
+                <MagnifyingGlassIcon
+                  className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                />
+                <Input
+                  placeholder="Search orders, customers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={`${colors.inputs.base} pl-9 h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
+                />
               </div>
 
-              {/* Search and Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Input field - border color matches add-product */}
-                <div className="relative w-full">
-                  {/* Center the search icon */}
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search orders, customers..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300"
-                  />
-                </div>
-
-                {/* Status dropdown - border color matches add-product */}
-                <div className="w-full">
-                  <Select
-                    value={selectedStatus}
-                    onValueChange={(value) =>
-                      setSelectedStatus(value as OrderStatus | "All Status")
-                    }
+              {/* Dropdowns - Second Line */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Select
+                  value={selectedStatus}
+                  onValueChange={(value) =>
+                    setSelectedStatus(value as OrderStatus | "All Status")
+                  }
+                >
+                  <SelectTrigger
+                    className={`text-sm h-9 w-full ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
                   >
-                    <SelectTrigger className="h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent className="min-w-[240px]">
-                      {statusOptions.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Sort dropdown - border color matches add-product */}
-                <div className="w-full">
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300">
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent className="min-w-[240px]">
-                      {sortOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {statusOptions.map((status) => (
+                      <SelectItem
+                        key={status}
+                        value={status}
+                        className="text-sm h-9"
+                      >
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger
+                    className={`text-sm h-9 w-full ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                  >
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {sortOptions.map((option) => (
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        className="text-sm h-9"
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Results and Active Filters */}
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex flex-wrap gap-2 items-center mt-2">
+                {searchTerm && (
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
+                  >
+                    &quot;{searchTerm}&quot;
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                {selectedStatus !== "All Status" && (
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
+                  >
+                    {selectedStatus}
+                    <button
+                      onClick={() => setSelectedStatus("All Status")}
+                      className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                <span
+                  className={`text-xs ${colors.texts.secondary} ml-2 whitespace-nowrap`}
+                >
                   {filteredAndSortedOrders.length} of {totalOrdersCount} orders
-                </p>
-
-                <div className="flex gap-2">
-                  {searchTerm && (
-                    <Badge
-                      variant="outline"
-                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
-                    >
-                      &quot;{searchTerm}&quot;
-                      <button
-                        onClick={() => setSearchTerm("")}
-                        className="ml-1 text-gray-600 hover:text-gray-800"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  {selectedStatus !== "All Status" && (
-                    <Badge
-                      variant="outline"
-                      className="text-xs bg-white/50 dark:bg-gray-900/50 border-gray-200/50 dark:border-gray-700/50"
-                    >
-                      {selectedStatus}
-                      <button
-                        onClick={() => setSelectedStatus("All Status")}
-                        className="ml-1 text-gray-600 hover:text-gray-800"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                </div>
+                </span>
               </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Tabs - Moved below filters */}
+        <div
+          className={`flex justify-center mt-6 transition-all duration-700 delay-350 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="w-full flex justify-center">
+            <div
+              className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
+            >
+              {[
+                {
+                  key: "all",
+                  label: "All Orders",
+                  count: null,
+                  icon: CubeIcon,
+                },
+                {
+                  key: "pending",
+                  label: "Pending",
+                  count: stats?.pendingOrders || 0,
+                  icon: ClockIcon,
+                },
+                {
+                  key: "active",
+                  label: "Active",
+                  count: stats?.activeOrders || 0,
+                  icon: TruckIcon,
+                },
+              ].map((tab) => {
+                const TabIcon = tab.icon;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setSelectedTab(tab.key as any)}
+                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                    ${
+                      selectedTab === tab.key
+                        ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
+                        : `${colors.texts.secondary} hover:${colors.texts.primary}`
+                    } flex items-center gap-2 justify-center`}
+                  >
+                    <TabIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* Orders List */}
         <div
-          className={`transform transition-all duration-700 delay-400 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
+          className={`transform transition-all duration-700 delay-400 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
         >
           {filteredAndSortedOrders.length > 0 ? (
             <div className="space-y-6">
@@ -882,7 +913,7 @@ export default function VendorOrdersPage() {
                     size="sm"
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="bg-white/50 dark:bg-gray-900/50 border-0 shadow-sm"
+                    className={`${colors.buttons.outline} rounded-none`}
                   >
                     Previous
                   </Button>
@@ -897,8 +928,8 @@ export default function VendorOrdersPage() {
                           onClick={() => setCurrentPage(page)}
                           className={
                             currentPage === page
-                              ? "bg-blue-600 hover:bg-blue-700 text-white"
-                              : "bg-white/50 dark:bg-gray-900/50 border-0 shadow-sm"
+                              ? `${colors.buttons.primary} text-white`
+                              : `${colors.buttons.outline} rounded-none`
                           }
                         >
                           {page}
@@ -914,7 +945,7 @@ export default function VendorOrdersPage() {
                       setCurrentPage((p) => Math.min(totalPages, p + 1))
                     }
                     disabled={currentPage === totalPages}
-                    className="bg-white/50 dark:bg-gray-900/50 border-0 shadow-sm"
+                    className={`${colors.buttons.outline} rounded-none`}
                   >
                     Next
                   </Button>
@@ -922,70 +953,48 @@ export default function VendorOrdersPage() {
               )}
             </div>
           ) : (
-            <Card className="text-center py-16 border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden">
-              <CardContent>
-                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-                  <Package className="h-10 w-10 text-gray-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  {totalOrdersCount === 0 ? "No Orders Yet" : "No Orders Found"}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                  {totalOrdersCount === 0
-                    ? "When customers place orders, they will appear here."
-                    : "Try adjusting your search terms or filters."}
-                </p>
-                {totalOrdersCount === 0 ? (
-                  <button
-                    onClick={() => window.open("/vendor/my-products", "_self")}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-                  >
-                    <Package className="h-4 w-4" />
-                    Manage Products
-                  </button>
-                ) : (
-                  <div className="flex justify-center">
-                    <Button
-                      onClick={() => {
-                        setSearchTerm("");
-                        setSelectedStatus("All Status");
-                        setSelectedTab("all");
-                      }}
-                      variant="outline"
-                      className="inline-flex items-center gap-2"
-                    >
-                      Clear All Filters
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div className="text-center py-12">
+              <CubeIcon
+                className={`h-16 w-16 mx-auto ${colors.icons.muted} mb-4`}
+              />
+              <h3
+                className={`text-lg font-medium ${colors.texts.primary} mb-2`}
+              >
+                {totalOrdersCount === 0 ? "No Orders Yet" : "No Orders Found"}
+              </h3>
+              <p className={`text-sm ${colors.texts.secondary}`}>
+                {totalOrdersCount === 0
+                  ? "When customers place orders, they will appear here."
+                  : "Try adjusting your search terms or filters."}
+              </p>
+            </div>
           )}
         </div>
 
         {/* Update Status Dialog */}
         <Dialog open={isUpdateStatusOpen} onOpenChange={setIsUpdateStatusOpen}>
-          <DialogContent className="max-w-md bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-0 shadow-2xl">
+          <DialogContent
+            className={`${colors.backgrounds.modal} rounded-none max-w-md`}
+          >
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                  <Activity className="h-5 w-5 text-white" />
-                </div>
+              <DialogTitle className={`${colors.texts.primary}`}>
                 Update Order Status
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className={`${colors.texts.secondary}`}>
                 Update the status of order{" "}
                 {updatingOrder?.orderNumber || updatingOrder?.id}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-4 py-4">
               <div>
-                <Label htmlFor="status">New Status</Label>
+                <Label className={`${colors.texts.primary}`}>New Status</Label>
                 <Select
                   value={newStatus}
                   onValueChange={(value) => setNewStatus(value as OrderStatus)}
                 >
-                  <SelectTrigger className="mt-1 h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300">
+                  <SelectTrigger
+                    className={`mt-1 h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1002,54 +1011,58 @@ export default function VendorOrdersPage() {
 
               {(newStatus === "shipped" || newStatus === "delivered") && (
                 <div>
-                  <Label htmlFor="tracking">Tracking Number</Label>
+                  <Label className={`${colors.texts.primary}`}>
+                    Tracking Number
+                  </Label>
                   <Input
-                    id="tracking"
                     value={trackingNumber}
                     onChange={(e) => setTrackingNumber(e.target.value)}
                     placeholder="Enter tracking number"
-                    className="mt-1 h-12 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300"
+                    className={`mt-1 h-9 w-full min-w-[240px} ${colors.inputs.base} ${colors.inputs.focus} transition-colors duration-200`}
                   />
                 </div>
               )}
 
               <div>
-                <Label htmlFor="note">Status Note (Optional)</Label>
+                <Label className={`${colors.texts.primary}`}>
+                  Status Note (Optional)
+                </Label>
                 <Textarea
-                  id="note"
                   value={statusNote}
                   onChange={(e) => setStatusNote(e.target.value)}
                   placeholder="Add a note about this status update..."
                   rows={3}
-                  className="mt-1 w-full min-w-[240px] bg-white dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300"
+                  className={`mt-1 w-full min-w-[240px} ${colors.inputs.base} ${colors.inputs.focus} transition-colors duration-200`}
                 />
               </div>
 
               {updatingOrder && (
-                <div className="bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm p-4 rounded-xl space-y-2 border border-gray-200/50 dark:border-gray-700/50">
+                <div
+                  className={`p-4 ${colors.backgrounds.accent} rounded-none`}
+                >
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className={`text-sm ${colors.texts.secondary}`}>
                       Customer:
                     </span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                    <span className={`font-medium ${colors.texts.primary}`}>
                       {updatingOrder.customerName}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className={`text-sm ${colors.texts.secondary}`}>
                       Order Total:
                     </span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
-                      ${updatingOrder.totalAmount?.toFixed(2) || "0.00"}
+                    <span className={`font-medium ${colors.texts.primary}`}>
+                      Rs {updatingOrder.totalAmount?.toFixed(2) || "0.00"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className={`text-sm ${colors.texts.secondary}`}>
                       Current Status:
                     </span>
                     <Badge
-                      className={`${getStatusConfig(updatingOrder.status).color} text-xs border`}
-                      variant="outline"
+                      className={`text-xs rounded-none px-2 py-0.5 ${getStatusConfig(updatingOrder.status).color}`}
+                      variant="secondary"
                     >
                       {getStatusConfig(updatingOrder.status).label}
                     </Badge>
@@ -1061,13 +1074,13 @@ export default function VendorOrdersPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsUpdateStatusOpen(false)}
-                className="bg-white/50 dark:bg-gray-900/50"
+                className={`${colors.buttons.outline} rounded-none`}
               >
                 Cancel
               </Button>
               <Button
                 onClick={saveStatusUpdate}
-                className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                className={`${colors.buttons.primary} rounded-none`}
               >
                 Update Status
               </Button>

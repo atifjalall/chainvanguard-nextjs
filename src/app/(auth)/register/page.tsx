@@ -148,6 +148,17 @@ const provinceOptions = [
   "Azad Jammu and Kashmir",
 ];
 
+// Add layout constants
+const FORM_SPACING = "space-y-4";
+const SECTION_MARGIN = "mb-4 md:mb-6";
+const NAVIGATION_MARGIN = "mt-6";
+const GRID_GAP = "gap-4";
+const CONTAINER_PADDING = "p-4 md:p-6";
+const FIELD_GAP = "gap-6";
+const LABEL_MARGIN = "mb-1";
+const ERROR_MARGIN = "mt-1";
+const HEADER_GAP = "gap-3";
+
 export default function RegisterPage() {
   const getInitialState = () => {
     if (typeof window === "undefined") return null;
@@ -1136,7 +1147,7 @@ export default function RegisterPage() {
   // Signup skeleton loader component
   function SignupSkeleton() {
     return (
-      <Card className="relative overflow-hidden border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+      <Card className="relative overflow-hidden border border-white/20 dark:border-gray-700/30 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
         <CardHeader className="relative z-10 text-center pb-4">
           <Skeleton className="mx-auto h-8 w-48 mb-2" />
           <Skeleton className="mx-auto h-4 w-64" />
@@ -1205,7 +1216,7 @@ export default function RegisterPage() {
     <AuthRouteGuard>
       <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
         {/* Header */}
-        <header className="fixed top-0 w-full z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
+        <header className="fixed top-0 w-full z-50 bg-white dark:bg-gray-950">
           <div className="w-full px-6 h-16 flex items-center">
             {/* Logo on the far left */}
             <Link
@@ -1218,7 +1229,7 @@ export default function RegisterPage() {
             </Link>
 
             {/* Push navbar to the right */}
-            <nav className="flex items-center gap-2 ml-auto">
+            <nav className={`flex items-center ${HEADER_GAP} ml-auto`}>
               <ThemeToggle />
               <Link href="/login">
                 <Button
@@ -1258,7 +1269,7 @@ export default function RegisterPage() {
             {isLoading && currentStep === 1 ? (
               <SignupSkeleton />
             ) : (
-              <Card className="relative overflow-hidden border border-gray-200 dark:border-gray-800 shadow-md bg-white dark:bg-gray-950 rounded-none">
+              <Card className="relative overflow-hidden border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 rounded-none shadow-none">
                 <CardHeader className="relative z-10 text-center pb-4">
                   <div
                     className={`transform transition-all duration-500 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
@@ -1301,8 +1312,8 @@ export default function RegisterPage() {
                   >
                     {/* Step 1: Wallet Setup */}
                     {currentStep === 1 && (
-                      <div className="space-y-4">
-                        <div className="text-center mb-4">
+                      <div className={FORM_SPACING}>
+                        <div className={`text-center ${SECTION_MARGIN}`}>
                           <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
                             <Wallet className="h-8 w-8" />
                           </div>
@@ -1403,7 +1414,7 @@ export default function RegisterPage() {
                                 }}
                                 className="overflow-hidden"
                               >
-                                <div className="rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm px-3 py-2 space-y-1.5">
+                                <div className="rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 space-y-1.5">
                                   <div className="flex items-center gap-1.5 text-xs">
                                     <motion.span
                                       animate={{
@@ -1533,8 +1544,8 @@ export default function RegisterPage() {
 
                     {/* Step 2: Personal Info */}
                     {currentStep === 2 && (
-                      <div className="space-y-4">
-                        <div className="text-center mb-4">
+                      <div className={FORM_SPACING}>
+                        <div className={`text-center ${SECTION_MARGIN}`}>
                           <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
                             <User className="h-8 w-8" />
                           </div>
@@ -1688,8 +1699,8 @@ export default function RegisterPage() {
 
                     {/* Step 3: Address Details - STATE FIRST, THEN CITY */}
                     {currentStep === 3 && (
-                      <div className="space-y-4">
-                        <div className="text-center mb-4">
+                      <div className={FORM_SPACING}>
+                        <div className={`text-center ${SECTION_MARGIN}`}>
                           <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
                             <MapPin className="h-8 w-8" />
                           </div>
@@ -1878,8 +1889,8 @@ export default function RegisterPage() {
 
                     {/* Step 4: Role Selection */}
                     {currentStep === 4 && (
-                      <div className="space-y-4">
-                        <div className="text-center mb-4">
+                      <div className={FORM_SPACING}>
+                        <div className={`text-center ${SECTION_MARGIN}`}>
                           <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
                             <Shield className="h-8 w-8" />
                           </div>
@@ -1888,7 +1899,7 @@ export default function RegisterPage() {
                           </h3>
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className={`grid ${GRID_GAP} sm:grid-cols-2`}>
                           {roleOptions.map((role) => {
                             const Icon = role.icon;
                             const isSelected = selectedRole === role.value;
@@ -1896,10 +1907,10 @@ export default function RegisterPage() {
                             return (
                               <Card
                                 key={role.value}
-                                className={`cursor-pointer transition-all duration-300 hover:shadow-lg rounded-none ${
+                                className={`cursor-pointer transition-all duration-300 rounded-none shadow-none ${
                                   isSelected
-                                    ? "ring-2 ring-gray-900 dark:ring-white shadow-lg bg-gray-50 dark:bg-gray-900"
-                                    : "hover:shadow-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                                    ? "ring-2 ring-gray-900 dark:ring-white bg-gray-50 dark:bg-gray-900"
+                                    : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                 }`}
                                 onClick={() =>
                                   setSelectedRole(role.value as UserRole)
@@ -2128,8 +2139,8 @@ export default function RegisterPage() {
 
                     {/* Step 5: Review & Terms */}
                     {currentStep === 5 && (
-                      <div className="space-y-4">
-                        <div className="text-center mb-4">
+                      <div className={FORM_SPACING}>
+                        <div className={`text-center ${SECTION_MARGIN}`}>
                           <div className="inline-flex items-center justify-center w-12 h-12 text-gray-900 dark:text-white mb-3">
                             <CheckCircle2 className="h-8 w-8" />
                           </div>
@@ -2140,8 +2151,8 @@ export default function RegisterPage() {
 
                         {/* Review Summary */}
                         <div className="space-y-3">
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <div className={`grid ${GRID_GAP} sm:grid-cols-2`}>
+                            <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none shadow-none">
                               <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                                 Wallet Details
                               </h4>
@@ -2165,7 +2176,7 @@ export default function RegisterPage() {
                               </div>
                             </Card>
 
-                            <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none">
+                            <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none shadow-none">
                               <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                                 Personal Info
                               </h4>
@@ -2191,7 +2202,7 @@ export default function RegisterPage() {
                           </div>
 
                           {/* Address Summary */}
-                          <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none shadow-none">
                             <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                               Address
                             </h4>
@@ -2231,7 +2242,7 @@ export default function RegisterPage() {
                             </div>
                           </Card>
 
-                          <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none shadow-none">
                             <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                               Role & Access
                             </h4>
@@ -2271,7 +2282,7 @@ export default function RegisterPage() {
                           </Card>
 
                           {requiresBusinessInfo && (
-                            <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none">
+                            <Card className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none shadow-none">
                               <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                                 Business Information
                               </h4>
@@ -2474,7 +2485,7 @@ export default function RegisterPage() {
                             {recoveryPhrase.split(" ").map((word, index) => (
                               <div
                                 key={index}
-                                className="flex items-center justify-center p-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow rounded-none"
+                                className="flex items-center justify-center p-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-none"
                               >
                                 <span className="text-xs text-gray-500 dark:text-gray-400 mr-1.5">
                                   {index + 1}.
@@ -2651,7 +2662,7 @@ export default function RegisterPage() {
             )}
 
             {/* Login Link */}
-            <div className="mt-4 text-center">
+            <div className={`${NAVIGATION_MARGIN} text-center`}>
               <p className="text-xs text-gray-600 dark:text-gray-400">
                 Already have a wallet?{" "}
                 <Link

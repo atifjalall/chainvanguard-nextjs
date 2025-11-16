@@ -56,6 +56,9 @@ const notificationSchema = new Schema(
         "inventory_adjustment",
 
         // Product Notifications
+        "product_created",
+        "product_updated",
+        "product_deleted",
         "product_approved",
         "product_rejected",
         "product_out_of_stock",

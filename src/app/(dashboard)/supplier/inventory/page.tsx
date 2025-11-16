@@ -44,6 +44,7 @@ import {
   ChartPieIcon,
   EyeIcon,
   ExclamationTriangleIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Inventory } from "@/types";
@@ -318,12 +319,12 @@ export default function SupplierInventoryPage() {
                 {stats.totalItems} Items
               </Badge>
               <Badge
-                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} flex items-center gap-1 text-xs rounded-none`}
+                className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
               >
-                <CheckCircleIcon
-                  className={`h-3 w-3 ${badgeColors.blue.icon}`}
+                <ShieldCheckIcon
+                  className={`h-3 w-3 ${badgeColors.cyan.icon}`}
                 />
-                Inventory Tracked
+                Blockchain Verified
               </Badge>
             </div>
           </div>
@@ -441,7 +442,7 @@ export default function SupplierInventoryPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-6">
               <div className="relative w-full">
                 <MagnifyingGlassIcon
                   className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
@@ -453,38 +454,43 @@ export default function SupplierInventoryPage() {
                   className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
                 />
               </div>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {statusOptions.map((status) => (
-                    <SelectItem
-                      key={status}
-                      value={status}
-                      className="text-sm h-9"
-                    >
-                      {status.replace("_", " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {sortOptions.map((option) => (
-                    <SelectItem
-                      key={option.value}
-                      value={option.value}
-                      className="text-sm h-9"
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Select
+                  value={selectedStatus}
+                  onValueChange={setSelectedStatus}
+                >
+                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {statusOptions.map((status) => (
+                      <SelectItem
+                        key={status}
+                        value={status}
+                        className="text-sm h-9"
+                      >
+                        {status.replace("_", " ")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {sortOptions.map((option) => (
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        className="text-sm h-9"
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex gap-2 items-center">

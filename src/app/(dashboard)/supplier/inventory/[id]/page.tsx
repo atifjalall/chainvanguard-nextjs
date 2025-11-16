@@ -33,6 +33,7 @@ import {
   XMarkIcon,
   SwatchIcon,
   CalendarIcon,
+  CheckBadgeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -172,6 +173,10 @@ export default function InventoryDetailPage() {
   const [inventoryItem, setInventoryItem] = useState<InventoryItem | null>(
     null
   );
+
+  // Add constants for consistent spacing
+  const CARD_HEADER_PADDING = "pb-6";
+  const CARD_CONTENT_PADDING = "pt-6";
 
   // Helper function to get image URL as string
   const getImageUrl = (
@@ -397,7 +402,7 @@ export default function InventoryDetailPage() {
     setCurrentImageIndex((prev) =>
       prev === inventoryItem.images.length - 1 ? 0 : prev + 1
     );
-  }; 
+  };
 
   const prevImage = () => {
     if (!inventoryItem) return;
@@ -475,42 +480,56 @@ export default function InventoryDetailPage() {
                 SKU: {inventoryItem.sku}
               </p>
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge
-                  className={`${
-                    stockStatus.color === "green"
-                      ? "bg-green-100/10 dark:bg-green-900/10 border-green-200 dark:border-green-900 text-green-700 dark:text-green-400"
-                      : ""
-                  }
-                  ${
-                    stockStatus.color === "yellow"
-                      ? "bg-yellow-100/10 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-900 text-yellow-700 dark:text-yellow-400"
-                      : ""
-                  }
-                  ${
-                    stockStatus.color === "red"
-                      ? "bg-red-100/10 dark:bg-red-900/10 border-red-100 dark:border-red-900 text-red-700 dark:text-red-400"
-                      : ""
-                  } border text-xs rounded-none`}
-                >
-                  {stockStatus.label}
-                </Badge>
-                <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
-                  {inventoryItem.category}
-                </Badge>
-                <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
-                  <ShieldCheckIcon className="h-3 w-3 mr-1 text-green-700 dark:text-green-400" />
-                  Grade {inventoryItem.qualityGrade}
-                </Badge>
-                {inventoryItem.isSustainable && (
+                <div className="flex items-center gap-2">
+                  <Badge
+                    className={`${
+                      stockStatus.color === "green"
+                        ? "bg-green-100/10 dark:bg-green-900/10 border-green-200 dark:border-green-900 text-green-700 dark:text-green-400"
+                        : ""
+                    }
+                    ${
+                      stockStatus.color === "yellow"
+                        ? "bg-yellow-100/10 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-900 text-yellow-700 dark:text-yellow-400"
+                        : ""
+                    }
+                    ${
+                      stockStatus.color === "red"
+                        ? "bg-red-100/10 dark:bg-red-900/10 border-red-100 dark:border-red-900 text-red-700 dark:text-red-400"
+                        : ""
+                    } border text-xs rounded-none`}
+                  >
+                    {stockStatus.label}
+                  </Badge>
                   <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
-                    Sustainable
+                    <CheckBadgeIcon className="h-3 w-3 mr-1 text-green-700 dark:text-green-400" />
+                    Grade {inventoryItem.qualityGrade}
                   </Badge>
-                )}
-                {inventoryItem.isBatchTracked && (
+                  {inventoryItem.isSustainable && (
+                    <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
+                      Sustainable
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
                   <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
-                    Batch Tracked
+                    {inventoryItem.category}
                   </Badge>
-                )}
+                  {inventoryItem.isBatchTracked && (
+                    <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
+                      Batch Tracked
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                  >
+                    <ShieldCheckIcon
+                      className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                    />
+                    Blockchain Verified
+                  </Badge>
+                </div>
               </div>
             </div>
 
@@ -541,9 +560,9 @@ export default function InventoryDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           <div className="lg:col-span-1 space-y-4 md:space-y-6">
-            <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none overflow-hidden">
+            <Card className="bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none">
               <CardContent className="p-0">
-                <div className="relative aspect-square group">
+                <div className="relative aspect-[4/3] group">
                   {inventoryItem.images.length > 0 ? (
                     <>
                       <img
@@ -617,13 +636,13 @@ export default function InventoryDetailPage() {
             </Card>
 
             <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-              <CardHeader className="pb-3">
+              <CardHeader className={CARD_HEADER_PADDING}>
                 <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                   Stock Summary
                 </h3>
               </CardHeader>
               <Separator />
-              <CardContent className="pt-4 space-y-3">
+              <CardContent className={CARD_CONTENT_PADDING + " space-y-3"}>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -662,13 +681,13 @@ export default function InventoryDetailPage() {
             </Card>
 
             <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-              <CardHeader className="pb-3">
+              <CardHeader className={CARD_HEADER_PADDING}>
                 <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                   Pricing Information
                 </h3>
               </CardHeader>
               <Separator />
-              <CardContent className="pt-4 space-y-3">
+              <CardContent className={CARD_CONTENT_PADDING + " space-y-3"}>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -717,13 +736,13 @@ export default function InventoryDetailPage() {
             </Card>
 
             <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-              <CardHeader>
+              <CardHeader className={CARD_HEADER_PADDING}>
                 <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                   QR Code & Tracking
                 </h3>
               </CardHeader>
               <Separator />
-              <CardContent className="pt-4">
+              <CardContent className={CARD_CONTENT_PADDING}>
                 <div className="flex flex-col items-center space-y-4">
                   {inventoryItem.qrCodeImageUrl ? (
                     <>
@@ -850,13 +869,13 @@ export default function InventoryDetailPage() {
                 className="mt-0 space-y-4 md:space-y-6"
               >
                 <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                  <CardHeader>
+                  <CardHeader className={CARD_HEADER_PADDING}>
                     <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                       Item Description
                     </h3>
                   </CardHeader>
                   <Separator />
-                  <CardContent className="pt-4">
+                  <CardContent className={CARD_CONTENT_PADDING}>
                     <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                       {inventoryItem.description}
                     </p>
@@ -864,13 +883,13 @@ export default function InventoryDetailPage() {
                 </Card>
 
                 <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                  <CardHeader>
+                  <CardHeader className={CARD_HEADER_PADDING}>
                     <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                       Classification
                     </h3>
                   </CardHeader>
                   <Separator />
-                  <CardContent className="pt-4">
+                  <CardContent className={CARD_CONTENT_PADDING}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -909,13 +928,13 @@ export default function InventoryDetailPage() {
                 </Card>
 
                 <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                  <CardHeader>
+                  <CardHeader className={CARD_HEADER_PADDING}>
                     <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                       Quality & Compliance
                     </h3>
                   </CardHeader>
                   <Separator />
-                  <CardContent className="pt-4 space-y-4">
+                  <CardContent className={CARD_CONTENT_PADDING + " space-y-4"}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -959,64 +978,62 @@ export default function InventoryDetailPage() {
                   </CardContent>
                 </Card>
 
-                {inventoryItem.tags.length > 0 && (
-                  <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                    <CardHeader>
-                      <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
-                        Tags
-                      </h3>
-                    </CardHeader>
-                    <Separator />
-                    <CardContent className="pt-4">
-                      <div className="flex flex-wrap gap-2">
-                        {inventoryItem.tags.map((tag) => (
-                          <Badge
-                            key={tag}
-                            className="bg-gray-100/10 dark:bg-gray-800/10 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-400 text-xs rounded-none"
-                          >
-                            <TagIcon className="h-3 w-3 mr-1 text-gray-700 dark:text-gray-400" />
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
+                  <CardHeader className={CARD_HEADER_PADDING}>
+                    <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
+                      Tags
+                    </h3>
+                  </CardHeader>
+                  <Separator />
+                  <CardContent className={CARD_CONTENT_PADDING}>
+                    <div className="flex flex-wrap gap-2">
+                      {inventoryItem.tags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          className="bg-gray-100/10 dark:bg-gray-800/10 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-400 text-xs rounded-none"
+                        >
+                          <TagIcon className="h-3 w-3 mr-1 text-gray-700 dark:text-gray-400" />
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                {inventoryItem.suitableFor.length > 0 && (
-                  <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                    <CardHeader>
-                      <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
-                        Suitable For
-                      </h3>
-                    </CardHeader>
-                    <Separator />
-                    <CardContent className="pt-4">
-                      <div className="flex flex-wrap gap-2">
-                        {inventoryItem.suitableFor.map((item) => (
-                          <Badge
-                            key={item}
-                            className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none"
-                          >
-                            {item}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
+                  <CardHeader className={CARD_HEADER_PADDING}>
+                    <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
+                      Suitable For
+                    </h3>
+                  </CardHeader>
+                  <Separator />
+                  <CardContent className={CARD_CONTENT_PADDING}>
+                    <div className="flex flex-wrap gap-2">
+                      {inventoryItem.suitableFor.map((item) => (
+                        <Badge
+                          key={item}
+                          className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none"
+                        >
+                          {item}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {(inventoryItem.internalCode ||
                   inventoryItem.barcode ||
                   inventoryItem.notes) && (
                   <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                    <CardHeader>
+                    <CardHeader className={CARD_HEADER_PADDING}>
                       <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                         Additional Information
                       </h3>
                     </CardHeader>
                     <Separator />
-                    <CardContent className="pt-4 space-y-3">
+                    <CardContent
+                      className={CARD_CONTENT_PADDING + " space-y-3"}
+                    >
                       {inventoryItem.internalCode && (
                         <div className="space-y-1">
                           <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -1054,13 +1071,13 @@ export default function InventoryDetailPage() {
 
               <TabsContent value="textile" className="mt-0">
                 <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                  <CardHeader>
+                  <CardHeader className={CARD_HEADER_PADDING}>
                     <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                       Textile Specifications
                     </h3>
                   </CardHeader>
                   <Separator />
-                  <CardContent className="pt-4">
+                  <CardContent className={CARD_CONTENT_PADDING}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                       <div className="space-y-4">
                         <div>
@@ -1212,13 +1229,13 @@ export default function InventoryDetailPage() {
                 className="mt-0 space-y-4 md:space-y-6"
               >
                 <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                  <CardHeader>
+                  <CardHeader className={CARD_HEADER_PADDING}>
                     <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                       Stock Levels
                     </h3>
                   </CardHeader>
                   <Separator />
-                  <CardContent className="pt-4">
+                  <CardContent className={CARD_CONTENT_PADDING}>
                     <div className="grid grid-cols-2 gap-4 md:gap-6">
                       <div className="space-y-1">
                         <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -1289,13 +1306,13 @@ export default function InventoryDetailPage() {
                 </Card>
 
                 <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                  <CardHeader>
+                  <CardHeader className={CARD_HEADER_PADDING}>
                     <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                       Stock Management Settings
                     </h3>
                   </CardHeader>
                   <Separator />
-                  <CardContent className="pt-4">
+                  <CardContent className={CARD_CONTENT_PADDING}>
                     <div className="grid grid-cols-2 gap-4 md:gap-6">
                       <div className="space-y-1">
                         <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -1359,13 +1376,13 @@ export default function InventoryDetailPage() {
 
                 {inventoryItem.warehouseLocation && (
                   <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                    <CardHeader>
+                    <CardHeader className={CARD_HEADER_PADDING}>
                       <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                         Storage Location
                       </h3>
                     </CardHeader>
                     <Separator />
-                    <CardContent className="pt-4">
+                    <CardContent className={CARD_CONTENT_PADDING}>
                       <div className="space-y-4">
                         <div className="space-y-1">
                           <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -1461,13 +1478,13 @@ export default function InventoryDetailPage() {
 
                 {inventoryItem.isBatchTracked && (
                   <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                    <CardHeader>
+                    <CardHeader className={CARD_HEADER_PADDING}>
                       <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                         Batch Tracking
                       </h3>
                     </CardHeader>
                     <Separator />
-                    <CardContent className="pt-4">
+                    <CardContent className={CARD_CONTENT_PADDING}>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -1519,13 +1536,13 @@ export default function InventoryDetailPage() {
                   inventoryItem.carbonFootprint ||
                   inventoryItem.recycledContent) && (
                   <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                    <CardHeader>
+                    <CardHeader className={CARD_HEADER_PADDING}>
                       <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                         Physical & Environmental Data
                       </h3>
                     </CardHeader>
                     <Separator />
-                    <CardContent className="pt-4">
+                    <CardContent className={CARD_CONTENT_PADDING}>
                       <div className="grid grid-cols-2 gap-4">
                         {inventoryItem.weight && (
                           <div className="space-y-1">
@@ -1578,13 +1595,13 @@ export default function InventoryDetailPage() {
                 className="mt-0 space-y-4 md:space-y-6"
               >
                 <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                  <CardHeader>
+                  <CardHeader className={CARD_HEADER_PADDING}>
                     <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                       Supplier Information
                     </h3>
                   </CardHeader>
                   <Separator />
-                  <CardContent className="pt-4 space-y-4">
+                  <CardContent className={CARD_CONTENT_PADDING + " space-y-4"}>
                     <div>
                       <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                         Supplier Name
@@ -1641,13 +1658,13 @@ export default function InventoryDetailPage() {
                 </Card>
 
                 <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                  <CardHeader>
+                  <CardHeader className={CARD_HEADER_PADDING}>
                     <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                       Delivery Information
                     </h3>
                   </CardHeader>
                   <Separator />
-                  <CardContent className="pt-4">
+                  <CardContent className={CARD_CONTENT_PADDING}>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-none">
                         <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">

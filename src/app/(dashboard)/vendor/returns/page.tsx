@@ -55,45 +55,50 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-// Mock data for requests (replace with API call later)
-type VendorRequest = {
+// Mock data for returns (replace with API call later)
+type ReturnRequest = {
   _id: string;
-  requestNumber: string;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  returnNumber: string;
+  status: "new" | "approved" | "rejected";
   total: number;
   items: any[];
   createdAt: string;
-  supplierNotes?: string;
-  vendorNotes?: string;
+  customerName: string;
+  reason?: string;
+  notes?: string;
 };
 
 const HEADER_GAP = "gap-3";
 
-const mockRequests: VendorRequest[] = [
+const mockReturns: ReturnRequest[] = [
   {
     _id: "1",
-    requestNumber: "REQ-001",
-    status: "pending",
+    returnNumber: "RET-001",
+    status: "new",
     total: 15000,
     items: [],
     createdAt: "2023-10-01",
+    customerName: "John Doe",
+    reason: "Defective product",
   },
   {
     _id: "2",
-    requestNumber: "REQ-002",
+    returnNumber: "RET-002",
     status: "approved",
     total: 25000,
     items: [],
     createdAt: "2023-09-15",
+    customerName: "Jane Smith",
+    reason: "Wrong item",
   },
   // Add more mock data as needed
 ];
 
-export default function MyRequestsPage() {
-  const [allRequests, setAllRequests] = useState<VendorRequest[]>(mockRequests);
+export default function ReturnsPage() {
+  const [allReturns, setAllReturns] = useState<ReturnRequest[]>(mockReturns);
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedRequest, setSelectedRequest] = useState<VendorRequest | null>(
+  const [selectedReturn, setSelectedReturn] = useState<ReturnRequest | null>(
     null
   );
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -112,10 +117,9 @@ export default function MyRequestsPage() {
     switch (status) {
       case "approved":
         return <CheckCircleIcon className="h-4 w-4" />;
-      case "pending":
+      case "new":
         return <InboxIcon className="h-4 w-4" />;
       case "rejected":
-      case "cancelled":
         return <XCircleIcon className="h-4 w-4" />;
       default:
         return <ClockIcon className="h-4 w-4" />;
@@ -123,20 +127,19 @@ export default function MyRequestsPage() {
   };
 
   const getStatusBadgeClass = (status: string) => {
-    if (status === "pending") {
+    if (status === "new") {
       return "bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400";
     }
     if (status === "approved") {
       return "bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400";
     }
-    if (status === "rejected" || status === "cancelled") {
+    if (status === "rejected") {
       return "bg-red-100/10 dark:bg-red-900/10 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400";
     }
     return "bg-gray-100/10 dark:bg-gray-900/10 border border-gray-200 dark:border-gray-900 text-gray-700 dark:text-gray-300";
   };
 
   const getDisplayStatus = (status: string) => {
-    if (status === "pending") return "applied";
     return status;
   };
 
@@ -152,13 +155,7 @@ export default function MyRequestsPage() {
     });
   };
 
-  const statusOptions = [
-    "All Status",
-    "Applied",
-    "Approved",
-    "Rejected",
-    "Cancelled",
-  ];
+  const statusOptions = ["All Status", "New", "Approved", "Rejected"];
 
   const sortOptions = [
     { value: "recent", label: "Most Recent" },
@@ -167,30 +164,32 @@ export default function MyRequestsPage() {
     { value: "value-asc", label: "Lowest Value" },
   ];
 
-  // Filter requests based on selected tab
+  // Filter returns based on selected tab
   const filteredByTab = useMemo(() => {
-    if (selectedTab === "all") return allRequests;
-    if (selectedTab === "applied")
-      return allRequests.filter((r) => r.status === "pending");
+    if (selectedTab === "all") return allReturns;
+    if (selectedTab === "new")
+      return allReturns.filter((r) => r.status === "new");
     if (selectedTab === "approved")
-      return allRequests.filter((r) => r.status === "approved");
+      return allReturns.filter((r) => r.status === "approved");
     if (selectedTab === "rejected")
-      return allRequests.filter((r) => r.status === "rejected");
-    if (selectedTab === "cancelled")
-      return allRequests.filter((r) => r.status === "cancelled");
-    return allRequests;
-  }, [allRequests, selectedTab]);
+      return allReturns.filter((r) => r.status === "rejected");
+    return allReturns;
+  }, [allReturns, selectedTab]);
 
   // Apply search and filters
-  const filteredAndSortedRequests = useMemo(() => {
-    const filtered = filteredByTab.filter((request) => {
-      const matchesSearch = request.requestNumber
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const displayStatus = getDisplayStatus(request.status);
+  const filteredAndSortedReturns = useMemo(() => {
+    const filtered = filteredByTab.filter((returnRequest) => {
+      const matchesSearch =
+        returnRequest.returnNumber
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        returnRequest.customerName
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+      const displayStatus = getDisplayStatus(returnRequest.status);
       const matchesStatus =
         selectedStatus === "All Status" ||
-        displayStatus === selectedStatus.toLowerCase().replace(" ", "_");
+        displayStatus === selectedStatus.toLowerCase();
       return matchesSearch && matchesStatus;
     });
 
@@ -217,18 +216,13 @@ export default function MyRequestsPage() {
   }, [filteredByTab, searchTerm, selectedStatus, sortBy]);
 
   // Calculate statistics
-  const totalRequests = allRequests.length;
-  const appliedRequests = allRequests.filter(
-    (r) => r.status === "pending"
-  ).length;
-  const approvedRequests = allRequests.filter(
+  const totalReturns = allReturns.length;
+  const newReturns = allReturns.filter((r) => r.status === "new").length;
+  const approvedReturns = allReturns.filter(
     (r) => r.status === "approved"
   ).length;
-  const rejectedRequests = allRequests.filter(
+  const rejectedReturns = allReturns.filter(
     (r) => r.status === "rejected"
-  ).length;
-  const cancelledRequests = allRequests.filter(
-    (r) => r.status === "cancelled"
   ).length;
 
   if (loading) {
@@ -236,7 +230,7 @@ export default function MyRequestsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading requests...</p>
+          <p className="mt-4 text-gray-600">Loading returns...</p>
         </div>
       </div>
     );
@@ -253,7 +247,7 @@ export default function MyRequestsPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>My Requests</BreadcrumbPage>
+              <BreadcrumbPage>Returns</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -265,10 +259,10 @@ export default function MyRequestsPage() {
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
               <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
-                My Requests
+                Returns
               </h1>
               <p className={`text-base ${colors.texts.secondary}`}>
-                View and manage your submitted requests
+                View and manage customer return requests
               </p>
               <div className={`flex items-center ${HEADER_GAP} mt-2`}>
                 <Badge
@@ -288,31 +282,26 @@ export default function MyRequestsPage() {
         <div
           className={`transform transition-all duration-700 delay-200 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
-                title: "Total Requests",
-                value: totalRequests.toString(),
+                title: "Total Returns",
+                value: totalReturns.toString(),
                 icon: InboxStackIcon,
               },
               {
-                title: "Applied",
-                value: appliedRequests.toString(),
+                title: "New",
+                value: newReturns.toString(),
                 icon: InboxArrowDownIcon,
               },
               {
                 title: "Approved",
-                value: approvedRequests.toString(),
+                value: approvedReturns.toString(),
                 icon: CheckCircleIcon,
               },
               {
                 title: "Rejected",
-                value: rejectedRequests.toString(),
-                icon: XCircleIcon,
-              },
-              {
-                title: "Cancelled",
-                value: cancelledRequests.toString(),
+                value: rejectedReturns.toString(),
                 icon: XCircleIcon,
               },
             ].map((stat, index) => (
@@ -334,9 +323,7 @@ export default function MyRequestsPage() {
                   >
                     {stat.value}
                   </div>
-                  <p className={`text-xs ${colors.texts.secondary}`}>
-                    Requests
-                  </p>
+                  <p className={`text-xs ${colors.texts.secondary}`}>Returns</p>
                 </CardContent>
               </Card>
             ))}
@@ -356,7 +343,7 @@ export default function MyRequestsPage() {
                 Filters & Search
               </CardTitle>
               <CardDescription className={`text-xs ${colors.texts.secondary}`}>
-                Filter and search through your requests
+                Filter and search through return requests
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -365,7 +352,7 @@ export default function MyRequestsPage() {
                   className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
                 />
                 <Input
-                  placeholder="Search requests by request number"
+                  placeholder="Search returns by return number or customer name"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
@@ -444,7 +431,7 @@ export default function MyRequestsPage() {
                 <span
                   className={`text-xs ${colors.texts.secondary} ml-2 whitespace-nowrap`}
                 >
-                  {filteredAndSortedRequests.length} requests found
+                  {filteredAndSortedReturns.length} returns found
                 </span>
               </div>
             </CardContent>
@@ -471,16 +458,16 @@ export default function MyRequestsPage() {
                   <Squares2X2Icon
                     className={`h-4 w-4 ${colors.icons.primary}`}
                   />
-                  All Requests
+                  All Request
                 </TabsTrigger>
                 <TabsTrigger
-                  value="applied"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "applied" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                  value="new"
+                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "new" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
                 >
                   <InboxArrowDownIcon
                     className={`h-4 w-4 ${colors.icons.primary}`}
                   />
-                  Applied
+                  New
                 </TabsTrigger>
                 <TabsTrigger
                   value="approved"
@@ -498,26 +485,19 @@ export default function MyRequestsPage() {
                   <XCircleIcon className={`h-4 w-4 ${colors.icons.primary}`} />
                   Rejected
                 </TabsTrigger>
-                <TabsTrigger
-                  value="cancelled"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "cancelled" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
-                >
-                  <XCircleIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-                  Cancelled
-                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
         </div>
 
-        {/* Request Cards */}
+        {/* Return Cards */}
         <div
           className={`transform transition-all duration-700 delay-500 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAndSortedRequests.map((request) => (
+            {filteredAndSortedReturns.map((returnRequest) => (
               <Card
-                key={request._id}
+                key={returnRequest._id}
                 className={`${colors.cards.base} hover:${colors.cards.hover} overflow-hidden group rounded-none !shadow-none hover:!shadow-none`}
               >
                 <CardContent className="p-6">
@@ -528,7 +508,9 @@ export default function MyRequestsPage() {
                       <AvatarFallback
                         className={`${colors.texts.primary} font-bold rounded-none`}
                       >
-                        {request.requestNumber.substring(0, 2).toUpperCase()}
+                        {returnRequest.returnNumber
+                          .substring(0, 2)
+                          .toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
@@ -536,16 +518,16 @@ export default function MyRequestsPage() {
                         <h3
                           className={`font-semibold ${colors.texts.primary} truncate`}
                         >
-                          {request.requestNumber}
+                          {returnRequest.returnNumber}
                         </h3>
-                        {getStatusIcon(request.status)}
+                        {getStatusIcon(returnRequest.status)}
                       </div>
                       <div className="flex items-center gap-1 mt-1">
                         <Badge
-                          className={`flex items-center gap-1 text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(request.status)}`}
+                          className={`flex items-center gap-1 text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(returnRequest.status)}`}
                           variant="secondary"
                         >
-                          {getDisplayStatus(request.status).replace("_", " ")}
+                          {getDisplayStatus(returnRequest.status)}
                         </Badge>
                       </div>
                     </div>
@@ -554,9 +536,17 @@ export default function MyRequestsPage() {
                     <div
                       className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
                     >
+                      <UsersIcon className={`h-4 w-4 ${colors.icons.muted}`} />
+                      <span className={`${colors.texts.primary}`}>
+                        Customer: {returnRequest.customerName}
+                      </span>
+                    </div>
+                    <div
+                      className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
+                    >
                       <CubeIcon className={`h-4 w-4 ${colors.icons.muted}`} />
                       <span className={`${colors.texts.primary}`}>
-                        Items: {request.items.length}
+                        Items: {returnRequest.items.length}
                       </span>
                     </div>
                   </div>
@@ -567,16 +557,16 @@ export default function MyRequestsPage() {
                       <p
                         className={`text-xl font-bold ${colors.texts.success}`}
                       >
-                        {formatCurrency(request.total)}
+                        {formatCurrency(returnRequest.total)}
                       </p>
                       <p className={`text-xs ${colors.texts.muted}`}>
-                        Total Value
+                        Return Value
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between mb-4">
                     <div className={`text-xs ${colors.texts.muted}`}>
-                      Requested: {formatDate(request.createdAt)}
+                      Requested: {formatDate(returnRequest.createdAt)}
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -584,7 +574,7 @@ export default function MyRequestsPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        setSelectedRequest(request);
+                        setSelectedReturn(returnRequest);
                         setIsDetailsOpen(true);
                       }}
                       className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
@@ -599,7 +589,7 @@ export default function MyRequestsPage() {
               </Card>
             ))}
           </div>
-          {filteredAndSortedRequests.length === 0 && (
+          {filteredAndSortedReturns.length === 0 && (
             <div className="text-center py-12">
               <InboxIcon
                 className={`h-16 w-16 mx-auto ${colors.icons.muted} mb-4`}
@@ -607,7 +597,7 @@ export default function MyRequestsPage() {
               <h3
                 className={`text-lg font-medium ${colors.texts.primary} mb-2`}
               >
-                No requests found
+                No returns found
               </h3>
               <p className={`text-sm ${colors.texts.secondary}`}>
                 Try adjusting your filters or search terms
@@ -617,20 +607,20 @@ export default function MyRequestsPage() {
         </div>
       </div>
 
-      {/* Request Details Dialog */}
+      {/* Return Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent
           className={`w-full max-w-[600px] ${colors.backgrounds.modal} rounded-none`}
         >
           <DialogHeader>
             <DialogTitle className={`${colors.texts.primary}`}>
-              Request Details
+              Return Details
             </DialogTitle>
             <DialogDescription className={`${colors.texts.secondary}`}>
-              Detailed information about your request
+              Detailed information about the return request
             </DialogDescription>
           </DialogHeader>
-          {selectedRequest && (
+          {selectedReturn && (
             <div className="space-y-6 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card
@@ -641,18 +631,28 @@ export default function MyRequestsPage() {
                       className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
                     >
                       <CubeIcon className={`h-5 w-5 ${colors.icons.primary}`} />
-                      Request Details
+                      Return Details
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
                       <p className={`text-xs ${colors.texts.muted}`}>
-                        Request Number
+                        Return Number
                       </p>
                       <p
                         className={`font-medium ${colors.texts.primary} text-sm`}
                       >
-                        {selectedRequest.requestNumber}
+                        {selectedReturn.returnNumber}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        Customer
+                      </p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {selectedReturn.customerName}
                       </p>
                     </div>
                     <div>
@@ -662,17 +662,17 @@ export default function MyRequestsPage() {
                       <p
                         className={`font-medium ${colors.texts.primary} text-sm`}
                       >
-                        {selectedRequest.items.length}
+                        {selectedReturn.items.length}
                       </p>
                     </div>
                     <div>
                       <p className={`text-xs ${colors.texts.muted}`}>
-                        Total Price
+                        Return Value
                       </p>
                       <p
                         className={`font-bold ${colors.texts.success} text-sm`}
                       >
-                        {formatCurrency(selectedRequest.total)}
+                        {formatCurrency(selectedReturn.total)}
                       </p>
                     </div>
                   </CardContent>
@@ -694,13 +694,10 @@ export default function MyRequestsPage() {
                     <div>
                       <p className={`text-xs ${colors.texts.muted}`}>Status</p>
                       <Badge
-                        className={`text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(selectedRequest.status)}`}
+                        className={`text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(selectedReturn.status)}`}
                         variant="secondary"
                       >
-                        {getDisplayStatus(selectedRequest.status).replace(
-                          "_",
-                          " "
-                        )}
+                        {getDisplayStatus(selectedReturn.status)}
                       </Badge>
                     </div>
                     <div>
@@ -710,13 +707,25 @@ export default function MyRequestsPage() {
                       <p
                         className={`font-medium ${colors.texts.primary} text-sm`}
                       >
-                        {formatDate(selectedRequest.createdAt)}
+                        {formatDate(selectedReturn.createdAt)}
                       </p>
                     </div>
+                    {selectedReturn.reason && (
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Reason
+                        </p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {selectedReturn.reason}
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
-              {selectedRequest.supplierNotes && (
+              {selectedReturn.notes && (
                 <Card
                   className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
                 >
@@ -727,12 +736,12 @@ export default function MyRequestsPage() {
                       <DocumentDuplicateIcon
                         className={`h-5 w-5 ${colors.icons.primary}`}
                       />
-                      Supplier Notes
+                      Notes
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className={`text-sm ${colors.texts.accent}`}>
-                      {selectedRequest.supplierNotes}
+                      {selectedReturn.notes}
                     </p>
                   </CardContent>
                 </Card>

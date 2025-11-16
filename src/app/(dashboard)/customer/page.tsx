@@ -239,7 +239,7 @@ export default function CustomerDashboard() {
               {
                 icon: TruckIcon,
                 title: "Free Shipping",
-                desc: "On orders over $50",
+                desc: "On orders over Rs 50",
               },
               {
                 icon: ShieldCheckIcon,
@@ -366,10 +366,10 @@ export default function CustomerDashboard() {
                   </h3>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-900 dark:text-white">
-                      ${product.price}
+                      Rs {product.price}
                     </span>
                     <span className="text-sm text-gray-400 dark:text-gray-500 line-through">
-                      ${product.originalPrice}
+                      Rs {product.originalPrice}
                     </span>
                   </div>
                 </div>
@@ -424,7 +424,7 @@ export default function CustomerDashboard() {
                     {item.name}
                   </h3>
                   <p className="text-sm text-gray-900 dark:text-white">
-                    ${item.price}
+                    Rs {item.price}
                   </p>
                 </div>
               </div>

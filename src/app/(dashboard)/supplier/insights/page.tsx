@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -44,15 +44,11 @@ import {
   ArrowPathIcon,
   GlobeAltIcon,
   TagIcon,
-  ClockIcon,
   ChartBarIcon,
   ShieldCheckIcon,
   UsersIcon,
   BuildingStorefrontIcon,
   PlusIcon,
-  ClipboardDocumentCheckIcon,
-  FaceSmileIcon,
-  CheckBadgeIcon,
   AdjustmentsHorizontalIcon,
   UserGroupIcon,
   CubeIcon,
@@ -440,12 +436,12 @@ export default function SupplierAnalyticsPage() {
                 Real-time Analytics
               </Badge>
               <Badge
-                className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
               >
                 <ShieldCheckIcon
-                  className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
+                  className={`h-3 w-3 ${badgeColors.cyan.icon}`}
                 />
-                Blockchain Secured
+                Blockchain Verified
               </Badge>
             </div>
           </div>

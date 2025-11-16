@@ -22,7 +22,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Header */}
-      <header className="fixed top-0 w-full z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
+      <header className="fixed top-0 w-full z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm">
         <div className="w-full px-6 h-16 flex items-center">
           {/* Logo on the far left */}
           <Link
@@ -152,39 +152,39 @@ export default function LandingPage() {
             {[
               {
                 icon: ShieldCheckIcon,
-                title: "Military-Grade Security",
-                desc: "End-to-end encryption with immutable blockchain records. Zero-trust architecture ensures complete data integrity and protection against tampering.",
-                metric: "99.99% Security Rating",
+                title: "Blockchain-Verified Authenticity",
+                desc: "Every product and transaction recorded on Hyperledger Fabric with cryptographic proof. QR code verification ensures product authenticity at every scan.",
+                metric: "Immutable Records",
               },
               {
                 icon: BoltIcon,
-                title: "Real-Time Intelligence",
-                desc: "AI-powered analytics with instant tracking across global supply chains. Machine learning algorithms predict and prevent disruptions before they occur.",
-                metric: "<100ms Response Time",
+                title: "Smart Vendor Request System",
+                desc: "Automated vendor purchase requests between suppliers and vendors with approval workflows, payment tracking, and order fulfillment status updates.",
+                metric: "Automated Workflows",
               },
               {
                 icon: CircleStackIcon,
-                title: "Distributed Architecture",
-                desc: "IPFS-powered decentralized storage with automatic redundancy. Your data is distributed across multiple nodes for maximum availability and resilience.",
-                metric: "99.9% Uptime SLA",
+                title: "IPFS Decentralized Storage",
+                desc: "Product images, certificates, and documents stored on IPFS with Cloudinary backup. Permanent, tamper-proof storage for all supply chain data.",
+                metric: "Distributed Storage",
               },
               {
                 icon: UsersIcon,
-                title: "Multi-Stakeholder Platform",
-                desc: "Unified ecosystem supporting suppliers, manufacturers, distributors, retailers, and consumers with role-based access controls and custom workflows.",
-                metric: "Unlimited Users",
+                title: "Multi-Role Wallet System",
+                desc: "Dedicated blockchain wallets for suppliers, vendors, customers, and experts with role-based access controls and secure authentication.",
+                metric: "Secure Wallets",
               },
               {
                 icon: CpuChipIcon,
-                title: "Smart Contract Automation",
-                desc: "Hyperledger Fabric smart contracts automate compliance, payments, and quality assurance. Reduce manual processes by up to 90%.",
-                metric: "90% Process Automation",
+                title: "Real-Time Inventory Tracking",
+                desc: "Track raw materials from suppliers and finished products from vendors with batch management, quality checks, and movement history.",
+                metric: "Live Tracking",
               },
               {
                 icon: ChartBarIcon,
-                title: "Advanced Analytics Suite",
-                desc: "Comprehensive dashboards with predictive analytics, compliance reporting, and performance optimization insights for data-driven decisions.",
-                metric: "Real-Time Insights",
+                title: "Comprehensive Analytics",
+                desc: "Industry overview dashboards for suppliers, business analytics for vendors, order tracking for customers, and blockchain audit trails for experts.",
+                metric: "Data-Driven Insights",
               },
             ].map((feature, i) => (
               <div
@@ -283,26 +283,26 @@ export default function LandingPage() {
             {[
               {
                 title: "Supplier/Ministry",
-                desc: "Manage inventory, buy from vendors, sell to vendors, view full product history and compliance",
-                access: "Read & Write",
+                desc: "Manage raw material inventory, create vendor purchase requests, monitor industry metrics, and oversee vendor performance across the supply chain",
+                access: "Full Access",
                 icon: BuildingStorefrontIcon,
               },
               {
                 title: "Vendor",
-                desc: "Add products, sell to customers, view transaction history and comprehensive analytics",
-                access: "Write Access",
+                desc: "List finished products, manage inventory, process customer orders, handle returns and reviews, and track business analytics",
+                access: "Business Owner",
                 icon: CubeIcon,
               },
               {
                 title: "Customer",
-                desc: "Browse products, add to cart, purchase items, track orders with real-time updates",
-                access: "Read Only",
+                desc: "Browse products, manage cart and wishlist, place orders, track deliveries, submit reviews, and request returns",
+                access: "Consumer",
                 icon: EyeIcon,
               },
               {
                 title: "Blockchain Expert",
-                desc: "View all transactions, manage consensus, security settings, and fault tolerance systems",
-                access: "Admin Access",
+                desc: "Monitor blockchain transactions, view immutable records, audit system integrity, and analyze distributed ledger data",
+                access: "Technical Admin",
                 icon: ChartBarIcon,
               },
             ].map((role, i) => (
@@ -345,24 +345,24 @@ export default function LandingPage() {
               <div className="space-y-6">
                 {[
                   {
-                    title: "Immutable Records",
-                    desc: "Blockchain ensures data integrity and prevents tampering",
+                    title: "QR Code Verification",
+                    desc: "Scan and verify product authenticity with blockchain-backed QR codes on every item",
                   },
                   {
-                    title: "Real-Time Tracking",
-                    desc: "Monitor every step of your supply chain instantly",
+                    title: "IPFS + Cloudinary Storage",
+                    desc: "Decentralized storage for images and documents with automatic cloud backup",
                   },
                   {
-                    title: "Enterprise Security",
-                    desc: "Zero-trust architecture with role-based access controls",
+                    title: "Vendor Request Workflow",
+                    desc: "Streamlined purchase requests between suppliers and vendors with approval tracking",
                   },
                   {
-                    title: "Seamless Integration",
-                    desc: "Works with your existing systems and workflows",
+                    title: "Role-Based Wallets",
+                    desc: "Secure blockchain wallets for each role with cryptographic authentication",
                   },
                   {
-                    title: "Expert Support",
-                    desc: "24/7 dedicated account management and technical assistance",
+                    title: "End-to-End Tracking",
+                    desc: "Track inventory from raw materials to finished products with complete history",
                   },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
@@ -407,7 +407,8 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-6 text-center">
           <div className="space-y-6">
             <h2 className="text-3xl font-light text-gray-900 dark:text-white">
-              Ready to Transform Your Supply Chain?
+              Ready to <span className="font-bold">Transform</span> Your
+              Supply Chain?
             </h2>
             <p className="text-xs text-gray-600 dark:text-gray-400 max-w-lg mx-auto">
               Join thousands of businesses already using ChainVanguard to create
