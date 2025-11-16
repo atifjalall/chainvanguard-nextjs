@@ -1094,6 +1094,7 @@ export interface InventoryImage {
 }
 
 export interface Inventory {
+  fabricType: string;
   _id: string;
   id: string;
 

@@ -1,592 +1,612 @@
-/* eslint-disable import/no-anonymous-default-export */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { apiClient } from "./client";
-import type {
-  VendorRequest,
-  VendorRequestListResponse,
-  VendorRequestResponse,
-  VendorRequestStatsResponse,
-  CreateVendorRequestData,
-  ApproveRequestData,
-  RejectRequestData,
-} from "@/types";
+import { ApiResponse } from "@/types";
+
+/**
+ * ========================================
+ * VENDOR REQUEST API
+ * Complete vendor request management for material procurement
+ * ========================================
+ */
 
 // ========================================
-// SUPPLIER ENDPOINTS
+// TYPE DEFINITIONS
 // ========================================
 
-/**
- * Get all vendor requests for supplier
- * Query params: status, page, limit, sortBy, sortOrder
- */
-export async function getSupplierRequests(params?: {
-  status?: string;
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: "asc" | "desc";
-}): Promise<VendorRequestListResponse> {
-  const response = await apiClient.get<VendorRequestListResponse>(
-    "/vendor-requests/supplier/requests",
-    { params }
-  );
-  return response;
+export interface RequestInventoryItem {
+  inventoryId: string;
+  quantity: number;
+  notes?: string;
 }
 
-/**
- * Get vendor request statistics for supplier
- */
-export async function getRequestStats(): Promise<VendorRequestStatsResponse> {
-  const response = await apiClient.get<VendorRequestStatsResponse>(
-    "/vendor-requests/stats"
-  );
-  return response;
+export interface CreateRequestData {
+  supplierId: string;
+  items: RequestInventoryItem[];
+  vendorNotes?: string;
 }
 
-/**
- * Get single vendor request by ID
- */
-export async function getRequestById(
-  id: string
-): Promise<VendorRequestResponse> {
-  const response = await apiClient.get<VendorRequestResponse>(
-    `/vendor-requests/${id}`
-  );
-  return response;
-}
-
-/**
- * Approve vendor request
- * Body: { supplierNotes?: string }
- */
-export async function approveRequest(
-  id: string,
-  data: ApproveRequestData
-): Promise<VendorRequestResponse> {
-  const response = await apiClient.post<VendorRequestResponse>(
-    `/vendor-requests/${id}/approve`,
-    data
-  );
-  return response;
-}
-
-/**
- * Reject vendor request
- * Body: { rejectionReason: string (required) }
- */
-export async function rejectRequest(
-  id: string,
-  data: RejectRequestData
-): Promise<VendorRequestResponse> {
-  const response = await apiClient.post<VendorRequestResponse>(
-    `/vendor-requests/${id}/reject`,
-    data
-  );
-  return response;
-}
-
-/**
- * Complete vendor request (moves to transactions)
- * Body: { notes?: string }
- */
-export async function completeRequest(
-  id: string,
-  data?: { notes?: string }
-): Promise<VendorRequestResponse> {
-  const response = await apiClient.post<VendorRequestResponse>(
-    `/vendor-requests/${id}/complete`,
-    data || {}
-  );
-  return response;
-}
-
-/**
- * Get supplier settings (auto-approve, etc.)
- */
-export async function getSupplierSettings(): Promise<{
-  success: boolean;
-  settings: {
-    autoApproveRequests: boolean;
-    minOrderValue?: number;
-    discountForRewards?: number;
-    rewardPointsRate?: number;
-  };
-}> {
-  const response = await apiClient.get<{
-    success: boolean;
-    settings: {
-      autoApproveRequests: boolean;
-      minOrderValue?: number;
-      discountForRewards?: number;
-      rewardPointsRate?: number;
-    };
-  }>("/vendor-requests/supplier/settings");
-  return response;
-}
-
-/**
- * Update supplier settings
- */
-export async function updateSupplierSettings(settings: {
-  autoApproveRequests?: boolean;
-  minOrderValue?: number;
-  discountForRewards?: number;
-  rewardPointsRate?: number;
-}): Promise<{
-  success: boolean;
-  message: string;
-  settings: any;
-}> {
-  const response = await apiClient.patch<{
-    success: boolean;
-    message: string;
-    settings: any;
-  }>("/vendor-requests/supplier/settings", settings);
-  return response;
-}
-
-/**
- * Toggle auto-approve setting
- */
-export async function toggleAutoApprove(): Promise<{
-  success: boolean;
-  message: string;
-  autoApproveRequests: boolean;
-}> {
-  const response = await apiClient.patch<{
-    success: boolean;
-    message: string;
-    autoApproveRequests: boolean;
-  }>("/vendor-requests/supplier/auto-approve");
-  return response;
-}
-
-// ========================================
-// VENDOR ENDPOINTS
-// ========================================
-
-/**
- * Create new vendor request
- * Body: { supplierId, items: [{ inventoryId, quantity }], vendorNotes? }
- */
-export async function createRequest(
-  data: CreateVendorRequestData
-): Promise<VendorRequestResponse> {
-  const response = await apiClient.post<VendorRequestResponse>(
-    "/vendor-requests",
-    data
-  );
-  return response;
-}
-
-/**
- * Get vendor's own requests
- * Query params: status, supplierId, page, limit, sortBy, sortOrder
- */
-export async function getVendorRequests(params?: {
-  status?: string;
-  supplierId?: string;
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: "asc" | "desc";
-}): Promise<VendorRequestListResponse> {
-  const response = await apiClient.get<VendorRequestListResponse>(
-    "/vendor-requests/my-requests",
-    { params }
-  );
-  return response;
-}
-
-/**
- * Cancel vendor's own request (only if status is pending)
- */
-export async function cancelRequest(
-  id: string
-): Promise<VendorRequestResponse> {
-  const response = await apiClient.post<VendorRequestResponse>(
-    `/vendor-requests/${id}/cancel`
-  );
-  return response;
-}
-
-/**
- * Get approved requests ready for payment
- */
-export async function getApprovedRequests(): Promise<{
-  success: boolean;
-  count: number;
-  data: VendorRequest[];
-  message: string;
-}> {
-  const response = await apiClient.get<{
-    success: boolean;
-    count: number;
-    data: VendorRequest[];
-    message: string;
-  }>("/vendor-requests/approved");
-  return response;
-}
-
-/**
- * Pay for approved request and create order
- * Body: { shippingAddress: {...} }
- */
-export async function payForRequest(
-  id: string,
-  shippingAddress: {
-    name: string;
-    phone: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  }
-): Promise<{
-  success: boolean;
-  message: string;
+export interface CreateRequestResponse extends ApiResponse {
   data: {
-    vendorRequest: VendorRequest;
-    order: any;
-    payment: any;
-  };
-}> {
-  const response = await apiClient.post<{
-    success: boolean;
-    message: string;
-    data: {
-      vendorRequest: VendorRequest;
-      order: any;
-      payment: any;
-    };
-  }>(`/vendor-requests/${id}/pay`, {
-    shippingAddress,
-  });
-  return response;
-}
-
-/**
- * Cancel approved request before payment
- * Body: { cancellationReason: string (required) }
- */
-export async function cancelApprovedRequest(
-  id: string,
-  cancellationReason: string
-): Promise<VendorRequestResponse> {
-  const response = await apiClient.post<VendorRequestResponse>(
-    `/vendor-requests/${id}/cancel-approved`,
-    { cancellationReason }
-  );
-  return response;
-}
-
-// ========================================
-// BLOCKCHAIN ENDPOINTS
-// ========================================
-
-/**
- * Get blockchain history for request (audit trail)
- */
-export async function getRequestHistory(id: string): Promise<{
-  success: boolean;
-  request: {
-    id: string;
+    requestId: string;
     requestNumber: string;
-    status: string;
+    status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
     total: number;
-    createdAt: string;
-    blockchainVerified: boolean;
-    blockchainTxId?: string;
-  };
-  blockchainHistory: any[];
-}> {
-  const response = await apiClient.get<{
-    success: boolean;
-    request: {
-      id: string;
-      requestNumber: string;
-      status: string;
-      total: number;
-      createdAt: string;
-      blockchainVerified: boolean;
-      blockchainTxId?: string;
-    };
-    blockchainHistory: any[];
-  }>(`/vendor-requests/${id}/history`);
-  return response;
-}
-
-/**
- * Verify if request exists on blockchain
- */
-export async function verifyRequestOnBlockchain(id: string): Promise<{
-  success: boolean;
-  mongoData: any;
-  blockchain: {
-    onBlockchain: boolean;
-    data: any;
-  };
-  synced: boolean;
-}> {
-  const response = await apiClient.get<{
-    success: boolean;
-    mongoData: any;
-    blockchain: {
-      onBlockchain: boolean;
-      data: any;
-    };
-    synced: boolean;
-  }>(`/vendor-requests/blockchain/verify/${id}`);
-  return response;
-}
-
-// ========================================
-// VENDOR TRANSACTION API
-// ========================================
-
-export interface VendorTransaction {
-  requestId: string;
-  requestNumber: string;
-  requestStatus: string;
-  requestDate: string;
-  supplier: {
-    id: string;
-    name: string;
-    email: string;
-    companyName: string;
-  };
-  amount: {
     subtotal: number;
     tax: number;
-    total: number;
+    items: Array<{
+      inventoryId: string;
+      inventoryName: string;
+      quantity: number;
+      pricePerUnit: number;
+      subtotal: number;
+    }>;
+    createdAt: string;
+  };
+}
+
+export interface VendorRequest {
+  _id: string;
+  requestNumber: string;
+  supplierId: {
+    _id: string;
+    name: string;
+    email: string;
+    companyName?: string;
+  };
+  vendorId: {
+    _id: string;
+    name: string;
+    email: string;
+    companyName?: string;
   };
   items: Array<{
     inventoryId: string;
-    name: string;
+    inventoryName?: string;
     quantity: number;
     pricePerUnit: number;
-    total: number;
+    subtotal: number;
+    inventory?: {
+      _id: string;
+      name: string;
+      category?: string;
+      unit?: string;
+    };
   }>;
-  itemCount: number;
+  subtotal: number;
+  tax: number;
+  total: number;
+  status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
   vendorNotes?: string;
   supplierNotes?: string;
   reviewedAt?: string;
+  reviewedBy?: string;
   rejectionReason?: string;
-  order?: {
-    orderId: string;
-    orderNumber: string;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-    shippingAddress: any;
-    trackingNumber?: string;
-    trackingUrl?: string;
-    courierName?: string;
-    estimatedDeliveryDate?: string;
-    actualDeliveryDate?: string;
-    statusHistory: any[];
-    currentStatus: {
-      status: string;
-      lastUpdate: string;
-    };
-  };
-  inventory: {
-    created: boolean;
-    itemCount: number;
-    items: Array<{
-      inventoryId: string;
-      name: string;
-      quantity: number;
-      status: string;
-    }>;
-  };
-  blockchain: {
-    verified: boolean;
-    txId?: string;
-  };
+  autoApproved?: boolean;
+  orderId?: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  blockchainTxId?: string;
+  blockchainVerified: boolean;
+  blockchainRequestId?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface TransactionListResponse {
-  success: boolean;
-  data: VendorTransaction[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
-
-export interface TransactionStatsResponse {
-  success: boolean;
-  stats: {
-    statusBreakdown: Array<{
-      _id: string;
-      count: number;
-      totalAmount: number;
-    }>;
-    totalSpent: number;
-    pendingRequests: number;
-    ordersInTransit: number;
-    recentTransactions: Array<{
-      requestId: string;
-      requestNumber: string;
-      supplier: string;
-      amount: number;
-      status: string;
-      date: string;
-    }>;
-  };
-  timeframe: string;
-}
-
-export interface OrderTrackingResponse {
-  success: boolean;
-  data: Array<{
-    requestId: string;
-    requestNumber: string;
-    order: {
-      orderId: string;
-      orderNumber: string;
-      status: string;
-      createdAt: string;
-      items: any[];
-      shippingAddress: any;
-      trackingNumber?: string;
-      trackingUrl?: string;
-      courierName?: string;
-      estimatedDeliveryDate?: string;
-      actualDeliveryDate?: string;
-      statusHistory: any[];
-      currentStatus: {
-        status: string;
-        lastUpdate: string;
-      };
-    };
-    supplier: {
-      name: string;
-      companyName: string;
-    };
-  }>;
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
-
-/**
- * Get all vendor transactions (completed requests with orders)
- * @param params - Query parameters for filtering and pagination
- */
-export async function getVendorTransactions(params?: {
-  status?: string;
-  orderStatus?: string;
+export interface GetRequestsParams {
+  status?: "pending" | "approved" | "rejected" | "cancelled" | "completed";
+  supplierId?: string;
   page?: number;
   limit?: number;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
-  startDate?: string;
-  endDate?: string;
-  supplierId?: string;
-}): Promise<TransactionListResponse> {
-  const response = await apiClient.get<TransactionListResponse>(
-    "/vendor/transactions",
-    { params }
-  );
-  return response;
 }
 
-/**
- * Get detailed transaction information by request ID
- * @param requestId - The vendor request ID
- */
-export async function getTransactionById(requestId: string): Promise<{
-  success: boolean;
-  data: {
-    request: any;
-    order: any;
-    inventory: any;
-    timeline: any[];
+export interface GetRequestsResponse extends ApiResponse {
+  requests: VendorRequest[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
   };
-}> {
-  const response = await apiClient.get<{
-    success: boolean;
-    data: {
-      request: any;
-      order: any;
-      inventory: any;
-      timeline: any[];
+}
+
+export interface RequestStatsResponse extends ApiResponse {
+  stats: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    cancelled: number;
+    completed: number;
+    totalValue: number;
+    avgRequestValue: number;
+  };
+}
+
+export interface RequestDetailsResponse extends ApiResponse {
+  request: VendorRequest;
+}
+
+export interface ApprovedRequest {
+  _id: string;
+  requestNumber: string;
+  supplierId: {
+    _id: string;
+    name: string;
+    companyName?: string;
+  };
+  items: Array<{
+    inventoryName: string;
+    quantity: number;
+    pricePerUnit: number;
+    subtotal: number;
+  }>;
+  total: number;
+  approvedAt: string;
+  vendorNotes?: string;
+  supplierNotes?: string;
+}
+
+export interface ApprovedRequestsResponse extends ApiResponse {
+  requests: ApprovedRequest[];
+  totalAmount: number;
+}
+
+export interface ShippingAddress {
+  name: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+export interface PaymentResponse extends ApiResponse {
+  data: {
+    order: {
+      orderId: string;
+      orderNumber: string;
+      total: number;
+      paymentStatus: string;
+      transactionHash?: string;
     };
-  }>(`/vendor/transactions/${requestId}`);
-  return response;
+    request: {
+      requestId: string;
+      status: string;
+    };
+    wallet: {
+      newBalance: number;
+      transactionId: string;
+    };
+  };
 }
 
-/**
- * Get vendor transaction statistics
- * @param timeframe - Time period for stats (week, month, year)
- */
-export async function getTransactionStats(
-  timeframe: "week" | "month" | "year" = "month"
-): Promise<TransactionStatsResponse> {
-  const response = await apiClient.get<TransactionStatsResponse>(
-    "/vendor/stats",
-    { params: { timeframe } }
-  );
-  return response;
-}
-
-/**
- * Get all orders with tracking information
- * @param params - Query parameters for filtering
- */
-export async function getOrderTracking(params?: {
+export interface RequestHistory {
+  timestamp: string;
+  action: string;
+  performedBy: string;
+  performedByRole: string;
   status?: string;
-  page?: number;
-  limit?: number;
-}): Promise<OrderTrackingResponse> {
-  const response = await apiClient.get<OrderTrackingResponse>(
-    "/vendor/orders/tracking",
-    { params }
-  );
-  return response;
+  notes?: string;
+  blockchainTxId?: string;
+}
+
+export interface RequestHistoryResponse extends ApiResponse {
+  history: RequestHistory[];
+  request: {
+    requestNumber: string;
+    currentStatus: string;
+  };
+}
+
+export interface BlockchainVerification extends ApiResponse {
+  mongoData: {
+    id: string;
+    requestNumber: string;
+    status: string;
+    total: number;
+    blockchainVerified: boolean;
+    blockchainTxId?: string;
+  };
+  blockchain: {
+    onBlockchain: boolean;
+    data?: any;
+  };
+  synced: boolean;
 }
 
 // ========================================
-// EXPORT DEFAULT
+// REQUEST MANAGEMENT FUNCTIONS
 // ========================================
 
-export default {
-  // Supplier
-  getSupplierRequests,
+/**
+ * Create new vendor request for inventory items
+ * POST /api/vendor-requests
+ *
+ * @param data - Request data with supplier, items, and notes
+ * @returns Created request details
+ *
+ * @example
+ * const request = await createRequest({
+ *   supplierId: 'sup_123456',
+ *   items: [
+ *     { inventoryId: 'inv_001', quantity: 100, notes: 'Urgent delivery' },
+ *     { inventoryId: 'inv_002', quantity: 50 }
+ *   ],
+ *   vendorNotes: 'Need by next Friday'
+ * });
+ */
+export const createRequest = async (
+  data: CreateRequestData
+): Promise<CreateRequestResponse> => {
+  const response = await apiClient.post<CreateRequestResponse>(
+    "/vendor-requests",
+    data
+  );
+  return response;
+};
+
+/**
+ * Get vendor's own requests with filters
+ * GET /api/vendor-requests/my-requests
+ *
+ * @param params - Filter and pagination parameters
+ * @returns Paginated list of vendor's requests
+ *
+ * @example
+ * const requests = await getMyRequests({
+ *   status: 'pending',
+ *   page: 1,
+ *   limit: 20,
+ *   sortBy: 'createdAt',
+ *   sortOrder: 'desc'
+ * });
+ */
+export const getMyRequests = async (
+  params?: GetRequestsParams
+): Promise<GetRequestsResponse> => {
+  const queryParams = new URLSearchParams();
+
+  if (params?.status) queryParams.append("status", params.status);
+  if (params?.supplierId) queryParams.append("supplierId", params.supplierId);
+  if (params?.page) queryParams.append("page", params.page.toString());
+  if (params?.limit) queryParams.append("limit", params.limit.toString());
+  if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params?.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+  const url = `/vendor-requests/my-requests${
+    queryParams.toString() ? `?${queryParams.toString()}` : ""
+  }`;
+  const response = await apiClient.get<GetRequestsResponse>(url);
+  return response;
+};
+
+/**
+ * Get vendor request statistics
+ * GET /api/vendor-requests/stats
+ *
+ * @returns Statistics about vendor's requests
+ *
+ * @example
+ * const stats = await getRequestStats();
+ * // Returns: { total: 45, pending: 12, approved: 20, totalValue: 150000, ... }
+ */
+export const getRequestStats = async (): Promise<RequestStatsResponse> => {
+  const response = await apiClient.get<RequestStatsResponse>(
+    "/vendor-requests/stats"
+  );
+  return response;
+};
+
+/**
+ * Get single request details
+ * GET /api/vendor-requests/:id
+ *
+ * @param requestId - ID of the request
+ * @returns Detailed request information
+ *
+ * @example
+ * const request = await getRequestById('req_123456');
+ */
+export const getRequestById = async (
+  requestId: string
+): Promise<RequestDetailsResponse> => {
+  const response = await apiClient.get<RequestDetailsResponse>(
+    `/vendor-requests/${requestId}`
+  );
+  return response;
+};
+
+/**
+ * Cancel a pending request
+ * POST /api/vendor-requests/:id/cancel
+ *
+ * @param requestId - ID of the request to cancel
+ * @returns Success response
+ *
+ * @example
+ * await cancelRequest('req_123456');
+ */
+export const cancelRequest = async (
+  requestId: string
+): Promise<ApiResponse> => {
+  const response = await apiClient.post<ApiResponse>(
+    `/vendor-requests/${requestId}/cancel`
+  );
+  return response;
+};
+
+// ========================================
+// APPROVED REQUESTS & PAYMENT FUNCTIONS
+// ========================================
+
+/**
+ * Get approved requests ready for payment
+ * GET /api/vendor-requests/approved
+ *
+ * @returns List of approved requests awaiting payment
+ *
+ * @example
+ * const approvedRequests = await getApprovedRequests();
+ */
+export const getApprovedRequests =
+  async (): Promise<ApprovedRequestsResponse> => {
+    const response = await apiClient.get<ApprovedRequestsResponse>(
+      "/vendor-requests/approved"
+    );
+    return response;
+  };
+
+/**
+ * Process payment for approved request
+ * POST /api/vendor-requests/:id/pay
+ *
+ * @param requestId - ID of the approved request
+ * @param shippingAddress - Delivery address for the order
+ * @returns Payment and order details
+ *
+ * @example
+ * const result = await payForRequest('req_123456', {
+ *   name: 'John Doe',
+ *   phone: '+92-300-1234567',
+ *   addressLine1: '123 Main Street',
+ *   city: 'Karachi',
+ *   state: 'Sindh',
+ *   postalCode: '75500',
+ *   country: 'Pakistan'
+ * });
+ */
+export const payForRequest = async (
+  requestId: string,
+  shippingAddress: ShippingAddress
+): Promise<PaymentResponse> => {
+  const response = await apiClient.post<PaymentResponse>(
+    `/vendor-requests/${requestId}/pay`,
+    {
+      shippingAddress,
+    }
+  );
+  return response;
+};
+
+/**
+ * Cancel an approved request before payment
+ * POST /api/vendor-requests/:id/cancel-approved
+ *
+ * @param requestId - ID of the approved request
+ * @param cancellationReason - Reason for cancellation
+ * @returns Success response
+ *
+ * @example
+ * await cancelApprovedRequest('req_123456', 'Found better alternative supplier');
+ */
+export const cancelApprovedRequest = async (
+  requestId: string,
+  cancellationReason: string
+): Promise<ApiResponse> => {
+  const response = await apiClient.post<ApiResponse>(
+    `/vendor-requests/${requestId}/cancel-approved`,
+    { cancellationReason }
+  );
+  return response;
+};
+
+// ========================================
+// BLOCKCHAIN & AUDIT FUNCTIONS
+// ========================================
+
+/**
+ * Get request history (blockchain audit trail)
+ * GET /api/vendor-requests/:id/history
+ *
+ * @param requestId - ID of the request
+ * @returns Complete history of request changes
+ *
+ * @example
+ * const history = await getRequestHistory('req_123456');
+ * // Returns array of all actions performed on the request
+ */
+export const getRequestHistory = async (
+  requestId: string
+): Promise<RequestHistoryResponse> => {
+  const response = await apiClient.get<RequestHistoryResponse>(
+    `/vendor-requests/${requestId}/history`
+  );
+  return response;
+};
+
+/**
+ * Verify request on blockchain
+ * GET /api/vendor-requests/blockchain/verify/:id
+ *
+ * @param requestId - ID of the request
+ * @returns Blockchain verification status
+ *
+ * @example
+ * const verification = await verifyRequestOnBlockchain('req_123456');
+ * // Returns: { synced: true, mongoData: {...}, blockchain: {...} }
+ */
+export const verifyRequestOnBlockchain = async (
+  requestId: string
+): Promise<BlockchainVerification> => {
+  const response = await apiClient.get<BlockchainVerification>(
+    `/vendor-requests/blockchain/verify/${requestId}`
+  );
+  return response;
+};
+
+// ========================================
+// BULK OPERATIONS
+// ========================================
+
+/**
+ * Cancel multiple pending requests at once
+ *
+ * @param requestIds - Array of request IDs to cancel
+ * @returns Results of bulk cancellation
+ *
+ * @example
+ * const results = await cancelMultipleRequests(['req_001', 'req_002', 'req_003']);
+ */
+export const cancelMultipleRequests = async (
+  requestIds: string[]
+): Promise<{
+  success: boolean;
+  cancelled: string[];
+  failed: Array<{ requestId: string; error: string }>;
+}> => {
+  const results = await Promise.allSettled(
+    requestIds.map((id) => cancelRequest(id))
+  );
+
+  const cancelled: string[] = [];
+  const failed: Array<{ requestId: string; error: string }> = [];
+
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      cancelled.push(requestIds[index]);
+    } else {
+      failed.push({
+        requestId: requestIds[index],
+        error: result.reason?.message || "Unknown error",
+      });
+    }
+  });
+
+  return {
+    success: failed.length === 0,
+    cancelled,
+    failed,
+  };
+};
+
+/**
+ * Get requests grouped by status
+ *
+ * @returns Requests organized by their status
+ *
+ * @example
+ * const grouped = await getRequestsByStatus();
+ * // Returns: { pending: [...], approved: [...], rejected: [...], ... }
+ */
+export const getRequestsByStatus = async (): Promise<{
+  pending: VendorRequest[];
+  approved: VendorRequest[];
+  rejected: VendorRequest[];
+  cancelled: VendorRequest[];
+  completed: VendorRequest[];
+}> => {
+  const statuses: Array<
+    "pending" | "approved" | "rejected" | "cancelled" | "completed"
+  > = ["pending", "approved", "rejected", "cancelled", "completed"];
+
+  const results = await Promise.all(
+    statuses.map((status) =>
+      getMyRequests({ status, limit: 100 }).then((res) => ({
+        status,
+        requests: res.requests,
+      }))
+    )
+  );
+
+  return results.reduce(
+    (acc, { status, requests }) => ({
+      ...acc,
+      [status]: requests,
+    }),
+    {} as any
+  );
+};
+
+// ========================================
+// UTILITY FUNCTIONS
+// ========================================
+
+/**
+ * Calculate total value of pending requests
+ *
+ * @returns Total amount of pending requests
+ *
+ * @example
+ * const total = await getPendingRequestsTotal();
+ * // Returns: 145000
+ */
+export const getPendingRequestsTotal = async (): Promise<number> => {
+  const response = await getMyRequests({ status: "pending", limit: 1000 });
+  return response.requests.reduce((sum, req) => sum + req.total, 0);
+};
+
+/**
+ * Check if vendor has any pending requests with a supplier
+ *
+ * @param supplierId - ID of the supplier
+ * @returns Boolean indicating if pending requests exist
+ *
+ * @example
+ * const hasPending = await hasPendingRequestsWithSupplier('sup_123456');
+ */
+export const hasPendingRequestsWithSupplier = async (
+  supplierId: string
+): Promise<boolean> => {
+  const response = await getMyRequests({
+    status: "pending",
+    supplierId,
+    limit: 1,
+  });
+  return response.requests.length > 0;
+};
+
+// ========================================
+// EXPORT ALL FUNCTIONS AS DEFAULT OBJECT
+// ========================================
+
+const vendorRequestApi = {
+  // Request Management (5 functions)
+  createRequest,
+  getMyRequests,
   getRequestStats,
   getRequestById,
-  approveRequest,
-  rejectRequest,
-  completeRequest,
-  getSupplierSettings,
-  updateSupplierSettings,
-  toggleAutoApprove,
-
-  // Vendor
-  createRequest,
-  getVendorRequests,
   cancelRequest,
+
+  // Approved Requests & Payment (3 functions)
   getApprovedRequests,
   payForRequest,
   cancelApprovedRequest,
 
-  // Blockchain
+  // Blockchain & Audit (2 functions)
   getRequestHistory,
   verifyRequestOnBlockchain,
 
-  getVendorTransactions,
-  getTransactionById,
-  getTransactionStats,
-  getOrderTracking,
+  // Bulk Operations (2 functions)
+  cancelMultipleRequests,
+  getRequestsByStatus,
+
+  // Utilities (2 functions)
+  getPendingRequestsTotal,
+  hasPendingRequestsWithSupplier,
 };
+
+export default vendorRequestApi;

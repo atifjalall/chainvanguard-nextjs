@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Wishlist from "../models/Wishlist.js";
 import Product from "../models/Product.js";
 import notificationService from "./notification.service.js";
@@ -5,38 +6,134 @@ import notificationService from "./notification.service.js";
 class WishlistService {
   /**
    * Get user's wishlist
+   * FIXED: Handles both Product and Inventory items
    */
   async getWishlist(userId) {
     try {
-      let wishlist = await Wishlist.findOne({ userId }).populate({
-        path: "items.productId",
-        select:
-          "name price images category subcategory quantity status sellerId description",
-        populate: {
-          path: "sellerId",
-          select: "name companyName",
-        },
-      });
+      // Get wishlist WITHOUT populate first
+      let wishlist = await Wishlist.findOne({ userId });
 
       if (!wishlist) {
         wishlist = new Wishlist({ userId, items: [] });
         await wishlist.save();
+
+        return {
+          success: true,
+          wishlist,
+          itemCount: 0,
+        };
       }
 
-      // Filter out deleted or null products
-      const validItems = wishlist.items.filter(
-        (item) => item.productId !== null
-      );
+      // Manually populate items - check both Product and Inventory
+      const Inventory = mongoose.model("Inventory");
+      const populatedItems = [];
+      const invalidItemIds = [];
 
-      if (validItems.length !== wishlist.items.length) {
-        wishlist.items = validItems;
-        await wishlist.save();
+      for (const item of wishlist.items) {
+        const productId = item.productId;
+
+        // Try Product first
+        let product = await Product.findById(productId)
+          .populate("sellerId", "name companyName")
+          .select(
+            "name price images category subcategory quantity status sellerId description"
+          );
+
+        // If not found in Product, try Inventory
+        if (!product) {
+          product = await Inventory.findById(productId)
+            .populate("supplierId", "name companyName")
+            .select(
+              "name pricePerUnit images category subcategory quantity status supplierId description"
+            );
+
+          if (product) {
+            // Normalize Inventory fields to match Product structure
+            product.price = product.pricePerUnit;
+            product.sellerId = product.supplierId;
+          }
+        }
+
+        // If found in either collection, add to populated items
+        if (product) {
+          populatedItems.push({
+            ...item.toObject(),
+            productId: product,
+          });
+        } else {
+          // Mark for removal if not found in either collection
+          invalidItemIds.push(productId);
+        }
       }
+
+      // If there are invalid items, remove them atomically
+      if (invalidItemIds.length > 0) {
+        console.log(
+          "🗑️ Removing invalid items from wishlist:",
+          invalidItemIds.length
+        );
+
+        wishlist = await Wishlist.findOneAndUpdate(
+          { userId },
+          { $pull: { items: { productId: { $in: invalidItemIds } } } },
+          { new: true }
+        );
+
+        // Re-populate after cleanup
+        const cleanedItems = [];
+        for (const item of wishlist.items) {
+          const productId = item.productId;
+
+          let product = await Product.findById(productId)
+            .populate("sellerId", "name companyName")
+            .select(
+              "name price images category subcategory quantity status sellerId description"
+            );
+
+          if (!product) {
+            product = await Inventory.findById(productId)
+              .populate("supplierId", "name companyName")
+              .select(
+                "name pricePerUnit images category subcategory quantity status supplierId description"
+              );
+
+            if (product) {
+              product.price = product.pricePerUnit;
+              product.sellerId = product.supplierId;
+            }
+          }
+
+          if (product) {
+            cleanedItems.push({
+              ...item.toObject(),
+              productId: product,
+            });
+          }
+        }
+
+        // Create response with populated items
+        const responseWishlist = {
+          ...wishlist.toObject(),
+          items: cleanedItems,
+        };
+
+        return {
+          success: true,
+          wishlist: responseWishlist,
+          itemCount: cleanedItems.length,
+        };
+      }
+
+      // Create response with populated items
+      const responseWishlist = {
+        ...wishlist.toObject(),
+        items: populatedItems,
+      };
 
       return {
         success: true,
-        wishlist,
-        itemCount: validItems.length,
+        wishlist: responseWishlist,
+        itemCount: populatedItems.length,
       };
     } catch (error) {
       console.error("❌ Get wishlist error:", error);
@@ -46,6 +143,7 @@ class WishlistService {
 
   /**
    * Add product to wishlist
+   * FIXED: Uses atomic $push operation
    */
   async addToWishlist(userId, productId, options = {}) {
     try {
@@ -55,8 +153,16 @@ class WishlistService {
         notifyOnBackInStock = false,
       } = options;
 
-      // Check if product exists
-      const product = await Product.findById(productId);
+      // Check if product exists (try Product first, then Inventory)
+      let product = await Product.findById(productId);
+      let isInventory = false;
+
+      if (!product) {
+        // Check if it's an inventory item
+        const Inventory = mongoose.model("Inventory");
+        product = await Inventory.findById(productId);
+        isInventory = true;
+      }
 
       if (!product) {
         throw new Error("Product not found");
@@ -71,6 +177,7 @@ class WishlistService {
 
       if (!wishlist) {
         wishlist = new Wishlist({ userId, items: [] });
+        await wishlist.save();
       }
 
       // Check if already in wishlist
@@ -82,20 +189,21 @@ class WishlistService {
         throw new Error("Product already in wishlist");
       }
 
-      // Add to wishlist
-      wishlist.items.push({
+      // Use atomic update to add item - prevents version conflicts
+      const newItem = {
         productId,
         notes,
         addedAt: new Date(),
-        priceWhenAdded: product.price,
+        priceWhenAdded: product.price || product.pricePerUnit || 0,
         notifyOnPriceDrop,
         notifyOnBackInStock,
-      });
+      };
 
-      await wishlist.save();
-
-      // Populate the wishlist for response
-      await wishlist.populate({
+      wishlist = await Wishlist.findOneAndUpdate(
+        { userId },
+        { $push: { items: newItem } },
+        { new: true }
+      ).populate({
         path: "items.productId",
         select: "name price images category quantity status sellerId",
         populate: {
@@ -118,26 +226,20 @@ class WishlistService {
 
   /**
    * Remove product from wishlist
+   * FIXED: Uses atomic $pull operation
    */
   async removeFromWishlist(userId, productId) {
     try {
-      const wishlist = await Wishlist.findOne({ userId });
+      // Use atomic update to remove item - prevents version conflicts
+      const wishlist = await Wishlist.findOneAndUpdate(
+        { userId },
+        { $pull: { items: { productId: productId } } },
+        { new: true }
+      );
 
       if (!wishlist) {
         throw new Error("Wishlist not found");
       }
-
-      const initialLength = wishlist.items.length;
-
-      wishlist.items = wishlist.items.filter(
-        (item) => item.productId.toString() !== productId
-      );
-
-      if (wishlist.items.length === initialLength) {
-        throw new Error("Product not found in wishlist");
-      }
-
-      await wishlist.save();
 
       return {
         success: true,
@@ -152,31 +254,36 @@ class WishlistService {
 
   /**
    * Update wishlist item
+   * FIXED: Uses atomic positional $ operator
    */
   async updateWishlistItem(userId, productId, updates) {
     try {
-      const wishlist = await Wishlist.findOne({ userId });
+      // Build the update object dynamically
+      const updateObj = {};
+      if (updates.notes !== undefined) {
+        updateObj["items.$.notes"] = updates.notes;
+      }
+      if (updates.notifyOnPriceDrop !== undefined) {
+        updateObj["items.$.notifyOnPriceDrop"] = updates.notifyOnPriceDrop;
+      }
+      if (updates.notifyOnBackInStock !== undefined) {
+        updateObj["items.$.notifyOnBackInStock"] = updates.notifyOnBackInStock;
+      }
+
+      // Use atomic update with positional operator - prevents version conflicts
+      const wishlist = await Wishlist.findOneAndUpdate(
+        { userId, "items.productId": productId },
+        { $set: updateObj },
+        { new: true }
+      );
 
       if (!wishlist) {
-        throw new Error("Wishlist not found");
+        throw new Error("Wishlist or product not found");
       }
 
       const item = wishlist.items.find(
         (item) => item.productId.toString() === productId
       );
-
-      if (!item) {
-        throw new Error("Product not found in wishlist");
-      }
-
-      // Update allowed fields
-      if (updates.notes !== undefined) item.notes = updates.notes;
-      if (updates.notifyOnPriceDrop !== undefined)
-        item.notifyOnPriceDrop = updates.notifyOnPriceDrop;
-      if (updates.notifyOnBackInStock !== undefined)
-        item.notifyOnBackInStock = updates.notifyOnBackInStock;
-
-      await wishlist.save();
 
       return {
         success: true,
@@ -191,17 +298,20 @@ class WishlistService {
 
   /**
    * Clear entire wishlist
+   * FIXED: Uses atomic $set operation
    */
   async clearWishlist(userId) {
     try {
-      const wishlist = await Wishlist.findOne({ userId });
+      // Use atomic update to clear all items - prevents version conflicts
+      const wishlist = await Wishlist.findOneAndUpdate(
+        { userId },
+        { $set: { items: [] } },
+        { new: true }
+      );
 
       if (!wishlist) {
         throw new Error("Wishlist not found");
       }
-
-      wishlist.items = [];
-      await wishlist.save();
 
       return {
         success: true,
@@ -272,6 +382,7 @@ class WishlistService {
 
   /**
    * Check for price drops and notify users
+   * FIXED: Uses atomic updates for price changes
    */
   async checkPriceDrops() {
     try {
@@ -280,7 +391,11 @@ class WishlistService {
       }).populate("items.productId");
 
       for (const wishlist of wishlists) {
-        for (const item of wishlist.items) {
+        const updates = [];
+
+        for (let i = 0; i < wishlist.items.length; i++) {
+          const item = wishlist.items[i];
+
           if (item.notifyOnPriceDrop && item.productId) {
             const currentPrice = item.productId.price;
             const originalPrice = item.priceWhenAdded;
@@ -309,13 +424,29 @@ class WishlistService {
                 },
               });
 
-              // Update price
-              item.priceWhenAdded = currentPrice;
+              // Track which items need price updates
+              updates.push({
+                productId: item.productId._id,
+                newPrice: currentPrice,
+              });
             }
           }
         }
 
-        await wishlist.save();
+        // Use atomic bulk update for all price changes
+        if (updates.length > 0) {
+          for (const update of updates) {
+            await Wishlist.findOneAndUpdate(
+              {
+                _id: wishlist._id,
+                "items.productId": update.productId,
+              },
+              {
+                $set: { "items.$.priceWhenAdded": update.newPrice },
+              }
+            );
+          }
+        }
       }
 
       return {
@@ -435,7 +566,7 @@ class WishlistService {
         });
       }
     } catch (error) {
-      logger.error("Error notifying price drop:", error);
+      console.error("Error notifying price drop:", error);
     }
   }
 }

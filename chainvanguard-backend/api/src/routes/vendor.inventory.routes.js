@@ -542,4 +542,33 @@ router.post(
   }
 );
 
+// ========================================
+// DELETE INVENTORY ITEM
+// DELETE /api/vendor/inventory/:id
+// ========================================
+router.delete(
+  "/:id",
+  authenticate,
+  authorizeRoles("vendor"),
+  async (req, res) => {
+    try {
+      await vendorInventoryService.deleteInventory(
+        req.params.id,
+        req.user.userId
+      );
+
+      res.json({
+        success: true,
+        message: "Inventory item deleted successfully",
+      });
+    } catch (error) {
+      logger.error("Error in DELETE /vendor/inventory/:id:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Error deleting inventory",
+      });
+    }
+  }
+);
+
 export default router;

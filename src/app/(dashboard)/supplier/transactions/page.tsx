@@ -77,7 +77,7 @@ import {
   getSupplierRequests,
   getRequestStats,
   getRequestById,
-} from "@/lib/api/vendor.request.api";
+} from "@/lib/api/supplier.vendor.request.api";
 
 const RsIcon = () => (
   <svg

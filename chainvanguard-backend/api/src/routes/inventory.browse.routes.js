@@ -21,6 +21,8 @@ router.get(
         supplierId,
         category,
         subcategory,
+        materialType,
+        fabricType,
         minPrice,
         maxPrice,
         search,
@@ -66,6 +68,14 @@ router.get(
         query.subcategory = subcategory;
       }
 
+      if (materialType) {
+        query.materialType = materialType;
+      }
+
+      if (fabricType) {
+        query["textileDetails.fabricType"] = fabricType;
+      }
+
       if (minPrice || maxPrice) {
         query.pricePerUnit = {};
         if (minPrice) query.pricePerUnit.$gte = Number(minPrice);
@@ -107,6 +117,10 @@ router.get(
       // Calculate available quantity for each item
       const itemsWithAvailability = items.map((item) => ({
         ...item,
+        supplierName:
+          item.supplierId?.companyName ||
+          item.supplierId?.name ||
+          "Unknown Supplier",
         availableQuantity: Math.max(
           0,
           item.quantity -

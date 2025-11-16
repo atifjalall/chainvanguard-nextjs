@@ -35,6 +35,8 @@ import {
   InboxStackIcon,
   InboxArrowDownIcon,
   ShieldCheckIcon,
+  CreditCardIcon,
+  BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import { colors, badgeColors } from "@/lib/colorConstants";
 import {
@@ -46,6 +48,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -54,45 +57,32 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
-// Mock data for requests (replace with API call later)
-type VendorRequest = {
-  _id: string;
-  requestNumber: string;
-  status: "pending" | "approved" | "rejected" | "cancelled";
-  total: number;
-  items: any[];
-  createdAt: string;
-  supplierNotes?: string;
-  vendorNotes?: string;
-};
+// Import API functions and types
+import {
+  getMyRequests,
+  getRequestStats,
+  cancelRequest,
+  cancelApprovedRequest,
+  payForRequest,
+  VendorRequest,
+  RequestStatsResponse,
+  ShippingAddress,
+  PaymentResponse,
+} from "@/lib/api/vendor.request.api";
 
 const HEADER_GAP = "gap-3";
 
-const mockRequests: VendorRequest[] = [
-  {
-    _id: "1",
-    requestNumber: "REQ-001",
-    status: "pending",
-    total: 15000,
-    items: [],
-    createdAt: "2023-10-01",
-  },
-  {
-    _id: "2",
-    requestNumber: "REQ-002",
-    status: "approved",
-    total: 25000,
-    items: [],
-    createdAt: "2023-09-15",
-  },
-  // Add more mock data as needed
-];
-
 export default function MyRequestsPage() {
-  const [allRequests, setAllRequests] = useState<VendorRequest[]>(mockRequests);
+  const [allRequests, setAllRequests] = useState<VendorRequest[]>([]);
+  const [stats, setStats] = useState<RequestStatsResponse["stats"] | null>(
+    null
+  );
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<VendorRequest | null>(
     null
   );
@@ -102,11 +92,65 @@ export default function MyRequestsPage() {
   const [sortBy, setSortBy] = useState("recent");
   const [selectedTab, setSelectedTab] = useState("all");
 
+  // Cancel modals
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isCancelApprovedDialogOpen, setIsCancelApprovedDialogOpen] =
+    useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Payment modal
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
+    name: "",
+    phone: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "Pakistan",
+  });
+
   useEffect(() => {
     setIsVisible(true);
-    // Simulate data fetch
-    setTimeout(() => setLoading(false), 1000);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        // Fetch all requests EXCEPT completed ones (they go to transactions page)
+        const requestsResponse = await getMyRequests({ limit: 1000 });
+        // Filter out completed requests
+        const activeRequests = requestsResponse.requests.filter(
+          (req) => req.status !== "completed"
+        );
+        setAllRequests(activeRequests);
+        // Fetch stats
+        const statsResponse = await getRequestStats();
+        setStats(statsResponse.stats);
+      } catch (err: any) {
+        setError(err.message || "Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
+
+  const refetchData = async () => {
+    try {
+      const requestsResponse = await getMyRequests({ limit: 1000 });
+      // Filter out completed requests (they belong on transactions page)
+      const activeRequests = requestsResponse.requests.filter(
+        (req) => req.status !== "completed"
+      );
+      setAllRequests(activeRequests);
+      const statsResponse = await getRequestStats();
+      setStats(statsResponse.stats);
+    } catch (err: any) {
+      console.error("Failed to refresh data:", err);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -216,20 +260,123 @@ export default function MyRequestsPage() {
     return filtered;
   }, [filteredByTab, searchTerm, selectedStatus, sortBy]);
 
-  // Calculate statistics
-  const totalRequests = allRequests.length;
-  const appliedRequests = allRequests.filter(
-    (r) => r.status === "pending"
-  ).length;
-  const approvedRequests = allRequests.filter(
-    (r) => r.status === "approved"
-  ).length;
-  const rejectedRequests = allRequests.filter(
-    (r) => r.status === "rejected"
-  ).length;
-  const cancelledRequests = allRequests.filter(
-    (r) => r.status === "cancelled"
-  ).length;
+  // Update statistics calculation to use fetched stats if available, fallback to calculation
+  const totalRequests = stats?.total ?? allRequests.length;
+  const appliedRequests =
+    stats?.pending ?? allRequests.filter((r) => r.status === "pending").length;
+  const approvedRequests =
+    stats?.approved ??
+    allRequests.filter((r) => r.status === "approved").length;
+  const rejectedRequests =
+    stats?.rejected ??
+    allRequests.filter((r) => r.status === "rejected").length;
+  const cancelledRequests =
+    stats?.cancelled ??
+    allRequests.filter((r) => r.status === "cancelled").length;
+
+  // Handle cancel pending request
+  const handleCancelPendingRequest = async () => {
+    if (!selectedRequest) return;
+
+    try {
+      setIsProcessing(true);
+      await cancelRequest(selectedRequest._id);
+      toast.success(
+        `Request ${selectedRequest.requestNumber} has been cancelled successfully.`
+      );
+      setIsCancelDialogOpen(false);
+      setIsDetailsOpen(false);
+      await refetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to cancel the request");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle cancel approved request
+  const handleCancelApprovedRequest = async () => {
+    if (!selectedRequest || !cancellationReason.trim()) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      await cancelApprovedRequest(selectedRequest._id, cancellationReason);
+      toast.success(
+        `Approved request ${selectedRequest.requestNumber} has been cancelled.`
+      );
+      setIsCancelApprovedDialogOpen(false);
+      setIsDetailsOpen(false);
+      setCancellationReason("");
+      await refetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to cancel the approved request");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle payment
+  const handlePayment = async () => {
+    if (!selectedRequest) return;
+
+    // Validate shipping address
+    const requiredFields: (keyof ShippingAddress)[] = [
+      "name",
+      "phone",
+      "addressLine1",
+      "city",
+      "state",
+      "postalCode",
+      "country",
+    ];
+    const missingFields = requiredFields.filter(
+      (field) => !shippingAddress[field]
+    );
+
+    if (missingFields.length > 0) {
+      toast.error(
+        `Please fill in all required fields: ${missingFields.join(", ")}`
+      );
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const result: PaymentResponse = await payForRequest(
+        selectedRequest._id,
+        shippingAddress
+      );
+
+      // Access the correct response structure with proper typing
+      const orderNumber = result.data?.order?.orderNumber || "N/A";
+      const totalAmount = result.data?.order?.total || selectedRequest.total;
+
+      toast.success(
+        `Payment processed successfully. Order ${orderNumber} created for ${formatCurrency(totalAmount)}`
+      );
+      setIsPaymentDialogOpen(false);
+      setIsDetailsOpen(false);
+      // Reset shipping address
+      setShippingAddress({
+        name: "",
+        phone: "",
+        addressLine1: "",
+        addressLine2: "",
+        city: "",
+        state: "",
+        postalCode: "",
+        country: "Pakistan",
+      });
+      await refetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to process payment");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -237,6 +384,27 @@ export default function MyRequestsPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading requests...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <XCircleIcon className="h-16 w-16 mx-auto text-red-500 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+            Error Loading Requests
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="mt-4"
+            variant="outline"
+          >
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -620,18 +788,19 @@ export default function MyRequestsPage() {
       {/* Request Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent
-          className={`w-full max-w-[600px] ${colors.backgrounds.modal} rounded-none`}
+          className={`w-full max-w-[700px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} rounded-none`}
         >
           <DialogHeader>
             <DialogTitle className={`${colors.texts.primary}`}>
               Request Details
             </DialogTitle>
             <DialogDescription className={`${colors.texts.secondary}`}>
-              Detailed information about your request
+              Complete information about your request
             </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-6 mt-6">
+              {/* Request Info Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card
                   className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
@@ -663,6 +832,24 @@ export default function MyRequestsPage() {
                         className={`font-medium ${colors.texts.primary} text-sm`}
                       >
                         {selectedRequest.items.length}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        Subtotal
+                      </p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {formatCurrency(selectedRequest.subtotal)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>Tax</p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {formatCurrency(selectedRequest.tax)}
                       </p>
                     </div>
                     <div>
@@ -713,9 +900,124 @@ export default function MyRequestsPage() {
                         {formatDate(selectedRequest.createdAt)}
                       </p>
                     </div>
+                    {selectedRequest.reviewedAt && (
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Reviewed Date
+                        </p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {formatDate(selectedRequest.reviewedAt)}
+                        </p>
+                      </div>
+                    )}
+                    {selectedRequest.orderId && (
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Order ID
+                        </p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {selectedRequest.orderId}
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Items List */}
+              <Card
+                className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+              >
+                <CardHeader className="pb-3">
+                  <CardTitle
+                    className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                  >
+                    <CubeIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                    Requested Items
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {selectedRequest.items.map((item, index) => (
+                      <div
+                        key={index}
+                        className={`p-3 ${colors.backgrounds.tertiary} rounded-none`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p
+                              className={`font-medium ${colors.texts.primary} text-sm`}
+                            >
+                              {item.inventory?.name || item.inventoryName}
+                            </p>
+                            {item.inventory?.category && (
+                              <p className={`text-xs ${colors.texts.muted}`}>
+                                Category: {item.inventory.category}
+                              </p>
+                            )}
+                          </div>
+                          <p
+                            className={`font-bold ${colors.texts.success} text-sm`}
+                          >
+                            {formatCurrency(item.subtotal)}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className={colors.texts.muted}>
+                              Quantity:
+                            </span>
+                            <span
+                              className={`ml-1 font-medium ${colors.texts.primary}`}
+                            >
+                              {item.quantity} {item.inventory?.unit || "units"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className={colors.texts.muted}>
+                              Price/Unit:
+                            </span>
+                            <span
+                              className={`ml-1 font-medium ${colors.texts.primary}`}
+                            >
+                              {formatCurrency(item.pricePerUnit)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Vendor Notes */}
+              {selectedRequest.vendorNotes && (
+                <Card
+                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle
+                      className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                    >
+                      <DocumentDuplicateIcon
+                        className={`h-5 w-5 ${colors.icons.primary}`}
+                      />
+                      Your Notes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className={`text-sm ${colors.texts.accent}`}>
+                      {selectedRequest.vendorNotes}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Supplier Notes */}
               {selectedRequest.supplierNotes && (
                 <Card
                   className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
@@ -737,15 +1039,405 @@ export default function MyRequestsPage() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Rejection Reason */}
+              {selectedRequest.rejectionReason && (
+                <Card
+                  className={`border-0 shadow-sm bg-red-50 dark:bg-red-900/10 rounded-none shadow-none`}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle
+                      className={`text-base flex items-center gap-2 text-red-700 dark:text-red-400`}
+                    >
+                      <XCircleIcon className={`h-5 w-5`} />
+                      Rejection Reason
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className={`text-sm text-red-600 dark:text-red-300`}>
+                      {selectedRequest.rejectionReason}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex gap-2">
+            {selectedRequest?.status === "pending" && (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setIsCancelDialogOpen(true);
+                }}
+                className="rounded-none"
+              >
+                <XCircleIcon className="h-4 w-4 mr-2" />
+                Cancel Request
+              </Button>
+            )}
+            {selectedRequest?.status === "approved" &&
+              !selectedRequest?.orderId && (
+                <>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setIsCancelApprovedDialogOpen(true);
+                    }}
+                    className="rounded-none"
+                  >
+                    <XCircleIcon className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsPaymentDialogOpen(true);
+                    }}
+                    className="rounded-none bg-green-600 hover:bg-green-700"
+                  >
+                    <CreditCardIcon className="h-4 w-4 mr-2" />
+                    Pay Now
+                  </Button>
+                </>
+              )}
             <Button
               variant="outline"
               onClick={() => setIsDetailsOpen(false)}
               className={`${colors.buttons.outline} rounded-none`}
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Pending Request Dialog */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent
+          className={`w-full max-w-[500px] ${colors.backgrounds.modal} rounded-none`}
+        >
+          <DialogHeader>
+            <DialogTitle className={`${colors.texts.primary}`}>
+              Cancel Request
+            </DialogTitle>
+            <DialogDescription className={`${colors.texts.secondary}`}>
+              Are you sure you want to cancel this request? This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-4 mt-4">
+              <div
+                className={`p-4 ${colors.backgrounds.tertiary} rounded-none`}
+              >
+                <p className={`text-sm font-medium ${colors.texts.primary}`}>
+                  Request: {selectedRequest.requestNumber}
+                </p>
+                <p className={`text-sm ${colors.texts.muted} mt-1`}>
+                  Total: {formatCurrency(selectedRequest.total)}
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsCancelDialogOpen(false)}
+              disabled={isProcessing}
+              className="rounded-none"
+            >
+              No, Keep It
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelPendingRequest}
+              disabled={isProcessing}
+              className="rounded-none"
+            >
+              {isProcessing ? "Cancelling..." : "Yes, Cancel Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Approved Request Dialog */}
+      <Dialog
+        open={isCancelApprovedDialogOpen}
+        onOpenChange={setIsCancelApprovedDialogOpen}
+      >
+        <DialogContent
+          className={`w-full max-w-[500px] ${colors.backgrounds.modal} rounded-none`}
+        >
+          <DialogHeader>
+            <DialogTitle className={`${colors.texts.primary}`}>
+              Cancel Approved Request
+            </DialogTitle>
+            <DialogDescription className={`${colors.texts.secondary}`}>
+              Please provide a reason for cancelling this approved request.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-4 mt-4">
+              <div
+                className={`p-4 ${colors.backgrounds.tertiary} rounded-none`}
+              >
+                <p className={`text-sm font-medium ${colors.texts.primary}`}>
+                  Request: {selectedRequest.requestNumber}
+                </p>
+                <p className={`text-sm ${colors.texts.muted} mt-1`}>
+                  Total: {formatCurrency(selectedRequest.total)}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cancellation-reason">
+                  Cancellation Reason *
+                </Label>
+                <Textarea
+                  id="cancellation-reason"
+                  placeholder="Please explain why you're cancelling this approved request..."
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  rows={4}
+                  className="rounded-none"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCancelApprovedDialogOpen(false);
+                setCancellationReason("");
+              }}
+              disabled={isProcessing}
+              className="rounded-none"
+            >
+              Back
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelApprovedRequest}
+              disabled={isProcessing || !cancellationReason.trim()}
+              className="rounded-none"
+            >
+              {isProcessing ? "Cancelling..." : "Cancel Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent
+          className={`w-full max-w-[600px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} rounded-none`}
+        >
+          <DialogHeader>
+            <DialogTitle
+              className={`flex items-center gap-2 ${colors.texts.primary}`}
+            >
+              <BanknotesIcon className="h-5 w-5" />
+              Process Payment
+            </DialogTitle>
+            <DialogDescription className={`${colors.texts.secondary}`}>
+              Enter shipping address to complete payment for this request
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-6 mt-6">
+              {/* Payment Summary */}
+              <Card
+                className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+              >
+                <CardHeader className="pb-3">
+                  <CardTitle className={`text-base ${colors.texts.primary}`}>
+                    Payment Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className={colors.texts.muted}>Request:</span>
+                    <span className={`font-medium ${colors.texts.primary}`}>
+                      {selectedRequest.requestNumber}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className={colors.texts.muted}>Items:</span>
+                    <span className={`font-medium ${colors.texts.primary}`}>
+                      {selectedRequest.items.length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className={colors.texts.muted}>Subtotal:</span>
+                    <span className={`font-medium ${colors.texts.primary}`}>
+                      {formatCurrency(selectedRequest.subtotal)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className={colors.texts.muted}>Tax:</span>
+                    <span className={`font-medium ${colors.texts.primary}`}>
+                      {formatCurrency(selectedRequest.tax)}
+                    </span>
+                  </div>
+                  <div
+                    className={`flex justify-between text-base font-bold pt-2 border-t ${colors.borders.primary}`}
+                  >
+                    <span className={colors.texts.primary}>Total:</span>
+                    <span className={colors.texts.success}>
+                      {formatCurrency(selectedRequest.total)}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Shipping Address Form */}
+              <div className="space-y-4">
+                <h3
+                  className={`text-base font-semibold ${colors.texts.primary}`}
+                >
+                  Shipping Address
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder="John Doe"
+                      value={shippingAddress.name}
+                      onChange={(e) =>
+                        setShippingAddress({
+                          ...shippingAddress,
+                          name: e.target.value,
+                        })
+                      }
+                      className="rounded-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Input
+                      id="phone"
+                      placeholder="+92-300-1234567"
+                      value={shippingAddress.phone}
+                      onChange={(e) =>
+                        setShippingAddress({
+                          ...shippingAddress,
+                          phone: e.target.value,
+                        })
+                      }
+                      className="rounded-none"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="addressLine1">Address Line 1 *</Label>
+                  <Input
+                    id="addressLine1"
+                    placeholder="Street address"
+                    value={shippingAddress.addressLine1}
+                    onChange={(e) =>
+                      setShippingAddress({
+                        ...shippingAddress,
+                        addressLine1: e.target.value,
+                      })
+                    }
+                    className="rounded-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="addressLine2">Address Line 2</Label>
+                  <Input
+                    id="addressLine2"
+                    placeholder="Apartment, suite, etc. (optional)"
+                    value={shippingAddress.addressLine2}
+                    onChange={(e) =>
+                      setShippingAddress({
+                        ...shippingAddress,
+                        addressLine2: e.target.value,
+                      })
+                    }
+                    className="rounded-none"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City *</Label>
+                    <Input
+                      id="city"
+                      placeholder="Karachi"
+                      value={shippingAddress.city}
+                      onChange={(e) =>
+                        setShippingAddress({
+                          ...shippingAddress,
+                          city: e.target.value,
+                        })
+                      }
+                      className="rounded-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state">State/Province *</Label>
+                    <Input
+                      id="state"
+                      placeholder="Sindh"
+                      value={shippingAddress.state}
+                      onChange={(e) =>
+                        setShippingAddress({
+                          ...shippingAddress,
+                          state: e.target.value,
+                        })
+                      }
+                      className="rounded-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="postalCode">Postal Code *</Label>
+                    <Input
+                      id="postalCode"
+                      placeholder="75500"
+                      value={shippingAddress.postalCode}
+                      onChange={(e) =>
+                        setShippingAddress({
+                          ...shippingAddress,
+                          postalCode: e.target.value,
+                        })
+                      }
+                      className="rounded-none"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country">Country *</Label>
+                  <Input
+                    id="country"
+                    placeholder="Pakistan"
+                    value={shippingAddress.country}
+                    onChange={(e) =>
+                      setShippingAddress({
+                        ...shippingAddress,
+                        country: e.target.value,
+                      })
+                    }
+                    className="rounded-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsPaymentDialogOpen(false)}
+              disabled={isProcessing}
+              className="rounded-none"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePayment}
+              disabled={isProcessing}
+              className="rounded-none bg-green-600 hover:bg-green-700"
+            >
+              {isProcessing ? "Processing..." : "Complete Payment"}
             </Button>
           </DialogFooter>
         </DialogContent>

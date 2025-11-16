@@ -37,8 +37,23 @@ class VendorRequestService {
         }
 
         // Ensure all items are from the same supplier
-        if (inventory.supplierId.toString() !== supplierId) {
-          throw new Error("All items must be from the same supplier");
+        const inventorySupplierId = inventory.supplierId?._id
+          ? inventory.supplierId._id.toString()
+          : inventory.supplierId.toString();
+
+        const requestSupplierId = supplierId.toString();
+
+        // Debug logging
+        logger.info("Comparing supplier IDs:", {
+          inventorySupplierId,
+          requestSupplierId,
+          match: inventorySupplierId === requestSupplierId,
+        });
+
+        if (inventorySupplierId !== requestSupplierId) {
+          throw new Error(
+            `All items must be from the same supplier. Inventory supplier: ${inventorySupplierId}, Request supplier: ${requestSupplierId}`
+          );
         }
 
         // Check stock availability
@@ -1287,7 +1302,7 @@ class VendorRequestService {
 
       // Add supply chain event
       order.supplyChainEvents.push({
-        stage: "vendor_request_updated",
+        stage: "order_placed",
         location: shippingAddress.city || "",
         description: `Order placed for vendor request ${vendorRequest.requestNumber}`,
         timestamp: new Date(),
@@ -1367,11 +1382,158 @@ class VendorRequestService {
         },
       });
 
+      // Since payment is complete, immediately transfer inventory to vendor
+      try {
+        logger.info(
+          `📦 Auto-creating vendor inventory from paid order ${order._id}`
+        );
+
+        // Mark order as delivered since payment is complete and this is B2B transaction
+        order.status = "delivered";
+        order.deliveredAt = new Date();
+        order.addStatusHistory(
+          "delivered",
+          vendorId,
+          "vendor",
+          "Auto-delivered after payment completion"
+        );
+        await order.save({ session });
+
+        // Create vendor inventory records
+        const inventoryRecords = [];
+
+        for (const item of order.items) {
+          const inventoryIdToLookup =
+            item.productId?._id || item.productId || item.inventoryId;
+
+          if (!inventoryIdToLookup) {
+            logger.warn(`No inventory ID found for item in order ${order._id}`);
+            continue;
+          }
+
+          const inventoryItem =
+            await Inventory.findById(inventoryIdToLookup).session(session);
+
+          if (!inventoryItem) {
+            logger.warn(
+              `Inventory item not found for ID: ${inventoryIdToLookup}`
+            );
+            continue;
+          }
+
+          const VendorInventory = (await import("../models/VendorInventory.js"))
+            .default;
+
+          const inventoryRecord = new VendorInventory({
+            vendorId: vendorId,
+            vendorName:
+              vendorRequest.vendorId.name ||
+              vendorRequest.vendorId.companyName ||
+              "Vendor",
+            vendorRequestId: vendorRequest._id,
+            orderId: order._id,
+            supplier: {
+              supplierId: vendorRequest.supplierId._id,
+              supplierName:
+                vendorRequest.supplierId.companyName ||
+                vendorRequest.supplierId.name ||
+                "Supplier",
+              contactEmail: vendorRequest.supplierId.email || "",
+              contactPhone: vendorRequest.supplierId.phone || "",
+            },
+            inventoryItem: {
+              inventoryId: inventoryItem._id,
+              name: inventoryItem.name,
+              sku: inventoryItem.sku || "",
+              category: inventoryItem.category,
+              subcategory: inventoryItem.subcategory || "",
+              description: inventoryItem.description || "",
+              images: inventoryItem.images || [],
+              specifications: inventoryItem.specifications || {},
+            },
+            quantity: {
+              received: item.quantity,
+              used: 0,
+              current: item.quantity,
+              reserved: 0,
+              damaged: 0,
+              unit: inventoryItem.unit || "units",
+            },
+            cost: {
+              perUnit: item.price,
+              totalCost: item.subtotal,
+              currency: order.currency || "PKR",
+            },
+            dates: {
+              purchased: vendorRequest.createdAt,
+              approved: vendorRequest.reviewedAt,
+              received: order.deliveredAt,
+            },
+            location: {
+              warehouse: "Main Warehouse",
+              section: "",
+              bin: "",
+            },
+            reorderLevel: Math.floor(item.quantity * 0.2),
+            reorderQuantity: item.quantity,
+            status: "active",
+            blockchain: {
+              txId: "",
+              verified: false,
+            },
+          });
+
+          // Add initial movement record
+          inventoryRecord.movements.push({
+            type: "received",
+            quantity: item.quantity,
+            previousQuantity: 0,
+            newQuantity: item.quantity,
+            performedBy: vendorId,
+            performedByRole: "vendor",
+            relatedOrderId: order._id,
+            reason: `Received from ${vendorRequest.supplierId.companyName || vendorRequest.supplierId.name}`,
+            notes: `Order ${order.orderNumber}`,
+            timestamp: new Date(),
+          });
+
+          await inventoryRecord.save({ session });
+          inventoryRecords.push(inventoryRecord);
+
+          logger.info(
+            `✅ Created vendor inventory record: ${inventoryRecord._id} for ${inventoryItem.name}`
+          );
+        }
+
+        // Send notification about inventory received
+        await notificationService.createNotification({
+          userId: vendorId,
+          userRole: "vendor",
+          type: "stock_updated",
+          category: "inventory",
+          title: "Raw Materials Received",
+          message: `${inventoryRecords.length} items have been added to your inventory from order ${order.orderNumber}`,
+          priority: "high",
+          relatedEntity: {
+            entityType: "order",
+            entityId: order._id,
+          },
+        });
+
+        logger.info(
+          `✅ Created ${inventoryRecords.length} vendor inventory records from order ${order._id}`
+        );
+      } catch (inventoryError) {
+        logger.error("❌ Failed to create vendor inventory:", inventoryError);
+        // Don't fail the entire transaction - inventory can be created manually later
+      }
+
       await session.commitTransaction();
 
       return {
         success: true,
-        message: "Payment processed and order created successfully",
+        message:
+          "Payment processed, order created, and inventory transferred successfully",
         data: {
           vendorRequest: vendorRequest,
           order: {
@@ -1381,6 +1543,7 @@ class VendorRequestService {
             status: order.status,
             paymentStatus: order.paymentStatus,
             paidAt: order.paidAt,
+            deliveredAt: order.deliveredAt,
             items: order.items.map((item) => ({
               productName: item.productName,
               quantity: item.quantity,

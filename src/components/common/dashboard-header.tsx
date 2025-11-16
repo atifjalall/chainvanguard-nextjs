@@ -438,6 +438,18 @@ export function DashboardHeader({
     return user?.name || user?.walletName || "User";
   };
 
+  const formatCurrency = (amount: number) => `Rs ${amount.toFixed(2)}`;
+
+  const formatCurrencyAbbreviated = (amount: number) => {
+    if (amount >= 1e9) {
+      return `Rs ${(amount / 1e9).toFixed(2)} B`;
+    } else if (amount >= 1e6) {
+      return `Rs ${(amount / 1e6).toFixed(2)} M`;
+    } else {
+      return formatCurrency(amount);
+    }
+  };
+
   // Listen for markAllAsRead event from notifications page
   useEffect(() => {
     const handler = async () => {
@@ -507,7 +519,7 @@ export function DashboardHeader({
             <div className="hidden md:flex items-center space-x-1 px-2 py-0.5 bg-gray-100 dark:bg-gray-800 backdrop-blur-sm rounded-none">
               <WalletIcon className="h-3 w-3 text-gray-600 dark:text-gray-400 cursor-pointer" />
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                Rs {balance}
+                {formatCurrencyAbbreviated(balance)}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {formatAddress(currentWallet.address)}
@@ -705,7 +717,7 @@ export function DashboardHeader({
                         {formatAddress(currentWallet.address)}
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Balance: Rs {balance}
+                        Balance:{formatCurrencyAbbreviated(balance)}
                       </p>
                     </div>
                   </DropdownMenuLabel>
