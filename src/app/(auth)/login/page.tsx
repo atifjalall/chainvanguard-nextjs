@@ -25,7 +25,6 @@ import {
   ArrowRightEndOnRectangleIcon,
   LockClosedIcon,
   PencilIcon,
-  XCircleIcon,
   KeyIcon,
 } from "@heroicons/react/24/outline";
 import { WalletIcon as WalletIconSolid } from "@heroicons/react/24/solid";
@@ -36,6 +35,16 @@ import { authAPI } from "@/lib/api/auth.api";
 import { AnimatePresence, motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AuthRouteGuard } from "@/components/guards/auth-route-guard";
+
+const FORM_SPACING = "space-y-4";
+const SECTION_MARGIN = "mb-4 md:mb-6";
+const NAVIGATION_MARGIN = "mt-6";
+const GRID_GAP = "gap-4";
+const CONTAINER_PADDING = "p-4 md:p-6";
+const FIELD_GAP = "gap-6";
+const LABEL_MARGIN = "mb-1";
+const ERROR_MARGIN = "mt-1";
+const HEADER_GAP = "gap-3";
 
 type WalletInputMode = "select" | "manual";
 
@@ -223,8 +232,8 @@ export default function LoginPage() {
     <AuthRouteGuard>
       <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
         {/* Header */}
-        <header className="fixed top-0 w-full z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
-          <div className="w-full px-6 h-16 flex items-center">
+        <header className="fixed top-0 w-full z-50 bg-white dark:bg-gray-950">
+          <div className={`w-full px-6 h-16 flex items-center`}>
             {/* Logo on the far left */}
             <Link
               href="/"
@@ -236,7 +245,7 @@ export default function LoginPage() {
             </Link>
 
             {/* Push navbar to the right */}
-            <nav className="flex items-center gap-2 ml-auto">
+            <nav className={`flex items-center gap-2 ml-auto ${HEADER_GAP}`}>
               <ThemeToggle />
               <Link href="/register">
                 <Button
@@ -251,21 +260,24 @@ export default function LoginPage() {
         </header>
 
         {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-[calc(100vh-8rem)]">
+        <div
+          className={`flex-1 flex items-center justify-center p-3 sm:p-4 min-h-[calc(100vh-8rem)]`}
+        >
           <div className="w-full max-w-2xl">
             {isInitializing ? (
-              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">
+              <div
+                className={`bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 ${CONTAINER_PADDING}`}
+              >
                 {/* Header Skeleton */}
-                <div className="text-center space-y-2 mb-5">
+                <div className={`text-center space-y-2 ${SECTION_MARGIN}`}>
                   <Skeleton className="h-12 w-12 mx-auto mb-2 rounded-none" />
                   <Skeleton className="h-6 w-40 mx-auto rounded-none" />
                   <Skeleton className="h-4 w-56 mx-auto rounded-none" />
                 </div>
                 {/* Form Skeleton */}
-                <form className="space-y-3">
+                <form className={FORM_SPACING}>
                   {/* Wallet Input Mode Toggle */}
                   <Skeleton className="h-9 w-full rounded-none" />
-
                   {/* Wallet Input */}
                   <div className="relative h-[60px] mb-3">
                     <div className="space-y-1.5 absolute inset-0">
@@ -273,36 +285,32 @@ export default function LoginPage() {
                       <Skeleton className="h-9 w-full rounded-none" />
                     </div>
                   </div>
-
                   {/* Password */}
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-28 mb-1 rounded-none" />
                     <Skeleton className="h-9 w-full rounded-none" />
                   </div>
-
                   {/* Submit Button */}
                   <Skeleton className="h-9 w-full mt-1 rounded-none" />
-
                   {/* Forgot Password Button */}
                   <Skeleton className="h-8 w-full mt-1 rounded-none" />
                 </form>
-
                 {/* Sign Up Link */}
-                <div className="mt-8 text-center">
+                <div className={`mt-8 text-center`}>
                   <Skeleton className="h-4 w-52 mx-auto rounded-none" />
                 </div>
-
                 {/* No Wallets Warning */}
                 {/* Optionally, you can show a skeleton for the warning box if needed */}
-
                 {/* Network Status */}
                 <Skeleton className="h-9 w-full mt-1 rounded-none" />
               </div>
             ) : (
-              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">
+              <div
+                className={`bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 ${CONTAINER_PADDING}`}
+              >
                 {/* Header */}
-                <div className="text-center space-y-2 mb-5">
-                  <WalletIconSolid className="h-12 w-12 mx-auto text-gray-900 dark:text-white mb-2" />
+                <div className={`text-center space-y-2 ${SECTION_MARGIN}`}>
+                  <WalletIconOutline className="h-12 w-12 mx-auto text-gray-900 dark:text-white mb-2" />
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                     Welcome Back
                   </h1>
@@ -312,9 +320,11 @@ export default function LoginPage() {
                   </p>
                 </div>
 
-                <form onSubmit={handleWalletLogin} className="space-y-3">
+                <form onSubmit={handleWalletLogin} className={FORM_SPACING}>
                   {/* Wallet Input Mode Toggle */}
-                  <div className="flex p-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-800">
+                  <div
+                    className={`flex p-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-800`}
+                  >
                     <button
                       type="button"
                       onClick={() => setWalletInputMode("select")}
@@ -341,7 +351,7 @@ export default function LoginPage() {
                     </button>
                   </div>
                   {/* Wallet Input */}
-                  <div className="relative h-[60px] mb-3">
+                  <div className="relative h-[60px]">
                     <AnimatePresence mode="wait">
                       {walletInputMode === "select" ? (
                         <motion.div
@@ -350,9 +360,11 @@ export default function LoginPage() {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
                           transition={{ duration: 0.3, ease: "easeInOut" }}
-                          className="space-y-1.5 absolute inset-0"
+                          className={`space-y-0.5 absolute inset-0`}
                         >
-                          <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                          <Label
+                            className={`flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ${LABEL_MARGIN}`}
+                          >
                             <WalletIconOutline className="h-3 w-3" />
                             Select Your Wallet
                           </Label>
@@ -396,12 +408,16 @@ export default function LoginPage() {
                               )}
                             </SelectContent>
                           </Select>
-                          {walletError && (
-                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
-                              <XCircleIcon className="h-3 w-3" />
-                              {walletError}
-                            </p>
-                          )}
+                          <div className="h-4">
+                            {walletError && (
+                              <p
+                                className={`text-xs text-red-600 dark:text-red-400 flex items-center gap-1`}
+                              >
+                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                {walletError}
+                              </p>
+                            )}
+                          </div>
                         </motion.div>
                       ) : (
                         <motion.div
@@ -410,9 +426,11 @@ export default function LoginPage() {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -20 }}
                           transition={{ duration: 0.3, ease: "easeInOut" }}
-                          className="space-y-1.5 absolute inset-0"
+                          className={`space-y-0.5 absolute inset-0`}
                         >
-                          <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                          <Label
+                            className={`flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ${LABEL_MARGIN}`}
+                          >
                             <PencilIcon className="h-3 w-3" />
                             Enter Wallet Address
                           </Label>
@@ -429,20 +447,26 @@ export default function LoginPage() {
                                 : "border-gray-200 dark:border-gray-700"
                             }`}
                           />
-                          {walletError && (
-                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
-                              <XCircleIcon className="h-3 w-3" />
-                              {walletError}
-                            </p>
-                          )}
+                          <div className="h-4">
+                            {walletError && (
+                              <p
+                                className={`text-xs text-red-600 dark:text-red-400 flex items-center gap-1`}
+                              >
+                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                {walletError}
+                              </p>
+                            )}
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
 
                   {/* Password */}
-                  <div className="space-y-1">
-                    <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                  <div className="space-y-0.5">
+                    <Label
+                      className={`flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ${LABEL_MARGIN}`}
+                    >
                       <LockClosedIcon className="h-3 w-3" />
                       Wallet Password
                     </Label>
@@ -473,18 +497,22 @@ export default function LoginPage() {
                         )}
                       </Button>
                     </div>
-                    {passwordError && (
-                      <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                        <XCircleIcon className="h-3 w-3" />
-                        {passwordError}
-                      </p>
-                    )}
+                    <div className="h-4">
+                      {passwordError && (
+                        <p
+                          className={`text-xs text-red-600 dark:text-red-400 flex items-center gap-1`}
+                        >
+                          <ExclamationTriangleIcon className="h-3 w-3" />
+                          {passwordError}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    className="w-full h-9 text-xs font-semibold bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 rounded-none cursor-pointer mt-1"
+                    className="w-full h-9 text-xs font-semibold bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 rounded-none cursor-pointer -mt-6"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -504,7 +532,7 @@ export default function LoginPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-8 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all duration-200 rounded-none cursor-pointer bg-white/50 dark:bg-gray-800/50 text-xs font-medium mt-1"
+                    className="w-full h-8 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all duration-200 rounded-none cursor-pointer bg-white/50 dark:bg-gray-800/50 text-xs font-medium"
                     size="sm"
                     onClick={() => router.push("/forgot-password")}
                   >
@@ -514,7 +542,7 @@ export default function LoginPage() {
                 </form>
 
                 {/* Sign Up Link */}
-                <div className="mt-4 text-center">
+                <div className={`mt-4 text-center`}>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
                     Don&apos;t have a wallet?{" "}
                     <Link
@@ -529,7 +557,9 @@ export default function LoginPage() {
                 {/* No Wallets Warning */}
                 {availableWallets.length === 0 &&
                   walletInputMode === "select" && (
-                    <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <div
+                      className={`mt-4 p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700`}
+                    >
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
                           <ExclamationTriangleIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />

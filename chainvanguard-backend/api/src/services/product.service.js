@@ -297,9 +297,9 @@ class ProductService {
       console.log(`✅ Product saved to MongoDB: ${product._id}`);
 
       await notificationService.createNotification({
-        userId: product.seller,
-        userRole: supplierData.role,
-        type: "product_approved",
+        userId: product.sellerId,
+        userRole: seller.role,
+        type: "product_created",
         category: "product",
         title: "Product Created Successfully",
         message: `Your product "${product.name}" has been created and is now live`,

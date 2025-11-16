@@ -21,9 +21,8 @@ import {
   Cog6ToothIcon,
   UserIcon,
   WalletIcon,
-  HeartIcon,
+  BookmarkIcon,
   BellIcon,
-  ShoppingCartIcon,
   CheckCircleIcon,
   ClockIcon,
   TruckIcon,
@@ -308,7 +307,6 @@ export function DashboardHeader({
   const getNotificationIcon = (type: string) => {
     const iconMap: Record<string, any> = {
       // Order related
-      order_placed: ShoppingCartIcon,
       order_confirmed: CheckCircleIcon,
       order_shipped: TruckIcon,
       order_delivered: CheckCircleIcon,
@@ -322,7 +320,6 @@ export function DashboardHeader({
       vendor_request_updated: DocumentTextIcon,
       vendor_request_fulfilled: CheckCircleIcon,
       vendor_request_completed: CheckCircleIcon,
-      request_order_placed: ShoppingCartIcon,
       vendor_request_payment_received: BanknotesIcon,
 
       // Payment related
@@ -534,7 +531,7 @@ export function DashboardHeader({
             >
               <BellIcon className="h-4 w-4 cursor-pointer" />
               {unreadCount > 0 && (
-                <span className="absolute top-0 right-0 h-4 w-4 bg-black text-white text-xs flex items-center justify-center rounded-none font-semibold">
+                <span className="absolute top-0 right-0 h-4 w-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs flex items-center justify-center rounded-none font-semibold">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
@@ -643,21 +640,9 @@ export function DashboardHeader({
               variant="ghost"
               size="icon"
               className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded-none"
-              onClick={() => router.push("/vendor/wishlist")}
+              onClick={() => router.push("/vendor/saved-items")}
             >
-              <HeartIcon className="h-4 w-4 cursor-pointer" />
-            </Button>
-          )}
-
-          {/* Cart (Vendor & Customer → Yes | Supplier → No) */}
-          {(isVendor || isCustomer) && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded-none"
-              onClick={() => router.push("/vendor/cart")}
-            >
-              <ShoppingCartIcon className="h-4 w-4 cursor-pointer" />
+              <BookmarkIcon className="h-4 w-4 cursor-pointer" />
             </Button>
           )}
 

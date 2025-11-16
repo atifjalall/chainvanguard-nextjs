@@ -44,6 +44,7 @@ import {
   ArrowTopRightOnSquareIcon,
   InboxStackIcon,
   InboxArrowDownIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import { colors, badgeColors } from "@/lib/colorConstants";
 import {
@@ -63,6 +64,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+
+const HEADER_GAP = "gap-3";
 
 const RsIcon = () => (
   <svg
@@ -511,6 +514,16 @@ export default function VendorRequestsPage() {
               <p className={`text-base ${colors.texts.secondary}`}>
                 Manage incoming requests from your vendor partners
               </p>
+              <div className={`flex items-center ${HEADER_GAP} mt-2`}>
+                <Badge
+                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                >
+                  <ShieldCheckIcon
+                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                  />
+                  Blockchain Verified
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
@@ -594,7 +607,7 @@ export default function VendorRequestsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="space-y-6 mb-4">
                 <div className="relative w-full">
                   <MagnifyingGlassIcon
                     className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
@@ -606,45 +619,47 @@ export default function VendorRequestsPage() {
                     className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
                   />
                 </div>
-                <Select
-                  value={selectedStatus}
-                  onValueChange={setSelectedStatus}
-                >
-                  <SelectTrigger
-                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Select
+                    value={selectedStatus}
+                    onValueChange={setSelectedStatus}
                   >
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {statusOptions.map((status) => (
-                      <SelectItem
-                        key={status}
-                        value={status}
-                        className="text-sm h-9"
-                      >
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger
-                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
-                  >
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {sortOptions.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="text-sm h-9"
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <SelectTrigger
+                      className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                    >
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {statusOptions.map((status) => (
+                        <SelectItem
+                          key={status}
+                          value={status}
+                          className="text-sm h-9"
+                        >
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger
+                      className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                    >
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {sortOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="text-sm h-9"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2 items-center mt-2">
                 {searchTerm && (

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -7,70 +8,58 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Input } from "@/components/_ui/input";
-import { Badge } from "@/components/_ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/_ui/avatar";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/_ui/select";
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
-} from "@/components/_ui/dialog";
-import { Label } from "@/components/_ui/label";
-import { Textarea } from "@/components/_ui/textarea";
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/_ui/tabs";
+  UsersIcon,
+  ShoppingBagIcon,
+  BanknotesIcon,
+  EnvelopeIcon,
+  EyeIcon,
+  ChatBubbleOvalLeftIcon,
+  FunnelIcon,
+  ArrowDownTrayIcon,
+  ArrowPathIcon,
+  TrophyIcon,
+  ExclamationCircleIcon,
+  CheckCircleIcon,
+  Squares2X2Icon,
+  Bars3Icon,
+  ShieldCheckIcon,
+  MagnifyingGlassIcon,
+  ClockIcon,
+  UserPlusIcon,
+} from "@heroicons/react/24/outline";
+import { colors, badgeColors } from "@/lib/colorConstants";
 import {
-  Search,
-  Users,
-  Star,
-  ShoppingBag,
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  MapPin,
-  Phone,
-  Mail,
-  Eye,
-  MessageCircle,
-  Filter,
-  UserPlus,
-  Download,
-  RefreshCw,
-  Award,
-  Clock,
-  Package,
-  MoreHorizontal,
-  Heart,
-  AlertCircle,
-  CheckCircle,
-  Grid3X3,
-  List,
-  SlidersHorizontal,
-  Sparkles,
-  Shield,
-  Crown,
-  Activity,
-} from "lucide-react";
-import { useAuth } from "@/components/providers/auth-provider";
-import { toast } from "sonner";
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
 
 // Customer interface
 interface Customer {
@@ -84,7 +73,7 @@ interface Customer {
   totalOrders: number;
   totalSpent: number;
   averageOrderValue: number;
-  status: "active" | "inactive" | "vip" | "new";
+  status: "active" | "inactive" | "new";
   location: {
     city: string;
     state: string;
@@ -111,7 +100,7 @@ const mockCustomers: Customer[] = [
     totalOrders: 12,
     totalSpent: 2847.96,
     averageOrderValue: 237.33,
-    status: "vip",
+    status: "active",
     location: {
       city: "New York",
       state: "NY",
@@ -159,7 +148,7 @@ const mockCustomers: Customer[] = [
     totalOrders: 15,
     totalSpent: 3892.45,
     averageOrderValue: 259.5,
-    status: "vip",
+    status: "active",
     location: {
       city: "Chicago",
       state: "IL",
@@ -246,7 +235,13 @@ const mockCustomers: Customer[] = [
   },
 ];
 
-const statusOptions = ["All Status", "active", "inactive", "vip", "new"];
+const HEADER_GAP = "gap-3";
+
+const formatCurrency = (amount: number) => {
+  return `Rs ${amount.toLocaleString("en-PK")}`;
+};
+
+const statusOptions = ["All Status", "active", "inactive", "new"];
 
 const sortOptions = [
   { value: "name-asc", label: "Name: A to Z" },
@@ -260,15 +255,14 @@ const sortOptions = [
 ];
 
 export default function VendorCustomersPage() {
-  const { user } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [sortBy, setSortBy] = useState("recent");
-  const [selectedTab, setSelectedTab] = useState<
-    "all" | "vip" | "new" | "inactive"
-  >("all");
+  const [selectedTab, setSelectedTab] = useState<"all" | "new" | "inactive">(
+    "all"
+  );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
@@ -281,7 +275,7 @@ export default function VendorCustomersPage() {
   useEffect(() => {
     setIsVisible(true);
     loadCustomers();
-  }, [user?.id]);
+  }, []);
 
   const loadCustomers = async () => {
     setIsLoading(true);
@@ -291,7 +285,7 @@ export default function VendorCustomersPage() {
       // In real app: const customers = await fetchVendorCustomers(user.id);
       setCustomers(mockCustomers);
     } catch (error) {
-      toast.error("Failed to load customers");
+      // toast.error("Failed to load customers");
     } finally {
       setIsLoading(false);
     }
@@ -348,39 +342,28 @@ export default function VendorCustomersPage() {
 
   const getStatusConfig = (status: Customer["status"]) => {
     switch (status) {
-      case "vip":
-        return {
-          color:
-            "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400",
-          icon: Crown,
-          label: "VIP",
-        };
       case "active":
         return {
-          color:
-            "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
-          icon: CheckCircle,
+          color: badgeColors.green,
+          icon: CheckCircleIcon,
           label: "Active",
         };
       case "new":
         return {
-          color:
-            "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
-          icon: Sparkles,
+          color: badgeColors.blue,
+          icon: UserPlusIcon,
           label: "New",
         };
       case "inactive":
         return {
-          color:
-            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-          icon: Clock,
+          color: badgeColors.grey,
+          icon: ClockIcon,
           label: "Inactive",
         };
       default:
         return {
-          color:
-            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-          icon: Users,
+          color: badgeColors.grey,
+          icon: UsersIcon,
           label: "Unknown",
         };
     }
@@ -415,12 +398,12 @@ export default function VendorCustomersPage() {
 
   const sendMessage = () => {
     if (!selectedCustomer || !contactMessage.trim()) {
-      toast.error("Please enter a message");
+      // toast.error("Please enter a message");
       return;
     }
 
     // In real app: sendCustomerMessage(selectedCustomer.id, contactMessage);
-    toast.success(`Message sent to ${selectedCustomer.name}`);
+    // toast.success(`Message sent to ${selectedCustomer.name}`);
     setIsContactOpen(false);
     setContactMessage("");
   };
@@ -434,134 +417,99 @@ export default function VendorCustomersPage() {
     );
 
     return (
-      <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5 rounded-lg" />
-        <CardContent className="relative z-10 p-6">
-          {/* Customer Header */}
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative">
-              <Avatar className="h-14 w-14 border-2 border-white dark:border-gray-800 shadow-lg">
-                <AvatarImage src={customer.avatar} alt={customer.name} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-bold">
-                  {getInitials(customer.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full p-1">
-                <StatusIcon className="h-3 w-3 text-white" />
-              </div>
-            </div>
+      <Card
+        className={`${colors.cards.base} hover:${colors.cards.hover} overflow-hidden group rounded-none !shadow-none hover:!shadow-none`}
+      >
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4 mb-4">
+            <Avatar
+              className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
+            >
+              <AvatarImage src={customer.avatar} alt={customer.name} />
+              <AvatarFallback
+                className={`${colors.texts.primary} font-bold rounded-none`}
+              >
+                {getInitials(customer.name)}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 truncate">
-                {customer.name}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                {customer.email}
-              </p>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mb-1">
+                <h3
+                  className={`font-semibold ${colors.texts.primary} truncate`}
+                >
+                  {customer.name}
+                </h3>
+                <StatusIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+              </div>
+              <div className="flex items-center gap-1 mt-1">
                 <Badge
-                  className={`${statusConfig.color} flex items-center gap-1 text-xs`}
+                  className={`flex items-center gap-1 text-xs rounded-none px-2 py-0.5 ${statusConfig.color.bg} ${statusConfig.color.border} ${statusConfig.color.text}`}
                   variant="secondary"
                 >
-                  <StatusIcon className="h-3 w-3" />
                   {statusConfig.label}
                 </Badge>
-                {customer.rating && (
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      {customer.rating}
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
           </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="text-center p-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg backdrop-blur">
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                {customer.totalOrders}
-              </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Orders</p>
-            </div>
-            <div className="text-center p-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg backdrop-blur">
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                ${customer.totalSpent.toFixed(0)}
-              </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Total Spent
-              </p>
-            </div>
-          </div>
-
-          {/* Customer Info */}
-          <div className="space-y-2 mb-4">
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="h-3 w-3 text-gray-500 dark:text-gray-500" />
-              <span className="text-gray-600 dark:text-gray-400">
-                {customer.location.city}, {customer.location.state}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Calendar className="h-3 w-3 text-gray-500 dark:text-gray-500" />
-              <span className="text-gray-600 dark:text-gray-400">
-                Last order: {daysSinceLastOrder}d ago
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Award className="h-3 w-3 text-gray-500 dark:text-gray-500" />
-              <span className="text-gray-600 dark:text-gray-400">
-                {customer.loyaltyPoints} loyalty points
-              </span>
-            </div>
-          </div>
-
-          {/* Categories */}
-          <div className="mb-4">
-            <p className="text-xs text-gray-500 dark:text-gray-500 mb-2 font-medium">
-              Favorite Categories
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {customer.favoriteCategories
-                .slice(0, 2)
-                .map((category, index) => (
-                  <Badge
-                    key={index}
-                    variant="outline"
-                    className="text-xs border-gray-300 dark:border-gray-600"
-                  >
-                    {category}
-                  </Badge>
-                ))}
-              {customer.favoriteCategories.length > 2 && (
-                <Badge
-                  variant="outline"
-                  className="text-xs border-gray-300 dark:border-gray-600"
-                >
-                  +{customer.favoriteCategories.length - 2}
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => handleViewDetails(customer)}
+          <div className="space-y-3 mb-4">
+            <div
+              className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
             >
-              <Eye className="h-3 w-3 mr-1" />
-              View
+              <EnvelopeIcon className={`h-4 w-4 ${colors.icons.muted}`} />
+              <span className={`${colors.texts.primary}`}>
+                {customer.email}
+              </span>
+            </div>
+            <div
+              className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
+            >
+              <ShoppingBagIcon className={`h-4 w-4 ${colors.icons.muted}`} />
+              <span className={`${colors.texts.primary}`}>
+                {customer.totalOrders} orders
+              </span>
+            </div>
+            <div
+              className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
+            >
+              <TrophyIcon className={`h-4 w-4 ${colors.icons.muted}`} />
+              <span className={`${colors.texts.primary}`}>
+                {customer.loyaltyPoints} points
+              </span>
+            </div>
+          </div>
+          <div className="mb-4">
+            <div
+              className={`text-center p-3 ${colors.backgrounds.accent} rounded-none`}
+            >
+              <p className={`text-xl font-bold ${colors.texts.success}`}>
+                {formatCurrency(customer.totalSpent)}
+              </p>
+              <p className={`text-xs ${colors.texts.muted}`}>Total Spent</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between mb-4">
+            <div className={`text-xs ${colors.texts.muted}`}>
+              Last order: {daysSinceLastOrder}d ago
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleViewDetails(customer)}
+              className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
+            >
+              <EyeIcon className={`h-3 w-3 mr-1 ${colors.icons.primary}`} />
+              View Details
             </Button>
             <Button
               size="sm"
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
               onClick={() => handleContactCustomer(customer)}
+              className={`flex-1 h-8 px-3 ${colors.buttons.primary} cursor-pointer rounded-none transition-all`}
             >
-              <MessageCircle className="h-3 w-3 mr-1" />
+              <EnvelopeIcon
+                className={`h-3 w-3 mr-1 ${colors.texts.inverse}`}
+              />
               Contact
             </Button>
           </div>
@@ -579,40 +527,31 @@ export default function VendorCustomersPage() {
     );
 
     return (
-      <Card className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-cyan-500/5 rounded-lg" />
-        <CardContent className="relative z-10 p-6">
+      <Card
+        className={`${colors.cards.base} hover:${colors.cards.hover} overflow-hidden group rounded-none !shadow-none hover:!shadow-none`}
+      >
+        <CardContent className="p-6">
           <div className="flex items-center gap-6">
-            {/* Avatar */}
-            <div className="relative flex-shrink-0">
-              <Avatar className="h-14 w-14 border-2 border-white dark:border-gray-800 shadow-lg">
-                <AvatarImage src={customer.avatar} alt={customer.name} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-bold">
-                  {getInitials(customer.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full p-1">
-                <StatusIcon className="h-3 w-3 text-white" />
-              </div>
-            </div>
-
-            {/* Customer Info */}
+            <Avatar
+              className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
+            >
+              <AvatarImage src={customer.avatar} alt={customer.name} />
+              <AvatarFallback
+                className={`${colors.texts.primary} font-bold rounded-none`}
+              >
+                {getInitials(customer.name)}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 truncate">
+                <h3
+                  className={`font-semibold ${colors.texts.primary} truncate`}
+                >
                   {customer.name}
                 </h3>
                 <div className="flex items-center gap-3">
-                  {customer.rating && (
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                        {customer.rating}
-                      </span>
-                    </div>
-                  )}
                   <Badge
-                    className={`${statusConfig.color} flex items-center gap-1`}
+                    className={`flex items-center gap-1 ${statusConfig.color.bg} ${statusConfig.color.border} ${statusConfig.color.text}`}
                     variant="secondary"
                   >
                     <StatusIcon className="h-3 w-3" />
@@ -620,59 +559,56 @@ export default function VendorCustomersPage() {
                   </Badge>
                 </div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-600 dark:text-gray-400 truncate">
+                  <p className={`${colors.texts.primary} truncate`}>
                     {customer.email}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                  <p className={`text-xs ${colors.texts.muted}`}>
                     {customer.location.city}, {customer.location.state}
                   </p>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 dark:text-gray-100">
+                  <p className={`font-semibold ${colors.texts.primary}`}>
                     {customer.totalOrders} orders
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
-                    Avg: ${customer.averageOrderValue.toFixed(0)}
+                  <p className={`text-xs ${colors.texts.muted}`}>
+                    Avg: {formatCurrency(customer.averageOrderValue)}
                   </p>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 dark:text-gray-100">
-                    ${customer.totalSpent.toFixed(0)}
+                  <p className={`font-semibold ${colors.texts.primary}`}>
+                    {formatCurrency(customer.totalSpent)}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                  <p className={`text-xs ${colors.texts.muted}`}>
                     {customer.loyaltyPoints} points
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className={`${colors.texts.primary}`}>
                     Last order: {daysSinceLastOrder}d ago
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                  <p className={`text-xs ${colors.texts.muted}`}>
                     Joined: {formatDate(customer.joinDate)}
                   </p>
                 </div>
               </div>
             </div>
-
-            {/* Actions */}
             <div className="flex gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 w-8 p-0"
+                className={`h-8 w-8 p-0 ${colors.buttons.outline} cursor-pointer rounded-none`}
                 onClick={() => handleViewDetails(customer)}
               >
-                <Eye className="h-3 w-3" />
+                <EyeIcon className="h-3 w-3" />
               </Button>
               <Button
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                className={`${colors.buttons.primary} cursor-pointer rounded-none`}
                 onClick={() => handleContactCustomer(customer)}
               >
-                <MessageCircle className="h-3 w-3 mr-1" />
+                <EnvelopeIcon className="h-3 w-3 mr-1" />
                 Contact
               </Button>
             </div>
@@ -684,10 +620,10 @@ export default function VendorCustomersPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/20 to-cyan-400/20 blur-sm"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading customers...</p>
         </div>
       </div>
     );
@@ -695,7 +631,6 @@ export default function VendorCustomersPage() {
 
   // Calculate stats
   const totalCustomers = customers.length;
-  const vipCustomers = customers.filter((c) => c.status === "vip").length;
   const newCustomers = customers.filter((c) => c.status === "new").length;
   const inactiveCustomers = customers.filter(
     (c) => c.status === "inactive"
@@ -704,593 +639,462 @@ export default function VendorCustomersPage() {
     customers.reduce((sum, c) => sum + c.totalSpent, 0) / customers.length;
 
   return (
-    <div className="space-y-8 p-6">
-      {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-              Customer Management
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg mt-2">
-              Manage customer relationships and track engagement
-            </p>
-            <div className="flex items-center gap-2 mt-3">
-              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
-                <Users className="h-3 w-3 mr-1" />
-                {totalCustomers} Customers
-              </Badge>
-              <Badge variant="outline" className="border-gray-300">
-                <Shield className="h-3 w-3 mr-1" />
-                Blockchain Secured
-              </Badge>
-              {vipCustomers > 0 && (
-                <Badge className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white">
-                  <Crown className="h-3 w-3 mr-1" />
-                  {vipCustomers} VIP
+    <div className={`min-h-screen ${colors.backgrounds.secondary}`}>
+      <div className="relative z-10 p-6 space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/vendor">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Customers</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        {/* Header */}
+        <div
+          className={`transform transition-all duration-700 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+        >
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="space-y-2">
+              <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
+                Customers
+              </h1>
+              <p className={`text-base ${colors.texts.secondary}`}>
+                Manage customer relationships and track engagement
+              </p>
+              <div className={`flex items-center ${HEADER_GAP} mt-2`}>
+                <Badge
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} flex items-center gap-1 text-xs rounded-none`}
+                >
+                  <UsersIcon className={`h-3 w-3 ${badgeColors.green.icon}`} />
+                  Customer Management
                 </Badge>
-              )}
+                <Badge
+                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                >
+                  <ShieldCheckIcon
+                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                  />
+                  Blockchain Verified
+                </Badge>
+              </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* View toggle */}
-            <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1 bg-white/50 dark:bg-gray-900/50 backdrop-blur">
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                className={`h-8 w-8 p-0 ${
-                  viewMode === "grid"
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                }`}
-                onClick={() => setViewMode("grid")}
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                className={`h-8 w-8 p-0 ${
-                  viewMode === "list"
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                }`}
-                onClick={() => setViewMode("list")}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={loadCustomers}
-              className="shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-            <Button
-              variant="outline"
-              className="shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
           </div>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div
-        className={`transform transition-all duration-700 delay-200 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          {[
-            {
-              title: "Total Customers",
-              value: totalCustomers,
-              subtitle: "Active relationships",
-              icon: Users,
-              gradient: "from-blue-500 to-cyan-500",
-              bgGradient: "from-blue-500/5 via-transparent to-cyan-500/5",
-            },
-            {
-              title: "VIP Customers",
-              value: vipCustomers,
-              subtitle: "High-value customers",
-              icon: Crown,
-              gradient: "from-purple-500 to-indigo-500",
-              bgGradient: "from-purple-500/5 via-transparent to-indigo-500/5",
-            },
-            {
-              title: "New Customers",
-              value: newCustomers,
-              subtitle: "Recent acquisitions",
-              icon: Sparkles,
-              gradient: "from-green-500 to-emerald-500",
-              bgGradient: "from-green-500/5 via-transparent to-emerald-500/5",
-            },
-            {
-              title: "At Risk",
-              value: inactiveCustomers,
-              subtitle: "Need attention",
-              icon: AlertCircle,
-              gradient: "from-orange-500 to-red-500",
-              bgGradient: "from-orange-500/5 via-transparent to-red-500/5",
-            },
-            {
-              title: "Avg. Spend",
-              value: `$${averageSpend.toFixed(0)}`,
-              subtitle: "Per customer",
-              icon: DollarSign,
-              gradient: "from-yellow-500 to-amber-500",
-              bgGradient: "from-yellow-500/5 via-transparent to-amber-500/5",
-            },
-          ].map((stat, index) => {
-            const Icon = stat.icon;
-            return (
+        {/* Statistics Cards */}
+        <div
+          className={`transform transition-all duration-700 delay-200 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                title: "Total Customers",
+                value: totalCustomers.toString(),
+                icon: UsersIcon,
+              },
+              {
+                title: "New Customers",
+                value: newCustomers.toString(),
+                icon: UserPlusIcon,
+              },
+              {
+                title: "At Risk",
+                value: inactiveCustomers.toString(),
+                icon: ExclamationCircleIcon,
+              },
+              {
+                title: "Avg. Spend",
+                value: formatCurrency(averageSpend),
+                icon: BanknotesIcon,
+              },
+            ].map((stat, index) => (
               <Card
                 key={index}
-                className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl group"
+                className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
               >
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`}
-                />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle
+                    className={`text-xs font-medium ${colors.texts.secondary}`}
+                  >
                     {stat.title}
                   </CardTitle>
-                  <div
-                    className={`h-10 w-10 rounded-full bg-gradient-to-r ${stat.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
-                  >
-                    <Icon className="h-5 w-5 text-white" />
-                  </div>
+                  <stat.icon className={`h-5 w-5 ${colors.icons.primary}`} />
                 </CardHeader>
-                <CardContent className="relative z-10">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                <CardContent>
+                  <div
+                    className={`text-lg font-bold ${colors.texts.primary} mb-1`}
+                  >
                     {stat.value}
                   </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    {stat.subtitle}
+                  <p className={`text-xs ${colors.texts.secondary}`}>
+                    Customers
                   </p>
                 </CardContent>
               </Card>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Filters and Controls */}
-      <div
-        className={`transform transition-all duration-700 delay-400 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-indigo-500/5 rounded-lg" />
-          <CardHeader className="relative z-10">
-            <CardTitle className="flex items-center gap-3 text-xl">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center">
-                <SlidersHorizontal className="h-4 w-4 text-white" />
-              </div>
-              Filters & Search
-            </CardTitle>
-            <CardDescription>
-              Filter and search through your customer base
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="relative z-10 space-y-6">
-            {/* Tab Navigation */}
-            <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1 w-fit bg-white/50 dark:bg-gray-900/50 backdrop-blur">
-              <Button
-                variant={selectedTab === "all" ? "default" : "ghost"}
-                size="sm"
-                className={`h-9 text-sm ${
-                  selectedTab === "all"
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                }`}
-                onClick={() => setSelectedTab("all")}
-              >
-                All Customers
-              </Button>
-              <Button
-                variant={selectedTab === "vip" ? "default" : "ghost"}
-                size="sm"
-                className={`h-9 text-sm ${
-                  selectedTab === "vip"
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                }`}
-                onClick={() => setSelectedTab("vip")}
-              >
-                <Crown className="h-4 w-4 mr-1" />
-                VIP ({vipCustomers})
-              </Button>
-              <Button
-                variant={selectedTab === "new" ? "default" : "ghost"}
-                size="sm"
-                className={`h-9 text-sm ${
-                  selectedTab === "new"
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                }`}
-                onClick={() => setSelectedTab("new")}
-              >
-                <Sparkles className="h-4 w-4 mr-1" />
-                New ({newCustomers})
-              </Button>
-              <Button
-                variant={selectedTab === "inactive" ? "default" : "ghost"}
-                size="sm"
-                className={`h-9 text-sm ${
-                  selectedTab === "inactive"
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                }`}
-                onClick={() => setSelectedTab("inactive")}
-              >
-                <Clock className="h-4 w-4 mr-1" />
-                Inactive ({inactiveCustomers})
-              </Button>
-            </div>
-
-            {/* Search and Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+        {/* Filters and Search */}
+        <div
+          className={`transform transition-all duration-700 delay-300 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
+        >
+          <Card
+            className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-base">
+                <FunnelIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                Filters & Search
+              </CardTitle>
+              <CardDescription className={`text-xs ${colors.texts.secondary}`}>
+                Filter and search through your customers
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="relative w-full">
+                <MagnifyingGlassIcon
+                  className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                />
                 <Input
-                  placeholder="Search customers..."
+                  placeholder="Search customers by name, email, or location"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-10"
+                  className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
                 />
               </div>
-
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Results and Active Filters */}
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {filteredAndSortedCustomers.length} of {totalCustomers}{" "}
-                customers
-              </p>
-
-              <div className="flex gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Select
+                  value={selectedStatus}
+                  onValueChange={setSelectedStatus}
+                >
+                  <SelectTrigger
+                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                  >
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {statusOptions.map((status) => (
+                      <SelectItem
+                        key={status}
+                        value={status}
+                        className="text-sm h-9"
+                      >
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger
+                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                  >
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {sortOptions.map((option) => (
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        className="text-sm h-9"
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-wrap gap-2 items-center mt-2">
                 {searchTerm && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
+                  >
                     &quot;{searchTerm}&quot;
                     <button
                       onClick={() => setSearchTerm("")}
-                      className="ml-1 text-gray-600 hover:text-gray-800"
+                      className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
                     >
                       ×
                     </button>
                   </Badge>
                 )}
                 {selectedStatus !== "All Status" && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
+                  >
                     {selectedStatus}
                     <button
                       onClick={() => setSelectedStatus("All Status")}
-                      className="ml-1 text-gray-600 hover:text-gray-800"
+                      className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
                     >
                       ×
                     </button>
                   </Badge>
                 )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Customers List */}
-      <div
-        className={`transform transition-all duration-700 delay-600 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        {filteredAndSortedCustomers.length > 0 ? (
-          <div
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                : "space-y-6"
-            }
-          >
-            {filteredAndSortedCustomers.map((customer) =>
-              viewMode === "grid" ? (
-                <CustomerCard key={customer.id} customer={customer} />
-              ) : (
-                <CustomerListItem key={customer.id} customer={customer} />
-              )
-            )}
-          </div>
-        ) : (
-          <Card className="text-center py-16 border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-500/5 via-transparent to-slate-500/5 rounded-lg" />
-            <CardContent className="relative z-10">
-              <div className="h-20 w-20 mx-auto mb-6 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center">
-                <Users className="h-10 w-10 text-gray-500 dark:text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                {totalCustomers === 0
-                  ? "No Customers Yet"
-                  : "No Customers Found"}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                {totalCustomers === 0
-                  ? "When customers make purchases, they will appear here."
-                  : "Try adjusting your search terms or filters."}
-              </p>
-              {totalCustomers === 0 ? (
-                <Button
-                  onClick={() => window.open("/vendor/my-products", "_self")}
-                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                <span
+                  className={`text-xs ${colors.texts.secondary} ml-2 whitespace-nowrap`}
                 >
-                  <Package className="h-4 w-4 mr-2" />
-                  Manage Products
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSelectedStatus("All Status");
-                    setSelectedTab("all");
-                  }}
-                  className="shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  Clear All Filters
-                </Button>
-              )}
+                  {filteredAndSortedCustomers.length} customers found
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex gap-2 items-center">
+                  {/* Additional badges or content can go here if needed */}
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className={`text-xs ${colors.texts.secondary} mr-2`}>
+                    View:
+                  </span>
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer ${
+                      viewMode === "grid"
+                        ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+                        : "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    <Squares2X2Icon className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer ${
+                      viewMode === "list"
+                        ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+                        : "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    <Bars3Icon className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        )}
+        </div>
+
+        {/* Tabs */}
+        <div
+          className={`flex justify-center mt-6 transition-all duration-700 delay-350 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
+        >
+          <div className="w-full flex justify-center">
+            <Tabs
+              value={selectedTab}
+              onValueChange={(value) =>
+                setSelectedTab(value as "all" | "new" | "inactive")
+              }
+              className="w-full flex justify-center"
+            >
+              <TabsList
+                className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
+              >
+                <TabsTrigger
+                  value="all"
+                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "all" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                >
+                  <Squares2X2Icon
+                    className={`h-4 w-4 ${colors.icons.primary}`}
+                  />
+                  All Customers
+                </TabsTrigger>
+                <TabsTrigger
+                  value="new"
+                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "new" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                >
+                  <UserPlusIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                  New
+                </TabsTrigger>
+                <TabsTrigger
+                  value="inactive"
+                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "inactive" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                >
+                  <ClockIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                  Inactive
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </div>
+
+        {/* Customers List */}
+        <div
+          className={`transform transition-all duration-700 delay-500 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
+        >
+          {filteredAndSortedCustomers.length > 0 ? (
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  : "space-y-6"
+              }
+            >
+              {filteredAndSortedCustomers.map((customer) =>
+                viewMode === "grid" ? (
+                  <CustomerCard key={customer.id} customer={customer} />
+                ) : (
+                  <CustomerListItem key={customer.id} customer={customer} />
+                )
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <UsersIcon
+                className={`h-16 w-16 mx-auto ${colors.icons.muted} mb-4`}
+              />
+              <h3
+                className={`text-lg font-medium ${colors.texts.primary} mb-2`}
+              >
+                No customers found
+              </h3>
+              <p className={`text-sm ${colors.texts.secondary}`}>
+                Try adjusting your filters or search terms
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Customer Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className={`w-full max-w-[600px] ${colors.backgrounds.modal} rounded-none`}
+        >
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                <Eye className="h-4 w-4 text-white" />
-              </div>
+            <DialogTitle className={`${colors.texts.primary}`}>
               Customer Details
             </DialogTitle>
-            <DialogDescription>
-              View detailed customer information and history
+            <DialogDescription className={`${colors.texts.secondary}`}>
+              Detailed information about the customer
             </DialogDescription>
           </DialogHeader>
           {selectedCustomer && (
-            <div className="space-y-6">
-              {/* Customer Info */}
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16 border-2 border-white shadow-lg">
-                  <AvatarImage
-                    src={selectedCustomer.avatar}
-                    alt={selectedCustomer.name}
-                  />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-lg font-bold">
-                    {getInitials(selectedCustomer.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                    {selectedCustomer.name}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {selectedCustomer.email}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge
-                      className={`text-xs ${getStatusConfig(selectedCustomer.status).color}`}
+            <div className="space-y-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card
+                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle
+                      className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
                     >
-                      {getStatusConfig(selectedCustomer.status).label}
-                    </Badge>
-                    {selectedCustomer.rating && (
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {selectedCustomer.rating}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {selectedCustomer.totalOrders}
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Total Orders
-                  </p>
-                </div>
-                <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    ${selectedCustomer.totalSpent.toFixed(0)}
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Total Spent
-                  </p>
-                </div>
-                <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    ${selectedCustomer.averageOrderValue.toFixed(0)}
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Avg Order
-                  </p>
-                </div>
-                <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {selectedCustomer.loyaltyPoints}
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Loyalty Points
-                  </p>
-                </div>
-              </div>
-
-              <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="info">Info</TabsTrigger>
-                  <TabsTrigger value="preferences">Preferences</TabsTrigger>
-                  <TabsTrigger value="notes">Notes</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="info" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <UsersIcon
+                        className={`h-5 w-5 ${colors.icons.primary}`}
+                      />
+                      Customer Info
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
                     <div>
-                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Contact Information
-                      </Label>
-                      <div className="mt-2 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {selectedCustomer.email}
-                          </span>
-                        </div>
-                        {selectedCustomer.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                              {selectedCustomer.phone}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {selectedCustomer.location.city},{" "}
-                            {selectedCustomer.location.state},{" "}
-                            {selectedCustomer.location.country}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Account Information
-                      </Label>
-                      <div className="mt-2 space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Join Date:
-                          </span>
-                          <span className="text-gray-900 dark:text-gray-100">
-                            {formatDate(selectedCustomer.joinDate)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Last Order:
-                          </span>
-                          <span className="text-gray-900 dark:text-gray-100">
-                            {formatDate(selectedCustomer.lastOrderDate)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Payment Method:
-                          </span>
-                          <span className="text-gray-900 dark:text-gray-100 capitalize">
-                            {selectedCustomer.preferredPayment}
-                          </span>
-                        </div>
-                        {selectedCustomer.walletAddress && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600 dark:text-gray-400">
-                              Wallet:
-                            </span>
-                            <span className="text-gray-900 dark:text-gray-100 font-mono text-xs">
-                              {selectedCustomer.walletAddress}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="preferences" className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Favorite Categories
-                    </Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {selectedCustomer.favoriteCategories.map(
-                        (category, index) => (
-                          <Badge
-                            key={index}
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            {category}
-                          </Badge>
-                        )
-                      )}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="notes" className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Customer Notes
-                    </Label>
-                    <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedCustomer.notes || "No notes available"}
+                      <p className={`text-xs ${colors.texts.muted}`}>Name</p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {selectedCustomer.name}
                       </p>
                     </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>Email</p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {selectedCustomer.email}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        Location
+                      </p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {selectedCustomer.location.city},{" "}
+                        {selectedCustomer.location.state},{" "}
+                        {selectedCustomer.location.country}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card
+                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle
+                      className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                    >
+                      <TrophyIcon
+                        className={`h-5 w-5 ${colors.icons.primary}`}
+                      />
+                      Stats
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        Total Orders
+                      </p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {selectedCustomer.totalOrders}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        Total Spent
+                      </p>
+                      <p
+                        className={`font-bold ${colors.texts.success} text-sm`}
+                      >
+                        {formatCurrency(selectedCustomer.totalSpent)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        Loyalty Points
+                      </p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {selectedCustomer.loyaltyPoints}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              {selectedCustomer.notes && (
+                <Card
+                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle
+                      className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                    >
+                      <ChatBubbleOvalLeftIcon
+                        className={`h-5 w-5 ${colors.icons.primary}`}
+                      />
+                      Notes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className={`text-sm ${colors.texts.accent}`}>
+                      {selectedCustomer.notes}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDetailsOpen(false)}
+              className={`${colors.buttons.outline} rounded-none`}
+            >
               Close
             </Button>
             <Button
@@ -1298,9 +1102,9 @@ export default function VendorCustomersPage() {
                 setIsDetailsOpen(false);
                 if (selectedCustomer) handleContactCustomer(selectedCustomer);
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+              className={`${colors.buttons.primary} rounded-none`}
             >
-              <MessageCircle className="h-4 w-4 mr-2" />
+              <EnvelopeIcon className="h-4 w-4 mr-2" />
               Contact Customer
             </Button>
           </DialogFooter>
@@ -1309,15 +1113,14 @@ export default function VendorCustomersPage() {
 
       {/* Contact Customer Dialog */}
       <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
-        <DialogContent>
+        <DialogContent
+          className={`w-full max-w-[500px] ${colors.backgrounds.modal} rounded-none`}
+        >
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
-                <MessageCircle className="h-4 w-4 text-white" />
-              </div>
+            <DialogTitle className={`${colors.texts.primary}`}>
               Contact Customer
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className={`${colors.texts.secondary}`}>
               Send a message to {selectedCustomer?.name}
             </DialogDescription>
           </DialogHeader>
@@ -1325,7 +1128,7 @@ export default function VendorCustomersPage() {
             <div>
               <Label
                 htmlFor="message"
-                className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                className={`text-sm font-medium ${colors.texts.primary}`}
               >
                 Message
               </Label>
@@ -1338,39 +1141,20 @@ export default function VendorCustomersPage() {
                 className="mt-1"
               />
             </div>
-            {selectedCustomer && (
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage
-                      src={selectedCustomer.avatar}
-                      alt={selectedCustomer.name}
-                    />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-bold">
-                      {getInitials(selectedCustomer.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {selectedCustomer.name}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {selectedCustomer.email}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsContactOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsContactOpen(false)}
+              className={`${colors.buttons.outline} rounded-none`}
+            >
               Cancel
             </Button>
             <Button
               onClick={sendMessage}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+              className={`${colors.buttons.primary} rounded-none`}
             >
-              <MessageCircle className="h-4 w-4 mr-2" />
+              <ChatBubbleOvalLeftIcon className="h-4 w-4 mr-2" />
               Send Message
             </Button>
           </DialogFooter>

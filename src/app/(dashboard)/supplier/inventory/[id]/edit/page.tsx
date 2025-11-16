@@ -1552,14 +1552,24 @@ export default function EditInventoryPage() {
                     inventory
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
-                      <BuildingStorefrontIcon className="h-3 w-3 mr-1 text-blue-700 dark:text-blue-400" />
-                      Inventory Management
-                    </Badge>
-                    <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 flex items-center gap-1 text-xs rounded-none">
-                      <ShieldCheckIcon className="h-3 w-3 text-green-700 dark:text-green-400" />
-                      Blockchain Tracked
-                    </Badge>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge
+                        className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                      >
+                        <CubeIcon
+                          className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
+                        />
+                        Inventory Management
+                      </Badge>
+                      <Badge
+                        className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                      >
+                        <ShieldCheckIcon
+                          className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                        />
+                        Blockchain Verified
+                      </Badge>
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 md:gap-3">

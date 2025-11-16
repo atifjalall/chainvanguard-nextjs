@@ -67,374 +67,85 @@ import {
 } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 
-// Mock data for demonstration
+// Mock data for demonstration (same as browse page)
 const mockInventory: Inventory[] = [
   {
     _id: "1",
-    id: "1",
-    name: "Premium Cotton Fabric",
-    sku: "RM-CF-001",
-    slug: "premium-cotton-fabric",
-    category: "Fabric",
-    subcategory: "Cotton Fabric",
-    quantity: 1000,
-    unit: "meters",
-    minStockLevel: 50,
-    reorderLevel: 100,
-    reorderQuantity: 500,
-    pricePerUnit: 450,
-    stockValue: 450000,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "ABC Textiles Ltd",
-    supplierId: "supplier-1",
-    description:
-      "High-quality premium cotton fabric for textile manufacturing.",
-    currency: "PKR",
-    location: "Warehouse A",
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
+    name: "Item 1",
+    sku: "SKU1",
+    category: "Category 1",
+    subcategory: "Subcategory 1",
+    supplierName: "Supplier 1",
+    materialType: "Material 1",
+    fabricType: "Fabric 1",
+    pattern: "Pattern 1",
+    finish: "Finish 1",
+    imageUrl: "/path/to/image1.jpg",
+    price: 100,
+    stock: 10,
   },
   {
     _id: "2",
-    id: "2",
-    name: "Polyester Thread Spools",
-    sku: "YT-PS-002",
-    slug: "polyester-thread-spools",
-    category: "Yarn & Thread",
-    subcategory: "Polyester Thread",
-    quantity: 45,
-    unit: "spools",
-    minStockLevel: 100,
-    reorderLevel: 100,
-    reorderQuantity: 200,
-    pricePerUnit: 85,
-    stockValue: 3825,
-    status: "active",
-    stockStatus: "low_stock",
-    supplierName: "ThreadMasters Co",
-    supplierId: "supplier-2",
-    description: "Durable polyester thread spools in various colors.",
-    currency: "PKR",
-    location: "Warehouse B",
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1623184663110-89ba5b565eb6?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
+    name: "Item 2",
+    sku: "SKU2",
+    category: "Category 2",
+    subcategory: "Subcategory 2",
+    supplierName: "Supplier 2",
+    materialType: "Material 2",
+    fabricType: "Fabric 2",
+    pattern: "Pattern 2",
+    finish: "Finish 2",
+    imageUrl: "/path/to/image2.jpg",
+    price: 200,
+    stock: 5,
   },
-  {
-    _id: "3",
-    id: "3",
-    name: "Reactive Dye - Red",
-    sku: "DC-RD-003",
-    slug: "reactive-dye-red",
-    category: "Dyes & Chemicals",
-    subcategory: "Reactive Dyes",
-    quantity: 0,
-    unit: "kg",
-    minStockLevel: 20,
-    reorderLevel: 30,
-    reorderQuantity: 100,
-    pricePerUnit: 1250,
-    stockValue: 0,
-    status: "active",
-    stockStatus: "out_of_stock",
-    supplierName: "ColorTech Industries",
-    supplierId: "supplier-3",
-    description: "High-quality reactive dye for cotton and cellulose fibers.",
-    currency: "PKR",
-    location: "Warehouse A",
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1541534401786-2077a6d8d2c8?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "4",
-    id: "4",
-    name: "Metal Zippers - Brass",
-    sku: "TA-MZ-004",
-    slug: "metal-zippers-brass",
-    category: "Trims & Accessories",
-    subcategory: "Zippers",
-    quantity: 5000,
-    unit: "pieces",
-    minStockLevel: 500,
-    reorderLevel: 800,
-    reorderQuantity: 2000,
-    pricePerUnit: 15,
-    stockValue: 75000,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "ZipCraft Solutions",
-    supplierId: "supplier-4",
-    description: "Premium brass metal zippers in various lengths.",
-    currency: "PKR",
-    location: "Warehouse C",
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "5",
-    id: "5",
-    name: "Cardboard Boxes - Medium",
-    sku: "PK-CB-005",
-    slug: "cardboard-boxes-medium",
-    category: "Packaging",
-    subcategory: "Cardboard Boxes",
-    quantity: 2500,
-    unit: "boxes",
-    minStockLevel: 200,
-    reorderLevel: 300,
-    reorderQuantity: 1000,
-    pricePerUnit: 35,
-    stockValue: 87500,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "PackPro Supplies",
-    supplierId: "supplier-5",
-    description: "Sturdy medium-sized cardboard boxes for shipping.",
-    currency: "PKR",
-    location: "Warehouse D",
-    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "6",
-    id: "6",
-    name: "Silk Blend Fabric",
-    sku: "FB-SB-006",
-    slug: "silk-blend-fabric",
-    category: "Fabric",
-    subcategory: "Silk Blend",
-    quantity: 750,
-    unit: "meters",
-    minStockLevel: 100,
-    reorderLevel: 150,
-    reorderQuantity: 400,
-    pricePerUnit: 950,
-    stockValue: 712500,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "Luxury Textiles Inc",
-    supplierId: "supplier-6",
-    description: "Premium silk blend fabric with excellent drape.",
-    currency: "PKR",
-    location: "Warehouse A",
-    createdAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "7",
-    id: "7",
-    name: "Industrial Sewing Machine",
-    sku: "TE-ISM-007",
-    slug: "industrial-sewing-machine",
-    category: "Tools & Equipment",
-    subcategory: "Sewing Machines",
-    quantity: 3,
-    unit: "units",
-    minStockLevel: 2,
-    reorderLevel: 2,
-    reorderQuantity: 5,
-    pricePerUnit: 125000,
-    stockValue: 375000,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "MachineWorks Ltd",
-    supplierId: "supplier-7",
-    description: "Heavy-duty industrial sewing machine for production.",
-    currency: "PKR",
-    location: "Equipment Storage",
-    createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1605002215863-f2c0ba8aa187?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "8",
-    id: "8",
-    name: "Cotton Yarn Cones",
-    sku: "YT-CY-008",
-    slug: "cotton-yarn-cones",
-    category: "Yarn & Thread",
-    subcategory: "Cotton Yarn",
-    quantity: 850,
-    unit: "cones",
-    minStockLevel: 100,
-    reorderLevel: 150,
-    reorderQuantity: 500,
-    pricePerUnit: 320,
-    stockValue: 272000,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "YarnCraft Suppliers",
-    supplierId: "supplier-8",
-    description: "100% cotton yarn cones for knitting and weaving.",
-    currency: "PKR",
-    location: "Warehouse B",
-    createdAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1604079628040-94301bb21b91?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
+  // Add more mock items as needed
 ];
 
+// Category options, subcategoryMap, etc. (copy from browse page)
 const categoryOptions = [
-  "All Categories",
-  "Raw Material",
-  "Fabric",
-  "Yarn & Thread",
-  "Dyes & Chemicals",
-  "Trims & Accessories",
-  "Packaging",
-  "Semi-Finished",
-  "Tools & Equipment",
+  { value: "All Categories", label: "All Categories" },
+  { value: "Category 1", label: "Category 1" },
+  { value: "Category 2", label: "Category 2" },
+  // Add more categories as needed
 ];
 
 const subcategoryMap: { [key: string]: string[] } = {
-  "Raw Material": [
-    "Cotton Fabric",
-    "Polyester Fabric",
-    "Silk Fabric",
-    "Wool Fabric",
-    "Linen Fabric",
-    "Denim Fabric",
-    "Jersey Fabric",
-    "Blended Fabric",
-  ],
-  Fabric: [
-    "Cotton Fabric",
-    "Polyester Fabric",
-    "Silk Fabric",
-    "Wool Fabric",
-    "Linen Fabric",
-    "Denim Fabric",
-    "Jersey Fabric",
-    "Blended Fabric",
-  ],
-  "Yarn & Thread": [
-    "Cotton Yarn",
-    "Polyester Yarn",
-    "Sewing Thread",
-    "Embroidery Thread",
-  ],
-  "Dyes & Chemicals": [
-    "Fabric Dye",
-    "Bleach",
-    "Softener",
-    "Finishing Chemical",
-  ],
-  "Trims & Accessories": [
-    "Buttons",
-    "Zippers",
-    "Elastic",
-    "Lace",
-    "Ribbon",
-    "Labels",
-    "Tags",
-  ],
-  Packaging: ["Poly Bags", "Hangers", "Boxes", "Tissue Paper"],
-  "Semi-Finished": [
-    "Cut Fabric",
-    "Printed Fabric",
-    "Dyed Fabric",
-    "Stitched Panels",
-  ],
-  "Tools & Equipment": ["Scissors", "Needles", "Measuring Tools", "Other"],
+  "Category 1": ["Subcategory 1", "Subcategory 2"],
+  "Category 2": ["Subcategory 3", "Subcategory 4"],
 };
 
 const materialTypes = [
-  "All Types",
-  "Raw Material",
-  "Semi-Finished",
-  "Finished Component",
-  "Accessory",
-  "Packaging",
-  "Tool",
-  "Consumable",
+  { value: "All Types", label: "All Types" },
+  { value: "Material 1", label: "Material 1" },
+  { value: "Material 2", label: "Material 2" },
 ];
 
 const fabricTypes = [
-  "All Fabric Types",
-  "Cotton",
-  "Polyester",
-  "Silk",
-  "Wool",
-  "Linen",
-  "Denim",
-  "Jersey",
-  "Chiffon",
-  "Satin",
-  "Velvet",
-  "Fleece",
-  "Rayon",
-  "Nylon",
-  "Spandex",
-  "Blended",
+  { value: "All Fabric Types", label: "All Fabric Types" },
+  { value: "Fabric 1", label: "Fabric 1" },
+  { value: "Fabric 2", label: "Fabric 2" },
 ];
 
 const patterns = [
-  "All Patterns",
-  "Solid",
-  "Striped",
-  "Checked",
-  "Printed",
-  "Floral",
-  "Abstract",
-  "Geometric",
-  "Polka Dot",
-  "Embroidered",
-  "Plaid",
+  { value: "All Patterns", label: "All Patterns" },
+  { value: "Pattern 1", label: "Pattern 1" },
+  { value: "Pattern 2", label: "Pattern 2" },
 ];
 
 const finishes = [
-  "All Finishes",
-  "Raw",
-  "Bleached",
-  "Dyed",
-  "Printed",
-  "Coated",
-  "Plain",
-  "Satin",
-  "Plain Weave",
-  "Twill",
-  "Satin Weave",
-  "Jacquard",
-  "Houndstooth",
-  "Tartan",
-  "Chevron",
-  "Geometric",
-  "Abstract",
-  "Digital",
-  "3D",
-  "Textured",
-  "Metallic",
+  { value: "All Finishes", label: "All Finishes" },
+  { value: "Finish 1", label: "Finish 1" },
+  { value: "Finish 2", label: "Finish 2" },
 ];
 
-// Elegant Inventory Card Component
+// InventoryCard component (copy from browse page)
 interface InventoryCardProps {
   item: Inventory;
   onRequest: (item: Inventory) => void;
   onView: (id: string) => void;
-  onToggleSaved?: (id: string) => void;
-  isSaved?: boolean;
+  onToggleSaved: (id: string) => void;
+  isSaved: boolean;
 }
 
 function InventoryCard({
@@ -442,201 +153,131 @@ function InventoryCard({
   onRequest,
   onView,
   onToggleSaved,
-  isSaved = false,
+  isSaved,
 }: InventoryCardProps) {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [imageError, setImageError] = useState(false);
-  const [imageKey, setImageKey] = useState(0);
-
-  const itemStatus = item.stockStatus || item.status;
-  const isOutOfStock = itemStatus === "out_of_stock" || item.quantity === 0;
-  const isLowStock = itemStatus === "low_stock";
-
-  useEffect(() => {
-    setImageLoaded(false);
-    setImageError(false);
-    setCurrentImageIndex(0);
-    setImageKey((prev) => prev + 1);
-  }, [item.images]);
-
-  const handleMouseEnter = () => {
-    if (item.images && item.images.length > 1 && !isOutOfStock) {
-      setCurrentImageIndex(1);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    setCurrentImageIndex(0);
-  };
-
-  const getImageSrc = () => {
-    if (!item.images || item.images.length === 0 || imageError) {
-      return "/placeholder-product.png";
-    }
-    const imageUrl =
-      typeof item.images[currentImageIndex] === "string"
-        ? item.images[currentImageIndex]
-        : item.images[currentImageIndex]?.url;
-    if (!imageUrl || typeof imageUrl !== "string") {
-      return "/placeholder-product.png";
-    }
-    return imageUrl;
-  };
-
-  const PlaceholderImage = () => (
-    <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 flex items-center justify-center">
-      <CubeIcon className="h-16 w-16 text-gray-400" />
-    </div>
-  );
-
   return (
-    <div
-      className={`group relative w-full ${isOutOfStock ? "opacity-60" : ""}`}
-    >
-      {/* Image Container */}
-      <div className="relative bg-gray-100 w-full">
-        <div
-          className={`block ${isOutOfStock ? "cursor-not-allowed" : "cursor-pointer"}`}
-          onClick={() => !isOutOfStock && onView(item._id)}
-        >
-          <div
-            className="relative w-full aspect-[4/5] overflow-hidden"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            {!imageError && item.images && item.images.length > 0 ? (
-              <img
-                key={`${imageKey}-${currentImageIndex}`}
-                src={getImageSrc()}
-                alt={item.name}
-                className={`w-full h-full object-cover transition-all duration-300 ${
-                  imageLoaded ? "opacity-100" : "opacity-0"
-                } ${!isOutOfStock ? "group-hover:scale-105" : ""} ${
-                  isOutOfStock ? "grayscale" : ""
-                }`}
-                onLoad={() => {
-                  setImageLoaded(true);
-                  setImageError(false);
-                }}
-                onError={() => {
-                  setImageError(true);
-                  setImageLoaded(false);
-                }}
-              />
-            ) : (
-              <PlaceholderImage />
-            )}
-
-            {!imageLoaded &&
-              !imageError &&
-              item.images &&
-              item.images.length > 0 && (
-                <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse" />
-              )}
-
-            {/* Out of Stock Overlay */}
-            {isOutOfStock && (
-              <div className="absolute inset-0 bg-gray-500/40 backdrop-blur-[1px] flex items-center justify-center">
-                <div className="bg-gray-800/90 px-3 py-1.5">
-                  <span className="text-xs font-medium text-white uppercase tracking-wider">
-                    Out of Stock
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Request Button - Plus Icon Bottom Left */}
-        {!isOutOfStock && (
+    <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none shadow-none">
+      <div className="relative">
+        <div className="absolute top-3 right-3">
           <button
-            className="absolute bottom-3 left-3 w-5 h-5 bg-white flex items-center justify-center opacity-100 transition-opacity duration-200 cursor-pointer"
+            className="flex items-center justify-center flex-shrink-0 mt-0.5"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onRequest(item);
+              onToggleSaved(item._id);
             }}
           >
-            <PlusIcon className="w-4 h-4 text-black" />
+            <BookmarkIcon
+              className={`w-4 h-4 transition-colors cursor-pointer ${
+                isSaved
+                  ? "fill-black text-black"
+                  : "text-gray-400 hover:text-black"
+              }`}
+            />
           </button>
-        )}
+        </div>
+        <div className="cursor-pointer" onClick={() => onView(item._id)}>
+          <img
+            src={item.imageUrl}
+            alt={item.name}
+            className="w-full h-40 object-cover rounded-t-none"
+          />
+        </div>
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
+                  {item.name}
+                </CardTitle>
+                <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
+                  {item.sku}
+                </CardDescription>
+              </div>
+              <div className="mt-2 sm:mt-0">
+                <Badge
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                >
+                  ${item.price.toFixed(2)}
+                </Badge>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex gap-2 flex-wrap">
+                <span
+                  className="text-xs rounded-full"
+                  style={{
+                    paddingLeft: "0.5rem",
+                    paddingRight: "0.5rem",
+                    paddingTop: "0.125rem",
+                    paddingBottom: "0.125rem",
+                    backgroundColor: colors.gray[100],
+                    color: colors.gray[800],
+                  }}
+                >
+                  {item.category}
+                </span>
+                <span
+                  className="text-xs rounded-full"
+                  style={{
+                    paddingLeft: "0.5rem",
+                    paddingRight: "0.5rem",
+                    paddingTop: "0.125rem",
+                    paddingBottom: "0.125rem",
+                    backgroundColor: colors.gray[100],
+                    color: colors.gray[800],
+                  }}
+                >
+                  {item.subcategory}
+                </span>
+                <span
+                  className="text-xs rounded-full"
+                  style={{
+                    paddingLeft: "0.5rem",
+                    paddingRight: "0.5rem",
+                    paddingTop: "0.125rem",
+                    paddingBottom: "0.125rem",
+                    backgroundColor: colors.gray[100],
+                    color: colors.gray[800],
+                  }}
+                >
+                  {item.materialType}
+                </span>
+                <span
+                  className="text-xs rounded-full"
+                  style={{
+                    paddingLeft: "0.5rem",
+                    paddingRight: "0.5rem",
+                    paddingTop: "0.125rem",
+                    paddingBottom: "0.125rem",
+                    backgroundColor: colors.gray[100],
+                    color: colors.gray[800],
+                  }}
+                >
+                  {item.fabricType}
+                </span>
+              </div>
+              <div className="mt-2 sm:mt-0">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRequest(item);
+                  }}
+                  variant="primary"
+                  className="text-xs rounded-none"
+                >
+                  Request Sample
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
       </div>
-
-      {/* Content Below Image */}
-      <div className="pt-3 pb-4">
-        {/* Supplier Badge */}
-        <div className="mb-2">
-          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 dark:bg-gray-800">
-            <BuildingStorefrontIcon className="h-3 w-3 text-gray-500" />
-            <span className="text-xs text-gray-600 dark:text-gray-400">
-              {item.supplierName}
-            </span>
-          </div>
-        </div>
-
-        {/* Item Name and Save Button */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div
-            className={`flex-1 ${isOutOfStock ? "cursor-not-allowed" : "cursor-pointer"}`}
-            onClick={() => !isOutOfStock && onView(item._id)}
-          >
-            <h3
-              className={`text-sm font-medium ${isOutOfStock ? "text-gray-400" : "text-gray-900 dark:text-white"} line-clamp-2 hover:text-gray-600 dark:hover:text-gray-300 transition-colors`}
-            >
-              {item.name}
-            </h3>
-          </div>
-          {onToggleSaved && !isOutOfStock && (
-            <button
-              className="flex items-center justify-center flex-shrink-0 mt-0.5"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggleSaved(item._id);
-              }}
-            >
-              <BookmarkIcon
-                className={`w-4 h-4 transition-colors cursor-pointer ${
-                  isSaved
-                    ? "fill-black text-black"
-                    : "text-gray-400 hover:text-black"
-                }`}
-              />
-            </button>
-          )}
-        </div>
-
-        {/* SKU and Category */}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          {item.sku} • {item.category}
-        </p>
-
-        {/* Price and Stock Info */}
-        <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
-          <div className="flex flex-col">
-            <span
-              className={`text-sm font-semibold ${isOutOfStock ? "text-gray-400" : "text-gray-900 dark:text-white"}`}
-            >
-              Rs {item.pricePerUnit.toFixed(2)}
-            </span>
-            <span className="text-xs text-gray-500">per {item.unit}</span>
-          </div>
-          <div className="flex flex-col items-end">
-            <span
-              className={`text-xs font-medium ${isOutOfStock ? "text-gray-400" : isLowStock ? "text-yellow-600" : "text-gray-600"}`}
-            >
-              {item.quantity} {item.unit}
-            </span>
-            <span className="text-xs text-gray-500">available</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    </Card>
   );
 }
 
-export default function VendorBrowsePage() {
+export default function VendorSavedItemsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [inventory, setInventory] = useState<Inventory[]>([]);
@@ -662,6 +303,7 @@ export default function VendorBrowsePage() {
   useEffect(() => {
     setIsVisible(true);
     loadInventory();
+    loadSavedItems();
   }, []);
 
   const loadInventory = async () => {
@@ -669,7 +311,6 @@ export default function VendorBrowsePage() {
     try {
       // Replace with actual API call
       setInventory(mockInventory);
-      toast.success("Inventory loaded successfully");
     } catch (error: any) {
       console.error("Error loading inventory:", error);
       toast.error(error?.message || "Failed to load inventory");
@@ -679,8 +320,16 @@ export default function VendorBrowsePage() {
     }
   };
 
+  const loadSavedItems = () => {
+    const saved = localStorage.getItem("savedItems");
+    if (saved) {
+      setSavedItems(new Set(JSON.parse(saved)));
+    }
+  };
+
   const filteredInventory = useMemo(() => {
     return inventory.filter((item) => {
+      if (!savedItems.has(item._id)) return false;
       const matchesSearch =
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -713,6 +362,7 @@ export default function VendorBrowsePage() {
     });
   }, [
     inventory,
+    savedItems,
     searchTerm,
     selectedCategory,
     selectedSubcategory,
@@ -740,13 +390,8 @@ export default function VendorBrowsePage() {
   const handleToggleSaved = (id: string) => {
     setSavedItems((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-        toast.info("Removed from saved items");
-      } else {
-        newSet.add(id);
-        toast.success("Added to saved items");
-      }
+      newSet.delete(id);
+      toast.info("Removed from saved items");
       return newSet;
     });
   };
@@ -757,34 +402,17 @@ export default function VendorBrowsePage() {
     setRequestDialogOpen(false);
   };
 
-  // Add a helper function to generate page numbers with ellipsis
   const getPageNumbers = () => {
-    const pages = [];
-    const maxVisiblePages = 5; // Show up to 5 page numbers at a time
-    const half = Math.floor(maxVisiblePages / 2);
-
-    let start = Math.max(1, currentPage - half);
-    const end = Math.min(totalPages, start + maxVisiblePages - 1);
-
-    if (end - start + 1 < maxVisiblePages) {
-      start = Math.max(1, end - maxVisiblePages + 1);
+    const delta = 2;
+    const range = [];
+    for (
+      let i = Math.max(2, currentPage - delta);
+      i <= Math.min(totalPages - 1, currentPage + delta);
+      i++
+    ) {
+      range.push(i);
     }
-
-    if (start > 1) {
-      pages.push(1);
-      if (start > 2) pages.push("ellipsis-start");
-    }
-
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-
-    if (end < totalPages) {
-      if (end < totalPages - 1) pages.push("ellipsis-end");
-      pages.push(totalPages);
-    }
-
-    return pages;
+    return [1, 2, ...range, totalPages];
   };
 
   if (isLoading) {
@@ -792,7 +420,7 @@ export default function VendorBrowsePage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <ArrowPathIcon className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading inventory...</p>
+          <p>Loading saved items...</p>
         </div>
       </div>
     );
@@ -809,7 +437,7 @@ export default function VendorBrowsePage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Browse Inventory</BreadcrumbPage>
+              <BreadcrumbPage>Saved Items</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -823,24 +451,16 @@ export default function VendorBrowsePage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="space-y-2">
               <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
-                Browse Supplier Inventory
+                Saved Items
               </h1>
               <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
-                Discover and request inventory from verified suppliers
+                Your wishlist of saved inventory items
               </p>
               <div className="flex items-center gap-2 mt-2">
                 <Badge
                   className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
                 >
-                  {filteredInventory.length} Items Available
-                </Badge>
-                <Badge
-                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
-                >
-                  <ShieldCheckIcon
-                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
-                  />
-                  Blockchain Verified
+                  {filteredInventory.length} Saved Items
                 </Badge>
               </div>
             </div>
@@ -856,81 +476,69 @@ export default function VendorBrowsePage() {
                 Search & Filters
               </CardTitle>
               <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
-                Find the perfect inventory items
+                Filter your saved items
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="relative w-full">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search by name, SKU, category, or supplier"
+                  placeholder="Search saved items by name, SKU, category, or supplier"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 h-9 w-full border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white rounded-none transition-colors duration-200"
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div>
+                  <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Category
                   </Label>
                   <Select
                     value={selectedCategory}
-                    onValueChange={(value) => {
-                      setSelectedCategory(value);
-                      setSelectedSubcategory("All Subcategories");
-                    }}
+                    onValueChange={setSelectedCategory}
                   >
                     <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
-                      <SelectValue placeholder="Select a category" />
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {categoryOptions.map((category) => (
-                        <SelectItem
-                          key={category}
-                          value={category}
-                          className="text-sm h-9"
-                        >
-                          {category}
+                    <SelectContent>
+                      {categoryOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div>
+                  <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Subcategory
                   </Label>
                   <Select
-                    value={selectedSubcategory}
+                    value={
+                      selectedCategory === "All Categories"
+                        ? ""
+                        : selectedSubcategory
+                    }
                     onValueChange={setSelectedSubcategory}
                     disabled={selectedCategory === "All Categories"}
                   >
                     <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
-                      <SelectValue placeholder="Select a subcategory" />
+                      <SelectValue placeholder="Select category first" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      <SelectItem
-                        value="All Subcategories"
-                        className="text-sm h-9"
-                      >
-                        All Subcategories
-                      </SelectItem>
-                      {selectedCategory !== "All Categories" &&
-                        subcategoryMap[selectedCategory]?.map((subcat) => (
-                          <SelectItem
-                            key={subcat}
-                            value={subcat}
-                            className="text-sm h-9"
-                          >
-                            {subcat}
+                    <SelectContent>
+                      {(subcategoryMap[selectedCategory] || []).map(
+                        (option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
                           </SelectItem>
-                        ))}
+                        )
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div>
+                  <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Material Type
                   </Label>
                   <Select
@@ -940,21 +548,17 @@ export default function VendorBrowsePage() {
                     <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
                       <SelectValue placeholder="Select material type" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {materialTypes.map((type) => (
-                        <SelectItem
-                          key={type}
-                          value={type}
-                          className="text-sm h-9"
-                        >
-                          {type}
+                    <SelectContent>
+                      {materialTypes.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div>
+                  <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Fabric Type
                   </Label>
                   <Select
@@ -964,14 +568,10 @@ export default function VendorBrowsePage() {
                     <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
                       <SelectValue placeholder="Select fabric type" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {fabricTypes.map((type) => (
-                        <SelectItem
-                          key={type}
-                          value={type}
-                          className="text-sm h-9"
-                        >
-                          {type}
+                    <SelectContent>
+                      {fabricTypes.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -980,6 +580,7 @@ export default function VendorBrowsePage() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex gap-2 items-center flex-wrap">
+                  {/* Filter badges (copy and adapt from browse page) */}
                   {searchTerm && (
                     <Badge
                       variant="outline"
@@ -1001,10 +602,7 @@ export default function VendorBrowsePage() {
                     >
                       {selectedCategory}
                       <button
-                        onClick={() => {
-                          setSelectedCategory("All Categories");
-                          setSelectedSubcategory("All Subcategories");
-                        }}
+                        onClick={() => setSelectedCategory("All Categories")}
                         className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
                       >
                         ×
@@ -1058,7 +656,7 @@ export default function VendorBrowsePage() {
                     </Badge>
                   )}
                   <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
-                    {filteredInventory.length} items found
+                    {filteredInventory.length} saved items found
                   </span>
                 </div>
               </div>
@@ -1077,39 +675,33 @@ export default function VendorBrowsePage() {
                   onRequest={handleRequest}
                   onView={handleView}
                   onToggleSaved={handleToggleSaved}
-                  isSaved={savedItems.has(item._id)}
+                  isSaved={true} // Always true for saved items page
                 />
               ))}
             </div>
           ) : (
             <Card className="text-center py-16 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none shadow-none">
               <CardContent>
-                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-none flex items-center justify-center">
-                  <CubeIcon className="h-10 w-10 text-gray-400" />
+                <div className="h-20 w-20 mx-auto mb-6 bg-transparent rounded-none flex items-center justify-center">
+                  <BookmarkIcon className="h-10 w-10 text-gray-400" />
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-                  No Items Found
+                  No Saved Items
                 </h3>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                  Try adjusting your search terms or filters to find items.
+                  You haven't saved any items yet. Browse inventory to add some.
                 </p>
                 <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSelectedCategory("All Categories");
-                    setSelectedSubcategory("All Subcategories");
-                    setSelectedMaterialType("All Types");
-                    setSelectedFabricType("All Fabric Types");
-                  }}
-                  className="inline-flex items-center gap-2 text-xs cursor-pointer border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-all rounded-none h-8"
+                  onClick={() => router.push("/vendor/browse")}
+                  className="inline-flex items-center gap-2 text-xs cursor-pointer bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition-all rounded-none h-8"
                 >
-                  Clear Filters
+                  <MagnifyingGlassIcon className="h-4 w-4" />
+                  Browse Inventory
                 </Button>
               </CardContent>
             </Card>
           )}
-          {/* Pagination */}
+          {/* Pagination (copy from browse page) */}
           {totalPages > 1 && (
             <div className="mt-6 flex justify-center">
               <Pagination>
@@ -1159,7 +751,7 @@ export default function VendorBrowsePage() {
           )}
         </div>
 
-        {/* Request Dialog */}
+        {/* Request Dialog (copy from browse page) */}
         <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
           <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none shadow-none max-w-sm md:max-w-md">
             <DialogHeader>
@@ -1231,8 +823,8 @@ export default function VendorBrowsePage() {
             </div>
             <DialogFooter className="gap-2 md:gap-3">
               <Button
-                variant="outline"
                 onClick={() => setRequestDialogOpen(false)}
+                variant="outline"
                 size="sm"
                 className="text-xs md:text-sm cursor-pointer h-8 md:h-9 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white rounded-none"
               >

@@ -342,11 +342,23 @@ export default function SupplierTransactionsPage() {
     }).format(Math.abs(amount));
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
+  const formatCurrencyAbbreviated = (amount: number) => {
+    if (amount >= 1e9) {
+      return `${(amount / 1e9).toFixed(2)} B`;
+    } else if (amount >= 1e6) {
+      return `${(amount / 1e6).toFixed(2)} M`;
+    } else {
+      return formatCurrency(amount);
+    }
+  };
+
+  // Helper function to format date as 'YYYY-MM-DD' or a readable format
+  const formatDate = (date: string | Date) => {
+    const d = new Date(date);
+    return d.toLocaleDateString("en-GB", {
       year: "numeric",
+      month: "short",
+      day: "2-digit",
     });
   };
 
@@ -457,11 +469,11 @@ export default function SupplierTransactionsPage() {
               </Button>
               <Button
                 onClick={exportToCSV}
-                variant="outline"
-                className={`flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.secondary} transition-all`}
+                variant="default"
+                className={`flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.primary} transition-all`}
               >
                 <ArrowDownTrayIcon
-                  className={`h-4 w-4 ${colors.icons.primary}`}
+                  className={`h-4 w-4 ${colors.icons.white}`}
                 />
                 Export
               </Button>
@@ -485,19 +497,19 @@ export default function SupplierTransactionsPage() {
               },
               {
                 title: "Total Volume",
-                value: formatCurrency(totalVolume),
+                value: formatCurrencyAbbreviated(totalVolume),
                 subtitle: "Transaction volume",
                 icon: RsIcon,
               },
               {
                 title: "Total Sales",
-                value: formatCurrency(totalSales),
+                value: formatCurrencyAbbreviated(totalSales),
                 subtitle: "Revenue generated",
                 icon: ArrowTrendingUpIcon,
               },
               {
                 title: "Total Purchases",
-                value: formatCurrency(totalPurchases),
+                value: formatCurrencyAbbreviated(totalPurchases),
                 subtitle: "Supply investments",
                 icon: CreditCardIcon,
               },
@@ -556,18 +568,18 @@ export default function SupplierTransactionsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="relative w-full">
-                  <MagnifyingGlassIcon
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
-                  />
-                  <Input
-                    placeholder="Search by reference, vendor or product"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
-                  />
-                </div>
+              <div className="relative w-full">
+                <MagnifyingGlassIcon
+                  className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                />
+                <Input
+                  placeholder="Search by reference, vendor or product"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Select value={selectedType} onValueChange={setSelectedType}>
                   <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 !rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                     <SelectValue placeholder="All Types" />
@@ -972,7 +984,7 @@ export default function SupplierTransactionsPage() {
             >
               <CardContent>
                 <div
-                  className={`h-20 w-20 mx-auto mb-6 ${colors.backgrounds.accent} backdrop-blur-sm !rounded-none flex items-center justify-center`}
+                  className={`h-20 w-20 mx-auto mb-6 backdrop-blur-sm !rounded-none flex items-center justify-center`}
                 >
                   <ArrowsUpDownIcon
                     className={`h-10 w-10 ${colors.icons.muted}`}
@@ -994,13 +1006,13 @@ export default function SupplierTransactionsPage() {
                 </p>
                 {totalTransactions === 0 ? (
                   <Button
-                    onClick={() => router.push("/supplier/products")}
+                    onClick={() => router.push("/supplier/inventory")}
                     className={`${colors.buttons.primary} shadow-none transition-all duration-300 text-xs cursor-pointer !rounded-none`}
                   >
                     <CubeIcon
                       className={`h-4 w-4 mr-2 ${colors.texts.inverse}`}
                     />
-                    View Products
+                    View Inventory
                   </Button>
                 ) : (
                   <Button

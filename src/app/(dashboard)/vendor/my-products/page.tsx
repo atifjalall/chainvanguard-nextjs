@@ -10,18 +10,18 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Input } from "@/components/_ui/input";
-import { Badge } from "@/components/_ui/badge";
-import { Label } from "@/components/_ui/label";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/_ui/select";
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/_ui/dialog";
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,37 +37,75 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/_ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import {
-  Search,
-  Plus,
-  Edit,
-  Trash2,
-  Eye,
-  Package,
-  TrendingUp,
-  TrendingDown,
-  Grid3X3,
-  List,
-  SlidersHorizontal,
-  MoreVertical,
-  DollarSign,
-  Sparkles,
-  Shield,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Loader2,
-  AlertTriangle,
-  RefreshCw,
-  Filter,
-  X,
-} from "lucide-react";
+  MagnifyingGlassIcon,
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  EyeIcon,
+  CubeIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  Squares2X2Icon,
+  Bars3Icon,
+  EllipsisVerticalIcon,
+  SparklesIcon,
+  ShieldCheckIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
+  FunnelIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+
+// Custom Rs Icon component
+const RsIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    className="h-5 w-5"
+  >
+    <text
+      x="12"
+      y="15"
+      textAnchor="middle"
+      fontSize="8"
+      fontWeight="600"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="0.2"
+      fontFamily="Arial, sans-serif"
+    >
+      Rs
+    </text>
+    <path
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
+
 import { useAuth } from "@/components/providers/auth-provider";
 import { Product } from "@/types";
 import { toast } from "sonner";
 import Link from "next/link";
 import { productAPI } from "@/lib/api/product.api";
+import { badgeColors, colors } from "@/lib/colorConstants";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 const categories = ["All Categories", "Men", "Women", "Kids", "Unisex"];
 const statusOptions = ["All Status", "active", "inactive", "out_of_stock"];
@@ -81,6 +119,30 @@ const sortOptions = [
   { value: "quantity-asc", label: "Stock: Low to High" },
   { value: "quantity-desc", label: "Stock: High to Low" },
 ];
+
+// Add consistent spacing and styling constants from add-product
+const FORM_SPACING = "space-y-4 md:space-y-2";
+const SECTION_MARGIN = "mb-4 md:mb-6";
+const GRID_GAP = "gap-6";
+const CONTAINER_PADDING = "p-4 md:p-6";
+const FIELD_GAP = "gap-6";
+const LABEL_MARGIN = "mb-1";
+const ERROR_MARGIN = "mt-1";
+const HEADER_GAP = "gap-3";
+const NAVIGATION_MARGIN = "mt-6";
+
+// Add currency formatting functions
+const formatCurrency = (amount: number) => `Rs ${amount.toFixed(2)}`;
+
+const formatCurrencyAbbreviated = (amount: number) => {
+  if (amount >= 1e9) {
+    return `${(amount / 1e9).toFixed(2)} B`;
+  } else if (amount >= 1e6) {
+    return `${(amount / 1e6).toFixed(2)} M`;
+  } else {
+    return formatCurrency(amount);
+  }
+};
 
 export default function VendorMyProductsPage() {
   const { user } = useAuth();
@@ -246,29 +308,29 @@ export default function VendorMyProductsPage() {
     router.push(`/vendor/my-products/${productId}/edit`);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-green-100 text-green-800 border-green-200 dark:bg-green-950/50 dark:text-green-400 dark:border-green-800";
+        return badgeColors.green;
       case "inactive":
-        return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700";
+        return badgeColors.grey;
       case "out_of_stock":
-        return "bg-red-100 text-red-800 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800";
+        return badgeColors.red;
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700";
+        return badgeColors.blue;
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "active":
-        return <CheckCircle className="h-3 w-3" />;
+        return <CheckCircleIcon className="h-3 w-3" />;
       case "inactive":
-        return <XCircle className="h-3 w-3" />;
+        return <XCircleIcon className="h-3 w-3" />;
       case "out_of_stock":
-        return <AlertTriangle className="h-3 w-3" />;
+        return <ExclamationTriangleIcon className="h-3 w-3" />;
       default:
-        return <Clock className="h-3 w-3" />;
+        return <ClockIcon className="h-3 w-3" />;
     }
   };
 
@@ -277,9 +339,9 @@ export default function VendorMyProductsPage() {
       return (
         <Badge
           variant="outline"
-          className="border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+          className={`${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} text-[10px] h-5 px-2 rounded-none flex-shrink-0`}
         >
-          <AlertTriangle className="h-3 w-3 mr-1" />
+          <ExclamationTriangleIcon className="h-2.5 w-2.5 mr-1" />
           Out of Stock
         </Badge>
       );
@@ -287,9 +349,9 @@ export default function VendorMyProductsPage() {
       return (
         <Badge
           variant="outline"
-          className="border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-400"
+          className={`${badgeColors.grey.bg} ${badgeColors.grey.border} ${badgeColors.grey.text} text-[10px] h-5 px-2 rounded-none flex-shrink-0`}
         >
-          <TrendingDown className="h-3 w-3 mr-1" />
+          <ArrowTrendingDownIcon className="h-2.5 w-2.5 mr-1" />
           Low Stock
         </Badge>
       );
@@ -297,9 +359,9 @@ export default function VendorMyProductsPage() {
       return (
         <Badge
           variant="outline"
-          className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400"
+          className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-[10px] h-5 px-2 rounded-none flex-shrink-0`}
         >
-          <TrendingUp className="h-3 w-3 mr-1" />
+          <ArrowTrendingUpIcon className="h-2.5 w-2.5 mr-1" />
           In Stock
         </Badge>
       );
@@ -333,59 +395,63 @@ export default function VendorMyProductsPage() {
     const showPlaceholder = !imageSrc || imageError;
 
     return (
-      <Card className="group relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-900">
-        {/* Image Section */}
-        <div className="relative w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 overflow-hidden">
-          {showPlaceholder ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-              <Package className="h-12 w-12 text-gray-400 dark:text-gray-500" />
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                No Image
-              </span>
-            </div>
-          ) : (
-            <Image
-              src={imageSrc}
-              alt={product.name}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={() => setImageError(true)}
-            />
-          )}
+      <div className="group relative w-full">
+        {/* Image Container */}
+        <div className="relative bg-gray-100 w-full">
+          <div className="relative w-full aspect-[3/4] overflow-hidden">
+            {showPlaceholder ? (
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 flex items-center justify-center">
+                <CubeIcon className="h-16 w-16 text-gray-400" />
+              </div>
+            ) : (
+              <Image
+                src={imageSrc}
+                alt={product.name}
+                fill
+                className="w-full h-full object-cover transition-opacity duration-300 group-hover:scale-105 transition-transform duration-500"
+                onError={() => setImageError(true)}
+              />
+            )}
 
-          {/* Actions Menu */}
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Status overlay for out of stock */}
+            {product.quantity === 0 && (
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
+                <span className="text-xs font-medium text-gray-900 uppercase tracking-wider">
+                  Out of Stock
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Actions Menu - Top Right */}
+          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-7 w-7 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
-                >
-                  <MoreVertical className="h-3.5 w-3.5" />
-                </Button>
+                <button className="w-8 h-8 bg-white flex items-center justify-center cursor-pointer">
+                  <EllipsisVerticalIcon className="h-4 w-4 text-black" />
+                </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuContent align="end" className="w-40 rounded-none">
                 <DropdownMenuItem
                   onClick={() => handleViewProduct(product._id)}
-                  className="text-xs"
+                  className="text-xs cursor-pointer"
                 >
-                  <Eye className="h-3.5 w-3.5 mr-2" />
+                  <EyeIcon className="h-3.5 w-3.5 mr-2" />
                   View
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleEditProduct(product._id)}
-                  className="text-xs"
+                  className="text-xs cursor-pointer"
                 >
-                  <Edit className="h-3.5 w-3.5 mr-2" />
+                  <PencilIcon className="h-3.5 w-3.5 mr-2" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => handleDelete(product)}
-                  className="text-xs text-red-600 dark:text-red-400"
+                  className="text-xs text-red-600 dark:text-red-400 cursor-pointer"
                 >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />
+                  <TrashIcon className="h-3.5 w-3.5 mr-2" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -393,21 +459,16 @@ export default function VendorMyProductsPage() {
           </div>
         </div>
 
-        {/* Content */}
-        <CardContent className="p-3 space-y-2.5">
-          {/* Title */}
-          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 line-clamp-2">
-            {product.name}
-          </h3>
-
-          {/* Category & Status */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-gray-600 dark:text-gray-400">
-              {product.category}
-            </span>
+        {/* Content Below Image */}
+        <div className="pt-2 pb-4 px-4 border border-gray-200 dark:border-gray-700">
+          {/* Product Name & Status */}
+          <div className="flex items-start justify-between mb-1 gap-2">
+            <h3 className="text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide flex-1">
+              {product.name}
+            </h3>
             <Badge
               variant="outline"
-              className={`${getStatusColor(product.status)} text-xs py-0 h-5`}
+              className={`${getStatusBadgeColor(product.status).bg} ${getStatusBadgeColor(product.status).border} ${getStatusBadgeColor(product.status).text} text-[10px] py-0 h-5 px-2 rounded-none flex-shrink-0`}
             >
               {getStatusIcon(product.status)}
               <span className="ml-1 capitalize">
@@ -416,34 +477,54 @@ export default function VendorMyProductsPage() {
             </Badge>
           </div>
 
+          {/* Category */}
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            {product.category} • {product.subcategory}
+          </p>
+
+          {/* Price */}
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="text-sm font-normal text-gray-900 dark:text-white">
+              Rs {product.price.toFixed(2)}
+            </span>
+            {product.costPrice && product.costPrice > product.price && (
+              <span className="text-xs text-gray-400 line-through">
+                Rs {product.costPrice.toFixed(2)}
+              </span>
+            )}
+          </div>
+
           {/* Badges Row */}
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap mb-3">
             {product.isFeatured && (
-              <Badge className="bg-amber-500 text-white text-xs border-0 h-5">
-                <Sparkles className="h-2.5 w-2.5 mr-1" />
+              <Badge
+                variant="outline"
+                className={`${badgeColors.amber.bg} ${badgeColors.amber.border} ${badgeColors.amber.text} text-[10px] h-5 px-2 rounded-none`}
+              >
+                <SparklesIcon className="h-2.5 w-2.5 mr-1" />
                 Featured
               </Badge>
             )}
             {product.blockchainVerified && (
-              <Badge className="bg-blue-500 text-white text-xs border-0 h-5">
-                <Shield className="h-2.5 w-2.5 mr-1" />
+              <Badge
+                variant="outline"
+                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-[10px] h-5 px-2 rounded-none`}
+              >
+                <ShieldCheckIcon className="h-2.5 w-2.5 mr-1" />
                 Verified
               </Badge>
             )}
+            {getStockStatusBadge(product)}
           </div>
 
-          {/* Price & Stock */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Price</p>
-              <p className="text-base font-bold text-gray-900 dark:text-gray-100">
-                ${product.price.toFixed(2)}
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-3 py-3 border-t border-gray-200 dark:border-gray-800">
+            <div className="text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
+                Stock
               </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Stock</p>
               <p
-                className={`text-base font-bold ${
+                className={`text-sm font-semibold ${
                   product.quantity === 0
                     ? "text-red-600"
                     : product.quantity <= product.minStockLevel
@@ -454,52 +535,43 @@ export default function VendorMyProductsPage() {
                 {product.quantity}
               </p>
             </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-            <div className="text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Views</p>
-              <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-                {product.views || 0}
+            <div className="text-center border-x border-gray-200 dark:border-gray-800">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
+                Sold
               </p>
-            </div>
-            <div className="text-center border-x border-gray-100 dark:border-gray-800">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Sold</p>
-              <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
                 {product.totalSold || 0}
               </p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Rating</p>
-              <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
+                Rating
+              </p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
                 {product.averageRating?.toFixed(1) || "N/A"}
               </p>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="grid grid-cols-2 gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-2 pt-3">
+            <button
               onClick={() => handleViewProduct(product._id)}
-              className="w-full h-8 text-xs"
+              className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-gray-900 dark:text-white bg-transparent border rounded-none transition-colors cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <Eye className="h-3 w-3 mr-1" />
+              <EyeIcon className="h-3 w-3" />
               View
-            </Button>
-            <Button
-              size="sm"
+            </button>
+            <button
               onClick={() => handleEditProduct(product._id)}
-              className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700"
+              className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-white bg-black hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors cursor-pointer"
             >
-              <Edit className="h-3 w-3 mr-1" />
+              <PencilIcon className="h-3 w-3" />
               Edit
-            </Button>
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   };
 
@@ -522,127 +594,142 @@ export default function VendorMyProductsPage() {
     const showPlaceholder = !imageSrc || imageError;
 
     return (
-      <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-6">
-            <div className="relative w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+      <div className="group relative w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <div className="p-6">
+          <div className="flex items-start gap-6">
+            {/* Image */}
+            <div className="relative w-40 h-52 bg-gray-100 flex-shrink-0 overflow-hidden">
               {showPlaceholder ? (
-                <div className="flex flex-col items-center justify-center gap-2">
-                  <Package className="h-12 w-12 text-gray-400 dark:text-gray-500" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    No Image
-                  </span>
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 flex items-center justify-center">
+                  <CubeIcon className="h-16 w-16 text-gray-400" />
                 </div>
               ) : (
                 <Image
                   src={imageSrc}
                   alt={product.name}
                   fill
-                  className="object-cover"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                   onError={() => setImageError(true)}
                 />
               )}
+
+              {product.quantity === 0 && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
+                  <span className="text-xs font-medium text-gray-900 uppercase tracking-wider">
+                    Out of Stock
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4 mb-3">
+            {/* Content */}
+            <div className="flex-1 min-w-0 space-y-4">
+              {/* Header Row */}
+              <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-2">
+                  <h3 className="text-base font-normal text-gray-900 dark:text-white uppercase tracking-wide mb-1">
                     {product.name}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                    {product.description}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {product.category} • {product.subcategory}
                   </p>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Badge
+                    variant="outline"
+                    className={`${getStatusBadgeColor(product.status).bg} ${getStatusBadgeColor(product.status).border} ${getStatusBadgeColor(product.status).text} text-[10px] h-5 px-2 rounded-none`}
+                  >
+                    {getStatusIcon(product.status)}
+                    <span className="ml-1 capitalize">
+                      {product.status.replace("_", " ")}
+                    </span>
+                  </Badge>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+                        <EllipsisVerticalIcon className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-40 rounded-none"
                     >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => handleViewProduct(product._id)}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleEditProduct(product._id)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Product
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => handleDelete(product)}
-                      className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Product
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      <DropdownMenuItem
+                        onClick={() => handleViewProduct(product._id)}
+                        className="text-xs cursor-pointer"
+                      >
+                        <EyeIcon className="h-3.5 w-3.5 mr-2" />
+                        View
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleEditProduct(product._id)}
+                        className="text-xs cursor-pointer"
+                      >
+                        <PencilIcon className="h-3.5 w-3.5 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(product)}
+                        className="text-xs text-red-600 dark:text-red-400 cursor-pointer"
+                      >
+                        <TrashIcon className="h-3.5 w-3.5 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <Badge
-                  variant="outline"
-                  className="font-normal bg-white dark:bg-gray-800"
-                >
-                  {product.category}
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className="font-normal bg-white dark:bg-gray-800"
-                >
-                  {product.subcategory}
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className={`${getStatusColor(product.status)} flex items-center gap-1`}
-                >
-                  {getStatusIcon(product.status)}
-                  <span className="capitalize">
-                    {product.status.replace("_", " ")}
-                  </span>
-                </Badge>
-                {getStockStatusBadge(product)}
+              {/* Badges Row */}
+              <div className="flex items-center gap-2 flex-wrap">
                 {product.isFeatured && (
-                  <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0 shadow-md">
-                    <Sparkles className="h-3 w-3 mr-1" />
+                  <Badge
+                    variant="outline"
+                    className={`${badgeColors.amber.bg} ${badgeColors.amber.border} ${badgeColors.amber.text} text-[10px] h-5 px-2 rounded-none`}
+                  >
+                    <SparklesIcon className="h-2.5 w-2.5 mr-1" />
                     Featured
                   </Badge>
                 )}
                 {product.blockchainVerified && (
-                  <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0 shadow-md">
-                    <Shield className="h-3 w-3 mr-1" />
+                  <Badge
+                    variant="outline"
+                    className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-[10px] h-5 px-2 rounded-none`}
+                  >
+                    <ShieldCheckIcon className="h-2.5 w-2.5 mr-1" />
                     Verified
                   </Badge>
                 )}
+                {getStockStatusBadge(product)}
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {/* Stats Grid */}
+              <div className="grid grid-cols-5 gap-6 pt-4 border-t border-gray-200 dark:border-gray-800">
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Price
                   </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                    ${product.price.toFixed(2)}
-                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-base font-semibold text-gray-900 dark:text-white">
+                      Rs {product.price.toFixed(2)}
+                    </p>
+                    {product.costPrice && product.costPrice > product.price && (
+                      <span className="text-xs text-gray-400 line-through">
+                        Rs {product.costPrice.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
                 </div>
+
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Stock
                   </p>
                   <p
-                    className={`text-lg font-bold ${
+                    className={`text-base font-semibold ${
                       product.quantity === 0
                         ? "text-red-600"
                         : product.quantity <= product.minStockLevel
@@ -653,44 +740,49 @@ export default function VendorMyProductsPage() {
                     {product.quantity}
                   </p>
                 </div>
+
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Views
                   </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
                     {product.views || 0}
                   </p>
                 </div>
+
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Sold
                   </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
                     {product.totalSold || 0}
                   </p>
                 </div>
+
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Rating
                   </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
                     {product.averageRating?.toFixed(1) || "N/A"}
                   </p>
                 </div>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
+      <div
+        className={`flex items-center justify-center min-h-screen ${colors.backgrounds.secondary}`}
+      >
         <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
-          <p className="text-gray-600 dark:text-gray-400">
+          <ArrowPathIcon className="h-12 w-12 animate-spin mx-auto text-blue-600" />
+          <p className={`${colors.texts.secondary}`}>
             Loading your products...
           </p>
         </div>
@@ -700,21 +792,27 @@ export default function VendorMyProductsPage() {
 
   if (error && products.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
-        <Card className="max-w-md w-full mx-4 border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+      <div
+        className={`flex items-center justify-center min-h-screen ${colors.backgrounds.secondary}`}
+      >
+        <Card
+          className={`${colors.cards.base} max-w-md w-full mx-4 rounded-none`}
+        >
           <CardContent className="p-8 text-center">
-            <div className="h-20 w-20 mx-auto mb-6 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-              <AlertTriangle className="h-10 w-10 text-red-600 dark:text-red-400" />
+            <div className="h-20 w-20 mx-auto mb-6 flex items-center justify-center">
+              <ExclamationTriangleIcon className="h-10 w-10 text-red-600 dark:text-red-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            <h3
+              className={`text-xl font-semibold ${colors.texts.primary} mb-2`}
+            >
               Failed to Load Products
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+            <p className={`${colors.texts.secondary} mb-6`}>{error}</p>
             <Button
               onClick={loadProducts}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className={`${colors.buttons.primary} text-white`}
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <ArrowPathIcon className="h-4 w-4 mr-2" />
               Try Again
             </Button>
           </CardContent>
@@ -724,42 +822,64 @@ export default function VendorMyProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl animate-pulse"></div>
-        <div
-          className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-400/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "2s" }}
-        ></div>
-      </div>
+    <div className={`min-h-screen ${colors.backgrounds.secondary}`}>
+      <div className={`relative z-10 ${CONTAINER_PADDING}`}>
+        {/* Breadcrumbs */}
+        <Breadcrumb className={SECTION_MARGIN}>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/supplier">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>My Products</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
-      <div className="relative z-10 p-6 space-y-6">
+        {/* Header */}
         <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+          className={`transform transition-all duration-700 mb-4 md:mb-6 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <div
+            className={`flex flex-col lg:flex-row justify-between items-start lg:items-center ${GRID_GAP}`}
+          >
+            <div className={FORM_SPACING}>
+              <h1
+                className={`text-lg md:text-2xl font-bold ${colors.texts.primary}`}
+              >
                 My Products
               </h1>
-              <p className="text-base text-gray-600 dark:text-gray-400">
+              <p className={`text-sm md:text-base ${colors.texts.secondary}`}>
                 Manage your blockchain-verified inventory
               </p>
+              <div className={`flex items-center ${HEADER_GAP} mt-2`}>
+                <Badge
+                  className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+                >
+                  <CubeIcon
+                    className={`h-3 w-3 mr-1 ${badgeColors.blue.icon}`}
+                  />
+                  Product Management
+                </Badge>
+                <Badge
+                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                >
+                  <ShieldCheckIcon
+                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                  />
+                  Blockchain Verified
+                </Badge>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={loadProducts}
-                variant="outline"
-                className="hidden lg:flex items-center gap-2 text-xs"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </Button>
+            <div className={`flex flex-wrap items-center ${HEADER_GAP}`}>
               <Link href="/vendor/add-product">
-                <button className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium transition-colors cursor-pointer shadow-md hover:shadow-lg">
-                  <Plus className="h-4 w-4" />
+                <button
+                  className={`flex items-center gap-2 px-4 py-2 text-xs text-white font-medium transition-colors cursor-pointer ${colors.buttons.primary}`}
+                >
+                  <PlusIcon className="h-4 w-4" />
                   Add New Product
                 </button>
               </Link>
@@ -772,97 +892,125 @@ export default function VendorMyProductsPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <div
+            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 ${GRID_GAP}`}
+          >
+            <Card
+              className={`${colors.cards.base} hover:scale-[1.02] transition-all duration-300 rounded-none`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle
+                  className={`text-xs font-medium ${colors.texts.secondary}`}
+                >
                   Total Products
                 </CardTitle>
-                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shadow-md">
-                  <Package className="h-5 w-5 text-blue-600" />
+                <div className="h-10 w-10 flex items-center justify-center">
+                  <CubeIcon className={`h-5 w-5 ${colors.texts.primary}`} />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <div className={`text-lg font-bold ${colors.texts.primary}`}>
                   {totalProducts}
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                <p className={`text-xs ${colors.texts.tertiary} mt-1`}>
                   Total inventory items
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <Card
+              className={`${colors.cards.base} hover:scale-[1.02] transition-all duration-300 rounded-none`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle
+                  className={`text-xs font-medium ${colors.texts.secondary}`}
+                >
                   Active Products
                 </CardTitle>
-                <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shadow-md">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                <div className="h-10 w-10 flex items-center justify-center">
+                  <CheckCircleIcon
+                    className={`h-5 w-5 ${colors.texts.primary}`}
+                  />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <div className={`text-lg font-bold ${colors.texts.primary}`}>
                   {activeProducts}
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                <p className={`text-xs ${colors.texts.tertiary} mt-1`}>
                   Currently listed
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <Card
+              className={`${colors.cards.base} hover:scale-[1.02] transition-all duration-300 rounded-none`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle
+                  className={`text-xs font-medium ${colors.texts.secondary}`}
+                >
                   Low Stock
                 </CardTitle>
-                <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shadow-md">
-                  <TrendingDown className="h-5 w-5 text-orange-600" />
+                <div className="h-10 w-10 flex items-center justify-center">
+                  <ArrowTrendingDownIcon
+                    className={`h-5 w-5 ${colors.texts.primary}`}
+                  />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <div className={`text-lg font-bold ${colors.texts.primary}`}>
                   {lowStockProducts}
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                <p className={`text-xs ${colors.texts.tertiary} mt-1`}>
                   Need restocking
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <Card
+              className={`${colors.cards.base} hover:scale-[1.02] transition-all duration-300 rounded-none`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle
+                  className={`text-xs font-medium ${colors.texts.secondary}`}
+                >
                   Out of Stock
                 </CardTitle>
-                <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shadow-md">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                <div className="h-10 w-10 flex items-center justify-center">
+                  <ExclamationTriangleIcon
+                    className={`h-5 w-5 ${colors.texts.primary}`}
+                  />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <div className={`text-lg font-bold ${colors.texts.primary}`}>
                   {outOfStockProducts}
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                <p className={`text-xs ${colors.texts.tertiary} mt-1`}>
                   Requires attention
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <Card
+              className={`${colors.cards.base} hover:scale-[1.02] transition-all duration-300 rounded-none`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle
+                  className={`text-xs font-medium ${colors.texts.secondary}`}
+                >
                   Total Value
                 </CardTitle>
-                <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shadow-md">
-                  <DollarSign className="h-5 w-5 text-purple-600" />
+                <div className="h-10 w-10 flex items-center justify-center">
+                  <RsIcon />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  ${totalValue.toFixed(2)}
+                <div className={`text-lg font-bold ${colors.texts.primary}`}>
+                  {formatCurrencyAbbreviated(totalValue)}
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                <p className={`text-xs ${colors.texts.tertiary} mt-1`}>
                   Inventory value
                 </p>
               </CardContent>
@@ -871,21 +1019,27 @@ export default function VendorMyProductsPage() {
         </div>
 
         <div
-          className={`transform transition-all duration-700 delay-200 ${
+          className={`transform transition-all duration-700 delay-200 mt-6 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <Card className="border border-white/20 dark:border-gray-700/30 shadow-md bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl">
+          <Card className={`${colors.cards.base} rounded-none`}>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className={`flex items-center justify-between`}>
                 <div>
-                  <CardTitle className="flex items-center gap-3 text-base">
-                    <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <SlidersHorizontal className="h-4 w-4 text-blue-600" />
+                  <CardTitle
+                    className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                  >
+                    <div className="h-8 w-8 flex items-center justify-center">
+                      <FunnelIcon
+                        className={`h-4 w-4 ${colors.texts.primary}`}
+                      />
                     </div>
                     Filters & Search
                   </CardTitle>
-                  <CardDescription className="text-xs">
+                  <CardDescription
+                    className={`text-xs ${colors.texts.secondary}`}
+                  >
                     Find and manage your products easily
                   </CardDescription>
                 </div>
@@ -895,164 +1049,165 @@ export default function VendorMyProductsPage() {
                   onClick={() => setShowFilters(!showFilters)}
                   className="lg:hidden border-2 border-gray-200 dark:border-gray-700 text-xs"
                 >
-                  <Filter className="h-3 w-3 mr-2" />
+                  <FunnelIcon className="h-3 w-3 mr-2" />
                   {showFilters ? "Hide" : "Show"} Filters
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               <div
-                className={`space-y-4 ${showFilters ? "block" : "hidden lg:block"}`}
+                className={`space-y-6 ${showFilters ? "block" : "hidden lg:block"}`}
               >
-                <div>
-                  <Label
-                    htmlFor="search"
-                    className="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300"
+                <div className="relative w-full">
+                  <MagnifyingGlassIcon
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                  />
+                  <Input
+                    placeholder="Search by name, description, or SKU..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <XMarkIcon className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Select
+                    value={selectedCategory}
+                    onValueChange={setSelectedCategory}
                   >
-                    Search Products
-                  </Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="search"
-                      placeholder="Search by name, description, or SKU..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 h-10 text-xs border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50"
-                    />
-                    {searchTerm && (
-                      <button
-                        onClick={() => setSearchTerm("")}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
+                    <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-full">
+                      {categories.map((category) => (
+                        <SelectItem
+                          key={category}
+                          value={category}
+                          className="text-xs"
+                        >
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={selectedStatus}
+                    onValueChange={setSelectedStatus}
+                  >
+                    <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-full">
+                      {statusOptions.map((status) => (
+                        <SelectItem
+                          key={status}
+                          value={status}
+                          className="text-xs"
+                        >
+                          <span className="capitalize">
+                            {status.replace("_", " ")}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-full">
+                      {sortOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="text-xs"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label
-                      htmlFor="category"
-                      className="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      Category
-                    </Label>
-                    <Select
-                      value={selectedCategory}
-                      onValueChange={setSelectedCategory}
-                    >
-                      <SelectTrigger className="w-full h-10 text-xs border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="w-full">
-                        {categories.map((category) => (
-                          <SelectItem
-                            key={category}
-                            value={category}
-                            className="text-xs"
-                          >
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label
-                      htmlFor="status"
-                      className="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      Status
-                    </Label>
-                    <Select
-                      value={selectedStatus}
-                      onValueChange={setSelectedStatus}
-                    >
-                      <SelectTrigger className="w-full h-10 text-xs border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="w-full">
-                        {statusOptions.map((status) => (
-                          <SelectItem
-                            key={status}
-                            value={status}
-                            className="text-xs"
-                          >
-                            <span className="capitalize">
-                              {status.replace("_", " ")}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label
-                      htmlFor="sort"
-                      className="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      Sort By
-                    </Label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="w-full h-10 text-xs border border-gray-200 dark:border-gray-700 hover:border-blue-300 focus:border-blue-500 transition-all bg-white/50 dark:bg-gray-800/50">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="w-full">
-                        {sortOptions.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value}
-                            className="text-xs"
-                          >
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
                 <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600 dark:text-gray-400 mr-2">
+                  <div className="flex gap-2 items-center">
+                    {searchTerm && (
+                      <Badge
+                        variant="outline"
+                        className={`${badgeColors.grey.bg} ${badgeColors.grey.border} ${badgeColors.grey.text} text-xs rounded-none`}
+                      >
+                        &quot;{searchTerm}&quot;
+                        <button
+                          onClick={() => setSearchTerm("")}
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedCategory !== "All Categories" && (
+                      <Badge
+                        variant="outline"
+                        className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                      >
+                        {selectedCategory}
+                        <button
+                          onClick={() => setSelectedCategory("All Categories")}
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedStatus !== "All Status" && (
+                      <Badge
+                        variant="outline"
+                        className={`${getStatusBadgeColor(selectedStatus).bg} ${getStatusBadgeColor(selectedStatus).border} ${getStatusBadgeColor(selectedStatus).text} flex items-center gap-1 text-xs rounded-none`}
+                      >
+                        {selectedStatus.replace("_", " ")}
+                        <button
+                          onClick={() => setSelectedStatus("All Status")}
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
+                      {filteredAndSortedProducts.length} products found
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className={`text-xs ${colors.texts.secondary} mr-2`}>
                       View:
                     </span>
                     <button
                       onClick={() => setViewMode("grid")}
-                      className={`h-8 w-8 p-0 rounded-md flex items-center justify-center transition-colors ${
+                      className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer ${
                         viewMode === "grid"
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
-                          : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+                          : "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
                       }`}
                     >
-                      <Grid3X3 className="h-4 w-4" />
+                      <Squares2X2Icon className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => setViewMode("list")}
-                      className={`h-8 w-8 p-0 rounded-md flex items-center justify-center transition-colors ${
+                      className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer ${
                         viewMode === "list"
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
-                          : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+                          : "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
                       }`}
                     >
-                      <List className="h-4 w-4" />
+                      <Bars3Icon className="h-4 w-4" />
                     </button>
                   </div>
-
-                  <Badge
-                    variant="outline"
-                    className="text-xs px-4 py-2 bg-white dark:bg-gray-800"
-                  >
-                    <Package className="h-3 w-3 mr-2" />
-                    {filteredAndSortedProducts.length}{" "}
-                    {filteredAndSortedProducts.length === 1
-                      ? "product"
-                      : "products"}
-                  </Badge>
                 </div>
               </div>
             </CardContent>
@@ -1060,7 +1215,7 @@ export default function VendorMyProductsPage() {
         </div>
 
         <div
-          className={`transform transition-all duration-700 delay-300 ${
+          className={`transform transition-all duration-700 delay-300 mt-6 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
@@ -1081,25 +1236,33 @@ export default function VendorMyProductsPage() {
               )}
             </div>
           ) : (
-            <Card className="text-center py-16 border-0 shadow-md bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+            <Card
+              className={`text-center py-16 ${colors.cards.base} rounded-none`}
+            >
               <CardContent>
-                <div className="h-20 w-20 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                  <Package className="h-10 w-10 text-gray-500 dark:text-gray-400" />
+                <div className="h-20 w-20 mx-auto mb-6 flex items-center justify-center">
+                  <CubeIcon className="h-10 w-10 text-gray-500 dark:text-gray-400" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                <h3
+                  className={`text-base font-semibold ${colors.texts.primary} mb-2`}
+                >
                   {totalProducts === 0
                     ? "No products yet"
                     : "No products found"}
                 </h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                <p
+                  className={`text-xs ${colors.texts.secondary} mb-6 max-w-md mx-auto`}
+                >
                   {totalProducts === 0
                     ? "Start building your blockchain marketplace by adding your first product!"
                     : "We couldn't find any products matching your filters. Try adjusting your search criteria."}
                 </p>
                 {totalProducts === 0 ? (
                   <Link href="/vendor/add-product">
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium transition-colors cursor-pointer mx-auto shadow-md hover:shadow-lg">
-                      <Plus className="h-3 w-3" />
+                    <button
+                      className={`flex items-center gap-2 px-4 py-2 text-xs text-white font-medium transition-colors cursor-pointer ${colors.buttons.primary}`}
+                    >
+                      <PlusIcon className="h-3 w-3" />
                       Add Your First Product
                     </button>
                   </Link>
@@ -1110,9 +1273,9 @@ export default function VendorMyProductsPage() {
                       setSelectedCategory("All Categories");
                       setSelectedStatus("All Status");
                     }}
-                    className="flex items-center gap-2 px-6 py-3 mx-auto rounded-md border-2 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-xs font-medium transition-colors cursor-pointer"
+                    className={`flex items-center gap-2 px-6 py-3 mx-auto border-2 ${colors.borders.primary} ${colors.backgrounds.primary} ${colors.texts.primary} text-xs font-medium transition-colors cursor-pointer`}
                   >
-                    <RefreshCw className="h-3 w-3" />
+                    <ArrowPathIcon className="h-3 w-3" />
                     Clear Filters
                   </button>
                 )}
@@ -1123,42 +1286,46 @@ export default function VendorMyProductsPage() {
       </div>
 
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent className="max-w-md border-0 shadow-md bg-white dark:bg-gray-900 backdrop-blur-xl">
+        <DialogContent
+          className={`max-w-md ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none shadow-none`}
+        >
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-base">
-              <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <Trash2 className="h-5 w-5 text-red-600" />
+            <DialogTitle
+              className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+            >
+              <div className="h-10 w-10 flex items-center justify-center">
+                <TrashIcon className="h-5 w-5 text-red-600" />
               </div>
               Delete Product
             </DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription className={`text-xs ${colors.texts.secondary}`}>
               Are you sure you want to delete &quot;{deletingProduct?.name}
               &quot;? This action cannot be undone and will permanently remove
               the product from your inventory.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
+            <button
               onClick={() => setIsDeleteOpen(false)}
               disabled={isDeleting}
-              className="border-2 border-gray-200 dark:border-gray-700 text-xs"
+              className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-gray-900 dark:text-white bg-transparent border border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors cursor-pointer rounded-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
             >
               Cancel
-            </Button>
+            </button>
             <Button
+              variant="outline"
               onClick={confirmDelete}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white text-xs"
+              className="flex items-center justify-center gap-1 px-3 py-2 text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                  <ArrowPathIcon className="h-3 w-3 mr-2 animate-spin" />
                   Deleting...
                 </>
               ) : (
                 <>
-                  <Trash2 className="h-3 w-3 mr-2" />
+                  <TrashIcon className="h-3 w-3 mr-2" />
                   Delete Product
                 </>
               )}

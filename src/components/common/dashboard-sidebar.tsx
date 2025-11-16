@@ -27,6 +27,7 @@ import {
   InboxIcon,
   ReceiptRefundIcon,
   MagnifyingGlassIcon,
+  BookmarkIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useState, createContext, useContext } from "react";
 
@@ -129,6 +130,11 @@ export function DashboardSidebar() {
             href: "/vendor/browse",
             label: "Browse Inventory",
             icon: MagnifyingGlassIcon,
+          },
+          {
+            href: "/vendor/saved-items",
+            label: "Saved Items",
+            icon: BookmarkIcon,
           },
           {
             href: "/vendor/my-inventory",

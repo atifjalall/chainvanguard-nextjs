@@ -8,22 +8,17 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Badge } from "@/components/_ui/badge";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/_ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/_ui/tabs";
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   LineChart,
   Line,
@@ -42,34 +37,31 @@ import {
   Legend,
 } from "recharts";
 import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  ShoppingCart,
-  Users,
-  Package,
-  Star,
-  Calendar,
-  Download,
-  RefreshCw,
-  ArrowUpRight,
-  ArrowDownRight,
-  Eye,
-  Target,
-  Clock,
-  Award,
-  Zap,
-  BarChart3,
-  PieChart as PieChartIcon,
-  Activity,
-  Filter,
-  Sparkles,
-  Shield,
-  Crown,
-  TrendingDown as TrendingDownIcon,
-} from "lucide-react";
+  ArrowTrendingUpIcon,
+  CurrencyDollarIcon,
+  ShoppingCartIcon,
+  UsersIcon,
+  CubeIcon,
+  StarIcon,
+  ArrowDownTrayIcon,
+  ArrowPathIcon,
+  ArrowUpRightIcon,
+  ArrowDownRightIcon,
+  EyeIcon,
+  TagIcon,
+  ClockIcon,
+  TrophyIcon,
+  BoltIcon,
+  ChartBarIcon,
+  ChartPieIcon,
+  PauseIcon,
+  SparklesIcon,
+  ShieldCheckIcon,
+  Squares2X2Icon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
+import { badgeColors, colors } from "@/lib/colorConstants";
 
 // Analytics data interfaces
 interface SalesData {
@@ -297,6 +289,7 @@ export default function VendorAnalyticsPage() {
   >("revenue");
   const [isVisible, setIsVisible] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [selectedTab, setSelectedTab] = useState("sales");
 
   // Check for dark mode
   useEffect(() => {
@@ -340,7 +333,7 @@ export default function VendorAnalyticsPage() {
         background-color: ${isDarkMode ? "#1f2937" : "#ffffff"} !important;
         border: 1px solid ${isDarkMode ? "#374151" : "#e5e7eb"} !important;
         color: ${getTextColor()} !important;
-        border-radius: 8px !important;
+        border-radius: 0px !important;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, ${isDarkMode ? "0.3" : "0.1"}), 0 8px 10px -6px rgba(0, 0, 0, ${isDarkMode ? "0.2" : "0.1"}) !important;
       }
       .recharts-cartesian-axis-line {
@@ -355,7 +348,7 @@ export default function VendorAnalyticsPage() {
       .recharts-tooltip-wrapper .recharts-default-tooltip {
         background-color: ${isDarkMode ? "#1f2937" : "#ffffff"} !important;
         border: 1px solid ${isDarkMode ? "#374151" : "#e5e7eb"} !important;
-        border-radius: 8px !important;
+        border-radius: 0px !important;
         color: ${getTextColor()} !important;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, ${isDarkMode ? "0.3" : "0.1"}), 0 8px 10px -6px rgba(0, 0, 0, ${isDarkMode ? "0.2" : "0.1"}) !important;
         backdrop-filter: blur(12px) !important;
@@ -434,10 +427,7 @@ export default function VendorAnalyticsPage() {
   }, [timeRange]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "PKR",
-    }).format(value);
+    return `Rs ${value.toLocaleString("en-US")}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -450,7 +440,7 @@ export default function VendorAnalyticsPage() {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-4">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-none shadow-none p-4">
           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
             {formatDate(label)}
           </p>
@@ -483,38 +473,31 @@ export default function VendorAnalyticsPage() {
     growth,
     icon: Icon,
     formatter = (val: number) => val.toString(),
-    gradient,
-    bgGradient,
   }: {
     title: string;
     value: number;
     growth: number;
     icon: any;
     formatter?: (val: number) => string;
-    gradient: string;
-    bgGradient: string;
   }) => (
-    <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-      <div className={`absolute inset-0 bg-gradient-to-br ${bgGradient}`} />
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-        <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+    <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300 hover:scale-[1.02] rounded-none !shadow-none hover:!shadow-none">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
           {title}
         </CardTitle>
-        <div
-          className={`h-10 w-10 rounded-full bg-gradient-to-r ${gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
-        >
-          <Icon className="h-5 w-5 text-white" />
+        <div className="h-10 w-10 flex items-center justify-center rounded-none">
+          <Icon className="h-5 w-5" />
         </div>
       </CardHeader>
-      <CardContent className="relative z-10">
-        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+      <CardContent>
+        <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
           {formatter(value)}
         </div>
         <div className="flex items-center gap-1">
           {growth >= 0 ? (
-            <ArrowUpRight className="h-4 w-4 text-green-500" />
+            <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
           ) : (
-            <ArrowDownRight className="h-4 w-4 text-red-500" />
+            <ArrowDownRightIcon className="h-4 w-4 text-red-500" />
           )}
           <span
             className={`text-xs font-medium ${
@@ -545,7 +528,47 @@ export default function VendorAnalyticsPage() {
   }
 
   return (
-    <div className="space-y-8 p-6">
+    <div
+      className={`min-h-screen ${colors.backgrounds.secondary} p-6 space-y-6`}
+    >
+      {/* Breadcrumb */}
+      <div className="mb-6">
+        <nav className="flex" aria-label="Breadcrumb">
+          <ol className="inline-flex items-center space-x-1 md:space-x-3">
+            <li className="inline-flex items-center">
+              <a
+                href="/vendor"
+                className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white"
+              >
+                Dashboard
+              </a>
+            </li>
+            <li>
+              <div className="flex items-center">
+                <svg
+                  className="w-3 h-3 text-gray-400 mx-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 6 10"
+                >
+                  <path
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="m1 9 4-4-4-4"
+                  />
+                </svg>
+                <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">
+                  Analytics
+                </span>
+              </div>
+            </li>
+          </ol>
+        </nav>
+      </div>
+
       {/* Header */}
       <div
         className={`transform transition-all duration-700 ${
@@ -554,31 +577,36 @@ export default function VendorAnalyticsPage() {
       >
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+            <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
               Analytics Dashboard
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg mt-2">
+            <p className={`text-base ${colors.texts.secondary} mt-2`}>
               Track your sales performance and business insights
             </p>
             <div className="flex items-center gap-2 mt-3">
-              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
-                <BarChart3 className="h-3 w-3 mr-1" />
+              <Badge
+                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+              >
+                <ChartBarIcon
+                  className={`h-3 w-3 mr-1 ${badgeColors.blue.icon}`}
+                />
                 Real-time Analytics
               </Badge>
-              <Badge variant="outline" className="border-gray-300">
-                <Shield className="h-3 w-3 mr-1" />
-                Blockchain Secured
-              </Badge>
-              <Badge className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white">
-                <Sparkles className="h-3 w-3 mr-1" />
-                AI Insights
+              <Badge
+                className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+              >
+                <ShieldCheckIcon
+                  className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                />
+                Blockchain Verified
               </Badge>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
             <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-40 border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 backdrop-blur">
+              <SelectTrigger
+                className={`w-40 h-10 ${colors.borders.primary} ${colors.backgrounds.primary} text-xs rounded-none`}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -591,19 +619,19 @@ export default function VendorAnalyticsPage() {
             </Select>
             <Button
               variant="outline"
-              size="sm"
+              className={`flex items-center gap-2 text-xs ${colors.buttons.outline} rounded-none`}
               onClick={loadAnalytics}
-              className="shadow-lg hover:shadow-xl transition-all duration-300"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
               Refresh
             </Button>
             <Button
               variant="outline"
-              size="sm"
-              className="shadow-lg hover:shadow-xl transition-all duration-300"
+              className={`flex items-center gap-2 text-xs ${colors.buttons.outline} rounded-none`}
             >
-              <Download className="h-4 w-4 mr-2" />
+              <ArrowDownTrayIcon
+                className={`h-4 w-4 ${colors.icons.primary}`}
+              />
               Export
             </Button>
           </div>
@@ -621,35 +649,27 @@ export default function VendorAnalyticsPage() {
             title="Total Revenue"
             value={currentPeriodData.revenue.value}
             growth={currentPeriodData.revenue.growth}
-            icon={DollarSign}
+            icon={CurrencyDollarIcon}
             formatter={formatCurrency}
-            gradient="from-green-500 to-emerald-500"
-            bgGradient="from-green-500/5 via-transparent to-emerald-500/5"
           />
           <MetricCard
             title="Total Orders"
             value={currentPeriodData.orders.value}
             growth={currentPeriodData.orders.growth}
-            icon={ShoppingCart}
-            gradient="from-blue-500 to-cyan-500"
-            bgGradient="from-blue-500/5 via-transparent to-cyan-500/5"
+            icon={ShoppingCartIcon}
           />
           <MetricCard
             title="Unique Customers"
             value={currentPeriodData.customers.value}
             growth={currentPeriodData.customers.growth}
-            icon={Users}
-            gradient="from-purple-500 to-indigo-500"
-            bgGradient="from-purple-500/5 via-transparent to-indigo-500/5"
+            icon={UsersIcon}
           />
           <MetricCard
             title="Avg Order Value"
             value={currentPeriodData.avgOrderValue.value}
             growth={currentPeriodData.avgOrderValue.growth}
-            icon={Target}
+            icon={TagIcon}
             formatter={formatCurrency}
-            gradient="from-orange-500 to-amber-500"
-            bgGradient="from-orange-500/5 via-transparent to-amber-500/5"
           />
         </div>
       </div>
@@ -660,52 +680,72 @@ export default function VendorAnalyticsPage() {
           isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
         }`}
       >
-        <Tabs defaultValue="sales" className="space-y-6">
-          <div className="flex items-center justify-center">
-            <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur border-gray-200 dark:border-gray-700">
-              <TabsTrigger
-                value="sales"
-                className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-              >
-                <BarChart3 className="h-4 w-4" />
-                Sales Trends
-              </TabsTrigger>
-              <TabsTrigger
-                value="products"
-                className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-              >
-                <Package className="h-4 w-4" />
-                Products
-              </TabsTrigger>
-              <TabsTrigger
-                value="categories"
-                className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-              >
-                <PieChartIcon className="h-4 w-4" />
-                Categories
-              </TabsTrigger>
-              <TabsTrigger
-                value="performance"
-                className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-              >
-                <Activity className="h-4 w-4" />
-                Performance
-              </TabsTrigger>
-            </TabsList>
-          </div>
+        <Tabs
+          defaultValue="sales"
+          value={selectedTab}
+          onValueChange={setSelectedTab}
+        >
+          <TabsList
+            className={`flex w-full max-w-2xl border ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto mb-6`}
+          >
+            <TabsTrigger
+              value="sales"
+              className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${
+                selectedTab === "sales"
+                  ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
+                  : `${colors.texts.secondary} hover:${colors.texts.primary}`
+              } flex items-center gap-2 justify-center`}
+            >
+              <ArrowTrendingUpIcon
+                className={`h-4 w-4 ${colors.icons.primary}`}
+              />
+              Sales Trends
+            </TabsTrigger>
+            <TabsTrigger
+              value="products"
+              className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${
+                selectedTab === "products"
+                  ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
+                  : `${colors.texts.secondary} hover:${colors.texts.primary}`
+              } flex items-center gap-2 justify-center`}
+            >
+              <CubeIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+              Products
+            </TabsTrigger>
+            <TabsTrigger
+              value="categories"
+              className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${
+                selectedTab === "categories"
+                  ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
+                  : `${colors.texts.secondary} hover:${colors.texts.primary}`
+              } flex items-center gap-2 justify-center`}
+            >
+              <Squares2X2Icon className={`h-4 w-4 ${colors.icons.primary}`} />
+              Categories
+            </TabsTrigger>
+            <TabsTrigger
+              value="performance"
+              className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${
+                selectedTab === "performance"
+                  ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
+                  : `${colors.texts.secondary} hover:${colors.texts.primary}`
+              } flex items-center gap-2 justify-center`}
+            >
+              <ChartBarIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+              Performance
+            </TabsTrigger>
+          </TabsList>
 
-          <TabsContent value="sales" className="space-y-6">
+          <TabsContent value="sales" className="space-y-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Revenue Trend */}
-              <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
-                <CardHeader className="relative z-10">
+              <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none">
+                <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-gray-900 dark:text-gray-100">
+                      <CardTitle className="text-base text-gray-900 dark:text-gray-100">
                         Revenue Trend
                       </CardTitle>
-                      <CardDescription className="text-gray-600 dark:text-gray-400">
+                      <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                         Daily revenue over time
                       </CardDescription>
                     </div>
@@ -713,7 +753,7 @@ export default function VendorAnalyticsPage() {
                       value={selectedMetric}
                       onValueChange={(value: any) => setSelectedMetric(value)}
                     >
-                      <SelectTrigger className="w-32 border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 backdrop-blur">
+                      <SelectTrigger className="w-32 h-10 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs rounded-none">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -724,7 +764,7 @@ export default function VendorAnalyticsPage() {
                     </Select>
                   </div>
                 </CardHeader>
-                <CardContent className="relative z-10">
+                <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={mockSalesData}>
                       <defs>
@@ -778,18 +818,16 @@ export default function VendorAnalyticsPage() {
                 </CardContent>
               </Card>
 
-              {/* Orders vs Revenue */}
-              <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5" />
-                <CardHeader className="relative z-10">
-                  <CardTitle className="text-gray-900 dark:text-gray-100">
+              <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none">
+                <CardHeader>
+                  <CardTitle className="text-base text-gray-900 dark:text-gray-100">
                     Orders vs Revenue
                   </CardTitle>
-                  <CardDescription className="text-gray-600 dark:text-gray-400">
+                  <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                     Order volume and revenue correlation
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="relative z-10">
+                <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={mockSalesData}>
                       <CartesianGrid
@@ -843,18 +881,16 @@ export default function VendorAnalyticsPage() {
               </Card>
             </div>
 
-            {/* Average Order Value */}
-            <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-indigo-500/5" />
-              <CardHeader className="relative z-10">
-                <CardTitle className="text-gray-900 dark:text-gray-100">
+            <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none mt-6">
+              <CardHeader>
+                <CardTitle className="text-base text-gray-900 dark:text-gray-100">
                   Average Order Value Trend
                 </CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-400">
+                <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                   Track how your average order value changes over time
                 </CardDescription>
               </CardHeader>
-              <CardContent className="relative z-10">
+              <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={mockSalesData}>
                     <CartesianGrid
@@ -875,59 +911,44 @@ export default function VendorAnalyticsPage() {
                       tick={{ fill: getAxisColor(), fontSize: 12 }}
                     />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar
-                      dataKey="avgOrderValue"
-                      fill="#8B5CF6"
-                      radius={[4, 4, 0, 0]}
-                    />
+                    <Bar dataKey="avgOrderValue" fill="#3B82F6" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="products" className="space-y-6">
-            <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-amber-500/5" />
-              <CardHeader className="relative z-10">
-                <CardTitle className="text-gray-900 dark:text-gray-100">
+          <TabsContent value="products" className="mt-0">
+            <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none">
+              <CardHeader>
+                <CardTitle className="text-base text-gray-900 dark:text-gray-100">
                   Top Performing Products
                 </CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-400">
+                <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                   Products ranked by revenue and performance metrics
                 </CardDescription>
               </CardHeader>
-              <CardContent className="relative z-10">
+              <CardContent>
                 <div className="space-y-4">
                   {mockProductPerformance.map((product, index) => (
                     <div
                       key={product.id}
-                      className="group flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white/50 dark:bg-gray-900/50 backdrop-blur hover:bg-white/70 dark:hover:bg-gray-900/70 transition-all duration-300"
+                      className="group flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-none bg-white/50 dark:bg-gray-900/50 backdrop-blur hover:bg-white/70 dark:hover:bg-gray-900/70 transition-all duration-300"
                     >
                       <div className="flex items-center gap-4">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg ${
-                            index === 0
-                              ? "bg-gradient-to-r from-yellow-500 to-amber-500"
-                              : index === 1
-                                ? "bg-gradient-to-r from-gray-400 to-gray-500"
-                                : index === 2
-                                  ? "bg-gradient-to-r from-orange-500 to-red-500"
-                                  : "bg-gradient-to-r from-blue-500 to-cyan-500"
-                          }`}
-                        >
+                        <div className="w-10 h-10 rounded-none flex items-center justify-center text-sm font-bold text-white bg-gray-500">
                           {index + 1}
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                             {product.name}
                           </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
                             {product.category}
                           </p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-4 gap-8 text-right">
+                      <div className="grid grid-cols-4 gap-6 text-right">
                         <div>
                           <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
                             {formatCurrency(product.revenue)}
@@ -967,18 +988,16 @@ export default function VendorAnalyticsPage() {
               </CardContent>
             </Card>
 
-            {/* Product Performance Chart */}
-            <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5" />
-              <CardHeader className="relative z-10">
-                <CardTitle className="text-gray-900 dark:text-gray-100">
+            <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none mt-6">
+              <CardHeader>
+                <CardTitle className="text-base text-gray-900 dark:text-gray-100">
                   Product Revenue Comparison
                 </CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-400">
+                <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                   Revenue generated by each product
                 </CardDescription>
               </CardHeader>
-              <CardContent className="relative z-10">
+              <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={mockProductPerformance} layout="horizontal">
                     <CartesianGrid
@@ -1008,35 +1027,29 @@ export default function VendorAnalyticsPage() {
                       contentStyle={{
                         backgroundColor: isDarkMode ? "#1f2937" : "#ffffff",
                         border: `1px solid ${isDarkMode ? "#374151" : "#e5e7eb"}`,
-                        borderRadius: "8px",
+                        borderRadius: "0px",
                         color: getTextColor(),
                       }}
                     />
-                    <Bar
-                      dataKey="revenue"
-                      fill="#3B82F6"
-                      radius={[0, 4, 4, 0]}
-                    />
+                    <Bar dataKey="revenue" fill="#3B82F6" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="categories" className="space-y-6">
+          <TabsContent value="categories" className="mt-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Category Pie Chart */}
-              <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5" />
-                <CardHeader className="relative z-10">
-                  <CardTitle className="text-gray-900 dark:text-gray-100">
+              <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none">
+                <CardHeader>
+                  <CardTitle className="text-base text-gray-900 dark:text-gray-100">
                     Revenue by Category
                   </CardTitle>
-                  <CardDescription className="text-gray-600 dark:text-gray-400">
+                  <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                     Distribution of revenue across product categories
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="relative z-10">
+                <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
@@ -1060,7 +1073,7 @@ export default function VendorAnalyticsPage() {
                         contentStyle={{
                           backgroundColor: isDarkMode ? "#1f2937" : "#ffffff",
                           border: `1px solid ${isDarkMode ? "#374151" : "#e5e7eb"}`,
-                          borderRadius: "8px",
+                          borderRadius: "0px",
                           color: getTextColor(),
                         }}
                       />
@@ -1070,43 +1083,41 @@ export default function VendorAnalyticsPage() {
                 </CardContent>
               </Card>
 
-              {/* Category Performance */}
-              <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 via-transparent to-rose-500/5" />
-                <CardHeader className="relative z-10">
-                  <CardTitle className="text-gray-900 dark:text-gray-100">
+              <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none">
+                <CardHeader>
+                  <CardTitle className="text-base text-gray-900 dark:text-gray-100">
                     Category Performance
                   </CardTitle>
-                  <CardDescription className="text-gray-600 dark:text-gray-400">
+                  <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                     Detailed breakdown by category
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="relative z-10">
+                <CardContent>
                   <div className="space-y-4">
                     {mockCategoryData.map((category, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div
-                              className="w-4 h-4 rounded-full shadow-sm"
+                              className="w-3 h-3 rounded-full"
                               style={{ backgroundColor: category.color }}
                             />
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
                               {category.name}
                             </span>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold text-gray-900 dark:text-gray-100">
+                            <p className="font-medium text-gray-900 dark:text-gray-100">
                               {formatCurrency(category.value)}
                             </p>
                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                              {category.percentage}%
+                              {category.percentage.toFixed(1)}%
                             </p>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-none h-2">
                           <div
-                            className="h-2 rounded-full transition-all duration-500 ease-out"
+                            className="h-2 rounded-none transition-all duration-300"
                             style={{
                               width: `${category.percentage}%`,
                               backgroundColor: category.color,
@@ -1121,234 +1132,173 @@ export default function VendorAnalyticsPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="performance" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Performance Metrics */}
-              {[
-                {
-                  title: "Conversion Rate",
-                  value: "2.8%",
-                  change: "+0.3%",
-                  icon: Target,
-                  gradient: "from-green-500 to-emerald-500",
-                  bg: "from-green-500/5 via-transparent to-emerald-500/5",
-                },
-                {
-                  title: "Page Views",
-                  value: "8,950",
-                  change: "+12%",
-                  icon: Eye,
-                  gradient: "from-blue-500 to-cyan-500",
-                  bg: "from-blue-500/5 via-transparent to-cyan-500/5",
-                },
-                {
-                  title: "Customer Rating",
-                  value: "4.7",
-                  change: "+0.1",
-                  icon: Star,
-                  gradient: "from-yellow-500 to-amber-500",
-                  bg: "from-yellow-500/5 via-transparent to-amber-500/5",
-                },
-                {
-                  title: "Response Time",
-                  value: "2.4h",
-                  change: "-0.6h",
-                  icon: Clock,
-                  gradient: "from-purple-500 to-indigo-500",
-                  bg: "from-purple-500/5 via-transparent to-indigo-500/5",
-                },
-              ].map((metric, index) => {
-                const Icon = metric.icon;
-                return (
-                  <Card
-                    key={index}
-                    className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl group"
-                  >
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-br ${metric.bg}`}
-                    />
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-                      <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {metric.title}
-                      </CardTitle>
-                      <div
-                        className={`h-10 w-10 rounded-full bg-gradient-to-r ${metric.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
-                      >
-                        <Icon className="h-5 w-5 text-white" />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="relative z-10">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                        {metric.value}
-                      </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        <span
-                          className={`font-medium ${metric.change.startsWith("+") || metric.change.startsWith("-0") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-                        >
-                          {metric.change}
-                        </span>{" "}
-                        vs last period
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-
-            {/* Performance Insights */}
-            <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5" />
-              <CardHeader className="relative z-10">
-                <CardTitle className="flex items-center gap-3 text-gray-900 dark:text-gray-100">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center">
-                    <Sparkles className="h-4 w-4 text-white" />
-                  </div>
-                  AI-Powered Performance Insights
+          <TabsContent value="performance" className="mt-0">
+            <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none">
+              <CardHeader>
+                <CardTitle className="text-base text-gray-900 dark:text-gray-100">
+                  Performance Insights
                 </CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-400">
-                  Smart recommendations to improve your business performance
+                <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
+                  AI-powered recommendations to improve your business
+                  performance
                 </CardDescription>
               </CardHeader>
-              <CardContent className="relative z-10">
+              <CardContent>
                 <div className="space-y-4">
-                  {[
-                    {
-                      type: "success",
-                      icon: TrendingUp,
-                      title: "Strong Performance",
-                      message:
-                        "Your conversion rate increased by 15% this month. Consider expanding your top-performing Electronics category.",
-                      gradient: "from-green-500/10 to-emerald-500/10",
-                      border: "border-green-200 dark:border-green-800",
-                      text: "text-green-800 dark:text-green-300",
-                    },
-                    {
-                      type: "info",
-                      icon: Zap,
-                      title: "Optimization Opportunity",
-                      message:
-                        "Products in the Accessories category have high views but low conversion. Consider adjusting pricing or product descriptions.",
-                      gradient: "from-blue-500/10 to-cyan-500/10",
-                      border: "border-blue-200 dark:border-blue-800",
-                      text: "text-blue-800 dark:text-blue-300",
-                    },
-                    {
-                      type: "warning",
-                      icon: Award,
-                      title: "Customer Satisfaction",
-                      message:
-                        "Your average rating of 4.7/5 is excellent! Maintain quality standards to keep customers happy.",
-                      gradient: "from-orange-500/10 to-amber-500/10",
-                      border: "border-orange-200 dark:border-orange-800",
-                      text: "text-orange-800 dark:text-orange-300",
-                    },
-                    {
-                      type: "alert",
-                      icon: Target,
-                      title: "Inventory Alert",
-                      message:
-                        "Smart Watch Pro is running low on stock (8 units). Consider restocking soon to avoid stockouts.",
-                      gradient: "from-purple-500/10 to-indigo-500/10",
-                      border: "border-purple-200 dark:border-purple-800",
-                      text: "text-purple-800 dark:text-purple-300",
-                    },
-                  ].map((insight, index) => {
-                    const Icon = insight.icon;
-                    return (
-                      <div
-                        key={index}
-                        className={`flex items-start gap-4 p-4 bg-gradient-to-r ${insight.gradient} border ${insight.border} rounded-lg backdrop-blur`}
-                      >
-                        <div
-                          className={`h-10 w-10 rounded-full bg-gradient-to-r ${insight.type === "success" ? "from-green-500 to-emerald-500" : insight.type === "info" ? "from-blue-500 to-cyan-500" : insight.type === "warning" ? "from-orange-500 to-amber-500" : "from-purple-500 to-indigo-500"} flex items-center justify-center shadow-lg`}
-                        >
-                          <Icon className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className={`font-semibold ${insight.text} mb-1`}>
-                            {insight.title}
-                          </h4>
-                          <p
-                            className={`text-sm ${insight.text.replace("800", "700").replace("300", "400")}`}
-                          >
-                            {insight.message}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-none">
+                    <ArrowTrendingUpIcon className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-green-800 dark:text-green-300">
+                        Strong Performance
+                      </h4>
+                      <p className="text-xs text-green-700 dark:text-green-400">
+                        Your revenue increased by{" "}
+                        {currentPeriodData.revenue.growth.toFixed(1)}% this
+                        period. Keep up the great work!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-none">
+                    <BoltIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                        Optimization Opportunity
+                      </h4>
+                      <p className="text-xs text-blue-700 dark:text-blue-400">
+                        Products in the Accessories category have high views but
+                        low conversion. Consider adjusting pricing or product
+                        descriptions.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-none">
+                    <TrophyIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                        Customer Satisfaction
+                      </h4>
+                      <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                        Your average rating of 4.7/5 is excellent! Maintain
+                        quality standards to keep customers happy.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-none">
+                    <TagIcon className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-purple-800 dark:text-purple-300">
+                        Inventory Alert
+                      </h4>
+                      <p className="text-xs text-purple-700 dark:text-purple-400">
+                        Smart Watch Pro is running low on stock (8 units).
+                        Consider restocking soon to avoid stockouts.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Goals & Targets */}
-            <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 via-transparent to-pink-500/5" />
-              <CardHeader className="relative z-10">
-                <CardTitle className="flex items-center gap-3 text-gray-900 dark:text-gray-100">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 flex items-center justify-center">
-                    <Target className="h-4 w-4 text-white" />
-                  </div>
+            <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none mt-6">
+              <CardHeader>
+                <CardTitle className="text-base text-gray-900 dark:text-gray-100">
                   Goals & Targets
                 </CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-400">
+                <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
                   Track your progress toward monthly and quarterly goals
                 </CardDescription>
               </CardHeader>
-              <CardContent className="relative z-10">
+              <CardContent>
                 <div className="space-y-6">
-                  {[
-                    {
-                      label: "Monthly Revenue Goal",
-                      current: currentPeriodData.revenue.value,
-                      target: 30000,
-                      color: "bg-blue-500",
-                      gradient: "from-blue-500 to-cyan-500",
-                    },
-                    {
-                      label: "Customer Acquisition",
-                      current: currentPeriodData.customers.value,
-                      target: 200,
-                      color: "bg-green-500",
-                      gradient: "from-green-500 to-emerald-500",
-                    },
-                    {
-                      label: "Order Volume",
-                      current: currentPeriodData.orders.value,
-                      target: 300,
-                      color: "bg-purple-500",
-                      gradient: "from-purple-500 to-indigo-500",
-                    },
-                  ].map((goal, index) => (
-                    <div key={index}>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          {goal.label}
-                        </span>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {index === 0
-                            ? formatCurrency(goal.current)
-                            : goal.current}{" "}
-                          /{" "}
-                          {index === 0
-                            ? formatCurrency(goal.target)
-                            : goal.target}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 shadow-inner">
-                        <div
-                          className={`bg-gradient-to-r ${goal.gradient} h-3 rounded-full transition-all duration-500 ease-out shadow-sm`}
-                          style={{
-                            width: `${Math.min((goal.current / goal.target) * 100, 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        {((goal.current / goal.target) * 100).toFixed(1)}%
-                        completed
-                      </p>
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Monthly Revenue Goal
+                      </span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {formatCurrency(currentPeriodData.revenue.value)} /{" "}
+                        {formatCurrency(30000)}
+                      </span>
                     </div>
-                  ))}
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-none h-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-none transition-all duration-300"
+                        style={{
+                          width: `${Math.min(
+                            (currentPeriodData.revenue.value / 30000) * 100,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      {(
+                        (currentPeriodData.revenue.value / 30000) *
+                        100
+                      ).toFixed(1)}
+                      % completed
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Customer Acquisition
+                      </span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {currentPeriodData.customers.value} / 200
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-none h-2">
+                      <div
+                        className="bg-green-500 h-2 rounded-none transition-all duration-300"
+                        style={{
+                          width: `${Math.min(
+                            (currentPeriodData.customers.value / 200) * 100,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      {(
+                        (currentPeriodData.customers.value / 200) *
+                        100
+                      ).toFixed(1)}
+                      % completed
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Order Volume
+                      </span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {currentPeriodData.orders.value} / 300
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-none h-2">
+                      <div
+                        className="bg-yellow-500 h-2 rounded-none transition-all duration-300"
+                        style={{
+                          width: `${Math.min(
+                            (currentPeriodData.orders.value / 300) * 100,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      {((currentPeriodData.orders.value / 300) * 100).toFixed(
+                        1
+                      )}
+                      % completed
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1357,79 +1307,91 @@ export default function VendorAnalyticsPage() {
       </div>
 
       {/* Quick Actions */}
-      <div
-        className={`transform transition-all duration-700 delay-600 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
+      <Card
+        className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
       >
-        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-500/5 via-transparent to-gray-500/5" />
-          <CardHeader className="relative z-10">
-            <CardTitle className="flex items-center gap-3 text-gray-900 dark:text-gray-100">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-slate-500 to-gray-600 flex items-center justify-center">
-                <Zap className="h-4 w-4 text-white" />
-              </div>
-              Quick Actions
-            </CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">
-              Common actions based on your analytics insights
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                {
-                  label: "Add Product",
-                  sublabel: "Expand inventory",
-                  icon: Package,
-                  gradient: "from-blue-500 to-cyan-500",
-                },
-                {
-                  label: "View Customers",
-                  sublabel: "Manage relationships",
-                  icon: Users,
-                  gradient: "from-green-500 to-emerald-500",
-                },
-                {
-                  label: "Check Orders",
-                  sublabel: "Process pending",
-                  icon: ShoppingCart,
-                  gradient: "from-purple-500 to-indigo-500",
-                },
-                {
-                  label: "Export Report",
-                  sublabel: "Download data",
-                  icon: Download,
-                  gradient: "from-orange-500 to-amber-500",
-                },
-              ].map((action, index) => {
-                const Icon = action.icon;
-                return (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    className="group justify-start h-auto p-4 flex-col gap-3 bg-white/50 dark:bg-gray-900/50 backdrop-blur hover:bg-white/70 dark:hover:bg-gray-900/70 border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
-                  >
-                    <div
-                      className={`h-10 w-10 rounded-full bg-gradient-to-r ${action.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
-                    >
-                      <Icon className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="text-center">
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">
-                        {action.label}
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        {action.sublabel}
-                      </div>
-                    </div>
-                  </Button>
-                );
-              })}
+        <CardHeader>
+          <CardTitle
+            className={`text-base flex items-center gap-3 ${colors.texts.primary}`}
+          >
+            <div className="h-8 w-8 flex items-center justify-center rounded-none">
+              <BoltIcon className={`h-4 w-4 ${colors.icons.primary}`} />
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            Quick Actions
+          </CardTitle>
+          <CardDescription className={`text-sm ${colors.texts.secondary}`}>
+            Common actions based on your analytics insights
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <button
+              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+            >
+              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                <CubeIcon className={`h-6 w-6 ${colors.texts.primary}`} />
+              </div>
+              <div className="text-center">
+                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
+                  Add Product
+                </p>
+                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                  Expand inventory
+                </p>
+              </div>
+            </button>
+            <button
+              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+            >
+              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                <UsersIcon className={`h-6 w-6 ${colors.texts.primary}`} />
+              </div>
+              <div className="text-center">
+                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
+                  View Customers
+                </p>
+                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                  Manage relationships
+                </p>
+              </div>
+            </button>
+            <button
+              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+            >
+              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                <ShoppingCartIcon
+                  className={`h-6 w-6 ${colors.texts.primary}`}
+                />
+              </div>
+              <div className="text-center">
+                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
+                  Check Orders
+                </p>
+                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                  Process pending
+                </p>
+              </div>
+            </button>
+            <button
+              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+            >
+              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                <ArrowDownTrayIcon
+                  className={`h-6 w-6 ${colors.texts.primary}`}
+                />
+              </div>
+              <div className="text-center">
+                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
+                  Export Report
+                </p>
+                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                  Download data
+                </p>
+              </div>
+            </button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

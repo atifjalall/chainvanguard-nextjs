@@ -21,7 +21,7 @@ import {
   Cog6ToothIcon,
   UserIcon,
   WalletIcon,
-  HeartIcon,
+  BookmarkIcon,
   BellIcon,
   ShoppingCartIcon,
   MagnifyingGlassIcon,
@@ -209,7 +209,7 @@ export default function CustomerHeader() {
             className="h-10 w-10 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-none cursor-pointer"
             onClick={() => router.push("/customer/wishlist")}
           >
-            <HeartIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+            <BookmarkIcon className="h-5 w-5 text-gray-900 dark:text-white" />
           </Button>
 
           {/* Cart */}
