@@ -8,6 +8,7 @@ export const NOTIFICATION_TYPES = {
     UPDATED: "vendor_request_updated",
     FULFILLED: "vendor_request_fulfilled",
     PAYMENT_RECEIVED: "vendor_request_payment_received",
+    PAYMENT_CONFIRMED: "vendor_request_payment_confirmed",
   },
 
   // Loyalty

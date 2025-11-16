@@ -29,12 +29,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   MagnifyingGlassIcon,
   FunnelIcon,
   ExclamationCircleIcon,
   BuildingStorefrontIcon,
   CubeIcon,
-  ArrowPathIcon,
   ArrowDownTrayIcon,
   CheckCircleIcon,
   XCircleIcon,
@@ -42,10 +51,68 @@ import {
   ChartPieIcon,
   EyeIcon,
   ShieldCheckIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
-import { Inventory } from "@/types";
 import { toast } from "@/components/ui/sonner";
+
+// VendorInventory type matching backend structure
+interface VendorInventoryItem {
+  _id: string;
+  vendorId: string;
+  vendorName: string;
+  vendorRequestId?: string;
+  orderId: string;
+  supplier: {
+    supplierId: string;
+    supplierName: string;
+    contactEmail: string;
+    contactPhone: string;
+  };
+  inventoryItem: {
+    inventoryId: string;
+    name: string;
+    sku: string;
+    category: string;
+    subcategory: string;
+    description: string;
+    images: Array<{ url: string; _id?: string }>;
+    specifications?: any;
+  };
+  quantity: {
+    received: number;
+    used: number;
+    current: number;
+    reserved: number;
+    damaged: number;
+    unit: string;
+  };
+  cost: {
+    perUnit: number;
+    totalCost: number;
+    currency: string;
+  };
+  dates: {
+    purchased: string | Date;
+    approved?: string | Date;
+    received: string | Date;
+  };
+  location: {
+    warehouse: string;
+    section: string;
+    bin: string;
+  };
+  reorderLevel: number;
+  reorderQuantity: number;
+  status: string;
+  qualityStatus: string;
+  blockchain: {
+    txId: string;
+    verified: boolean;
+  };
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
 import SupplierInventorySkeleton from "@/components/skeletons/supplierInventorySkeleton";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import {
@@ -58,15 +125,16 @@ import {
 } from "@/components/ui/breadcrumb";
 
 import {
-  getSupplierInventory, // Using supplier functions as per user request
+  getVendorInventory,
   getInventoryStats,
-} from "@/lib/api/inventory.api";
+  deleteVendorInventory,
+} from "@/lib/api/vendor.inventory.api";
 
 const statusOptions = [
   "All Status",
   "Active",
   "Low Stock",
-  "Out of Stock",
+  "Depleted",
   "Inactive",
 ];
 
@@ -113,7 +181,7 @@ const RsIcon = () => (
 export default function VendorMyInventoryPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [inventory, setInventory] = useState<Inventory[]>([]);
+  const [inventory, setInventory] = useState<VendorInventoryItem[]>([]);
   const [stats, setStats] = useState({
     totalItems: 0,
     totalValue: 0,
@@ -127,6 +195,9 @@ export default function VendorMyInventoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [sortBy, setSortBy] = useState("name-asc");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -136,25 +207,53 @@ export default function VendorMyInventoryPage() {
   const loadInventory = async () => {
     setIsLoading(true);
     try {
+      console.log("🔄 Loading vendor inventory...");
       const [inventoryResponse, statsResponse] = await Promise.all([
-        getSupplierInventory(), // Using supplier function
-        getInventoryStats(), // Using supplier function
+        getVendorInventory({ limit: 1000 }), // Load up to 1000 items
+        getInventoryStats(),
       ]);
 
-      setInventory(inventoryResponse.data || []);
-      setStats(
-        statsResponse.data || {
-          totalItems: 0,
-          totalValue: 0,
-          inStockItems: 0,
-          lowStockItems: 0,
-          outOfStockItems: 0,
-          reservedItems: 0,
-        }
-      );
+      console.log("📦 Inventory Response:", inventoryResponse);
+      console.log("📊 Stats Response:", statsResponse);
+
+      // The API returns { success, data } where data is the inventory array
+      const inventoryData = Array.isArray(inventoryResponse)
+        ? inventoryResponse
+        : inventoryResponse.data || [];
+
+      setInventory(inventoryData);
+
+      // Calculate stats from actual inventory data
+      const calculatedStats = {
+        totalItems: inventoryData.length,
+        totalValue: inventoryData.reduce(
+          (sum: any, item: { cost: { totalCost: any; }; }) => sum + (item.cost?.totalCost || 0),
+          0
+        ),
+        inStockItems: inventoryData.filter(
+          (item: { quantity: { current: number; }; reorderLevel: number; }) => item.quantity?.current > item.reorderLevel
+        ).length,
+        lowStockItems: inventoryData.filter(
+          (item: { quantity: { current: number; }; reorderLevel: number; }) =>
+            item.quantity?.current > 0 &&
+            item.quantity?.current <= item.reorderLevel
+        ).length,
+        outOfStockItems: inventoryData.filter(
+          (item: { quantity: { current: number; }; }) => item.quantity?.current === 0
+        ).length,
+        reservedItems: inventoryData.reduce(
+          (sum: any, item: { quantity: { reserved: any; }; }) => sum + (item.quantity?.reserved || 0),
+          0
+        ),
+      };
+
+      setStats(calculatedStats);
+
+      console.log("✅ Inventory set:", inventoryData.length, "items");
+      console.log("✅ Stats calculated:", calculatedStats);
       toast.success("Inventory loaded successfully");
     } catch (error: any) {
-      console.error("Error loading inventory:", error);
+      console.error("❌ Error loading inventory:", error);
       toast.error(error?.message || "Failed to load inventory");
       setInventory([]);
     } finally {
@@ -162,11 +261,34 @@ export default function VendorMyInventoryPage() {
     }
   };
 
-  const getStatusDisplay = (item: Inventory) => {
+  const handleDeleteClick = (id: string) => {
+    setItemToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteVendorInventory(itemToDelete);
+      toast.success("Inventory item deleted successfully");
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+      // Reload inventory after deletion
+      loadInventory();
+    } catch (error: any) {
+      console.error("Error deleting inventory:", error);
+      toast.error(error?.message || "Failed to delete inventory item");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const getStatusDisplay = (item: VendorInventoryItem) => {
     if (item.status === "inactive") return "inactive";
-    if (item.stockStatus) return item.stockStatus;
-    if (item.quantity === 0) return "out_of_stock";
-    if (item.quantity <= item.minStockLevel) return "low_stock";
+    if (item.quantity.current === 0) return "out_of_stock";
+    if (item.quantity.current <= item.reorderLevel) return "low_stock";
     return "active";
   };
 
@@ -174,15 +296,21 @@ export default function VendorMyInventoryPage() {
     const statusMapping: Record<string, string> = {
       Active: "active",
       "Low Stock": "low_stock",
-      "Out of Stock": "out_of_stock",
+      Depleted: "out_of_stock",
       Inactive: "inactive",
     };
 
     const filtered = inventory.filter((item) => {
       const matchesSearch =
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase());
+        item.inventoryItem.name
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        item.inventoryItem.sku
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        item.inventoryItem.category
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
 
       const itemStatus = getStatusDisplay(item);
       const normalizedSelectedStatus =
@@ -199,23 +327,17 @@ export default function VendorMyInventoryPage() {
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "name-asc":
-          return a.name.localeCompare(b.name);
+          return a.inventoryItem.name.localeCompare(b.inventoryItem.name);
         case "name-desc":
-          return b.name.localeCompare(a.name);
+          return b.inventoryItem.name.localeCompare(a.inventoryItem.name);
         case "quantity-asc":
-          return a.quantity - b.quantity;
+          return a.quantity.current - b.quantity.current;
         case "quantity-desc":
-          return b.quantity - a.quantity;
+          return b.quantity.current - a.quantity.current;
         case "value-asc":
-          return (
-            (a.stockValue || a.pricePerUnit * a.quantity) -
-            (b.stockValue || b.pricePerUnit * b.quantity)
-          );
+          return a.cost.totalCost - b.cost.totalCost;
         case "value-desc":
-          return (
-            (b.stockValue || b.pricePerUnit * b.quantity) -
-            (a.stockValue || a.pricePerUnit * a.quantity)
-          );
+          return b.cost.totalCost - a.cost.totalCost;
         default:
           return 0;
       }
@@ -257,6 +379,7 @@ export default function VendorMyInventoryPage() {
       case "low_stock":
         return badgeColors.yellow;
       case "out_of_stock":
+      case "depleted":
         return badgeColors.red;
       case "inactive":
         return badgeColors.blue;
@@ -266,6 +389,10 @@ export default function VendorMyInventoryPage() {
   };
 
   const capitalizeStatus = (status: string) => {
+    // Replace out_of_stock with depleted for vendor context
+    if (status === "out_of_stock") {
+      return "Depleted";
+    }
     return status
       .replace(/_/g, " ")
       .split(" ")
@@ -285,12 +412,11 @@ export default function VendorMyInventoryPage() {
       <Breadcrumb className="mb-6">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/vendor">Dashboard</BreadcrumbLink>{" "}
-            {/* Changed href */}
+            <BreadcrumbLink href="/vendor">Dashboard</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>My Inventory</BreadcrumbPage> {/* Changed text */}
+            <BreadcrumbPage>My Inventory</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -304,11 +430,10 @@ export default function VendorMyInventoryPage() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
             <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
-              My Inventory {/* Changed title */}
+              My Inventory
             </h1>
             <p className={`text-base ${colors.texts.secondary}`}>
-              View and manage inventory purchased from suppliers{" "}
-              {/* Changed description */}
+              View and manage inventory purchased from suppliers
             </p>
             {/* Header badges */}
             <div className="flex items-center gap-2 mt-2">
@@ -335,7 +460,6 @@ export default function VendorMyInventoryPage() {
               <ArrowDownTrayIcon className={`h-4 w-4 ${colors.icons.white}`} />
               Export
             </Button>
-            {/* Removed Add Inventory button */}
           </div>
         </div>
       </div>
@@ -345,28 +469,28 @@ export default function VendorMyInventoryPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
-              title: "Total Items",
+              title: "Total Materials",
               value: stats.totalItems.toLocaleString(),
-              subtitle: "Products in inventory",
+              subtitle: "Raw materials in stock",
               icon: CubeIcon,
             },
             {
-              title: "Total Value",
+              title: "Total Investment",
               value: formatCurrencyAbbreviated(stats.totalValue),
-              subtitle: "Inventory worth",
+              subtitle: "Materials worth",
               icon: RsIcon,
             },
             {
-              title: "In Stock",
+              title: "Available Stock",
               value: stats.inStockItems.toString(),
-              subtitle: "Available items",
+              subtitle: "Ready to use",
               icon: CheckCircleIcon,
             },
             {
-              title: "Out of Stock",
-              value: stats.outOfStockItems.toString(),
-              subtitle: "Require attention",
-              icon: XCircleIcon,
+              title: "Low Stock",
+              value: stats.lowStockItems.toString(),
+              subtitle: "Need reordering",
+              icon: ExclamationCircleIcon,
             },
           ].map((stat, index) => (
             <Card
@@ -519,7 +643,7 @@ export default function VendorMyInventoryPage() {
                         className={`h-4 w-4 ${colors.icons.primary}`}
                       />
                     </div>
-                    My Inventory Overview {/* Changed title */}
+                    My Inventory Overview
                   </CardTitle>
                 </div>
                 <div className="flex-1" />
@@ -591,160 +715,155 @@ export default function VendorMyInventoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAndSortedInventory.map((item: Inventory) => {
-                      const itemStatus = getStatusDisplay(item);
-                      const badgeColor = getStatusBadgeColor(itemStatus);
-                      const totalValue =
-                        item.stockValue || item.pricePerUnit * item.quantity;
+                    {filteredAndSortedInventory.map(
+                      (item: VendorInventoryItem) => {
+                        const itemStatus = getStatusDisplay(item);
+                        const badgeColor = getStatusBadgeColor(itemStatus);
+                        const totalValue = item.cost.totalCost;
 
-                      return (
-                        <TableRow
-                          key={item._id}
-                          className={`border-b ${colors.borders.secondary} ${colors.backgrounds.hover} transition-colors rounded-none`}
-                        >
-                          <TableCell className="pl-8 pr-4">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`h-10 w-10 rounded-none ${colors.backgrounds.primary} flex items-center justify-center`}
+                        return (
+                          <TableRow
+                            key={item._id}
+                            className={`border-b ${colors.borders.secondary} ${colors.backgrounds.hover} transition-colors rounded-none`}
+                          >
+                            <TableCell className="pl-8 pr-4">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`h-10 w-10 rounded-none ${colors.backgrounds.primary} flex items-center justify-center`}
+                                >
+                                  {item.inventoryItem.images &&
+                                  item.inventoryItem.images.length > 0 &&
+                                  item.inventoryItem.images[0] ? (
+                                    <img
+                                      src={item.inventoryItem.images[0].url}
+                                      alt={item.inventoryItem.name}
+                                      className="h-10 w-10 object-cover rounded-none"
+                                      style={{
+                                        minWidth: 40,
+                                        minHeight: 40,
+                                        background: "#f3f4f6",
+                                      }}
+                                    />
+                                  ) : (
+                                    <CubeIcon
+                                      className={`h-5 w-5 ${colors.texts.primary}`}
+                                    />
+                                  )}
+                                </div>
+                                <div>
+                                  <p
+                                    className={`font-medium ${colors.texts.primary} text-xs`}
+                                  >
+                                    {item.inventoryItem.name}
+                                  </p>
+                                  <p
+                                    className={`text-xs ${colors.texts.muted}`}
+                                  >
+                                    From: {item.supplier.supplierName}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <Badge
+                                variant="outline"
+                                className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-mono text-xs px-2 py-1 rounded-none"
                               >
-                                {item.images &&
-                                item.images.length > 0 &&
-                                item.images[0] ? (
-                                  <img
-                                    src={
-                                      typeof item.images[0] === "string"
-                                        ? item.images[0]
-                                        : item.images[0]?.url
-                                    }
-                                    alt={item.name}
-                                    className="h-10 w-10 object-cover rounded-none"
-                                    style={{
-                                      minWidth: 40,
-                                      minHeight: 40,
-                                      background: "#f3f4f6",
-                                    }}
-                                  />
-                                ) : (
-                                  <CubeIcon
-                                    className={`h-5 w-5 ${colors.texts.primary}`}
+                                {item.inventoryItem.sku}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <Badge
+                                variant="outline"
+                                className="font-medium text-xs border-0 rounded-none"
+                              >
+                                {item.inventoryItem.category}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <div>
+                                <p className="font-bold text-gray-900 dark:text-gray-100 text-xs">
+                                  {item.quantity.current.toLocaleString()}{" "}
+                                  {item.quantity.unit}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-500">
+                                  Min: {item.reorderLevel}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <Badge
+                                className={`text-xs px-2 py-1 font-medium ${badgeColor.bg} ${badgeColor.border} ${badgeColor.text} flex items-center gap-1 rounded-none`}
+                                variant="secondary"
+                              >
+                                {itemStatus === "active" && (
+                                  <CheckCircleIcon
+                                    className={`h-3 w-3 ${badgeColor.icon}`}
                                   />
                                 )}
-                              </div>
-                              <div>
-                                <p
-                                  className={`font-medium ${colors.texts.primary} text-xs`}
+                                {itemStatus === "low_stock" && (
+                                  <ExclamationCircleIcon
+                                    className={`h-3 w-3 ${badgeColor.icon}`}
+                                  />
+                                )}
+                                {itemStatus === "out_of_stock" && (
+                                  <XCircleIcon
+                                    className={`h-3 w-3 ${badgeColor.icon}`}
+                                  />
+                                )}
+                                {itemStatus === "inactive" && (
+                                  <ClockIcon
+                                    className={`h-3 w-3 ${badgeColor.icon}`}
+                                  />
+                                )}
+                                {capitalizeStatus(itemStatus)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                                {formatCurrencyAbbreviated(item.cost.perUnit)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <span className="font-bold text-green-600 dark:text-green-400 text-xs">
+                                {formatCurrencyAbbreviated(totalValue)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">
+                                {formatDate(item.updatedAt)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-8">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    router.push(
+                                      `/vendor/my-inventory/${item._id}/`
+                                    )
+                                  }
+                                  className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none`}
                                 >
-                                  {item.name}
-                                </p>
-                                <p className={`text-xs ${colors.texts.muted}`}>
-                                  Purchased from supplier
-                                </p>
+                                  <EyeIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
+                                  View
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDeleteClick(item._id)}
+                                  className={`h-8 px-3 ${colors.buttons.secondary} cursor-pointer rounded-none hover:bg-red-50 dark:hover:bg-red-950 hover:border-red-500 dark:hover:border-red-500`}
+                                >
+                                  <TrashIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
+                                  Delete
+                                </Button>
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <Badge
-                              variant="outline"
-                              className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-mono text-xs px-2 py-1 rounded-none"
-                            >
-                              {item.sku}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <Badge
-                              variant="outline"
-                              className="font-medium text-xs border-0 rounded-none"
-                            >
-                              {item.category}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <div>
-                              <p className="font-bold text-gray-900 dark:text-gray-100 text-xs">
-                                {item.quantity.toLocaleString()}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                Min: {item.minStockLevel}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <Badge
-                              className={`text-xs px-2 py-1 font-medium ${badgeColor.bg} ${badgeColor.border} ${badgeColor.text} flex items-center gap-1 rounded-none`}
-                              variant="secondary"
-                            >
-                              {itemStatus === "active" && (
-                                <CheckCircleIcon
-                                  className={`h-3 w-3 ${badgeColor.icon}`}
-                                />
-                              )}
-                              {itemStatus === "low_stock" && (
-                                <ExclamationCircleIcon
-                                  className={`h-3 w-3 ${badgeColor.icon}`}
-                                />
-                              )}
-                              {itemStatus === "out_of_stock" && (
-                                <XCircleIcon
-                                  className={`h-3 w-3 ${badgeColor.icon}`}
-                                />
-                              )}
-                              {itemStatus === "inactive" && (
-                                <ClockIcon
-                                  className={`h-3 w-3 ${badgeColor.icon}`}
-                                />
-                              )}
-                              {capitalizeStatus(itemStatus)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                              {formatCurrencyAbbreviated(item.pricePerUnit)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <span className="font-bold text-green-600 dark:text-green-400 text-xs">
-                              {formatCurrencyAbbreviated(totalValue)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <span className="text-xs text-gray-600 dark:text-gray-400">
-                              {formatDate(item.updatedAt)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-8">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  router.push(
-                                    `/vendor/my-inventory/${item._id}/`
-                                  )
-                                }
-                                className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none`}
-                              >
-                                <EyeIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
-                                View
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  // Placeholder for delete; user will implement
-                                  alert(
-                                    "Delete functionality to be implemented"
-                                  );
-                                }}
-                                className={`h-8 px-3 ${colors.buttons.secondary} cursor-pointer rounded-none`}
-                              >
-                                <XCircleIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -771,19 +890,18 @@ export default function VendorMyInventoryPage() {
                 className={`text-xs ${colors.texts.secondary} mb-6 max-w-md mx-auto`}
               >
                 {stats.totalItems === 0
-                  ? "You haven't purchased any inventory yet."
-                  : "Try adjusting your search terms or filters to find items."}{" "}
-                {/* Changed message */}
+                  ? "You haven't purchased any raw materials yet. Browse supplier inventory to get started."
+                  : "Try adjusting your search terms or filters to find materials."}
               </p>
               {stats.totalItems === 0 ? (
                 <Button
-                  onClick={() => router.push("/vendor/marketplace")} // Changed to marketplace or similar
+                  onClick={() => router.push("/vendor/supplier-inventory")}
                   className={`${colors.buttons.primary} shadow-none hover:shadow-none transition-all duration-300 text-xs cursor-pointer rounded-none`}
                 >
                   <MagnifyingGlassIcon
                     className={`h-4 w-4 ${colors.texts.inverse}`}
                   />
-                  Browse Inventory {/* Changed button text */}
+                  Browse Supplier Inventory
                 </Button>
               ) : (
                 <Button
@@ -801,6 +919,31 @@ export default function VendorMyInventoryPage() {
           </Card>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              inventory item from your records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting} className="rounded-none">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 rounded-none"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

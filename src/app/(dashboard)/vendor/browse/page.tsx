@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -12,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -33,21 +35,17 @@ import {
   FunnelIcon,
   CubeIcon,
   BuildingStorefrontIcon,
-  EyeIcon,
-  ShoppingBagIcon,
   CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon,
-  ChartPieIcon,
   ShieldCheckIcon,
   ArrowPathIcon,
   PlusIcon,
   BookmarkIcon,
+  MinusIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Inventory } from "@/types";
 import { toast } from "@/components/ui/sonner";
-import { badgeColors, colors } from "@/lib/colorConstants";
+import { badgeColors } from "@/lib/colorConstants";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -66,235 +64,8 @@ import {
   PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
-
-// Mock data for demonstration
-const mockInventory: Inventory[] = [
-  {
-    _id: "1",
-    id: "1",
-    name: "Premium Cotton Fabric",
-    sku: "RM-CF-001",
-    slug: "premium-cotton-fabric",
-    category: "Fabric",
-    subcategory: "Cotton Fabric",
-    quantity: 1000,
-    unit: "meters",
-    minStockLevel: 50,
-    reorderLevel: 100,
-    reorderQuantity: 500,
-    pricePerUnit: 450,
-    stockValue: 450000,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "ABC Textiles Ltd",
-    supplierId: "supplier-1",
-    description:
-      "High-quality premium cotton fabric for textile manufacturing.",
-    currency: "PKR",
-    location: "Warehouse A",
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "2",
-    id: "2",
-    name: "Polyester Thread Spools",
-    sku: "YT-PS-002",
-    slug: "polyester-thread-spools",
-    category: "Yarn & Thread",
-    subcategory: "Polyester Thread",
-    quantity: 45,
-    unit: "spools",
-    minStockLevel: 100,
-    reorderLevel: 100,
-    reorderQuantity: 200,
-    pricePerUnit: 85,
-    stockValue: 3825,
-    status: "active",
-    stockStatus: "low_stock",
-    supplierName: "ThreadMasters Co",
-    supplierId: "supplier-2",
-    description: "Durable polyester thread spools in various colors.",
-    currency: "PKR",
-    location: "Warehouse B",
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1623184663110-89ba5b565eb6?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "3",
-    id: "3",
-    name: "Reactive Dye - Red",
-    sku: "DC-RD-003",
-    slug: "reactive-dye-red",
-    category: "Dyes & Chemicals",
-    subcategory: "Reactive Dyes",
-    quantity: 0,
-    unit: "kg",
-    minStockLevel: 20,
-    reorderLevel: 30,
-    reorderQuantity: 100,
-    pricePerUnit: 1250,
-    stockValue: 0,
-    status: "active",
-    stockStatus: "out_of_stock",
-    supplierName: "ColorTech Industries",
-    supplierId: "supplier-3",
-    description: "High-quality reactive dye for cotton and cellulose fibers.",
-    currency: "PKR",
-    location: "Warehouse A",
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1541534401786-2077a6d8d2c8?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "4",
-    id: "4",
-    name: "Metal Zippers - Brass",
-    sku: "TA-MZ-004",
-    slug: "metal-zippers-brass",
-    category: "Trims & Accessories",
-    subcategory: "Zippers",
-    quantity: 5000,
-    unit: "pieces",
-    minStockLevel: 500,
-    reorderLevel: 800,
-    reorderQuantity: 2000,
-    pricePerUnit: 15,
-    stockValue: 75000,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "ZipCraft Solutions",
-    supplierId: "supplier-4",
-    description: "Premium brass metal zippers in various lengths.",
-    currency: "PKR",
-    location: "Warehouse C",
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "5",
-    id: "5",
-    name: "Cardboard Boxes - Medium",
-    sku: "PK-CB-005",
-    slug: "cardboard-boxes-medium",
-    category: "Packaging",
-    subcategory: "Cardboard Boxes",
-    quantity: 2500,
-    unit: "boxes",
-    minStockLevel: 200,
-    reorderLevel: 300,
-    reorderQuantity: 1000,
-    pricePerUnit: 35,
-    stockValue: 87500,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "PackPro Supplies",
-    supplierId: "supplier-5",
-    description: "Sturdy medium-sized cardboard boxes for shipping.",
-    currency: "PKR",
-    location: "Warehouse D",
-    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "6",
-    id: "6",
-    name: "Silk Blend Fabric",
-    sku: "FB-SB-006",
-    slug: "silk-blend-fabric",
-    category: "Fabric",
-    subcategory: "Silk Blend",
-    quantity: 750,
-    unit: "meters",
-    minStockLevel: 100,
-    reorderLevel: 150,
-    reorderQuantity: 400,
-    pricePerUnit: 950,
-    stockValue: 712500,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "Luxury Textiles Inc",
-    supplierId: "supplier-6",
-    description: "Premium silk blend fabric with excellent drape.",
-    currency: "PKR",
-    location: "Warehouse A",
-    createdAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "7",
-    id: "7",
-    name: "Industrial Sewing Machine",
-    sku: "TE-ISM-007",
-    slug: "industrial-sewing-machine",
-    category: "Tools & Equipment",
-    subcategory: "Sewing Machines",
-    quantity: 3,
-    unit: "units",
-    minStockLevel: 2,
-    reorderLevel: 2,
-    reorderQuantity: 5,
-    pricePerUnit: 125000,
-    stockValue: 375000,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "MachineWorks Ltd",
-    supplierId: "supplier-7",
-    description: "Heavy-duty industrial sewing machine for production.",
-    currency: "PKR",
-    location: "Equipment Storage",
-    createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1605002215863-f2c0ba8aa187?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "8",
-    id: "8",
-    name: "Cotton Yarn Cones",
-    sku: "YT-CY-008",
-    slug: "cotton-yarn-cones",
-    category: "Yarn & Thread",
-    subcategory: "Cotton Yarn",
-    quantity: 850,
-    unit: "cones",
-    minStockLevel: 100,
-    reorderLevel: 150,
-    reorderQuantity: 500,
-    pricePerUnit: 320,
-    stockValue: 272000,
-    status: "active",
-    stockStatus: "in_stock",
-    supplierName: "YarnCraft Suppliers",
-    supplierId: "supplier-8",
-    description: "100% cotton yarn cones for knitting and weaving.",
-    currency: "PKR",
-    location: "Warehouse B",
-    createdAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
-    images: [
-      "https://images.unsplash.com/photo-1604079628040-94301bb21b91?w=400&h=600&fit=crop&crop=center",
-    ],
-    updatedAt: new Date().toISOString(),
-  },
-];
+import vendorBrowseApi from "@/lib/api/vendor.browse.api";
+import vendorRequestApi from "@/lib/api/vendor.request.api";
 
 const categoryOptions = [
   "All Categories",
@@ -390,45 +161,6 @@ const fabricTypes = [
   "Blended",
 ];
 
-const patterns = [
-  "All Patterns",
-  "Solid",
-  "Striped",
-  "Checked",
-  "Printed",
-  "Floral",
-  "Abstract",
-  "Geometric",
-  "Polka Dot",
-  "Embroidered",
-  "Plaid",
-];
-
-const finishes = [
-  "All Finishes",
-  "Raw",
-  "Bleached",
-  "Dyed",
-  "Printed",
-  "Coated",
-  "Plain",
-  "Satin",
-  "Plain Weave",
-  "Twill",
-  "Satin Weave",
-  "Jacquard",
-  "Houndstooth",
-  "Tartan",
-  "Chevron",
-  "Geometric",
-  "Abstract",
-  "Digital",
-  "3D",
-  "Textured",
-  "Metallic",
-];
-
-// Elegant Inventory Card Component
 interface InventoryCardProps {
   item: Inventory;
   onRequest: (item: Inventory) => void;
@@ -494,7 +226,6 @@ function InventoryCard({
     <div
       className={`group relative w-full ${isOutOfStock ? "opacity-60" : ""}`}
     >
-      {/* Image Container */}
       <div className="relative bg-gray-100 w-full">
         <div
           className={`block ${isOutOfStock ? "cursor-not-allowed" : "cursor-pointer"}`}
@@ -535,7 +266,6 @@ function InventoryCard({
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse" />
               )}
 
-            {/* Out of Stock Overlay */}
             {isOutOfStock && (
               <div className="absolute inset-0 bg-gray-500/40 backdrop-blur-[1px] flex items-center justify-center">
                 <div className="bg-gray-800/90 px-3 py-1.5">
@@ -548,7 +278,6 @@ function InventoryCard({
           </div>
         </div>
 
-        {/* Request Button - Plus Icon Bottom Left */}
         {!isOutOfStock && (
           <button
             className="absolute bottom-3 left-3 w-5 h-5 bg-white flex items-center justify-center opacity-100 transition-opacity duration-200 cursor-pointer"
@@ -563,9 +292,7 @@ function InventoryCard({
         )}
       </div>
 
-      {/* Content Below Image */}
       <div className="pt-3 pb-4">
-        {/* Supplier Badge */}
         <div className="mb-2">
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 dark:bg-gray-800">
             <BuildingStorefrontIcon className="h-3 w-3 text-gray-500" />
@@ -575,7 +302,6 @@ function InventoryCard({
           </div>
         </div>
 
-        {/* Item Name and Save Button */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <div
             className={`flex-1 ${isOutOfStock ? "cursor-not-allowed" : "cursor-pointer"}`}
@@ -607,12 +333,10 @@ function InventoryCard({
           )}
         </div>
 
-        {/* SKU and Category */}
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
           {item.sku} • {item.category}
         </p>
 
-        {/* Price and Stock Info */}
         <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
           <div className="flex flex-col">
             <span
@@ -626,7 +350,7 @@ function InventoryCard({
             <span
               className={`text-xs font-medium ${isOutOfStock ? "text-gray-400" : isLowStock ? "text-yellow-600" : "text-gray-600"}`}
             >
-              {item.quantity} {item.unit}
+              {item.availableQuantity || item.quantity} {item.unit}
             </span>
             <span className="text-xs text-gray-500">available</span>
           </div>
@@ -650,81 +374,105 @@ export default function VendorBrowsePage() {
   const [selectedMaterialType, setSelectedMaterialType] = useState("All Types");
   const [selectedFabricType, setSelectedFabricType] =
     useState("All Fabric Types");
-  const [selectedPattern, setSelectedPattern] = useState("All Patterns");
-  const [selectedFinish, setSelectedFinish] = useState("All Finishes");
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Inventory | null>(null);
   const [requestQuantity, setRequestQuantity] = useState(1);
   const [requestNotes, setRequestNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const itemsPerPage = 20;
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
+    }, 500); // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     setIsVisible(true);
     loadInventory();
-  }, []);
-
-  const loadInventory = async () => {
-    setIsLoading(true);
-    try {
-      // Replace with actual API call
-      setInventory(mockInventory);
-      toast.success("Inventory loaded successfully");
-    } catch (error: any) {
-      console.error("Error loading inventory:", error);
-      toast.error(error?.message || "Failed to load inventory");
-      setInventory([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const filteredInventory = useMemo(() => {
-    return inventory.filter((item) => {
-      const matchesSearch =
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.supplierName?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesCategory =
-        selectedCategory === "All Categories" ||
-        item.category === selectedCategory;
-
-      const matchesSubcategory =
-        selectedSubcategory === "All Subcategories" ||
-        item.subcategory === selectedSubcategory;
-
-      const matchesMaterialType =
-        selectedMaterialType === "All Types" ||
-        item.materialType === selectedMaterialType;
-
-      const matchesFabricType =
-        selectedFabricType === "All Fabric Types" ||
-        item.fabricType === selectedFabricType;
-
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesSubcategory &&
-        matchesMaterialType &&
-        matchesFabricType
-      );
-    });
+    loadWishlist();
   }, [
-    inventory,
-    searchTerm,
+    currentPage,
+    debouncedSearchTerm,
     selectedCategory,
     selectedSubcategory,
     selectedMaterialType,
     selectedFabricType,
   ]);
 
-  const totalPages = Math.ceil(filteredInventory.length / itemsPerPage);
-  const paginatedInventory = filteredInventory.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const loadInventory = async () => {
+    setIsLoading(true);
+    try {
+      const response = await vendorBrowseApi.browseInventory({
+        search: debouncedSearchTerm || undefined,
+        category:
+          selectedCategory !== "All Categories" ? selectedCategory : undefined,
+        subcategory:
+          selectedSubcategory !== "All Subcategories"
+            ? selectedSubcategory
+            : undefined,
+        materialType:
+          selectedMaterialType !== "All Types"
+            ? selectedMaterialType
+            : undefined,
+        fabricType:
+          selectedFabricType !== "All Fabric Types"
+            ? selectedFabricType
+            : undefined,
+        page: currentPage,
+        limit: itemsPerPage,
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      });
+
+      if (response.success && response.data) {
+        setInventory(response.data);
+        setTotalItems(response.pagination.total);
+        setTotalPages(response.pagination.pages);
+      }
+    } catch (error: any) {
+      console.error("Error loading inventory:", error);
+      toast.error(error?.response?.data?.message || "Failed to load inventory");
+      setInventory([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadWishlist = async () => {
+    try {
+      const response = await vendorBrowseApi.getWishlist();
+
+      if (response.success && response.wishlist) {
+        const items = response.wishlist.items;
+
+        const wishlistIds = new Set(
+          items
+            .map((item) => {
+              if (typeof item.productId === "string") {
+                return item.productId;
+              } else if (item.productId && typeof item.productId === "object") {
+                return (item.productId as any)._id as string;
+              }
+              return null;
+            })
+            .filter((id): id is string => id !== null)
+        );
+
+        setSavedItems(wishlistIds);
+      }
+    } catch (error: any) {
+      console.error("Error loading wishlist:", error);
+    }
+  };
 
   const handleRequest = (item: Inventory) => {
     setSelectedItem(item);
@@ -737,30 +485,113 @@ export default function VendorBrowsePage() {
     router.push(`/vendor/browse/${id}`);
   };
 
-  const handleToggleSaved = (id: string) => {
-    setSavedItems((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
+  const handleToggleSaved = async (id: string) => {
+    const wasAdding = !savedItems.has(id);
+
+    // Optimistic update - update UI immediately
+    if (savedItems.has(id)) {
+      setSavedItems((prev) => {
+        const newSet = new Set(prev);
         newSet.delete(id);
-        toast.info("Removed from saved items");
-      } else {
-        newSet.add(id);
+        return newSet;
+      });
+    } else {
+      setSavedItems((prev) => new Set(prev).add(id));
+    }
+
+    try {
+      // Then sync with server in background
+      if (wasAdding) {
+        await vendorBrowseApi.addToWishlist(id, {
+          notifyOnPriceDrop: true,
+          notifyOnBackInStock: true,
+        });
         toast.success("Added to saved items");
+      } else {
+        await vendorBrowseApi.removeFromWishlist(id);
+        toast.info("Removed from saved items");
       }
-      return newSet;
-    });
+    } catch (error: any) {
+      // Rollback on error
+      if (wasAdding) {
+        setSavedItems((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      } else {
+        setSavedItems((prev) => new Set(prev).add(id));
+      }
+
+      console.error("Error toggling wishlist:", error);
+      toast.error(
+        error?.response?.data?.message || "Failed to update wishlist"
+      );
+    }
   };
 
-  const submitRequest = () => {
+  const handleQuantityChange = (delta: number) => {
+    const maxQty =
+      selectedItem?.availableQuantity || selectedItem?.quantity || 1;
+    const newQty = Math.max(1, Math.min(maxQty, requestQuantity + delta));
+    setRequestQuantity(newQty);
+  };
+
+  const submitRequest = async () => {
     if (!selectedItem) return;
-    toast.success(`Request submitted for ${selectedItem.name}`);
-    setRequestDialogOpen(false);
+
+    setIsSubmitting(true);
+    try {
+      // Extract supplier ID properly
+      let extractedSupplierId: string;
+
+      if (typeof selectedItem.supplierId === "string") {
+        extractedSupplierId = selectedItem.supplierId;
+      } else if (
+        selectedItem.supplierId &&
+        typeof selectedItem.supplierId === "object" &&
+        "_id" in selectedItem.supplierId
+      ) {
+        extractedSupplierId = selectedItem.supplierId._id;
+      } else {
+        toast.error("Invalid supplier information");
+        return;
+      }
+
+      const response = await vendorRequestApi.createRequest({
+        supplierId: extractedSupplierId,
+        items: [
+          {
+            inventoryId: selectedItem._id,
+            quantity: requestQuantity,
+            notes: requestNotes || undefined,
+          },
+        ],
+        vendorNotes: requestNotes || undefined,
+      });
+
+      if (response.success) {
+        // FIX: Backend returns 'request' not 'data'
+        const requestNumber = (response as any).request?.requestNumber || "N/A";
+        toast.success(
+          `Request submitted successfully! Request #${requestNumber}`
+        );
+        setRequestDialogOpen(false);
+        setRequestQuantity(1);
+        setRequestNotes("");
+        setSelectedItem(null);
+      }
+    } catch (error: any) {
+      console.error("Error submitting request:", error);
+      toast.error(error?.response?.data?.message || "Failed to submit request");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Add a helper function to generate page numbers with ellipsis
   const getPageNumbers = () => {
     const pages = [];
-    const maxVisiblePages = 5; // Show up to 5 page numbers at a time
+    const maxVisiblePages = 5;
     const half = Math.floor(maxVisiblePages / 2);
 
     let start = Math.max(1, currentPage - half);
@@ -787,21 +618,21 @@ export default function VendorBrowsePage() {
     return pages;
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <ArrowPathIcon className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading inventory...</p>
-        </div>
-      </div>
-    );
-  }
+  const calculateTotal = () => {
+    if (!selectedItem) return { subtotal: 0, tax: 0, total: 0 };
+
+    const subtotal = selectedItem.pricePerUnit * requestQuantity;
+    const tax = subtotal * 0.1; // 10% tax
+    const total = subtotal + tax;
+
+    return { subtotal, tax, total };
+  };
+
+  const { subtotal, tax, total } = calculateTotal();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-sm">
       <div className="relative z-10 p-4 md:p-6">
-        {/* Breadcrumb */}
         <Breadcrumb className="mb-6">
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -814,7 +645,6 @@ export default function VendorBrowsePage() {
           </BreadcrumbList>
         </Breadcrumb>
 
-        {/* Header */}
         <div
           className={`mb-6 transform transition-all duration-700 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
@@ -832,7 +662,7 @@ export default function VendorBrowsePage() {
                 <Badge
                   className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
                 >
-                  {filteredInventory.length} Items Available
+                  {totalItems} Items Available
                 </Badge>
                 <Badge
                   className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
@@ -847,7 +677,6 @@ export default function VendorBrowsePage() {
           </div>
         </div>
 
-        {/* Filters Card */}
         <div className="mb-6 transform transition-all duration-700 delay-300">
           <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none shadow-none">
             <CardHeader>
@@ -865,7 +694,9 @@ export default function VendorBrowsePage() {
                 <Input
                   placeholder="Search by name, SKU, category, or supplier"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                  }}
                   className="pl-9 h-9 w-full border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white rounded-none transition-colors duration-200"
                 />
               </div>
@@ -879,6 +710,7 @@ export default function VendorBrowsePage() {
                     onValueChange={(value) => {
                       setSelectedCategory(value);
                       setSelectedSubcategory("All Subcategories");
+                      setCurrentPage(1);
                     }}
                   >
                     <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
@@ -903,7 +735,10 @@ export default function VendorBrowsePage() {
                   </Label>
                   <Select
                     value={selectedSubcategory}
-                    onValueChange={setSelectedSubcategory}
+                    onValueChange={(value) => {
+                      setSelectedSubcategory(value);
+                      setCurrentPage(1);
+                    }}
                     disabled={selectedCategory === "All Categories"}
                   >
                     <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
@@ -935,7 +770,10 @@ export default function VendorBrowsePage() {
                   </Label>
                   <Select
                     value={selectedMaterialType}
-                    onValueChange={setSelectedMaterialType}
+                    onValueChange={(value) => {
+                      setSelectedMaterialType(value);
+                      setCurrentPage(1);
+                    }}
                   >
                     <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
                       <SelectValue placeholder="Select material type" />
@@ -959,7 +797,10 @@ export default function VendorBrowsePage() {
                   </Label>
                   <Select
                     value={selectedFabricType}
-                    onValueChange={setSelectedFabricType}
+                    onValueChange={(value) => {
+                      setSelectedFabricType(value);
+                      setCurrentPage(1);
+                    }}
                   >
                     <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
                       <SelectValue placeholder="Select fabric type" />
@@ -987,7 +828,10 @@ export default function VendorBrowsePage() {
                     >
                       &quot;{searchTerm}&quot;
                       <button
-                        onClick={() => setSearchTerm("")}
+                        onClick={() => {
+                          setSearchTerm("");
+                          setCurrentPage(1);
+                        }}
                         className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
                       >
                         ×
@@ -1004,6 +848,7 @@ export default function VendorBrowsePage() {
                         onClick={() => {
                           setSelectedCategory("All Categories");
                           setSelectedSubcategory("All Subcategories");
+                          setCurrentPage(1);
                         }}
                         className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
                       >
@@ -1018,9 +863,10 @@ export default function VendorBrowsePage() {
                     >
                       {selectedSubcategory}
                       <button
-                        onClick={() =>
-                          setSelectedSubcategory("All Subcategories")
-                        }
+                        onClick={() => {
+                          setSelectedSubcategory("All Subcategories");
+                          setCurrentPage(1);
+                        }}
                         className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
                       >
                         ×
@@ -1034,7 +880,10 @@ export default function VendorBrowsePage() {
                     >
                       {selectedMaterialType}
                       <button
-                        onClick={() => setSelectedMaterialType("All Types")}
+                        onClick={() => {
+                          setSelectedMaterialType("All Types");
+                          setCurrentPage(1);
+                        }}
                         className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
                       >
                         ×
@@ -1048,9 +897,10 @@ export default function VendorBrowsePage() {
                     >
                       {selectedFabricType}
                       <button
-                        onClick={() =>
-                          setSelectedFabricType("All Fabric Types")
-                        }
+                        onClick={() => {
+                          setSelectedFabricType("All Fabric Types");
+                          setCurrentPage(1);
+                        }}
                         className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
                       >
                         ×
@@ -1058,7 +908,7 @@ export default function VendorBrowsePage() {
                     </Badge>
                   )}
                   <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
-                    {filteredInventory.length} items found
+                    {totalItems} items found
                   </span>
                 </div>
               </div>
@@ -1066,11 +916,19 @@ export default function VendorBrowsePage() {
           </Card>
         </div>
 
-        {/* Inventory Grid */}
         <div className="transform transition-all duration-700 delay-400">
-          {paginatedInventory.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <ArrowPathIcon className="h-8 w-8 animate-spin mx-auto mb-4 text-gray-400" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Loading inventory...
+                </p>
+              </div>
+            </div>
+          ) : inventory.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-              {paginatedInventory.map((item) => (
+              {inventory.map((item) => (
                 <InventoryCard
                   key={item._id}
                   item={item}
@@ -1101,6 +959,7 @@ export default function VendorBrowsePage() {
                     setSelectedSubcategory("All Subcategories");
                     setSelectedMaterialType("All Types");
                     setSelectedFabricType("All Fabric Types");
+                    setCurrentPage(1);
                   }}
                   className="inline-flex items-center gap-2 text-xs cursor-pointer border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-all rounded-none h-8"
                 >
@@ -1109,7 +968,6 @@ export default function VendorBrowsePage() {
               </CardContent>
             </Card>
           )}
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="mt-6 flex justify-center">
               <Pagination>
@@ -1159,19 +1017,47 @@ export default function VendorBrowsePage() {
           )}
         </div>
 
-        {/* Request Dialog */}
+        {/* Enhanced Request Dialog */}
         <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
           <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none shadow-none max-w-sm md:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-sm md:text-base font-bold flex items-center gap-3 text-gray-900 dark:text-white">
-                <ShoppingBagIcon className="h-4 w-4" />
-                Request Item
+              <DialogTitle className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                Request Material
               </DialogTitle>
               <DialogDescription className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                 Request {selectedItem?.name} from {selectedItem?.supplierName}
               </DialogDescription>
             </DialogHeader>
+
             <div className="space-y-4">
+              {/* Item Summary */}
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-none space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600 dark:text-gray-400">SKU:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {selectedItem?.sku}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Category:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {selectedItem?.category}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Available:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {selectedItem?.availableQuantity || selectedItem?.quantity}{" "}
+                    {selectedItem?.unit}
+                  </span>
+                </div>
+              </div>
+
+              {/* Quantity Selector */}
               <div className="space-y-2">
                 <Label
                   htmlFor="quantity"
@@ -1179,37 +1065,82 @@ export default function VendorBrowsePage() {
                 >
                   Quantity ({selectedItem?.unit})
                 </Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  max={selectedItem?.quantity}
-                  value={requestQuantity}
-                  onChange={(e) =>
-                    setRequestQuantity(parseInt(e.target.value) || 1)
-                  }
-                  className="rounded-none border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white h-9"
-                />
-                <p className="text-xs text-gray-500">
-                  Available: {selectedItem?.quantity} {selectedItem?.unit}
-                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuantityChange(-1)}
+                    disabled={requestQuantity <= 1}
+                    className="h-9 w-9 p-0 rounded-none border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white"
+                  >
+                    <MinusIcon className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    max={
+                      selectedItem?.availableQuantity || selectedItem?.quantity
+                    }
+                    value={requestQuantity}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 1;
+                      const maxQty =
+                        selectedItem?.availableQuantity ||
+                        selectedItem?.quantity ||
+                        1;
+                      setRequestQuantity(Math.max(1, Math.min(maxQty, val)));
+                    }}
+                    className="flex-1 text-center rounded-none border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white h-9"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuantityChange(1)}
+                    disabled={
+                      requestQuantity >=
+                      (selectedItem?.availableQuantity ||
+                        selectedItem?.quantity ||
+                        1)
+                    }
+                    className="h-9 w-9 p-0 rounded-none border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
+
+              {/* Notes */}
               <div className="space-y-2">
                 <Label
                   htmlFor="notes"
                   className="text-sm font-medium text-gray-900 dark:text-white"
                 >
-                  Notes (Optional)
+                  Notes{" "}
+                  <span className="text-gray-500 font-normal">
+                    (Optional, max 500 chars)
+                  </span>
                 </Label>
-                <Input
+                <Textarea
                   id="notes"
-                  placeholder="Any special requirements..."
+                  placeholder="Any special requirements or instructions..."
                   value={requestNotes}
-                  onChange={(e) => setRequestNotes(e.target.value)}
-                  className="rounded-none border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white h-9"
+                  onChange={(e) =>
+                    setRequestNotes(e.target.value.slice(0, 500))
+                  }
+                  maxLength={500}
+                  rows={3}
+                  className="rounded-none border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white resize-none"
                 />
+                <p className="text-xs text-gray-500 text-right">
+                  {requestNotes.length}/500
+                </p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-none space-y-1">
+
+              {/* Cost Breakdown */}
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-none space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">
                     Unit Price:
@@ -1218,21 +1149,44 @@ export default function VendorBrowsePage() {
                     Rs {selectedItem?.pricePerUnit.toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm font-semibold">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Quantity:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {requestQuantity} {selectedItem?.unit}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Subtotal:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    Rs {subtotal.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Tax (10%):
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    Rs {tax.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm font-semibold pt-2 border-t border-gray-200 dark:border-gray-700">
                   <span className="text-gray-900 dark:text-white">Total:</span>
                   <span className="text-gray-900 dark:text-white">
-                    Rs{" "}
-                    {(
-                      (selectedItem?.pricePerUnit || 0) * requestQuantity
-                    ).toFixed(2)}
+                    Rs {total.toFixed(2)}
                   </span>
                 </div>
               </div>
             </div>
+
             <DialogFooter className="gap-2 md:gap-3">
               <Button
                 variant="outline"
                 onClick={() => setRequestDialogOpen(false)}
+                disabled={isSubmitting}
                 size="sm"
                 className="text-xs md:text-sm cursor-pointer h-8 md:h-9 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white rounded-none"
               >
@@ -1240,11 +1194,21 @@ export default function VendorBrowsePage() {
               </Button>
               <Button
                 onClick={submitRequest}
+                disabled={isSubmitting}
                 size="sm"
                 className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
               >
-                <CheckCircleIcon className="h-3 w-3 mr-2" />
-                Submit Request
+                {isSubmitting ? (
+                  <>
+                    <ArrowPathIcon className="h-3 w-3 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="h-3 w-3 mr-2" />
+                    Submit Request
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

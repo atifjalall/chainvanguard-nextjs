@@ -104,6 +104,8 @@ const notificationSchema = new Schema(
         "vendor_request_updated",
         "vendor_request_fulfilled",
         "vendor_request_completed",
+        "vendor_request_payment_received",
+        "vendor_request_payment_confirmed",
       ],
       required: true,
       index: true,

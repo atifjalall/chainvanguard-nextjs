@@ -74,7 +74,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
-  getSupplierRequests,
+  getMyRequests,
   getRequestStats,
   getRequestById,
 } from "@/lib/api/vendor.request.api";
@@ -108,16 +108,6 @@ const RsIcon = () => (
     />
   </svg>
 );
-
-const transactionTypes = [
-  "All Types",
-  "sale",
-  "purchase",
-  "adjustment",
-  "transfer",
-];
-
-const transactionStatuses = ["All Status", "completed", "pending", "cancelled"];
 
 const sortOptions = [
   { value: "date-desc", label: "Date: Newest First" },
@@ -168,8 +158,8 @@ export default function VendorTransactionsPage() {
   const loadTransactions = async () => {
     setIsLoading(true);
     try {
-      // Fetch completed requests from backend (update to vendor-specific API later)
-      const response = await getSupplierRequests({
+      // Fetch completed requests from vendor API
+      const response = await getMyRequests({
         status: "completed",
         page: 1,
         limit: 100,
@@ -180,18 +170,20 @@ export default function VendorTransactionsPage() {
       if (response.success && response.requests) {
         // Transform backend data to match UI structure
         const transformedTransactions = response.requests.map((req: any) => {
-          const vendorInfo =
-            typeof req.vendorId === "object" ? req.vendorId : null;
+          const supplierInfo =
+            typeof req.supplierId === "object" ? req.supplierId : null;
 
           return {
             id: req._id,
             reference: req.requestNumber,
             date: req.createdAt,
-            type: "purchase", // Changed to purchase for vendor
+            type: "purchase", // All are purchases for vendors
             status: "completed",
             amount: req.total || 0,
             vendor:
-              vendorInfo?.name || vendorInfo?.companyName || "Unknown Supplier", // Renamed to Supplier
+              supplierInfo?.name ||
+              supplierInfo?.companyName ||
+              "Unknown Supplier",
             product:
               req.items?.length > 0
                 ? req.items[0].inventoryName || "Multiple Items"
@@ -220,61 +212,17 @@ export default function VendorTransactionsPage() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
-      case "pending":
-        return <ClockIcon className="h-4 w-4 text-yellow-500" />;
-      case "cancelled":
-        return <XCircleIcon className="h-4 w-4 text-red-500" />;
-      default:
-        return <ExclamationCircleIcon className="h-4 w-4 text-gray-500" />;
-    }
-  };
+  // Dynamically compute transaction types from data
+  const transactionTypes = useMemo(() => {
+    const types = new Set(transactions.map((t) => t.type));
+    return ["All Types", ...Array.from(types)];
+  }, [transactions]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800";
-      case "pending":
-        return "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800";
-      case "cancelled":
-        return "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
-      default:
-        return "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "sale":
-        return <ArrowUpIcon className="h-4 w-4 text-green-500" />;
-      case "purchase":
-        return <ArrowDownIcon className="h-4 w-4 text-blue-500" />;
-      case "adjustment":
-        return <ArrowsUpDownIcon className="h-4 w-4 text-orange-500" />;
-      case "transfer":
-        return <ArrowsUpDownIcon className="h-4 w-4 text-purple-500" />;
-      default:
-        return <ChartPieIcon className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "sale":
-        return "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800";
-      case "purchase":
-        return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800";
-      case "adjustment":
-        return "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800";
-      case "transfer":
-        return "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800";
-      default:
-        return "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
-    }
-  };
+  // Dynamically compute transaction statuses from data
+  const transactionStatuses = useMemo(() => {
+    const statuses = new Set(transactions.map((t) => t.status));
+    return ["All Status", ...Array.from(statuses)];
+  }, [transactions]);
 
   const filteredAndSortedTransactions = useMemo(() => {
     const filtered = transactions.filter((transaction) => {
@@ -282,7 +230,7 @@ export default function VendorTransactionsPage() {
         transaction.reference
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        transaction.vendor.toLowerCase().includes(searchTerm.toLowerCase()) || // Now searches supplier
+        transaction.vendor.toLowerCase().includes(searchTerm.toLowerCase()) || // Searches supplier
         transaction.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
         transaction.description
           .toLowerCase()
@@ -385,7 +333,7 @@ export default function VendorTransactionsPage() {
       formatDate(t.date),
       t.type,
       t.status,
-      t.vendor, // Now supplier
+      t.vendor, // Supplier
       t.product,
       t.quantity,
       t.amount,
@@ -449,13 +397,13 @@ export default function VendorTransactionsPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div className="flex justify-between items-start">
             <div className="space-y-2">
               <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
-                Supply Chain Transactions
+                Vendor Purchase Transactions
               </h1>
               <p className={`text-base ${colors.texts.secondary}`}>
-                Track all blockchain transactions and financial activities
+                Track all completed purchases and financial activities
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -496,7 +444,7 @@ export default function VendorTransactionsPage() {
               {
                 title: "Total Purchases",
                 value: formatCurrencyAbbreviated(totalPurchases),
-                subtitle: "Amount spent",
+                subtitle: "Amount spent on completed purchases",
                 icon: CreditCardIcon,
               },
               {
@@ -559,7 +507,7 @@ export default function VendorTransactionsPage() {
                   className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
                 />
                 <Input
-                  placeholder="Search by reference, supplier or product" // Changed to supplier
+                  placeholder="Search by reference, supplier or product"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
@@ -729,7 +677,7 @@ export default function VendorTransactionsPage() {
                           className={`h-4 w-4 ${colors.icons.primary}`}
                         />
                       </div>
-                      Transaction History
+                      Purchase History
                     </CardTitle>
                   </div>
                   <div className="flex-1" />
@@ -980,15 +928,15 @@ export default function VendorTransactionsPage() {
                   className={`text-base font-semibold ${colors.texts.primary} mb-2`}
                 >
                   {totalTransactions === 0
-                    ? "No Transactions Yet"
-                    : "No Transactions Found"}
+                    ? "No Purchases Yet"
+                    : "No Purchases Found"}
                 </h3>
                 <p
                   className={`text-xs ${colors.texts.secondary} mb-6 max-w-md mx-auto`}
                 >
                   {totalTransactions === 0
-                    ? "Start purchasing from suppliers to see transactions here." // Updated message
-                    : "Try adjusting your search terms or filters to find transactions."}
+                    ? "Start purchasing from suppliers to see transactions here."
+                    : "Try adjusting your search terms or filters to find purchases."}
                 </p>
                 {totalTransactions === 0 ? null : (
                   <Button
@@ -1021,12 +969,12 @@ export default function VendorTransactionsPage() {
                 className={`flex items-center gap-3 text-xl font-bold ${colors.texts.primary}`}
               >
                 <EyeIcon className={`h-5 w-5 ${colors.icons.primary}`} />
-                Transaction Details
+                Purchase Details
               </DialogTitle>
               <DialogDescription
                 className={`text-base ${colors.texts.secondary}`}
               >
-                Detailed information about the completed transaction
+                Detailed information about the completed purchase
               </DialogDescription>
             </DialogHeader>
             {selectedRequest && (
@@ -1107,19 +1055,19 @@ export default function VendorTransactionsPage() {
                         <BuildingOffice2Icon
                           className={`h-5 w-5 ${colors.icons.primary}`}
                         />
-                        Supplier Information // Changed from Vendor Information
+                        Supplier Information
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div>
                         <p className={`text-xs ${colors.texts.muted}`}>
-                          Supplier Name // Changed
+                          Supplier Name
                         </p>
                         <p
                           className={`font-medium ${colors.texts.primary} text-sm`}
                         >
-                          {typeof selectedRequest.vendorId === "object"
-                            ? selectedRequest.vendorId?.name
+                          {typeof selectedRequest.supplierId === "object"
+                            ? selectedRequest.supplierId?.name
                             : "N/A"}
                         </p>
                       </div>
@@ -1130,8 +1078,8 @@ export default function VendorTransactionsPage() {
                         <p
                           className={`font-medium ${colors.texts.primary} text-sm`}
                         >
-                          {typeof selectedRequest.vendorId === "object"
-                            ? selectedRequest.vendorId?.companyName
+                          {typeof selectedRequest.supplierId === "object"
+                            ? selectedRequest.supplierId?.companyName
                             : "N/A"}
                         </p>
                       </div>
@@ -1140,8 +1088,8 @@ export default function VendorTransactionsPage() {
                         <p
                           className={`font-medium ${colors.texts.primary} text-sm`}
                         >
-                          {typeof selectedRequest.vendorId === "object"
-                            ? selectedRequest.vendorId?.email
+                          {typeof selectedRequest.supplierId === "object"
+                            ? selectedRequest.supplierId?.email
                             : "N/A"}
                         </p>
                       </div>

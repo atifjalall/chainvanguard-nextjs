@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import * as vendorRequestApi from "@/lib/api/vendor.request.api";
+import * as vendorRequestApi from "@/lib/api/supplier.vendor.request.api";
 import type { VendorRequest, VendorRequestStats } from "@/types";
 import { toast } from "sonner";
 import {

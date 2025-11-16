@@ -103,7 +103,7 @@ class VendorInventoryService {
           cost: {
             perUnit: item.price,
             totalCost: item.subtotal,
-            currency: order.currency || "PKR",
+            currency: order.currency || "USD",
           },
           dates: {
             purchased: vendorRequest?.createdAt || order.createdAt,
@@ -722,6 +722,54 @@ class VendorInventoryService {
       return inventory;
     } catch (error) {
       logger.error("Error searching inventory:", error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // DELETE INVENTORY
+  // ========================================
+  async deleteInventory(inventoryId, vendorId) {
+    try {
+      const inventory = await VendorInventory.findOne({
+        _id: inventoryId,
+        vendorId: vendorId,
+      });
+
+      if (!inventory) {
+        throw new Error("Inventory not found or access denied");
+      }
+
+      // Check if inventory has been used
+      if (inventory.quantity.used > 0) {
+        throw new Error(
+          "Cannot delete inventory that has been used in production"
+        );
+      }
+
+      // Check if inventory has reserved quantity
+      if (inventory.quantity.reserved > 0) {
+        throw new Error("Cannot delete inventory with reserved quantity");
+      }
+
+      await VendorInventory.deleteOne({ _id: inventoryId });
+
+      // Send notification
+      await notificationService.createNotification({
+        userId: vendorId,
+        userRole: "vendor",
+        type: "inventory_deleted",
+        category: "inventory",
+        title: "Inventory Deleted",
+        message: `${inventory.inventoryItem.name} has been removed from your inventory`,
+        priority: "medium",
+      });
+
+      logger.info(`Deleted inventory ${inventoryId} for vendor ${vendorId}`);
+
+      return { success: true };
+    } catch (error) {
+      logger.error("Error deleting inventory:", error);
       throw error;
     }
   }
