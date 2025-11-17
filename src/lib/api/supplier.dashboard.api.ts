@@ -9,6 +9,8 @@ import {
   RecentActivity,
 } from "@/types";
 import supplierVendorApi from "./supplier.vendor.api";
+import supplierRatingApi from "./supplier.rating.api";
+import { SupplierRatingStats } from "@/types";
 
 /**
  * ========================================
@@ -153,7 +155,7 @@ export const analyticsApi = {
       status: "active" as const,
       lastOrderDate: vendor.lastOrderDate,
       joinedDate: vendor.lastOrderDate, // Using lastOrderDate as fallback
-      rating: vendor.rating || 4.5,
+      rating: vendor.rating || 0, // Changed from 4.5 to 0 for accuracy when no ratings exist
       location: vendor.location || { city: "N/A", country: "N/A" },
     }));
   },
@@ -247,5 +249,81 @@ export const analyticsApi = {
       console.error("[Analytics API] Error exporting analytics:", error);
       throw new Error(error?.message || "Failed to export analytics");
     }
+  },
+
+  /**
+   * Get supplier's rating statistics
+   * Called from dashboard to show rating info
+   */
+  getSupplierRatingStats: async (
+    supplierId: string
+  ): Promise<{
+    averageRating: number;
+    totalRatings: number;
+    stats?: SupplierRatingStats;
+  }> => {
+    try {
+      const response = await supplierRatingApi.getRatingStats(supplierId);
+      if (response.success && response.stats) {
+        return {
+          averageRating: response.stats.averageOverall || 0,
+          totalRatings: response.stats.totalRatings || 0,
+          stats: response.stats,
+        };
+      }
+      return { averageRating: 0, totalRatings: 0 };
+    } catch (error) {
+      console.error("Error fetching rating stats:", error);
+      return { averageRating: 0, totalRatings: 0 };
+    }
+  },
+
+  /**
+   * Transform inventory categories to top products display
+   */
+  transformInventoryToTopProducts: (inventoryStats: any): TopProduct[] => {
+    if (!inventoryStats?.byCategory) return [];
+
+    return inventoryStats.byCategory
+      .sort((a: any, b: any) => b.totalValue - a.totalValue)
+      .slice(0, 5)
+      .map((cat: any, index: number) => ({
+        id: cat._id || `inv-${index}`,
+        name: `${cat._id || "General"} Inventory`,
+        category: cat._id || "Supplies",
+        totalSold: cat.totalQuantity || 0,
+        revenue: cat.totalValue || 0,
+        currentStock: cat.itemCount || 0,
+        status: (cat.itemCount > 5
+          ? "active"
+          : cat.itemCount > 0
+            ? "low_stock"
+            : "out_of_stock") as "active" | "low_stock" | "out_of_stock",
+        lastSold: new Date().toISOString(),
+        averageRating: 4.5,
+      }));
+  },
+
+  /**
+   * Transform top products data from analytics to TopProduct interface
+   */
+  transformTopProducts: (topProducts: any[]): TopProduct[] => {
+    return topProducts.map((product) => ({
+      id: product._id || product.id,
+      name: product.name,
+      category: product.category,
+      totalSold: product.totalSupplied || 0,
+      revenue: product.revenue || 0,
+      currentStock: product.currentStock || 0,
+      status: (product.currentStock > 5
+        ? "active"
+        : product.currentStock > 0
+          ? "low_stock"
+          : "out_of_stock") as "active" | "low_stock" | "out_of_stock",
+      lastSold: product.lastSold || new Date().toISOString(),
+      averageRating: product.averageRating || 4.5,
+      image:
+        typeof product.image === "string" ? product.image : product.image?.url,
+    }));
   },
 };

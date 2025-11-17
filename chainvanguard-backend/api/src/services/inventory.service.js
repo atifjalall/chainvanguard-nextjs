@@ -465,7 +465,13 @@ class InventoryService {
       if (supplierId) query.supplierId = supplierId;
       if (category) query.category = category;
       if (subcategory) query.subcategory = subcategory;
-      if (status) query.status = status;
+
+      // ✅ FIX: Always exclude discontinued items unless explicitly requested
+      if (status) {
+        query.status = status;
+      } else {
+        query.status = { $ne: "discontinued" };
+      }
 
       if (minPrice || maxPrice) {
         query.pricePerUnit = {};
@@ -582,7 +588,14 @@ class InventoryService {
   // ========================================
   async updateInventoryItem(inventoryId, userId, updates, files = {}) {
     try {
-      logger.info("Updating inventory item", { inventoryId, userId });
+      logger.info("Updating inventory item", {
+        inventoryId,
+        userId,
+        hasManufactureDate: !!updates.manufactureDate,
+        hasExpiryDate: !!updates.expiryDate,
+        manufactureDateValue: updates.manufactureDate,
+        expiryDateValue: updates.expiryDate,
+      });
 
       const inventory = await Inventory.findById(inventoryId);
       if (!inventory) {
@@ -688,6 +701,15 @@ class InventoryService {
         Array.isArray(inventory.batches) &&
         inventory.batches.length > 0
       ) {
+        logger.info("📅 Updating batch dates", {
+          isBatchTracked: inventory.isBatchTracked,
+          hasBatches: inventory.batches.length > 0,
+          manufactureDate: updates.manufactureDate,
+          expiryDate: updates.expiryDate,
+          oldManufactureDate: inventory.batches[0].manufactureDate,
+          oldExpiryDate: inventory.batches[0].expiryDate,
+        });
+
         if (
           updates.manufactureDate &&
           !isNaN(Date.parse(updates.manufactureDate))
@@ -695,10 +717,22 @@ class InventoryService {
           inventory.batches[0].manufactureDate = new Date(
             updates.manufactureDate
           );
+          logger.info("✅ Updated manufactureDate in batch[0]", {
+            newDate: inventory.batches[0].manufactureDate,
+          });
         }
         if (updates.expiryDate && !isNaN(Date.parse(updates.expiryDate))) {
           inventory.batches[0].expiryDate = new Date(updates.expiryDate);
+          logger.info("✅ Updated expiryDate in batch[0]", {
+            newDate: inventory.batches[0].expiryDate,
+          });
         }
+      } else {
+        logger.warn("⚠️  Cannot update batch dates", {
+          isBatchTracked: inventory.isBatchTracked,
+          hasBatches: inventory.batches?.length > 0,
+          batchCount: inventory.batches?.length || 0,
+        });
       }
 
       // Track quantity changes
@@ -745,10 +779,20 @@ class InventoryService {
   // ========================================
   async deleteInventoryItem(inventoryId, userId) {
     try {
+      logger.info("🗑️  Starting delete inventory item", { inventoryId, userId });
+
       const inventory = await Inventory.findById(inventoryId);
       if (!inventory) {
         throw new Error("Inventory item not found");
       }
+
+      logger.info("📦 Found inventory item", {
+        id: inventory._id,
+        name: inventory.name,
+        currentStatus: inventory.status,
+        quantity: inventory.quantity,
+        minStockLevel: inventory.minStockLevel,
+      });
 
       if (inventory.supplierId.toString() !== userId) {
         throw new Error("Unauthorized to delete this inventory item");
@@ -761,9 +805,21 @@ class InventoryService {
       }
 
       // Soft delete
+      logger.info("🔄 Setting status to discontinued...");
       inventory.status = "discontinued";
       inventory.isActive = false;
+
+      logger.info("💾 Saving inventory with new status...", {
+        statusBeforeSave: inventory.status,
+      });
       await inventory.save();
+
+      logger.info("✅ Inventory saved, verifying status...");
+      const verifyInventory = await Inventory.findById(inventoryId);
+      logger.info("🔍 Verification result", {
+        savedStatus: verifyInventory.status,
+        isActive: verifyInventory.isActive,
+      });
 
       // Update blockchain
       await fabricService.invoke(
@@ -775,11 +831,11 @@ class InventoryService {
       // ✅ CRITICAL: Invalidate caches AFTER successful deletion
       await this.invalidateInventoryCaches(userId, inventoryId);
 
-      logger.info("Inventory item deleted", { inventoryId });
+      logger.info("✅ Inventory item deleted successfully", { inventoryId });
 
       return { message: "Inventory item deleted successfully" };
     } catch (error) {
-      logger.error("Error deleting inventory:", error);
+      logger.error("❌ Error deleting inventory:", error);
       throw error;
     }
   }
@@ -896,7 +952,9 @@ class InventoryService {
     try {
       logger.info("Fetching inventory stats", { supplierId });
 
+      // ✅ FIX: Always exclude discontinued items from stats
       const filter = supplierId ? { supplierId } : {};
+      filter.status = { $ne: "discontinued" };
 
       const cacheKey = `inventory:stats:${supplierId || "global"}`;
 

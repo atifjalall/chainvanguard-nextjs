@@ -22,8 +22,6 @@ import {
   TrashIcon,
   ShieldCheckIcon,
   ClockIcon,
-  CubeIcon,
-  TagIcon,
   BuildingStorefrontIcon,
   DocumentTextIcon,
   CheckCircleIcon,
@@ -33,7 +31,10 @@ import {
   XMarkIcon,
   SwatchIcon,
   CalendarIcon,
-  CheckBadgeIcon,
+  XCircleIcon,
+  ArrowPathIcon,
+  DocumentDuplicateIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -47,7 +48,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import { getInventoryDetail, deleteInventory } from "@/lib/api/inventory.api";
-import { Inventory } from "@/types";
 
 type InventoryItem = {
   id: string;
@@ -149,6 +149,7 @@ type InventoryItem = {
   qrCodeGenerated: boolean;
   totalScans: number;
   ipfsHash: string;
+  blockchainInventoryId?: string;
   qrMetadata?: {
     generatedAt?: string | Date;
     generatedBy?: string;
@@ -165,18 +166,19 @@ export default function InventoryDetailPage() {
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isImageModalOpen, setIsImageModalOpen] = useState<boolean>(false);
+  const [isCopied, setIsCopied] = useState<boolean>(false);
 
   const [inventoryItem, setInventoryItem] = useState<InventoryItem | null>(
     null
   );
 
   // Add constants for consistent spacing
-  const CARD_HEADER_PADDING = "pb-6";
-  const CARD_CONTENT_PADDING = "pt-6";
+  const CARD_HEADER_PADDING = "px-6 pb-0";
+  const CARD_CONTENT_PADDING = "px-6 pt-0";
 
   // Helper function to get image URL as string
   const getImageUrl = (
@@ -211,7 +213,10 @@ export default function InventoryDetailPage() {
           committedQuantity: inventoryData.committedQuantity || 0,
           damagedQuantity: inventoryData.damagedQuantity || 0,
           availableQuantity:
-            inventoryData.availableQuantity || inventoryData.quantity,
+            inventoryData.quantity -
+            (inventoryData.reservedQuantity || 0) -
+            (inventoryData.committedQuantity || 0) -
+            (inventoryData.damagedQuantity || 0),
           minStockLevel: inventoryData.minStockLevel,
           reorderLevel: inventoryData.reorderLevel,
           reorderQuantity: inventoryData.reorderQuantity,
@@ -346,6 +351,7 @@ export default function InventoryDetailPage() {
             "",
           qrCodeGenerated: inventoryData.qrCodeGenerated || false,
           totalScans: inventoryData.totalScans || 0,
+          blockchainInventoryId: inventoryData.blockchainInventoryId || "",
           ipfsHash:
             inventoryData.ipfsHash || inventoryData.qrMetadata?.ipfsHash || "",
           qrMetadata: inventoryData.qrMetadata
@@ -373,7 +379,7 @@ export default function InventoryDetailPage() {
     fetchInventoryData();
   }, [inventoryId, router]);
 
-  const handleDelete = async () => {
+  const confirmDelete = async () => {
     setIsDeleting(true);
     try {
       await deleteInventory(inventoryId);
@@ -384,7 +390,7 @@ export default function InventoryDetailPage() {
       console.error("Delete error:", error);
     } finally {
       setIsDeleting(false);
-      setIsDeleteDialogOpen(false);
+      setIsDeleteOpen(false);
     }
   };
 
@@ -420,6 +426,37 @@ export default function InventoryDetailPage() {
       month: "long",
       day: "numeric",
     });
+  };
+
+  // Helper function to get grade color
+  const getGradeColor = (grade: string) => {
+    switch (grade) {
+      case "A":
+        return badgeColors.blue;
+      case "B":
+        return badgeColors.green;
+      case "C":
+        return badgeColors.yellow;
+      case "Rejected":
+        return badgeColors.red;
+      default:
+        return badgeColors.grey;
+    }
+  };
+
+  const handleCopyHash = async () => {
+    if (inventoryItem?.blockchainInventoryId) {
+      try {
+        await navigator.clipboard.writeText(
+          inventoryItem.blockchainInventoryId
+        );
+        toast.success("Blockchain hash copied to clipboard");
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } catch (error) {
+        toast.error("Failed to copy hash");
+      }
+    }
   };
 
   if (isLoading) {
@@ -479,8 +516,8 @@ export default function InventoryDetailPage() {
               <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                 SKU: {inventoryItem.sku}
               </p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
                   <Badge
                     className={`${
                       stockStatus.color === "green"
@@ -500,8 +537,18 @@ export default function InventoryDetailPage() {
                   >
                     {stockStatus.label}
                   </Badge>
-                  <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
-                    <CheckBadgeIcon className="h-3 w-3 mr-1 text-green-700 dark:text-green-400" />
+                  <Badge
+                    className={`${getGradeColor(inventoryItem.qualityGrade).bg} ${getGradeColor(inventoryItem.qualityGrade).border} ${getGradeColor(inventoryItem.qualityGrade).text} text-xs rounded-none`}
+                  >
+                    {inventoryItem.qualityGrade === "Rejected" ? (
+                      <XCircleIcon
+                        className={`h-3 w-3 mr-1 ${getGradeColor(inventoryItem.qualityGrade).icon}`}
+                      />
+                    ) : (
+                      <CheckCircleIcon
+                        className={`h-3 w-3 mr-1 ${getGradeColor(inventoryItem.qualityGrade).icon}`}
+                      />
+                    )}
                     Grade {inventoryItem.qualityGrade}
                   </Badge>
                   {inventoryItem.isSustainable && (
@@ -510,17 +557,12 @@ export default function InventoryDetailPage() {
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
                     {inventoryItem.category}
                   </Badge>
-                  {inventoryItem.isBatchTracked && (
-                    <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
-                      Batch Tracked
-                    </Badge>
-                  )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Badge
                     className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
                   >
@@ -533,7 +575,7 @@ export default function InventoryDetailPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 size="sm"
@@ -548,7 +590,7 @@ export default function InventoryDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsDeleteDialogOpen(true)}
+                onClick={() => setIsDeleteOpen(true)}
                 className="text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400"
               >
                 <TrashIcon className="h-3 w-3 md:h-4 md:w-4 mr-2 text-red-600 dark:text-red-400" />
@@ -560,9 +602,9 @@ export default function InventoryDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           <div className="lg:col-span-1 space-y-4 md:space-y-6">
-            <Card className="bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none">
+            <Card className="bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none overflow-hidden p-0">
               <CardContent className="p-0">
-                <div className="relative aspect-[4/3] group">
+                <div className="relative aspect-[3/4]">
                   {inventoryItem.images.length > 0 ? (
                     <>
                       <img
@@ -641,7 +683,7 @@ export default function InventoryDetailPage() {
                   Stock Summary
                 </h3>
               </CardHeader>
-              <Separator />
+              <Separator className="-mt-2" />
               <CardContent className={CARD_CONTENT_PADDING + " space-y-3"}>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -662,7 +704,7 @@ export default function InventoryDetailPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                      Reserved
+                      Total Sold
                     </p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">
                       {inventoryItem.reservedQuantity} {inventoryItem.unit}
@@ -686,7 +728,7 @@ export default function InventoryDetailPage() {
                   Pricing Information
                 </h3>
               </CardHeader>
-              <Separator />
+              <Separator className="-mt-2" />
               <CardContent className={CARD_CONTENT_PADDING + " space-y-3"}>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
@@ -721,7 +763,7 @@ export default function InventoryDetailPage() {
                       %
                     </span>
                   </div>
-                  <Separator />
+                  <Separator className="-mt-2" />
                   <div className="flex justify-between items-center pt-2">
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                       Total Value
@@ -735,13 +777,48 @@ export default function InventoryDetailPage() {
               </CardContent>
             </Card>
 
+            {inventoryItem.blockchainInventoryId && (
+              <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
+                <CardHeader className={CARD_HEADER_PADDING}>
+                  <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
+                    Blockchain Information
+                  </h3>
+                </CardHeader>
+                <Separator className="-mt-2" />
+                <CardContent className={CARD_CONTENT_PADDING}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                      Blockchain Hash
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs font-mono text-gray-900 dark:text-white truncate max-w-[200px]">
+                        {inventoryItem.blockchainInventoryId}
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCopyHash}
+                        className="p-1 h-6 w-6 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                      >
+                        {isCopied ? (
+                          <CheckIcon className="h-4 w-4" />
+                        ) : (
+                          <DocumentDuplicateIcon className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
               <CardHeader className={CARD_HEADER_PADDING}>
                 <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
                   QR Code & Tracking
                 </h3>
               </CardHeader>
-              <Separator />
+              <Separator className="-mt-2" />
               <CardContent className={CARD_CONTENT_PADDING}>
                 <div className="flex flex-col items-center space-y-4">
                   {inventoryItem.qrCodeImageUrl ? (
@@ -833,31 +910,31 @@ export default function InventoryDetailPage() {
 
           <div className="lg:col-span-2">
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="w-full justify-start bg-transparent rounded-none p-0 h-auto mb-4 md:mb-6 flex-wrap">
+              <TabsList className="w-full justify-start bg-transparent rounded-none p-0 h-auto mb-2 md:mb-3 flex-wrap">
                 <TabsTrigger
                   value="basic"
-                  className="mr-2 mb-2 rounded-none bg-transparent data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-gray-900 text-xs px-3 py-2 border border-gray-200 dark:border-gray-700 data-[state=active]:border-gray-900 dark:data-[state=active]:border-white hover:border-black dark:hover:border-white"
+                  className="mr-3 mb-2 rounded-none bg-transparent data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-gray-900 text-xs px-3 py-2 border border-gray-200 dark:border-gray-700 data-[state=active]:border-gray-900 dark:data-[state=active]:border-white hover:border-black dark:hover:border-white cursor-pointer"
                 >
                   <DocumentTextIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                   Basic Info
                 </TabsTrigger>
                 <TabsTrigger
                   value="textile"
-                  className="mr-2 mb-2 rounded-none bg-transparent data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-gray-900 text-xs px-3 py-2 border border-gray-200 dark:border-gray-700 data-[state=active]:border-gray-900 dark:data-[state=active]:border-white hover:border-black dark:hover:border-white"
+                  className="mr-3 mb-2 rounded-none bg-transparent data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-gray-900 text-xs px-3 py-2 border border-gray-200 dark:border-gray-700 data-[state=active]:border-gray-900 dark:data-[state=active]:border-white hover:border-black dark:hover:border-white cursor-pointer"
                 >
                   <SwatchIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                   Textile Details
                 </TabsTrigger>
                 <TabsTrigger
                   value="stock"
-                  className="mr-2 mb-2 rounded-none bg-transparent data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-gray-900 text-xs px-3 py-2 border border-gray-200 dark:border-gray-700 data-[state=active]:border-gray-900 dark:data-[state=active]:border-white hover:border-black dark:hover:border-white"
+                  className="mr-3 mb-2 rounded-none bg-transparent data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-gray-900 text-xs px-3 py-2 border border-gray-200 dark:border-gray-700 data-[state=active]:border-gray-900 dark:data-[state=active]:border-white hover:border-black dark:hover:border-white cursor-pointer"
                 >
                   <ArchiveBoxIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                   Stock Management
                 </TabsTrigger>
                 <TabsTrigger
                   value="supplier"
-                  className="mb-2 rounded-none bg-transparent data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-gray-900 text-xs px-3 py-2 border border-gray-200 dark:border-gray-700 data-[state=active]:border-gray-900 dark:data-[state=active]:border-white hover:border-black dark:hover:border-white"
+                  className="mb-2 rounded-none bg-transparent data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-gray-900 text-xs px-3 py-2 border border-gray-200 dark:border-gray-700 data-[state=active]:border-gray-900 dark:data-[state=active]:border-white hover:border-black dark:hover:border-white cursor-pointer"
                 >
                   <BuildingStorefrontIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                   Supplier
@@ -874,9 +951,12 @@ export default function InventoryDetailPage() {
                       Item Description
                     </h3>
                   </CardHeader>
-                  <Separator />
+                  <Separator className="-mt-2" />
                   <CardContent className={CARD_CONTENT_PADDING}>
-                    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    <p
+                      className="text-xs md:text-sm text-gray-600 dark:text-gray-400 leading-relaxed break-words overflow-wrap-anywhere"
+                      style={{ whiteSpace: "pre-wrap", textAlign: "justify" }}
+                    >
                       {inventoryItem.description}
                     </p>
                   </CardContent>
@@ -888,7 +968,7 @@ export default function InventoryDetailPage() {
                       Classification
                     </h3>
                   </CardHeader>
-                  <Separator />
+                  <Separator className="-mt-2" />
                   <CardContent className={CARD_CONTENT_PADDING}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
@@ -933,14 +1013,25 @@ export default function InventoryDetailPage() {
                       Quality & Compliance
                     </h3>
                   </CardHeader>
-                  <Separator />
+                  <Separator className="-mt-2" />
                   <CardContent className={CARD_CONTENT_PADDING + " space-y-4"}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <p className="text-xs text-gray-600 dark:text-gray-400">
                           Quality Grade
                         </p>
-                        <Badge className="bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-xs rounded-none">
+                        <Badge
+                          className={`${getGradeColor(inventoryItem.qualityGrade).bg} ${getGradeColor(inventoryItem.qualityGrade).border} ${getGradeColor(inventoryItem.qualityGrade).text} text-xs rounded-none`}
+                        >
+                          {inventoryItem.qualityGrade === "Rejected" ? (
+                            <XCircleIcon
+                              className={`h-3 w-3 mr-1 ${getGradeColor(inventoryItem.qualityGrade).icon}`}
+                            />
+                          ) : (
+                            <CheckCircleIcon
+                              className={`h-3 w-3 mr-1 ${getGradeColor(inventoryItem.qualityGrade).icon}`}
+                            />
+                          )}
                           Grade {inventoryItem.qualityGrade}
                         </Badge>
                       </div>
@@ -956,7 +1047,7 @@ export default function InventoryDetailPage() {
 
                     {inventoryItem.certifications.length > 0 && (
                       <>
-                        <Separator />
+                        <Separator className="-mt-2" />
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                             Certifications
@@ -978,49 +1069,6 @@ export default function InventoryDetailPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                  <CardHeader className={CARD_HEADER_PADDING}>
-                    <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
-                      Tags
-                    </h3>
-                  </CardHeader>
-                  <Separator />
-                  <CardContent className={CARD_CONTENT_PADDING}>
-                    <div className="flex flex-wrap gap-2">
-                      {inventoryItem.tags.map((tag) => (
-                        <Badge
-                          key={tag}
-                          className="bg-gray-100/10 dark:bg-gray-800/10 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-400 text-xs rounded-none"
-                        >
-                          <TagIcon className="h-3 w-3 mr-1 text-gray-700 dark:text-gray-400" />
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
-                  <CardHeader className={CARD_HEADER_PADDING}>
-                    <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
-                      Suitable For
-                    </h3>
-                  </CardHeader>
-                  <Separator />
-                  <CardContent className={CARD_CONTENT_PADDING}>
-                    <div className="flex flex-wrap gap-2">
-                      {inventoryItem.suitableFor.map((item) => (
-                        <Badge
-                          key={item}
-                          className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none"
-                        >
-                          {item}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
                 {(inventoryItem.internalCode ||
                   inventoryItem.barcode ||
                   inventoryItem.notes) && (
@@ -1030,7 +1078,7 @@ export default function InventoryDetailPage() {
                         Additional Information
                       </h3>
                     </CardHeader>
-                    <Separator />
+                    <Separator className="-mt-2" />
                     <CardContent
                       className={CARD_CONTENT_PADDING + " space-y-3"}
                     >
@@ -1076,7 +1124,7 @@ export default function InventoryDetailPage() {
                       Textile Specifications
                     </h3>
                   </CardHeader>
-                  <Separator />
+                  <Separator className="-mt-2" />
                   <CardContent className={CARD_CONTENT_PADDING}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                       <div className="space-y-4">
@@ -1234,7 +1282,7 @@ export default function InventoryDetailPage() {
                       Stock Levels
                     </h3>
                   </CardHeader>
-                  <Separator />
+                  <Separator className="-mt-2" />
                   <CardContent className={CARD_CONTENT_PADDING}>
                     <div className="grid grid-cols-2 gap-4 md:gap-6">
                       <div className="space-y-1">
@@ -1255,7 +1303,7 @@ export default function InventoryDetailPage() {
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-gray-600 dark:text-gray-400">
-                          Reserved
+                          Total Sold
                         </p>
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
                           {inventoryItem.reservedQuantity} {inventoryItem.unit}
@@ -1311,7 +1359,7 @@ export default function InventoryDetailPage() {
                       Stock Management Settings
                     </h3>
                   </CardHeader>
-                  <Separator />
+                  <Separator className="-mt-2" />
                   <CardContent className={CARD_CONTENT_PADDING}>
                     <div className="grid grid-cols-2 gap-4 md:gap-6">
                       <div className="space-y-1">
@@ -1381,7 +1429,7 @@ export default function InventoryDetailPage() {
                         Storage Location
                       </h3>
                     </CardHeader>
-                    <Separator />
+                    <Separator className="-mt-2" />
                     <CardContent className={CARD_CONTENT_PADDING}>
                       <div className="space-y-4">
                         <div className="space-y-1">
@@ -1395,7 +1443,7 @@ export default function InventoryDetailPage() {
 
                         {inventoryItem.storageLocations.length > 0 && (
                           <>
-                            <Separator />
+                            <Separator className="-mt-2" />
                             <div>
                               <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
                                 Detailed Storage Locations
@@ -1483,7 +1531,7 @@ export default function InventoryDetailPage() {
                         Batch Tracking
                       </h3>
                     </CardHeader>
-                    <Separator />
+                    <Separator className="-mt-2" />
                     <CardContent className={CARD_CONTENT_PADDING}>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
@@ -1541,7 +1589,7 @@ export default function InventoryDetailPage() {
                         Physical & Environmental Data
                       </h3>
                     </CardHeader>
-                    <Separator />
+                    <Separator className="-mt-2" />
                     <CardContent className={CARD_CONTENT_PADDING}>
                       <div className="grid grid-cols-2 gap-4">
                         {inventoryItem.weight && (
@@ -1600,7 +1648,7 @@ export default function InventoryDetailPage() {
                       Supplier Information
                     </h3>
                   </CardHeader>
-                  <Separator />
+                  <Separator className="-mt-2" />
                   <CardContent className={CARD_CONTENT_PADDING + " space-y-4"}>
                     <div>
                       <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
@@ -1611,7 +1659,7 @@ export default function InventoryDetailPage() {
                       </p>
                     </div>
 
-                    <Separator />
+                    <Separator className="-mt-2" />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -1643,7 +1691,7 @@ export default function InventoryDetailPage() {
 
                     {inventoryItem.manufacturer && (
                       <>
-                        <Separator />
+                        <Separator className="-mt-2" />
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                             Manufacturer
@@ -1663,7 +1711,7 @@ export default function InventoryDetailPage() {
                       Delivery Information
                     </h3>
                   </CardHeader>
-                  <Separator />
+                  <Separator className="-mt-2" />
                   <CardContent className={CARD_CONTENT_PADDING}>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-none">
@@ -1696,47 +1744,52 @@ export default function InventoryDetailPage() {
           </div>
         </div>
 
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none shadow-none max-w-sm md:max-w-md">
+        <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <DialogContent
+            className={`max-w-md ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none shadow-none`}
+          >
             <DialogHeader>
-              <DialogTitle className="text-sm md:text-base font-bold flex items-center gap-3 text-gray-900 dark:text-white">
-                <TrashIcon className="h-4 w-4 md:h-5 md:w-5 text-red-600 dark:text-red-400" />
+              <DialogTitle
+                className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+              >
+                <div className="h-10 w-10 flex items-center justify-center">
+                  <TrashIcon className="h-5 w-5 text-red-600" />
+                </div>
                 Delete Inventory Item
               </DialogTitle>
-              <DialogDescription className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                This action cannot be undone. This will permanently delete the
-                inventory item and remove all associated data.
+              <DialogDescription
+                className={`text-xs ${colors.texts.secondary}`}
+              >
+                Are you sure you want to delete &quot;{inventoryItem?.name}
+                &quot;? This action cannot be undone and will permanently remove
+                the item from your inventory.
               </DialogDescription>
             </DialogHeader>
-            <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900 p-3 md:p-4 rounded-none">
-              <p className="text-xs text-red-800 dark:text-red-300">
-                <strong>Warning:</strong> Deleting this item will remove it from
-                blockchain records and affect any pending orders or
-                reservations.
-              </p>
-            </div>
-            <DialogFooter className="gap-2 md:gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setIsDeleteDialogOpen(false)}
+            <DialogFooter>
+              <button
+                onClick={() => setIsDeleteOpen(false)}
                 disabled={isDeleting}
-                size="sm"
-                className="text-xs cursor-pointer h-8 rounded-none border-gray-200 dark:border-gray-700 shadow-none hover:shadow-none"
+                className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-gray-900 dark:text-white bg-transparent border border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors cursor-pointer rounded-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
               >
                 Cancel
-              </Button>
+              </button>
               <Button
-                onClick={handleDelete}
+                variant="outline"
+                onClick={confirmDelete}
                 disabled={isDeleting}
-                size="sm"
-                className="bg-red-600 hover:bg-red-700 text-white text-xs cursor-pointer h-8 rounded-none shadow-none hover:shadow-none"
+                className="flex items-center justify-center gap-1 px-3 py-2 text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
               >
                 {isDeleting ? (
-                  <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                  <>
+                    <ArrowPathIcon className="h-3 w-3 mr-2 animate-spin" />
+                    Deleting...
+                  </>
                 ) : (
-                  <TrashIcon className="h-3 w-3 mr-2" />
+                  <>
+                    <TrashIcon className="h-3 w-3 mr-2" />
+                    Delete Item
+                  </>
                 )}
-                {isDeleting ? "Deleting..." : "Delete Item"}
               </Button>
             </DialogFooter>
           </DialogContent>

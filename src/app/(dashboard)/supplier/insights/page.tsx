@@ -266,9 +266,14 @@ export default function SupplierAnalyticsPage() {
         orders: item.orderCount,
         totalSupplied: item.totalSupplied,
         avgOrderSize: Math.round(item.avgOrderSize),
-        stock: item.currentStock,
+        stock:
+          (item.quantity || 0) -
+          (item.reservedQuantity || 0) -
+          (item.damagedQuantity || 0) -
+          (item.committedQuantity || 0),
         image: item.image || undefined,
       }));
+      console.log("Transformed Products:", transformedProducts);
       setProductPerformance(transformedProducts);
       // Calculate metrics with growth
       const calculatedMetrics = await supplierAnalyticsApi.calculateMetrics(
@@ -426,7 +431,7 @@ export default function SupplierAnalyticsPage() {
             <p className={`text-base ${colors.texts.secondary} mt-2`}>
               Track your supply performance and vendor relationships
             </p>
-            <div className="flex items-center gap-2 mt-3">
+            <div className="flex items-center gap-3 mt-3">
               <Badge
                 className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
               >
@@ -465,21 +470,11 @@ export default function SupplierAnalyticsPage() {
             </Select>
             <Button
               variant="outline"
-              className={`flex items-center gap-2 text-xs ${colors.buttons.outline} rounded-none`}
+              className={`flex items-center gap-2 text-xs ${colors.buttons.outline} rounded-none transition-all hover:border-black dark:hover:border-white`}
               onClick={loadAnalytics}
             >
               <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
               Refresh
-            </Button>
-            <Button
-              variant="outline"
-              className={`flex items-center gap-2 text-xs ${colors.buttons.outline} rounded-none`}
-              onClick={handleExport}
-            >
-              <ArrowDownTrayIcon
-                className={`h-4 w-4 ${colors.icons.primary}`}
-              />
-              Export
             </Button>
           </div>
         </div>
@@ -847,7 +842,7 @@ export default function SupplierAnalyticsPage() {
                               {product.stock}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Current Stock
+                              Available Stock
                             </p>
                           </div>
                         </div>
@@ -1108,7 +1103,7 @@ export default function SupplierAnalyticsPage() {
                       </span>
                       <span className="text-sm text-muted-foreground">
                         {formatCurrency(metrics.revenue.value)} /{" "}
-                        {formatCurrency(750000)}
+                        {formatCurrency(10000000)}
                       </span>
                     </div>
                     <div className="w-full bg-muted rounded-none h-2">
@@ -1116,14 +1111,14 @@ export default function SupplierAnalyticsPage() {
                         className="bg-blue-500 h-2 rounded-none transition-all duration-300"
                         style={{
                           width: `${Math.min(
-                            (metrics.revenue.value / 750000) * 100,
+                            (metrics.revenue.value / 10000000) * 100,
                             100
                           )}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {((metrics.revenue.value / 750000) * 100).toFixed(1)}%
+                      {((metrics.revenue.value / 10000000) * 100).toFixed(1)}%
                       completed
                     </p>
                   </div>
@@ -1134,7 +1129,7 @@ export default function SupplierAnalyticsPage() {
                         Vendor Partnerships
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {metrics.vendors.value} / 25
+                        {metrics.vendors.value} / 500
                       </span>
                     </div>
                     <div className="w-full bg-muted rounded-none h-2">
@@ -1142,14 +1137,14 @@ export default function SupplierAnalyticsPage() {
                         className="bg-green-500 h-2 rounded-none transition-all duration-300"
                         style={{
                           width: `${Math.min(
-                            (metrics.vendors.value / 25) * 100,
+                            (metrics.vendors.value / 500) * 100,
                             100
                           )}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {((metrics.vendors.value / 25) * 100).toFixed(1)}%
+                      {((metrics.vendors.value / 500) * 100).toFixed(1)}%
                       completed
                     </p>
                   </div>
@@ -1160,7 +1155,7 @@ export default function SupplierAnalyticsPage() {
                         Supply Orders
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {metrics.orders.value} / 500
+                        {metrics.orders.value} / 5000
                       </span>
                     </div>
                     <div className="w-full bg-muted rounded-none h-2">
@@ -1168,14 +1163,14 @@ export default function SupplierAnalyticsPage() {
                         className="bg-yellow-500 h-2 rounded-none transition-all duration-300"
                         style={{
                           width: `${Math.min(
-                            (metrics.orders.value / 500) * 100,
+                            (metrics.orders.value / 5000) * 100,
                             100
                           )}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {((metrics.orders.value / 500) * 100).toFixed(1)}%
+                      {((metrics.orders.value / 5000) * 100).toFixed(1)}%
                       completed
                     </p>
                   </div>

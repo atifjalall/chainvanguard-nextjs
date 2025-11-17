@@ -1153,6 +1153,14 @@ inventorySchema.pre("save", function (next) {
 
 // Update stock status before save (like Product)
 inventorySchema.pre("save", function (next) {
+  // ✅ FIX: Don't auto-update status for discontinued, archived, or inactive items
+  const protectedStatuses = ["discontinued", "archived", "inactive", "quarantined"];
+
+  if (protectedStatuses.includes(this.status)) {
+    // Skip auto status updates for these states
+    return next();
+  }
+
   if (this.quantity <= 0) {
     this.status = "out_of_stock";
   } else if (this.quantity <= this.minStockLevel) {

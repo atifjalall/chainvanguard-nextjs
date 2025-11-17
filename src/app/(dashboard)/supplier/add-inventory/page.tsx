@@ -27,11 +27,9 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArchiveBoxIcon,
   ArrowUpTrayIcon,
   XMarkIcon,
   ExclamationTriangleIcon,
-  DocumentDuplicateIcon,
   ArrowPathIcon,
   CheckCircleIcon,
   ShieldCheckIcon,
@@ -42,14 +40,17 @@ import {
   DocumentTextIcon,
   EyeIcon,
   EyeSlashIcon,
-  InboxIcon,
   CubeIcon,
   BuildingStorefrontIcon,
   SparklesIcon,
+  PlusIcon,
+  BookmarkIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Loader2 } from "lucide-react";
+import { useGeminiAI } from "@/hooks/use-gemini-ai";
+
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -71,7 +72,7 @@ import { cn } from "@/lib/utils";
 
 const RsIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/5000/svg"
     fill="none"
     viewBox="0 0 24 24"
     className="h-5 w-5"
@@ -267,7 +268,7 @@ const statuses = [
   "quarantined",
 ];
 
-const currencies = ["PKR", "USD", "EUR"];
+const currencies = ["PKR"];
 
 const warehouseLocations = [
   "Karachi Main Warehouse",
@@ -429,6 +430,7 @@ type FormDataType = {
 
   // Supplier
   supplierName: string;
+  companyName: string;
   supplierContact: {
     phone: string;
     email: string;
@@ -498,145 +500,150 @@ type ErrorsType = {
 
 // Preview Card Component
 const PreviewCard = ({ formData }: { formData: FormDataType }) => {
-  const getStockStatus = () => {
-    const qty = parseInt(formData.quantity) || 0;
-    if (qty === 0) return { label: "Out of Stock", color: "red" };
-    if (qty < 20) return { label: "Low Stock", color: "yellow" };
-    return { label: "In Stock", color: "green" };
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageError, setImageError] = useState(false);
+  const [imageKey, setImageKey] = useState(0);
+
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+    setCurrentImageIndex(0);
+    setImageKey((prev) => prev + 1);
+  }, [formData.images]);
+
+  const isLowStock =
+    parseInt(formData.quantity || "0") > 0 &&
+    parseInt(formData.quantity || "0") < 20;
+
+  const handleMouseEnter = () => {
+    if (formData.images && formData.images.length > 1) {
+      setCurrentImageIndex(1);
+    }
   };
 
-  const stockStatus = getStockStatus();
+  const handleMouseLeave = () => {
+    setCurrentImageIndex(0);
+  };
+
+  const getImageSrc = () => {
+    if (!formData.images || formData.images.length === 0 || imageError) {
+      return "/placeholder-product.png";
+    }
+    const imageUrl = formData.images[currentImageIndex];
+    if (!imageUrl || typeof imageUrl !== "string") {
+      return "/placeholder-product.png";
+    }
+    return imageUrl;
+  };
+
+  const PlaceholderImage = () => (
+    <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 flex items-center justify-center">
+      <CubeIcon className="h-16 w-16 text-gray-400" />
+    </div>
+  );
 
   return (
-    <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300 rounded-none overflow-hidden w-full p-0 shadow-none">
-      {/* Image Section - Even Larger */}
-      <div className="relative w-full h-96 bg-gray-100 dark:bg-gray-800 overflow-hidden m-0">
-        {formData.images.length > 0 ? (
-          <img
-            src={formData.images[0]}
-            alt={formData.name}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-600">
-            <ArchiveBoxIcon className="h-20 w-20" />
-          </div>
-        )}
-
-        {/* Stock Status Badge */}
-        <div className="absolute top-2 right-2">
-          <Badge
-            className={`
-              ${stockStatus.color === "green" ? "bg-green-100/10 dark:bg-green-900/10 border-green-200 dark:border-green-900 text-green-700 dark:text-green-400" : ""}
-              ${stockStatus.color === "yellow" ? "bg-yellow-100/10 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-900 text-yellow-700 dark:text-yellow-400" : ""}
-              ${stockStatus.color === "red" ? "bg-red-100/10 dark:bg-red-900/10 border-red-100 dark:border-red-900 text-red-700 dark:text-red-400" : ""}
-              border text-xs rounded-none backdrop-blur-sm
-            `}
+    <div className="group relative w-full">
+      <div className="relative bg-gray-100 w-full">
+        <div className="block">
+          <div
+            className="relative w-full aspect-[4/5] overflow-hidden"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
           >
-            {stockStatus.label}
-          </Badge>
+            {!imageError && formData.images && formData.images.length > 0 ? (
+              <img
+                key={`${imageKey}-${currentImageIndex}`}
+                src={getImageSrc()}
+                alt={formData.name || "Preview"}
+                className={`w-full h-full object-cover transition-all duration-300 ${
+                  imageLoaded ? "opacity-100" : "opacity-0"
+                } group-hover:scale-105`}
+                onLoad={() => {
+                  setImageLoaded(true);
+                  setImageError(false);
+                }}
+                onError={() => {
+                  setImageError(true);
+                  setImageLoaded(false);
+                }}
+              />
+            ) : (
+              <PlaceholderImage />
+            )}
+
+            {!imageLoaded &&
+              !imageError &&
+              formData.images &&
+              formData.images.length > 0 && (
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse" />
+              )}
+          </div>
         </div>
 
-        {/* Category Badge */}
-        <div className="absolute top-2 left-2">
-          <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none backdrop-blur-sm">
-            {formData.category || "Category"}
-          </Badge>
-        </div>
+        <button
+          className="absolute bottom-3 left-3 w-5 h-5 bg-white flex items-center justify-center opacity-100 transition-opacity duration-200 cursor-pointer"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <PlusIcon className="w-4 h-4 text-black" />
+        </button>
       </div>
 
-      {/* Content Section */}
-      <CardContent className="p-3 space-y-2.5">
-        {/* Name and SKU */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-0.5 line-clamp-2 leading-tight">
-            {formData.name || "Sample Inventory Item"}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-500">
-            SKU: {formData.sku || "N/A"}
-          </p>
+      <div className="pt-3 pb-4">
+        <div className="mb-2">
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 dark:bg-gray-800">
+            <BuildingStorefrontIcon className="h-3 w-3 text-gray-500" />
+            <span className="text-xs text-gray-600 dark:text-gray-400">
+              {formData.companyName || "Company Name"}
+            </span>
+          </div>
         </div>
 
-        {/* Price Section */}
-        <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 rounded-none">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              Unit Price
-            </span>
-            <span className="text-base font-bold text-gray-900 dark:text-gray-100">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex-1">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+              {formData.name || "Item Name"}
+            </h3>
+          </div>
+          <button
+            className="flex items-center justify-center flex-shrink-0 mt-0.5"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <BookmarkIcon className="w-4 h-4 text-gray-400 hover:text-black transition-colors cursor-pointer" />
+          </button>
+        </div>
+
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          {formData.sku || "SKU"} • {formData.category || "Category"}
+        </p>
+
+        <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
               Rs {parseFloat(formData.pricePerUnit || "0").toFixed(2)}
             </span>
+            <span className="text-xs text-gray-500">per {formData.unit}</span>
           </div>
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-gray-600 dark:text-gray-400">
-              Available Quantity
-            </span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">
+          <div className="flex flex-col items-end">
+            <span
+              className={`text-xs font-medium ${
+                isLowStock ? "text-yellow-600" : "text-gray-600"
+              }`}
+            >
               {formData.quantity || "0"} {formData.unit}
             </span>
+            <span className="text-xs text-gray-500">available</span>
           </div>
         </div>
-
-        {/* Textile Details Grid */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 rounded-none">
-            <p className="text-xs text-gray-500 dark:text-gray-500 mb-0.5">
-              Color
-            </p>
-            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">
-              {formData.textileDetails?.color || "N/A"}
-            </p>
-          </div>
-
-          <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 rounded-none">
-            <p className="text-xs text-gray-500 dark:text-gray-500 mb-0.5">
-              Fabric Type
-            </p>
-            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">
-              {formData.textileDetails?.fabricType || "N/A"}
-            </p>
-          </div>
-        </div>
-
-        {/* Total Value - Grey Background */}
-        <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 rounded-none">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              Total Inventory Value
-            </span>
-            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-              Rs{" "}
-              {(
-                parseFloat(formData.pricePerUnit || "0") *
-                parseInt(formData.quantity || "0")
-              ).toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            className="w-full text-xs font-medium h-8 bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white rounded-none cursor-not-allowed opacity-90"
-          >
-            <InboxIcon className="h-4 w-4 mr-1.5" />
-            Request
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            className="w-full text-xs font-medium h-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-900 dark:border-white rounded-none cursor-not-allowed"
-          >
-            <EyeIcon className="h-4 w-4 mr-1.5 text-gray-900 dark:text-gray-100" />
-            View
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
@@ -651,6 +658,7 @@ export default function AddInventoryPage() {
   const [showPreview, setShowPreview] = useState<boolean>(true);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const totalSteps = 6;
+  const { isGenerating, generateInventoryDescription } = useGeminiAI();
 
   useEffect(() => {
     setIsVisible(true);
@@ -699,9 +707,10 @@ export default function AddInventoryPage() {
     dimensions: "",
     tags: [],
     season: "All Season",
-    countryOfOrigin: "",
+    countryOfOrigin: "Pakistan",
     manufacturer: "",
     supplierName: "",
+    companyName: "",
     supplierContact: {
       phone: "",
       email: "",
@@ -740,6 +749,7 @@ export default function AddInventoryPage() {
       setFormData((prev) => ({
         ...prev,
         supplierName: user.name || prev.supplierName,
+        companyName: user.companyName || prev.companyName,
         supplierContact: {
           ...prev.supplierContact,
           phone: user.phone || prev.supplierContact.phone,
@@ -1116,6 +1126,7 @@ export default function AddInventoryPage() {
       countryOfOrigin: "Pakistan",
       manufacturer: "",
       supplierName: "",
+      companyName: "",
       supplierContact: { phone: "", email: "", address: "" },
       status: "active",
       isSustainable: false,
@@ -1245,6 +1256,13 @@ export default function AddInventoryPage() {
           formData.damagedQuantity !== ""
             ? parseInt(formData.damagedQuantity)
             : 0,
+
+        // ADD MISSING FIELDS:
+        internalCode: formData.internalCode || undefined,
+        barcode: formData.barcode || undefined,
+        shelfLife: formData.shelfLife
+          ? parseInt(formData.shelfLife)
+          : undefined,
       };
 
       // Call API
@@ -1266,6 +1284,31 @@ export default function AddInventoryPage() {
       console.error("Error adding inventory:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateDescription = async () => {
+    // Validate required fields before generating
+    if (!formData.name || !formData.category) {
+      toast.error("Please fill in Name and Category first");
+      return;
+    }
+
+    // Build data from Step 1 fields
+    const inventoryData = {
+      name: formData.name,
+      category: formData.category,
+      subcategory: formData.subcategory,
+      specifications: formData.specifications,
+      unit: formData.unit,
+      manufacturer: formData.manufacturer,
+      origin: formData.countryOfOrigin,
+    };
+
+    const description = await generateInventoryDescription(inventoryData);
+
+    if (description) {
+      handleInputChange("description", description);
     }
   };
 
@@ -1298,16 +1341,18 @@ export default function AddInventoryPage() {
 
     if (step === 1) {
       if (!formData.name.trim()) newErrors.name = "Item name is required";
-      if (!formData.description.trim())
-        newErrors.description = "Description is required";
       if (!formData.category) newErrors.category = "Category is required";
       if (!formData.subcategory)
         newErrors.subcategory = "Subcategory is required";
       if (!formData.materialType)
         newErrors.materialType = "Material type is required";
-    } else if (step === 2) {
       if (!formData.textileDetails.color.trim())
         newErrors["textileDetails.color"] = "Color is required";
+      if (!formData.textileDetails.colorCode)
+        newErrors["textileDetails.colorCode"] = "Color code is required";
+    } else if (step === 2) {
+      if (!formData.description.trim())
+        newErrors.description = "Description is required";
       if (!formData.textileDetails.fabricType)
         newErrors["textileDetails.fabricType"] = "Fabric type is required";
       if (!formData.textileDetails.composition.trim())
@@ -1318,8 +1363,6 @@ export default function AddInventoryPage() {
         newErrors["textileDetails.gsm"] = "GSM is required";
       if (!formData.textileDetails.width.trim())
         newErrors["textileDetails.width"] = "Width is required";
-      if (!formData.textileDetails.colorCode)
-        newErrors["textileDetails.colorCode"] = "Color code is required";
     } else if (step === 3) {
       if (!formData.pricePerUnit || parseFloat(formData.pricePerUnit) <= 0)
         newErrors.pricePerUnit = "Valid price is required";
@@ -1409,7 +1452,7 @@ export default function AddInventoryPage() {
               <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
                 Add new textile materials and components to inventory
               </p>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-3 mt-2">
                 <Badge
                   className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
                 >
@@ -1433,7 +1476,7 @@ export default function AddInventoryPage() {
                 variant="outline"
                 onClick={resetForm}
                 size="sm"
-                className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+                className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none transition-all hover:border-black dark:hover:border-white"
               >
                 <ArrowPathIcon className="h-3 w-3 mr-2" />
                 Reset
@@ -1442,7 +1485,7 @@ export default function AddInventoryPage() {
                 variant="outline"
                 onClick={() => setShowPreview(!showPreview)}
                 size="sm"
-                className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
+                className="text-xs cursor-pointer h-8 border-black dark:border-white bg-black text-white dark:bg-white dark:text-black rounded-none hover:bg-gray-800 hover:text-white dark:hover:bg-gray-200 dark:hover:text-black transition-all"
               >
                 {showPreview ? (
                   <>
@@ -1470,7 +1513,7 @@ export default function AddInventoryPage() {
             <Card
               className={`${colors.cards.base} transition-all duration-300 rounded-none mb-4 md:mb-6 shadow-none`}
             >
-              <CardContent className="p-4 md:p-6">
+              <CardContent className="">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
                     Step {currentStep} of {totalSteps}
@@ -1483,7 +1526,7 @@ export default function AddInventoryPage() {
                   value={getStepProgress()}
                   className="h-2 mb-4 rounded-none"
                 />
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
                   {[
                     { step: 1, title: "Basic Info", icon: DocumentTextIcon },
                     { step: 2, title: "Textile Details", icon: SwatchIcon },
@@ -1516,7 +1559,7 @@ export default function AddInventoryPage() {
                           }
                         }}
                         disabled={isDisabled}
-                        className={`flex items-center gap-1 md:gap-2 p-2 rounded-none transition-all cursor-pointer text-xs md:text-sm
+                        className={`flex items-center justify-center gap-1 md:gap-2 p-2 rounded-none transition-all cursor-pointer text-xs md:text-sm
                           ${
                             isSelected
                               ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
@@ -1562,10 +1605,10 @@ export default function AddInventoryPage() {
             <Card
               className={`${colors.cards.base} transition-all duration-300 rounded-none shadow-none`}
             >
-              <CardContent className="p-4 md:p-6">
+              <CardContent className="">
                 {/* Step 1: Basic Information */}
                 {currentStep === 1 && (
-                  <div className="space-y-4 md:space-y-6">
+                  <div className="space-y-2 md:space-y-4">
                     <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
                         <h3
@@ -1581,13 +1624,13 @@ export default function AddInventoryPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-2">
                       <div className="space-y-1">
                         <Label
                           htmlFor="name"
                           className={`text-xs md:text-sm font-medium ${colors.texts.accent}`}
                         >
-                          Item Name *
+                          Item Name <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="name"
@@ -1605,20 +1648,20 @@ export default function AddInventoryPage() {
                             <p
                               className={`text-xs ${colors.texts.error} flex items-center gap-1`}
                             >
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.name}
                             </p>
                           )}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                         <div className="space-y-1">
                           <Label
                             htmlFor="category"
                             className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
-                            Category *
+                            Category <span className="text-red-500">*</span>
                           </Label>
                           <Select
                             value={formData.category}
@@ -1651,7 +1694,7 @@ export default function AddInventoryPage() {
                           <div className="min-h-4">
                             {errors.category && (
                               <p className="text-xs text-red-500 flex items-center gap-1">
-                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                                 {errors.category}
                               </p>
                             )}
@@ -1663,7 +1706,7 @@ export default function AddInventoryPage() {
                             htmlFor="subcategory"
                             className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
-                            Subcategory *
+                            Subcategory <span className="text-red-500">*</span>
                           </Label>
                           <Select
                             value={formData.subcategory}
@@ -1699,7 +1742,7 @@ export default function AddInventoryPage() {
                           <div className="min-h-4">
                             {errors.subcategory && (
                               <p className="text-xs text-red-500 flex items-center gap-1">
-                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                                 {errors.subcategory}
                               </p>
                             )}
@@ -1707,13 +1750,11 @@ export default function AddInventoryPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                         <div className="space-y-1">
-                          <Label
-                            htmlFor="materialType"
-                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                          >
-                            Material Type *
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Material Type{" "}
+                            <span className="text-red-500">*</span>
                           </Label>
                           <Select
                             value={formData.materialType}
@@ -1743,7 +1784,7 @@ export default function AddInventoryPage() {
                           <div className="min-h-4">
                             {errors.materialType && (
                               <p className="text-xs text-red-500 flex items-center gap-1">
-                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                                 {errors.materialType}
                               </p>
                             )}
@@ -1755,7 +1796,7 @@ export default function AddInventoryPage() {
                             htmlFor="unit"
                             className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
-                            Unit *
+                            Unit <span className="text-red-500">*</span>
                           </Label>
                           <Select
                             value={formData.unit}
@@ -1793,49 +1834,70 @@ export default function AddInventoryPage() {
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <Label
-                          htmlFor="description"
-                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                        >
-                          Item Description *
-                        </Label>
-                        <div className="relative group">
-                          <Textarea
-                            id="description"
-                            placeholder="Provide a detailed description of the inventory item..."
-                            value={formData.description}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Color <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            placeholder="e.g., Navy Blue"
+                            value={formData.textileDetails.color}
                             onChange={(e) =>
-                              handleInputChange("description", e.target.value)
+                              handleTextileDetailChange("color", e.target.value)
                             }
-                            maxLength={1000}
-                            rows={8}
-                            className={`text-sm resize-none bg-white dark:bg-gray-900 border rounded-none group-hover:border-black focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
-                              errors.description
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none hover:border-black focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 ${
+                              errors["textileDetails.color"]
                                 ? "border-red-500"
                                 : "border-gray-200 dark:border-gray-700"
                             }`}
                           />
-                          <Button
-                            type="button"
-                            className="absolute top-1 right-1 h-8 px-2 bg-transparent text-gray-500 border-none rounded-none flex items-center gap-1 hover:text-black hover:bg-transparent focus-visible:ring-0 active:bg-transparent cursor-pointer"
-                          >
-                            <SparklesIcon className="h-4 w-4" />
-                            Generate
-                          </Button>
+                          <div className="min-h-4">
+                            {errors["textileDetails.color"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.color"]}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center">
-                          {errors.description ? (
-                            <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
-                              {errors.description}
-                            </p>
-                          ) : (
-                            <span />
-                          )}
-                          <p className="text-xs text-gray-500 dark:text-gray-500">
-                            {formData.description.length}/1000 characters
-                          </p>
+
+                        <div className="space-y-1">
+                          <Label
+                            htmlFor="textileDetails.colorCode"
+                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >
+                            Color Code <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="textileDetails.colorCode"
+                            name="textileDetails.colorCode"
+                            type="color"
+                            value={
+                              formData.textileDetails?.colorCode || "#000000"
+                            }
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                textileDetails: {
+                                  ...prev.textileDetails,
+                                  colorCode: e.target.value,
+                                },
+                              }))
+                            }
+                            className={`rounded-none hover:border-black ${
+                              errors["textileDetails.colorCode"]
+                                ? "border-red-500"
+                                : ""
+                            }`}
+                          />
+                          <div className="min-h-4">
+                            {errors["textileDetails.colorCode"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.colorCode"]}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -1891,7 +1953,7 @@ export default function AddInventoryPage() {
 
                 {/* Step 2: Textile Details */}
                 {currentStep === 2 && (
-                  <div className="space-y-4 md:space-y-6">
+                  <div className="space-y-2 md:space-y-4">
                     <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
                         <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
@@ -1903,36 +1965,10 @@ export default function AddInventoryPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-2">
                       <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Color *
-                        </Label>
-                        <Input
-                          placeholder="e.g., Navy Blue"
-                          value={formData.textileDetails.color}
-                          onChange={(e) =>
-                            handleTextileDetailChange("color", e.target.value)
-                          }
-                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none hover:border-black focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 ${
-                            errors["textileDetails.color"]
-                              ? "border-red-500"
-                              : "border-gray-200 dark:border-gray-700"
-                          }`}
-                        />
-                        <div className="min-h-4">
-                          {errors["textileDetails.color"] && (
-                            <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
-                              {errors["textileDetails.color"]}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Fabric Type *
+                          Fabric Type <span className="text-red-500">*</span>
                         </Label>
                         <Select
                           value={formData.textileDetails.fabricType}
@@ -1964,170 +2000,191 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors["textileDetails.fabricType"] && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors["textileDetails.fabricType"]}
                             </p>
                           )}
                         </div>
                       </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Composition *
-                        </Label>
-                        <Input
-                          placeholder="e.g., 100% Cotton"
-                          value={formData.textileDetails.composition}
-                          onChange={(e) =>
-                            handleTextileDetailChange(
-                              "composition",
-                              e.target.value
-                            )
-                          }
-                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black dark:focus:border-white ${
-                            errors["textileDetails.composition"]
-                              ? "border-red-500"
-                              : ""
-                          }`}
-                        />
-                        <div className="min-h-4">
-                          {errors["textileDetails.composition"] && (
-                            <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
-                              {errors["textileDetails.composition"]}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Pattern *
-                        </Label>
-                        <Select
-                          value={formData.textileDetails.pattern}
-                          onValueChange={(value) =>
-                            handleTextileDetailChange("pattern", value)
-                          }
-                        >
-                          <SelectTrigger
-                            className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white hover:border-black ${
-                              errors["textileDetails.pattern"]
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Composition <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            placeholder="e.g., 100% Cotton"
+                            value={formData.textileDetails.composition}
+                            onChange={(e) =>
+                              handleTextileDetailChange(
+                                "composition",
+                                e.target.value
+                              )
+                            }
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none hover:border-black focus:border-black dark:focus:border-white ${
+                              errors["textileDetails.composition"]
                                 ? "border-red-500"
                                 : ""
                             }`}
+                          />
+                          <div className="min-h-4">
+                            {errors["textileDetails.composition"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.composition"]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Pattern <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={formData.textileDetails.pattern}
+                            onValueChange={(value) =>
+                              handleTextileDetailChange("pattern", value)
+                            }
                           >
-                            <SelectValue placeholder="Select pattern" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {patterns.map((pattern) => (
-                              <SelectItem key={pattern} value={pattern}>
-                                {pattern}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <div className="min-h-4">
-                          {errors["textileDetails.pattern"] && (
-                            <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
-                              {errors["textileDetails.pattern"]}
-                            </p>
-                          )}
+                            <SelectTrigger
+                              className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white hover:border-black ${
+                                errors["textileDetails.pattern"]
+                                  ? "border-red-500"
+                                  : ""
+                              }`}
+                            >
+                              <SelectValue placeholder="Select pattern" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {patterns.map((pattern) => (
+                                <SelectItem key={pattern} value={pattern}>
+                                  {pattern}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="min-h-4">
+                            {errors["textileDetails.pattern"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.pattern"]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            GSM <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 180"
+                            value={formData.textileDetails.gsm}
+                            onChange={(e) =>
+                              handleTextileDetailChange("gsm", e.target.value)
+                            }
+                            min="0"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors["textileDetails.gsm"]
+                                ? "border-red-500"
+                                : ""
+                            } hover:border-black`}
+                          />
+                          <div className="min-h-4">
+                            {errors["textileDetails.gsm"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.gsm"]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Width (cm) <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 150"
+                            value={formData.textileDetails.width}
+                            onChange={(e) =>
+                              handleTextileDetailChange("width", e.target.value)
+                            }
+                            min="0"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors["textileDetails.width"]
+                                ? "border-red-500"
+                                : ""
+                            } hover:border-black`}
+                          />
+                          <div className="min-h-4">
+                            {errors["textileDetails.width"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.width"]}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          GSM *
-                        </Label>
-                        <Input
-                          type="number"
-                          placeholder="e.g., 180"
-                          value={formData.textileDetails.gsm}
-                          onChange={(e) =>
-                            handleTextileDetailChange("gsm", e.target.value)
-                          }
-                          min="0"
-                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                            errors["textileDetails.gsm"] ? "border-red-500" : ""
-                          }`}
-                        />
-                        <div className="min-h-4">
-                          {errors["textileDetails.gsm"] && (
-                            <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
-                              {errors["textileDetails.gsm"]}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Width (cm) *
-                        </Label>
-                        <Input
-                          type="number"
-                          placeholder="e.g., 150"
-                          value={formData.textileDetails.width}
-                          onChange={(e) =>
-                            handleTextileDetailChange("width", e.target.value)
-                          }
-                          min="0"
-                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                            errors["textileDetails.width"]
-                              ? "border-red-500"
-                              : ""
-                          }`}
-                        />
-                        <div className="min-h-4">
-                          {errors["textileDetails.width"] && (
-                            <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
-                              {errors["textileDetails.width"]}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Add Color Code field */}
                       <div className="space-y-1">
                         <Label
-                          htmlFor="textileDetails.colorCode"
+                          htmlFor="description"
                           className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                         >
-                          Color Code *
+                          Item Description{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
-                        <Input
-                          id="textileDetails.colorCode"
-                          name="textileDetails.colorCode"
-                          type="color"
-                          value={
-                            formData.textileDetails?.colorCode || "#000000"
-                          }
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              textileDetails: {
-                                ...prev.textileDetails,
-                                colorCode: e.target.value,
-                              },
-                            }))
-                          }
-                          className={`rounded-none ${
-                            errors["textileDetails.colorCode"]
-                              ? "border-red-500"
-                              : ""
-                          }`}
-                        />
-                        <div className="min-h-4">
-                          {errors["textileDetails.colorCode"] && (
+                        <div className="relative group">
+                          <Textarea
+                            id="description"
+                            placeholder="Provide a detailed description of the inventory item..."
+                            value={formData.description}
+                            onChange={(e) =>
+                              handleInputChange("description", e.target.value)
+                            }
+                            maxLength={5000}
+                            rows={8}
+                            className={`text-sm resize-none bg-white dark:bg-gray-900 border rounded-none group-hover:border-black hover:border-black focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none min-h-[180px] h-[180px] ${
+                              errors.description
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            }`}
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleGenerateDescription}
+                            disabled={
+                              isGenerating ||
+                              !formData.name ||
+                              !formData.category
+                            }
+                            className="absolute top-1 right-1 h-8 px-2 bg-transparent text-gray-500 border-none rounded-none flex items-center gap-1 hover:text-black hover:bg-transparent focus-visible:ring-0 active:bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isGenerating ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <SparklesIcon className="h-4 w-4" />
+                            )}
+                            {isGenerating ? "Generating..." : "Generate"}
+                          </Button>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          {errors.description ? (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
-                              {errors["textileDetails.colorCode"]}
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.description}
                             </p>
+                          ) : (
+                            <span />
                           )}
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            {formData.description.length}/5000 characters
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -2137,7 +2194,7 @@ export default function AddInventoryPage() {
                         variant="outline"
                         onClick={prevStep}
                         size="sm"
-                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all hover:border-black dark:hover:border-white"
                       >
                         <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                         Previous
@@ -2156,7 +2213,7 @@ export default function AddInventoryPage() {
 
                 {/* Step 3: Stock & Pricing */}
                 {currentStep === 3 && (
-                  <div className="space-y-4 md:space-y-6">
+                  <div className="space-y-2 md:space-y-4">
                     <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
                         <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
@@ -2168,10 +2225,10 @@ export default function AddInventoryPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                       <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Unit Price *
+                          Unit Price <span className="text-red-500">*</span>
                         </Label>
                         <div className="relative">
                           <Input
@@ -2193,7 +2250,7 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.pricePerUnit && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.pricePerUnit}
                             </p>
                           )}
@@ -2202,7 +2259,7 @@ export default function AddInventoryPage() {
 
                       <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Cost Price *
+                          Cost Price <span className="text-red-500">*</span>
                         </Label>
                         <div className="relative">
                           <Input
@@ -2224,7 +2281,7 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.costPrice && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.costPrice}
                             </p>
                           )}
@@ -2233,7 +2290,8 @@ export default function AddInventoryPage() {
 
                       <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Current Quantity *
+                          Current Quantity{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           type="number"
@@ -2252,7 +2310,7 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.quantity && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.quantity}
                             </p>
                           )}
@@ -2261,7 +2319,7 @@ export default function AddInventoryPage() {
 
                       <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Reorder Level *
+                          Reorder Level <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           type="number"
@@ -2275,7 +2333,7 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.reorderLevel && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.reorderLevel}
                             </p>
                           )}
@@ -2284,7 +2342,8 @@ export default function AddInventoryPage() {
 
                       <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Min Stock Level *
+                          Min Stock Level{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           type="number"
@@ -2303,7 +2362,7 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.minStockLevel && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.minStockLevel}
                             </p>
                           )}
@@ -2315,7 +2374,8 @@ export default function AddInventoryPage() {
                           htmlFor="safetyStockLevel"
                           className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                         >
-                          Safety Stock Level *
+                          Safety Stock Level{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="safetyStockLevel"
@@ -2337,15 +2397,20 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.safetyStockLevel && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.safetyStockLevel}
                             </p>
                           )}
                         </div>
                       </div>
+
                       <div className="space-y-1">
-                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Damaged Quantity *
+                        <Label
+                          htmlFor="damagedQuantity"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Damaged Quantity{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="damagedQuantity"
@@ -2364,7 +2429,7 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.damagedQuantity && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.damagedQuantity}
                             </p>
                           )}
@@ -2373,7 +2438,8 @@ export default function AddInventoryPage() {
 
                       <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Shelf Life (Days) *
+                          Shelf Life (Days){" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="shelfLife"
@@ -2392,7 +2458,7 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.shelfLife && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.shelfLife}
                             </p>
                           )}
@@ -2401,7 +2467,7 @@ export default function AddInventoryPage() {
 
                       <div className="space-y-1 md:col-span-2">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Auto Reorder *
+                          Auto Reorder <span className="text-red-500">*</span>
                         </Label>
                         <Select
                           value={formData.autoReorderEnabled ? "true" : "false"}
@@ -2429,7 +2495,7 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.autoReorderEnabled && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.autoReorderEnabled}
                             </p>
                           )}
@@ -2438,7 +2504,7 @@ export default function AddInventoryPage() {
                     </div>
 
                     {/* Batch Tracking Fields */}
-                    <div className="space-y-4 mt-4 md:mt-6 p-3 md:p-4 border border-gray-200 dark:border-gray-700 rounded-none">
+                    <div className="space-y-2 mt-2 md:mt-4 p-3 md:p-4 border border-gray-200 dark:border-gray-700 rounded-none">
                       <div className="flex items-center gap-2 mb-4">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                           Batch Tracking
@@ -2448,7 +2514,7 @@ export default function AddInventoryPage() {
                         </Badge>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                         <div className="space-y-1 md:col-span-2">
                           <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                             Enable Batch Tracking
@@ -2479,7 +2545,8 @@ export default function AddInventoryPage() {
                                 htmlFor="manufactureDate"
                                 className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                               >
-                                Manufacture Date *
+                                Manufacture Date{" "}
+                                <span className="text-red-500">*</span>
                               </Label>
                               <Popover>
                                 <PopoverTrigger asChild>
@@ -2527,7 +2594,7 @@ export default function AddInventoryPage() {
                               <div className="min-h-4">
                                 {errors.manufactureDate && (
                                   <p className="text-xs text-red-500 flex items-center gap-1">
-                                    <ExclamationTriangleIcon className="h-3 w-3" />
+                                    <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                                     {errors.manufactureDate}
                                   </p>
                                 )}
@@ -2612,7 +2679,7 @@ export default function AddInventoryPage() {
 
                     <div className="space-y-1">
                       <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Currency *
+                        Currency <span className="text-red-500">*</span>
                       </Label>
                       <Select
                         value={formData.currency}
@@ -2644,7 +2711,7 @@ export default function AddInventoryPage() {
                       <div className="min-h-4">
                         {errors.currency && (
                           <p className="text-xs text-red-500 flex items-center gap-1">
-                            <ExclamationTriangleIcon className="h-3 w-3" />
+                            <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                             {errors.currency}
                           </p>
                         )}
@@ -2653,7 +2720,8 @@ export default function AddInventoryPage() {
 
                     <div className="space-y-1">
                       <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Warehouse Location *
+                        Warehouse Location{" "}
+                        <span className="text-red-500">*</span>
                       </Label>
                       <Select
                         value={formData.warehouseLocation}
@@ -2685,7 +2753,7 @@ export default function AddInventoryPage() {
                       <div className="min-h-4">
                         {errors.warehouseLocation && (
                           <p className="text-xs text-red-500 flex items-center gap-1">
-                            <ExclamationTriangleIcon className="h-3 w-3" />
+                            <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                             {errors.warehouseLocation}
                           </p>
                         )}
@@ -2697,7 +2765,7 @@ export default function AddInventoryPage() {
                         variant="outline"
                         onClick={prevStep}
                         size="sm"
-                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all hover:border-black dark:hover:border-white"
                       >
                         <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                         Previous
@@ -2716,7 +2784,7 @@ export default function AddInventoryPage() {
 
                 {/* Step 4: Quality */}
                 {currentStep === 4 && (
-                  <div className="space-y-4 md:space-y-6">
+                  <div className="space-y-2 md:space-y-4">
                     <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
                         <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
@@ -2728,10 +2796,10 @@ export default function AddInventoryPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                       <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Quality Grade *
+                          Quality Grade <span className="text-red-500">*</span>
                         </Label>
                         <Select
                           value={formData.qualityGrade}
@@ -2759,7 +2827,7 @@ export default function AddInventoryPage() {
                         {errors.qualityGrade && (
                           <div className="min-h-4">
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.qualityGrade}
                             </p>
                           </div>
@@ -2768,7 +2836,8 @@ export default function AddInventoryPage() {
 
                       <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Country of Origin *
+                          Country of Origin{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           placeholder="e.g., Pakistan"
@@ -2785,7 +2854,7 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.countryOfOrigin && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.countryOfOrigin}
                             </p>
                           )}
@@ -2797,7 +2866,7 @@ export default function AddInventoryPage() {
                       <Label className="text-xs md:text-sm font-medium">
                         Certifications
                       </Label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 md:gap-x-6 md:gap-y-3">
                         {certifications.map((cert) => (
                           <label
                             key={cert}
@@ -2835,7 +2904,7 @@ export default function AddInventoryPage() {
                         variant="outline"
                         onClick={prevStep}
                         size="sm"
-                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all hover:border-black dark:hover:border-white"
                       >
                         <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                         Previous
@@ -2854,7 +2923,7 @@ export default function AddInventoryPage() {
 
                 {/* Step 5: Supplier */}
                 {currentStep === 5 && (
-                  <div className="space-y-4 md:space-y-6">
+                  <div className="space-y-2 md:space-y-4">
                     <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
                         <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
@@ -2866,10 +2935,10 @@ export default function AddInventoryPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-2">
                       <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Supplier Name *
+                          Supplier Name <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           placeholder="e.g., ABC Textiles Ltd."
@@ -2886,17 +2955,17 @@ export default function AddInventoryPage() {
                         <div className="min-h-4">
                           {errors.supplierName && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                               {errors.supplierName}
                             </p>
                           )}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                         <div className="space-y-1">
                           <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Phone *
+                            Phone <span className="text-red-500">*</span>
                           </Label>
                           <Input
                             placeholder="e.g., +92 300 1234567"
@@ -2921,7 +2990,7 @@ export default function AddInventoryPage() {
                           <div className="min-h-4">
                             {errors["supplierContact.phone"] && (
                               <p className="text-xs text-red-500 flex items-center gap-1">
-                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                                 {errors["supplierContact.phone"]}
                               </p>
                             )}
@@ -2930,7 +2999,7 @@ export default function AddInventoryPage() {
 
                         <div className="space-y-1">
                           <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Email *
+                            Email <span className="text-red-500">*</span>
                           </Label>
                           <Input
                             type="email"
@@ -2951,7 +3020,7 @@ export default function AddInventoryPage() {
                           <div className="min-h-4">
                             {errors["supplierContact.email"] && (
                               <p className="text-xs text-red-500 flex items-center gap-1">
-                                <ExclamationTriangleIcon className="h-3 w-3" />
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                                 {errors["supplierContact.email"]}
                               </p>
                             )}
@@ -2965,7 +3034,7 @@ export default function AddInventoryPage() {
                         variant="outline"
                         onClick={prevStep}
                         size="sm"
-                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all hover:border-black dark:hover:border-white"
                       >
                         <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                         Previous
@@ -2984,7 +3053,7 @@ export default function AddInventoryPage() {
 
                 {/* Step 6: Media & Final */}
                 {currentStep === 6 && (
-                  <div className="space-y-4 md:space-y-6">
+                  <div className="space-y-2 md:space-y-4">
                     <div className="flex items-center gap-3 mb-4 md:mb-6">
                       <div>
                         <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
@@ -2998,26 +3067,38 @@ export default function AddInventoryPage() {
 
                     <div className="space-y-1">
                       <Label className="text-xs md:text-sm font-medium">
-                        Product Images *
+                        Product Images <span className="text-red-500">*</span>
                       </Label>
-                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-none p-4 md:p-6 bg-white/30 dark:bg-gray-800/30">
-                        <div className="text-center">
-                          <div className="mx-auto h-10 w-10 md:h-12 md:w-12 flex items-center justify-center rounded-none mb-3">
-                            {isUploading ? (
-                              <Loader2 className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-gray-100 animate-spin" />
-                            ) : (
-                              <ArrowUpTrayIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-gray-100" />
-                            )}
+                      <div className="bg-yellow-50/80 dark:bg-yellow-950/30 backdrop-blur-sm border-none rounded-none p-4">
+                        <div className="flex items-start gap-2">
+                          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+                              Image Requirements
+                            </p>
+                            <ul className="text-sm text-yellow-700 dark:text-yellow-300 mt-1 list-disc list-inside">
+                              <li>At least 1 image required (maximum 5)</li>
+                              <li>Formats: JPG, PNG, WebP</li>
+                              <li>Max size: 10MB per image</li>
+                            </ul>
                           </div>
+                        </div>
+                      </div>
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-none p-8 text-center hover:border-gray-500 dark:hover:border-gray-500 transition-colors bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm cursor-pointer mt-6">
+                        <div className="text-center">
                           <div className="mb-3">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              {isUploading
-                                ? "Uploading..."
-                                : "Upload Item Images"}
-                            </p>
-                            <p className="text-xs text-gray-600 dark:text-gray-400">
-                              Drag and drop or click to browse
-                            </p>
+                            <label
+                              htmlFor="image-upload"
+                              className="cursor-pointer block"
+                            >
+                              <ArrowUpTrayIcon className="!h-20 !w-20 md:h-24 md:w-24 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                              <p className="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">
+                                Upload Product Images
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Click to browse or drag and drop
+                              </p>
+                            </label>
                           </div>
                           <input
                             type="file"
@@ -3028,12 +3109,6 @@ export default function AddInventoryPage() {
                             id="image-upload"
                             disabled={isUploading}
                           />
-                          <label
-                            htmlFor="image-upload"
-                            className={`inline-flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 ${colors.buttons.primary} text-sm font-medium cursor-pointer rounded-none`}
-                          >
-                            Choose Images
-                          </label>
                         </div>
                       </div>
 
@@ -3069,7 +3144,7 @@ export default function AddInventoryPage() {
                       {errors.images && (
                         <div className="min-h-4">
                           <p className="text-xs text-red-500 flex items-center gap-1">
-                            <ExclamationTriangleIcon className="h-3 w-3" />
+                            <ExclamationTriangleIcon className="h-1.5 w-1.5" />
                             {errors.images}
                           </p>
                         </div>
@@ -3081,7 +3156,7 @@ export default function AddInventoryPage() {
                         variant="outline"
                         onClick={prevStep}
                         size="sm"
-                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all hover:border-black dark:hover:border-white"
                       >
                         <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                         Previous
@@ -3109,7 +3184,7 @@ export default function AddInventoryPage() {
           {/* Preview Section - Narrower and Separate */}
           {showPreview && (
             <div className="lg:col-span-3">
-              <div className="sticky top-6">
+              <div className="sticky top-20">
                 <PreviewCard formData={formData} />
               </div>
             </div>

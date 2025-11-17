@@ -55,6 +55,10 @@ const userSchema = new Schema(
     totalPurchases: { type: Number, default: 0 },
     totalOrders: { type: Number, default: 0 },
 
+    // Supplier Rating (for suppliers rated by vendors)
+    averageRating: { type: Number, default: 0, min: 0, max: 5 },
+    totalRatings: { type: Number, default: 0, min: 0 },
+
     // Status
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true, index: true },
@@ -64,9 +68,9 @@ const userSchema = new Schema(
     blockchainTxId: { type: String, default: "" },
     blockchainUserId: { type: String, default: "" },
 
-    // ============================================
-    // NEW: Supplier-specific settings
-    // ============================================
+    /**
+     * Supplier-specific settings
+     */
     supplierSettings: {
       // Auto-approve purchase requests from vendors
       autoApproveRequests: {
@@ -121,9 +125,9 @@ const userSchema = new Schema(
       },
     },
 
-    // ============================================
-    // NEW: Vendor-specific settings
-    // ============================================
+    /**
+     * Vendor-specific settings
+     */
     vendorSettings: {
       // Preferred suppliers
       preferredSuppliers: [

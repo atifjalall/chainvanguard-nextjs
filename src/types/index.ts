@@ -21,6 +21,10 @@ export interface User {
   businessAddress?: string;
   businessType?: string;
   registrationNumber?: string;
+
+  averageRating?: number; // Supplier's average rating (0-5)
+  totalRatings?: number; // Total number of ratings received
+
   // Hyperledger specific
   networkType: "hyperledger-fabric";
   organizationMSP: string;
@@ -29,6 +33,89 @@ export interface User {
   updatedAt: string;
   loginAt?: string;
   avatar?: string;
+}
+
+// ========================================
+// SUPPLIER RATING TYPES
+// ========================================
+
+export interface SupplierRating {
+  _id: string;
+  ratingId: string;
+  vendorId: string;
+  vendorName: string;
+  supplierId: string;
+  supplierName: string;
+  ratings: {
+    quality: number; // 1-5
+    delivery: number; // 1-5
+    pricing: number; // 1-5
+    communication: number; // 1-5
+  };
+  overallRating: number; // Auto-calculated average
+  comment?: string;
+  completedOrdersCount: number;
+  sampleOrders: string[];
+  isEdited: boolean;
+  editHistory?: EditHistory[];
+  lastEditedAt?: string;
+  supplierResponse?: {
+    comment: string;
+    respondedBy: string;
+    respondedAt: string;
+  };
+  status: "approved" | "pending" | "flagged" | "removed";
+  isFlagged: boolean;
+  helpfulCount: number;
+  unhelpfulCount: number;
+  blockchainTxId?: string;
+  blockchainVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EditHistory {
+  previousRatings: {
+    quality: number;
+    delivery: number;
+    pricing: number;
+    communication: number;
+  };
+  previousOverallRating: number;
+  previousComment: string;
+  editedAt: string;
+}
+
+export interface SupplierRatingStats {
+  totalRatings: number;
+  averageOverall: number;
+  averageQuality: number;
+  averageDelivery: number;
+  averagePricing: number;
+  averageCommunication: number;
+  fiveStarCount: number;
+  fourStarCount: number;
+  threeStarCount: number;
+  twoStarCount: number;
+  oneStarCount: number;
+  withCommentsCount: number;
+}
+
+export interface RatingEligibility {
+  eligible: boolean;
+  reason?: string;
+  completedOrdersCount: number;
+  sampleOrders?: string[];
+}
+
+export interface SubmitRatingData {
+  ratings: {
+    quality: number;
+    delivery: number;
+    pricing: number;
+    communication: number;
+  };
+  comment?: string;
 }
 
 export type UserRole = "supplier" | "vendor" | "customer" | "expert";
@@ -835,6 +922,8 @@ export interface DashboardMetrics {
   recentTransactions: BlockchainTransaction[];
   salesData: SalesData[];
   performanceMetrics: PerformanceMetric[];
+  averageRating?: number; // Add ? to make optional
+  totalRatings?: number; // Add ? to make optional
 }
 
 export interface SalesData {
@@ -868,6 +957,8 @@ export interface SupplierDashboardMetrics {
   completedTransactions: number;
   totalInventoryValue: number;
   avgOrderValue: number;
+  averageRating?: number; // 0-5
+  totalRatings?: number;
 }
 
 export interface RecentActivity {
@@ -922,6 +1013,7 @@ export interface TopProduct {
 export interface SupplierAnalyticsResponse {
   success: boolean;
   timeframe: string;
+  topInventoryItems?: TopProduct[];
   analytics: {
     revenue: {
       daily: Array<{
@@ -975,6 +1067,7 @@ export interface SupplierAnalyticsResponse {
       completedOrders: number;
       cancelledOrders: number;
     }>;
+    topProducts: any[]; 
   };
 }
 
@@ -1282,6 +1375,7 @@ export interface InventoryFormData {
   // Storage
   storageLocations?: StorageLocation[];
   defaultLocation?: string;
+  primaryLocation?: string;
 
   // Quality
   qualityGrade?: string;
@@ -1317,6 +1411,9 @@ export interface InventoryFormData {
   safetyStockLevel?: number;
   damagedQuantity?: number;
   warehouseLocation?: string;
+  notes?: string;
+  internalCode?: string;
+  barcode?: string;
 }
 
 export type UpdateInventoryFormData = Partial<InventoryFormData>;

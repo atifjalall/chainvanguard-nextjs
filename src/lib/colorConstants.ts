@@ -89,6 +89,7 @@ export const colors = {
     error: "text-red-500",
     info: "text-blue-500",
     white: "text-white dark:text-gray-900",
+    red: "text-red-500",
   },
   buttons: {
     primary:

@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import SupplierDashboardSkeleton from "@/components/skeletons/supplierDashboardSkeleton";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import { analyticsApi } from "@/lib/api/supplier.dashboard.api";
+import supplierRatingApi from "@/lib/api/supplier.rating.api";
 
 interface DashboardMetrics {
   totalInventory: number;
@@ -51,6 +52,8 @@ interface DashboardMetrics {
   completedTransactions: number;
   totalInventoryValue: number;
   avgOrderValue: number;
+  averageRating?: number;
+  totalRatings?: number;
 }
 
 interface RecentActivity {
@@ -82,6 +85,7 @@ interface TopProduct {
   status: "active" | "low_stock" | "out_of_stock";
   lastSold: string;
   averageRating: number;
+  image?: string; // Add image field
 }
 
 // Custom Rs Icon component
@@ -137,6 +141,8 @@ export default function SupplierDashboard() {
     completedTransactions: 0,
     totalInventoryValue: 0,
     avgOrderValue: 0,
+    averageRating: 0,
+    totalRatings: 0,
   });
 
   useEffect(() => {
@@ -169,12 +175,56 @@ export default function SupplierDashboard() {
         console.log("✅ Transformed metrics:", dashboardMetrics);
         setMetrics(dashboardMetrics);
 
+        // Fetch supplier rating if user is supplier
+        if (user?.id && user?.role === "supplier") {
+          try {
+            const ratingData = await analyticsApi.getSupplierRatingStats(
+              user.id
+            );
+            dashboardMetrics.averageRating = ratingData.averageRating;
+            dashboardMetrics.totalRatings = ratingData.totalRatings;
+          } catch (error) {
+            console.error("Failed to load rating stats:", error);
+            dashboardMetrics.averageRating = 0;
+            dashboardMetrics.totalRatings = 0;
+          }
+        }
+
         // Transform and set top vendors
         const transformedVendors = analyticsApi.transformTopVendors(
           analyticsData.analytics.topVendors
         );
         console.log("👥 Top vendors:", transformedVendors);
         setTopVendors(transformedVendors);
+
+        // Fetch and map dynamic ratings for top vendors
+        if (user?.id && user?.role === "supplier") {
+          try {
+            const ratingsResponse = await supplierRatingApi.getSupplierRatings(
+              user.id
+            );
+            if (ratingsResponse.success) {
+              const ratingMap = new Map();
+              ratingsResponse.ratings.forEach((rating) => {
+                ratingMap.set(rating.vendorId, rating.overallRating);
+              });
+              setTopVendors((prev) =>
+                prev.map((vendor) => ({
+                  ...vendor,
+                  rating: ratingMap.get(vendor.id) || vendor.rating || 0,
+                }))
+              );
+            }
+          } catch (error) {
+            console.error("Failed to fetch vendor ratings:", error);
+          }
+        }
+
+        // Use real top products from analytics
+        const topProductsData = analyticsApi.transformTopProducts(
+          analyticsData.analytics.topProducts
+        );
+        setTopProducts(topProductsData);
 
         // Generate recent activity
         const activity = analyticsApi.generateRecentActivity(analyticsData);
@@ -201,6 +251,8 @@ export default function SupplierDashboard() {
         completedTransactions: 0,
         totalInventoryValue: 0,
         avgOrderValue: 0,
+        averageRating: 0,
+        totalRatings: 0,
       });
     } finally {
       setIsLoading(false);
@@ -307,6 +359,39 @@ export default function SupplierDashboard() {
     return "Just now";
   };
 
+  const vendorSatisfaction = useMemo(() => {
+    if (topVendors.length === 0) return { rating: "0.0", percentage: 0 };
+
+    const totalRating = topVendors.reduce(
+      (sum, vendor) => sum + (vendor.rating || 0),
+      0
+    );
+    const avgRating = totalRating / topVendors.length;
+    const percentage = (avgRating / 5) * 100;
+
+    return {
+      rating: avgRating.toFixed(1),
+      percentage: Math.round(percentage),
+    };
+  }, [topVendors]);
+
+  // Calculate stock turnover rate
+  const stockTurnover = useMemo(() => {
+    if (metrics.totalInventoryValue === 0 || metrics.totalRevenue === 0) {
+      return { rate: "0.0", percentage: 0, comparison: "Below" };
+    }
+
+    const turnoverRate = metrics.totalRevenue / metrics.totalInventoryValue;
+    const industryAvg = 5;
+    const percentage = Math.min((turnoverRate / industryAvg) * 100, 100);
+
+    return {
+      rate: turnoverRate.toFixed(1),
+      percentage: Math.round(percentage),
+      comparison: turnoverRate >= industryAvg ? "Above" : "Below",
+    };
+  }, [metrics.totalRevenue, metrics.totalInventoryValue]);
+
   if (isLoading) {
     return <SupplierDashboardSkeleton />;
   }
@@ -328,24 +413,28 @@ export default function SupplierDashboard() {
               <p className={`text-base ${colors.texts.secondary}`}>
                 Manage your inventory, vendors, and supply operations
               </p>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-3 mt-2">
                 <Badge
                   className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
                 >
-                  {metrics.totalInventory} Inventory Items
+                  {metrics.totalInventory}{" "}
+                  {metrics.totalInventory === 1
+                    ? "Inventory Item"
+                    : "Inventory Items"}
                 </Badge>
                 <Badge
-                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                  className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
                 >
-                  {metrics.totalVendors} Vendors
+                  {metrics.totalVendors}{" "}
+                  {metrics.totalVendors === 1 ? "Vendor" : "Vendors"}
                 </Badge>
                 <Badge
-                  className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} flex items-center gap-1 text-xs rounded-none`}
+                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
                 >
                   <ShieldCheckIcon
-                    className={`h-3 w-3 ${badgeColors.blue.icon}`}
+                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
                   />
-                  Blockchain Secured
+                  Blockchain Verified
                 </Badge>
               </div>
             </div>
@@ -532,18 +621,6 @@ export default function SupplierDashboard() {
                     })}
                   </div>
                 )}
-                <div className="mt-6 text-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => router.push("/supplier/transactions")}
-                    className={`${colors.texts.primary} hover:${colors.backgrounds.hover} rounded-none border-0`}
-                    style={{ borderRadius: 0 }}
-                  >
-                    View All Transactions
-                    <ArrowRightIcon className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
               </CardContent>
             </Card>
 
@@ -569,16 +646,19 @@ export default function SupplierDashboard() {
                     </span>
                     <span className={`text-xs ${colors.texts.secondary}`}>
                       {formatCurrencyAbbreviated(metrics.totalRevenue)} /{" "}
-                      {formatCurrencyAbbreviated(500000)}
+                      {formatCurrencyAbbreviated(10000000)}
                     </span>
                   </div>
                   <Progress
-                    value={Math.min((metrics.totalRevenue / 500000) * 100, 100)}
+                    value={Math.min(
+                      (metrics.totalRevenue / 10000000) * 100,
+                      100
+                    )}
                     className="h-2 rounded-none"
                   />
                   <p className={`text-xs ${colors.texts.muted} mt-1`}>
                     {Math.round(
-                      Math.min((metrics.totalRevenue / 500000) * 100, 100)
+                      Math.min((metrics.totalRevenue / 10000000) * 100, 100)
                     )}
                     % completed
                   </p>
@@ -589,12 +669,34 @@ export default function SupplierDashboard() {
                       Vendor Satisfaction
                     </span>
                     <span className="text-xs text-gray-600 dark:text-gray-400">
-                      4.7/5
+                      {vendorSatisfaction.rating}/5
                     </span>
                   </div>
-                  <Progress value={94} className="h-2 rounded-none" />
+                  <Progress
+                    value={vendorSatisfaction.percentage}
+                    className="h-2 rounded-none"
+                  />
                   <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                    94% satisfaction rate
+                    {vendorSatisfaction.percentage}% satisfaction rate
+                  </p>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                      Supplier Rating
+                    </span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                      <StarIcon className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      {metrics.averageRating || 0}/5
+                    </span>
+                  </div>
+                  <Progress
+                    value={(metrics.averageRating || 0) * 20}
+                    className="h-2 rounded-none"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    From {metrics.totalRatings || 0} vendor
+                    {metrics.totalRatings !== 1 ? "s" : ""}
                   </p>
                 </div>
                 <div>
@@ -603,12 +705,15 @@ export default function SupplierDashboard() {
                       Stock Turnover
                     </span>
                     <span className="text-xs text-gray-600 dark:text-gray-400">
-                      6.2x
+                      {stockTurnover.rate}x
                     </span>
                   </div>
-                  <Progress value={85} className="h-2 rounded-none" />
+                  <Progress
+                    value={stockTurnover.percentage}
+                    className="h-2 rounded-none"
+                  />
                   <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                    Above industry average
+                    {stockTurnover.comparison} industry average
                   </p>
                 </div>
               </CardContent>
@@ -738,7 +843,7 @@ export default function SupplierDashboard() {
               </CardContent>
             </Card>
 
-            {/* Top Products */}
+            {/* Top Items */}
             <Card
               className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
             >
@@ -747,7 +852,7 @@ export default function SupplierDashboard() {
                   className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
                 >
                   <StarIcon className={`h-5 w-5 ${colors.icons.primary}`} />
-                  Top Products
+                  Top Items
                 </CardTitle>
                 <CardDescription
                   className={`text-xs ${colors.texts.secondary}`}
@@ -762,10 +867,10 @@ export default function SupplierDashboard() {
                       className={`h-12 w-12 mx-auto ${colors.icons.secondary} mb-3`}
                     />
                     <p className={`text-sm ${colors.texts.secondary}`}>
-                      No product data
+                      No inventory data
                     </p>
                     <p className={`text-xs ${colors.texts.muted} mt-1`}>
-                      Product performance will appear here
+                      Item performance will appear here
                     </p>
                   </div>
                 ) : (
@@ -778,10 +883,20 @@ export default function SupplierDashboard() {
                           key={product.id}
                           className={`flex items-center gap-4 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.backgrounds.hover} transition-all cursor-pointer ${colors.borders.primary} hover:shadow-none`}
                         >
-                          <div
-                            className={`h-12 w-12 ${colors.backgrounds.tertiary} flex items-center justify-center text-gray-900 dark:text-white font-bold rounded-none`}
-                          >
-                            {getInitials(product.name)}
+                          <div className="relative">
+                            <Avatar
+                              className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
+                            >
+                              <AvatarImage
+                                src={product.image}
+                                alt={product.name}
+                              />
+                              <AvatarFallback
+                                className={`${colors.texts.primary} font-bold rounded-none`}
+                              >
+                                {getInitials(product.name)}
+                              </AvatarFallback>
+                            </Avatar>
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
@@ -885,6 +1000,7 @@ export default function SupplierDashboard() {
                   </div>
                 </button>
                 <button
+                 onClick={() => router.push("/supplier/vendors")}
                   className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
                 >
                   <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
@@ -902,6 +1018,7 @@ export default function SupplierDashboard() {
                   </div>
                 </button>
                 <button
+                 onClick={() => router.push("/supplier/inventory")}
                   className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
                 >
                   <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
@@ -921,6 +1038,7 @@ export default function SupplierDashboard() {
                   </div>
                 </button>
                 <button
+                 onClick={() => router.push("/supplier/insights")}
                   className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
                 >
                   <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">

@@ -31,6 +31,7 @@ class AnalyticsService {
         orderTrends,
         topProducts,
         categoryRevenue,
+        topInventoryItems,
       ] = await Promise.all([
         this.getSupplierRevenue(supplierId, dateFilter),
         this.getTopVendors(supplierId, dateFilter),
@@ -39,6 +40,7 @@ class AnalyticsService {
         this.getOrderTrends(supplierId, dateFilter, timeframe),
         this.getTopSupplyProducts(supplierId, dateFilter),
         this.getCategoryRevenue(supplierId, dateFilter),
+        this.getTopInventoryItems(supplierId, dateFilter, 5),
       ]);
 
       return {
@@ -52,6 +54,7 @@ class AnalyticsService {
           orderTrends,
           topProducts,
           categoryRevenue,
+          topInventoryItems,
         },
       };
     } catch (error) {
@@ -808,6 +811,10 @@ class AnalyticsService {
           orderCount: 1,
           currentStock: "$inventory.quantity",
           avgOrderSize: { $divide: ["$totalSupplied", "$orderCount"] },
+          quantity: "$inventory.quantity",
+          reservedQuantity: "$inventory.reservedQuantity",
+          damagedQuantity: "$inventory.damagedQuantity",
+          committedQuantity: "$inventory.committedQuantity",
         },
       },
     ]);
@@ -858,6 +865,76 @@ class AnalyticsService {
     ]);
 
     return categoryStats;
+  }
+
+  /**
+   * Get top selling inventory items for supplier
+   */
+  async getTopInventoryItems(supplierId, dateFilter, limit = 5) {
+    try {
+      const topItems = await Order.aggregate([
+        {
+          $match: {
+            sellerId: mongoose.Types.ObjectId(supplierId),
+            status: { $in: ["delivered", "completed"] },
+            createdAt: dateFilter,
+          },
+        },
+        { $unwind: "$items" },
+        {
+          $group: {
+            _id: "$items.productId",
+            productName: { $first: "$items.productName" },
+            totalSold: { $sum: "$items.quantity" },
+            revenue: { $sum: "$items.subtotal" },
+            orderCount: { $sum: 1 },
+          },
+        },
+        {
+          $lookup: {
+            from: "inventories", // or "products" depending on your setup
+            localField: "_id",
+            foreignField: "_id",
+            as: "itemDetails",
+          },
+        },
+        { $unwind: { path: "$itemDetails", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 1,
+            name: "$productName",
+            category: "$itemDetails.category",
+            totalSold: 1,
+            revenue: 1,
+            currentStock: "$itemDetails.quantity",
+            status: {
+              $cond: [
+                {
+                  $gte: ["$itemDetails.quantity", "$itemDetails.minStockLevel"],
+                },
+                "active",
+                {
+                  $cond: [
+                    { $gt: ["$itemDetails.quantity", 0] },
+                    "low_stock",
+                    "out_of_stock",
+                  ],
+                },
+              ],
+            },
+            lastSold: new Date(),
+            averageRating: { $ifNull: ["$itemDetails.averageRating", 4.5] },
+          },
+        },
+        { $sort: { revenue: -1 } },
+        { $limit: limit },
+      ]);
+
+      return topItems;
+    } catch (error) {
+      console.error("Error getting top inventory items:", error);
+      return [];
+    }
   }
 }
 

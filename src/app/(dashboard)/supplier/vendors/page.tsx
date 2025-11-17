@@ -46,12 +46,14 @@ import {
   XCircleIcon,
   TagIcon,
   ShoppingCartIcon,
+  ClipboardDocumentIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
 import SupplierVendorsSkeleton from "@/components/skeletons/supplierVendorsSkeleton";
 import { Activity } from "lucide-react";
-import { colors } from "@/lib/colorConstants";
+import { colors, badgeColors } from "@/lib/colorConstants";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -61,6 +63,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import * as vendorCustomerApi from "@/lib/api/supplier.vendor.api";
+import { getRequestById } from "@/lib/api/supplier.vendor.request.api";
 
 const RsIcon = () => (
   <svg
@@ -138,6 +141,8 @@ export default function SupplierVendorsPage() {
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [detailedVendor, setDetailedVendor] = useState<any>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [copiedTxId, setCopiedTxId] = useState<string | null>(null);
+  const [requestTxIds, setRequestTxIds] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setIsVisible(true);
@@ -184,6 +189,30 @@ export default function SupplierVendorsPage() {
           vendor: vendorData,
           stats: statsData,
         });
+
+        // Fetch blockchainTxId for recent requests
+        if (response.recentRequests && response.recentRequests.length > 0) {
+          const txPromises = response.recentRequests
+            .slice(0, 5)
+            .map(async (req: any) => {
+              try {
+                const res = await getRequestById(req.id);
+                return {
+                  id: req.id,
+                  txId: res.request?.blockchainTxId || "N/A",
+                };
+              } catch (error) {
+                console.error("Error fetching TxId for request", req.id, error);
+                return { id: req.id, txId: "N/A" };
+              }
+            });
+          const txResults = await Promise.all(txPromises);
+          const txMap = txResults.reduce(
+            (acc, { id, txId }) => ({ ...acc, [id]: txId }),
+            {}
+          );
+          setRequestTxIds(txMap);
+        }
       }
     } catch (error: any) {
       console.error("Error loading vendor details:", error);
@@ -214,6 +243,19 @@ export default function SupplierVendorsPage() {
     return isActive
       ? "bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400"
       : "bg-red-100/10 dark:bg-red-900/10 border border-red-100 dark:border-red-900 text-red-700 dark:text-red-400";
+  };
+
+  const getTransactionStatusBadgeClass = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "completed":
+        return `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} rounded-none`;
+      case "cancelled":
+        return `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} rounded-none`;
+      case "pending":
+        return `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text} rounded-none`;
+      default:
+        return `${badgeColors.grey.bg} ${badgeColors.grey.border} ${badgeColors.grey.text} rounded-none`;
+    }
   };
 
   const filteredAndSortedVendors = useMemo(() => {
@@ -274,6 +316,12 @@ export default function SupplierVendorsPage() {
     await loadVendorDetails(vendor._id);
   };
 
+  const handleCopyTxId = (txId: string) => {
+    navigator.clipboard.writeText(txId);
+    setCopiedTxId(txId);
+    setTimeout(() => setCopiedTxId(null), 2000);
+  };
+
   if (isLoading) {
     return <SupplierVendorsSkeleton />;
   }
@@ -313,19 +361,10 @@ export default function SupplierVendorsPage() {
               <Button
                 onClick={loadVendors}
                 variant="outline"
-                className={`hidden lg:flex items-center gap-2 text-xs cursor-pointer ${colors.buttons.outline} transition-all rounded-none`}
+                className={`hidden lg:flex items-center gap-2 text-xs cursor-pointer ${colors.buttons.outline} transition-all hover:border-black dark:hover:border-white rounded-none `}
               >
                 <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
                 Refresh
-              </Button>
-              <Button
-                variant="outline"
-                className={`flex items-center gap-2 text-xs cursor-pointer ${colors.buttons.outline} transition-all rounded-none`}
-              >
-                <ArrowDownTrayIcon
-                  className={`h-4 w-4 ${colors.icons.primary}`}
-                />
-                Export
               </Button>
             </div>
           </div>
@@ -416,7 +455,7 @@ export default function SupplierVendorsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+              <div className="w-full mb-6">
                 <div className="relative w-full">
                   <MagnifyingGlassIcon
                     className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
@@ -425,15 +464,17 @@ export default function SupplierVendorsPage() {
                     placeholder="Search vendors by name, email or company"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
+                    className={`${colors.inputs.base} pl-9 h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                 <Select
                   value={selectedStatus}
                   onValueChange={setSelectedStatus}
                 >
                   <SelectTrigger
-                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                    className={`text-sm h-9 w-full ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
                   >
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
@@ -451,7 +492,7 @@ export default function SupplierVendorsPage() {
                 </Select>
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger
-                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                    className={`text-sm h-9 w-full ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
                   >
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
@@ -682,7 +723,7 @@ export default function SupplierVendorsPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleViewDetails(vendor)}
-                              className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none`}
+                              className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none transition-all hover:border-black dark:hover:border-white`}
                             >
                               <EyeIcon
                                 className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
@@ -743,8 +784,8 @@ export default function SupplierVendorsPage() {
       {/* Vendor Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent
-          style={{ width: "100%", maxWidth: "700px" }}
-          className={`w-full max-w-[700px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none p-0 !shadow-none hover:!shadow-none`}
+          style={{ width: "100%", maxWidth: "900px" }}
+          className={`w-full max-w-[900px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none p-0 !shadow-none hover:!shadow-none`}
         >
           <div className="p-6">
             <DialogHeader>
@@ -950,7 +991,7 @@ export default function SupplierVendorsPage() {
                           Average Order Value
                         </p>
                         <p
-                          className={`text-base font-bold ${colors.texts.info}`}
+                          className={`text-base font-bold ${colors.texts.primary}`}
                         >
                           {formatCurrency(selectedVendor.stats.avgRequestValue)}
                         </p>
@@ -1000,11 +1041,14 @@ export default function SupplierVendorsPage() {
                           {detailedVendor.recentRequests
                             .slice(0, 5)
                             .map((request: any, idx: number) => {
+                              console.log("Request object:", request); // Debug log to check if blockchainTxId is present
                               // Backend returns 'date' and 'amount' fields
                               const requestDate =
                                 request.date || request.createdAt;
                               const requestAmount =
                                 request.amount || request.total || 0;
+                              const blockchainTxId =
+                                requestTxIds[request.id] || "Loading...";
 
                               return (
                                 <div
@@ -1025,15 +1069,36 @@ export default function SupplierVendorsPage() {
                                         ? formatDate(requestDate)
                                         : "N/A"}
                                     </p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span
+                                        className={`text-xs ${colors.texts.secondary}`}
+                                      >
+                                        TxId: {blockchainTxId}
+                                      </span>
+                                      {blockchainTxId !== "N/A" && (
+                                        <button
+                                          onClick={() =>
+                                            handleCopyTxId(blockchainTxId)
+                                          }
+                                          className={`cursor-pointer ${colors.texts.secondary} hover:${colors.texts.primary}`}
+                                        >
+                                          {copiedTxId === blockchainTxId ? (
+                                            <CheckIcon className="h-4 w-4" />
+                                          ) : (
+                                            <ClipboardDocumentIcon className="h-4 w-4" />
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                   <div className="text-right">
                                     <p
-                                      className={`text-sm font-bold ${colors.texts.success}`}
+                                      className={`text-sm font-bold ${colors.texts.primary}`}
                                     >
                                       {formatCurrency(requestAmount)}
                                     </p>
                                     <Badge
-                                      className="text-xs rounded-none"
+                                      className={`text-xs ${getTransactionStatusBadgeClass(request.status)}`}
                                       variant="outline"
                                     >
                                       {request.status || "unknown"}
@@ -1054,7 +1119,7 @@ export default function SupplierVendorsPage() {
             <Button
               variant="outline"
               onClick={() => setIsDetailsOpen(false)}
-              className={`shadow-none hover:shadow-none transition-all duration-300 cursor-pointer ${colors.buttons.outline} rounded-none`}
+              className={`shadow-none hover:shadow-none transition-all duration-300 cursor-pointer ${colors.buttons.outline} rounded-none transition-all hover:border-black dark:hover:border-white`}
             >
               Close
             </Button>
