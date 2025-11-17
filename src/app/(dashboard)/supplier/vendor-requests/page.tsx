@@ -45,6 +45,7 @@ import {
   InboxStackIcon,
   InboxArrowDownIcon,
   ShieldCheckIcon,
+  NoSymbolIcon,
 } from "@heroicons/react/24/outline";
 import { colors, badgeColors } from "@/lib/colorConstants";
 import {
@@ -64,6 +65,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Inbox } from "lucide-react";
 
 const HEADER_GAP = "gap-3";
 
@@ -386,6 +388,7 @@ export default function VendorRequestsPage() {
     "Pending",
     "Confirmed",
     "Cancelled",
+    "Rejected",
   ];
 
   const sortOptions = [
@@ -397,23 +400,30 @@ export default function VendorRequestsPage() {
     { value: "value-asc", label: "Lowest Value" },
   ];
 
+  // Filter out completed requests to exclude them from display
+  const filteredAllRequests = useMemo(() => {
+    return allRequests.filter((r) => !r.isCompleted);
+  }, [allRequests]);
+
   // Filter requests based on selected tab
   const filteredByTab = useMemo(() => {
-    if (selectedTab === "all") return allRequests;
+    if (selectedTab === "all") return filteredAllRequests;
     if (selectedTab === "new")
-      return allRequests.filter((r) => r.status === "pending");
+      return filteredAllRequests.filter((r) => r.status === "pending");
     if (selectedTab === "pending")
-      return allRequests.filter((r) => r.status === "approved" && !r.orderId);
+      return filteredAllRequests.filter(
+        (r) => r.status === "approved" && !r.orderId
+      );
     if (selectedTab === "confirmed")
-      return allRequests.filter(
+      return filteredAllRequests.filter(
         (r) => r.status === "approved" && r.orderId && !r.isCompleted
       );
     if (selectedTab === "cancelled")
-      return allRequests.filter(
-        (r) => r.status === "cancelled" || r.status === "rejected"
-      );
-    return allRequests;
-  }, [allRequests, selectedTab]);
+      return filteredAllRequests.filter((r) => r.status === "cancelled");
+    if (selectedTab === "rejected")
+      return filteredAllRequests.filter((r) => r.status === "rejected");
+    return filteredAllRequests;
+  }, [filteredAllRequests, selectedTab]);
 
   // Apply search and filters
   const filteredAndSortedRequests = useMemo(() => {
@@ -460,16 +470,18 @@ export default function VendorRequestsPage() {
     return filtered;
   }, [filteredByTab, searchTerm, selectedStatus, sortBy]);
 
-  // Calculate statistics from all requests
-  const totalRequests = allRequests.length;
-  const newRequests = allRequests.filter((r) => r.status === "pending").length;
-  const pendingRequests = allRequests.filter(
+  // Calculate statistics from filtered (non-completed) requests
+  const totalRequests = filteredAllRequests.length;
+  const newRequests = filteredAllRequests.filter(
+    (r) => r.status === "pending"
+  ).length;
+  const pendingRequests = filteredAllRequests.filter(
     (r) => r.status === "approved" && !r.orderId
   ).length;
-  const confirmedRequests = allRequests.filter(
+  const confirmedRequests = filteredAllRequests.filter(
     (r) => r.status === "approved" && r.orderId && !r.isCompleted
   ).length;
-  const cancelledRequests = allRequests.filter(
+  const cancelledRequests = filteredAllRequests.filter(
     (r) => r.status === "cancelled" || r.status === "rejected"
   ).length;
 
@@ -515,6 +527,14 @@ export default function VendorRequestsPage() {
                 Manage incoming requests from your vendor partners
               </p>
               <div className={`flex items-center ${HEADER_GAP} mt-2`}>
+                <Badge
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                >
+                  <InboxStackIcon
+                    className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
+                  />
+                  Request Management
+                </Badge>
                 <Badge
                   className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
                 >
@@ -781,6 +801,18 @@ export default function VendorRequestsPage() {
                   <XCircleIcon className={`h-4 w-4 ${colors.icons.primary}`} />
                   Cancelled
                 </TabsTrigger>
+                <TabsTrigger
+                  value="rejected"
+                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                  ${
+                    selectedTab === "rejected"
+                      ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
+                      : `${colors.texts.secondary} hover:${colors.texts.primary}`
+                  } flex items-center gap-2 justify-center`}
+                >
+                  <NoSymbolIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                  Rejected
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -912,7 +944,7 @@ export default function VendorRequestsPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     {request.status === "pending" && (
                       <>
                         <Button
@@ -923,7 +955,7 @@ export default function VendorRequestsPage() {
                             setIsApproveDialogOpen(true);
                           }}
                           disabled={actionLoading}
-                          className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
+                          className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none transition-all hover:border-black dark:hover:border-white`}
                         >
                           <CheckCircleIcon
                             className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
@@ -938,10 +970,11 @@ export default function VendorRequestsPage() {
                             setIsRejectDialogOpen(true);
                           }}
                           disabled={actionLoading}
-                          className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
+                          className={`flex-1 h-8 px-3 ${colors.buttons.outline} 
+                            text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400`}
                         >
-                          <XCircleIcon
-                            className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
+                          <NoSymbolIcon
+                            className={`h-3 w-3 mr-1 ${colors.icons.red}`}
                           />
                           Reject
                         </Button>
@@ -971,7 +1004,7 @@ export default function VendorRequestsPage() {
                         setSelectedRequest(request);
                         setIsDetailsOpen(true);
                       }}
-                      className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
+                      className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none transition-all hover:border-black dark:hover:border-white`}
                     >
                       <EyeIcon
                         className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
@@ -1009,7 +1042,8 @@ export default function VendorRequestsPage() {
       {/* Approve Dialog */}
       <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
         <DialogContent
-          className={`${colors.backgrounds.modal} rounded-none max-w-md`}
+          style={{ width: "100%", maxWidth: "672px" }}
+          className={`${colors.backgrounds.modal} rounded-none`}
         >
           <DialogHeader>
             <DialogTitle className={`${colors.texts.primary}`}>
@@ -1028,26 +1062,31 @@ export default function VendorRequestsPage() {
                 value={supplierNotes}
                 onChange={(e) => setSupplierNotes(e.target.value)}
                 placeholder="Enter any notes for the vendor..."
-                className={`${colors.inputs.base} rounded-none mt-2`}
-                rows={4}
+                className={`${colors.inputs.base} rounded-none mt-2 ring-0 focus:ring-0 !focus:ring-0 outline-none focus:outline-none shadow-none focus:shadow-none resize-none min-w-[300px]`}
+                style={{ outline: "none", boxShadow: "none", height: "200px" }}
+                rows={5}
+                maxLength={1000}
               />
+              <p className={`text-xs ${colors.texts.muted} mt-1 text-right`}>
+                {supplierNotes.length}/1000 characters
+              </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-3">
             <Button
               variant="outline"
               onClick={() => {
                 setIsApproveDialogOpen(false);
                 setSupplierNotes("");
               }}
-              className={`${colors.buttons.outline} rounded-none`}
+              className={`${colors.buttons.outline} rounded-none transition-all hover:border-black dark:hover:border-white cursor-pointer`}
             >
               Cancel
             </Button>
             <Button
               onClick={handleApprove}
               disabled={actionLoading}
-              className={`${colors.buttons.primary} rounded-none`}
+              className={`${colors.buttons.primary} rounded-none cursor-pointer`}
             >
               {actionLoading ? "Approving..." : "Approve Request"}
             </Button>
@@ -1058,7 +1097,8 @@ export default function VendorRequestsPage() {
       {/* Reject Dialog */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent
-          className={`${colors.backgrounds.modal} rounded-none max-w-md`}
+          style={{ width: "100%", maxWidth: "672px" }}
+          className={`${colors.backgrounds.modal} rounded-none`}
         >
           <DialogHeader>
             <DialogTitle className={`${colors.texts.primary}`}>
@@ -1077,28 +1117,34 @@ export default function VendorRequestsPage() {
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 placeholder="Explain why you're rejecting this request..."
-                className={`${colors.inputs.base} rounded-none mt-2`}
-                rows={4}
+                className={`${colors.inputs.base} rounded-none mt-2 ring-0 focus:ring-0 !focus:ring-0 outline-none focus:outline-none shadow-none focus:shadow-none resize-none min-w-[300px]`}
+                style={{ outline: "none", boxShadow: "none", height: "200px" }}
+                rows={5}
+                maxLength={1000}
                 required
               />
+              <p className={`text-xs ${colors.texts.muted} mt-1 text-right`}>
+                {supplierNotes.length}/1000 characters
+              </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-3">
             <Button
               variant="outline"
               onClick={() => {
                 setIsRejectDialogOpen(false);
                 setRejectionReason("");
               }}
-              className={`${colors.buttons.outline} rounded-none`}
+              className={`${colors.buttons.outline} 
+                rounded-none transition-all hover:border-black dark:hover:border-white cursor-pointer`}
             >
               Cancel
             </Button>
             <Button
-              variant="destructive"
+              variant="outline"
               onClick={handleReject}
               disabled={actionLoading || !rejectionReason.trim()}
-              className="rounded-none"
+              className="text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400"
             >
               {actionLoading ? "Rejecting..." : "Reject Request"}
             </Button>
@@ -1370,7 +1416,7 @@ export default function VendorRequestsPage() {
             <Button
               variant="outline"
               onClick={() => setIsDetailsOpen(false)}
-              className={`shadow-none hover:shadow-none transition-all duration-300 cursor-pointer ${colors.buttons.outline} rounded-none`}
+              className={`shadow-none cursor-pointer ${colors.buttons.outline} rounded-none transition-all hover:border-black dark:hover:border-white w-24`}
             >
               Close
             </Button>

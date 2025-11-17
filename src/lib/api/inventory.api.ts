@@ -118,6 +118,14 @@ export async function createInventory(
     data.append("autoReorderEnabled", formData.autoReorderEnabled.toString());
   }
 
+  // Add internalCode and barcode
+  if (formData.internalCode) {
+    data.append("internalCode", formData.internalCode);
+  }
+  if (formData.barcode) {
+    data.append("barcode", formData.barcode);
+  }
+
   // JSON objects
   if (formData.textileDetails) {
     data.append("textileDetails", JSON.stringify(formData.textileDetails));
@@ -198,7 +206,16 @@ export async function updateInventory(
   // Append all provided fields
   Object.entries(formData).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
-      if (key === "storageLocations") return;
+      // Skip fields that are handled specially below
+      if (
+        key === "storageLocations" ||
+        key === "manufactureDate" ||
+        key === "expiryDate" ||
+        key === "warehouseLocation" ||
+        key === "primaryLocation"
+      ) {
+        return;
+      }
 
       if (key === "imagesToDelete") {
         // Send imagesToDelete as JSON
@@ -217,15 +234,23 @@ export async function updateInventory(
   });
 
   // Explicitly append manufactureDate and expiryDate if present (for safety)
-  if (formData.manufactureDate)
+  if (formData.manufactureDate) {
     data.append("manufactureDate", formData.manufactureDate);
-  if (formData.expiryDate) data.append("expiryDate", formData.expiryDate);
+    console.log("✅ Appending manufactureDate:", formData.manufactureDate);
+  }
+  if (formData.expiryDate) {
+    data.append("expiryDate", formData.expiryDate);
+    console.log("✅ Appending expiryDate:", formData.expiryDate);
+  }
 
-  if (formData.warehouseLocation) {
-    data.append("defaultLocation", formData.warehouseLocation);
+  // Handle both warehouseLocation (old) and primaryLocation (new)
+  const locationValue =
+    (formData as any).primaryLocation || formData.warehouseLocation;
+  if (locationValue) {
+    data.append("primaryLocation", locationValue);
     const storageLocations = [
       {
-        warehouse: formData.warehouseLocation,
+        warehouse: locationValue,
         zone: "",
         aisle: "",
         rack: "",

@@ -45,6 +45,8 @@ import {
   EyeIcon,
   ExclamationTriangleIcon,
   ShieldCheckIcon,
+  EllipsisVerticalIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Inventory } from "@/types";
@@ -63,7 +65,22 @@ import {
 import {
   getSupplierInventory,
   getInventoryStats,
+  deleteInventory,
 } from "@/lib/api/inventory.api";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const statusOptions = [
   "All Status",
@@ -130,6 +147,13 @@ export default function SupplierInventoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [sortBy, setSortBy] = useState("name-asc");
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState<Inventory | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     setIsVisible(true);
@@ -276,6 +300,101 @@ export default function SupplierInventoryPage() {
       .join(" ");
   };
 
+  const handleDelete = (item: Inventory) => {
+    setDeletingProduct(item);
+    setIsDeleteOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingProduct) return;
+    setIsDeleting(true);
+    try {
+      await deleteInventory(deletingProduct._id);
+      toast.success("Inventory item deleted successfully");
+      loadInventory();
+      setIsDeleteOpen(false);
+      setDeletingProduct(null);
+    } catch (error: any) {
+      console.error("Error deleting inventory:", error);
+      toast.error(error?.message || "Failed to delete inventory");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (filteredAndSortedInventory.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const headers = [
+      "Name",
+      "SKU",
+      "Category",
+      "Total Stock",
+      "Available Stock",
+      "Status",
+      "Unit Price",
+      "Total Value",
+      "Last Updated",
+    ];
+
+    const rows = filteredAndSortedInventory.map((item) => {
+      const itemStatus = getStatusDisplay(item);
+      const totalValue = item.stockValue || item.pricePerUnit * item.quantity;
+      const availableStock =
+        (item.quantity || 0) -
+        (item.damagedQuantity || 0) -
+        (item.reservedQuantity || 0) -
+        (item.committedQuantity || 0);
+
+      return [
+        item.name,
+        item.sku,
+        item.category,
+        item.quantity.toString(),
+        availableStock.toString(),
+        capitalizeStatus(itemStatus),
+        item.pricePerUnit.toString(),
+        totalValue.toString(),
+        formatDate(item.updatedAt),
+      ];
+    });
+
+    const csvContent = [headers, ...rows]
+      .map((row) =>
+        row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "inventory_export.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success("CSV exported successfully");
+  };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedStatus, sortBy]);
+
+  const totalPages = Math.ceil(
+    filteredAndSortedInventory.length / itemsPerPage
+  );
+  const paginatedItems = filteredAndSortedInventory.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   if (isLoading) {
     return <SupplierInventorySkeleton />;
   }
@@ -312,7 +431,7 @@ export default function SupplierInventoryPage() {
               Manage stock levels and track inventory across your supply chain
             </p>
             {/* Header badges */}
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-3 mt-2">
               <Badge
                 className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
               >
@@ -328,18 +447,19 @@ export default function SupplierInventoryPage() {
               </Badge>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <Button
               onClick={loadInventory}
               variant="outline"
-              className={`hidden lg:flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
+              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all hover:border-black dark:hover:border-white`}
             >
               <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
               Refresh
             </Button>
             <Button
+              onClick={handleExportCSV}
               variant="outline"
-              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
+              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all hover:border-black dark:hover:border-white`}
             >
               <ArrowDownTrayIcon
                 className={`h-4 w-4 ${colors.icons.primary}`}
@@ -566,141 +686,56 @@ export default function SupplierInventoryPage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow
-                      className={`border-b ${colors.borders.secondary}`}
-                    >
-                      <TableHead
-                        className={`${colors.texts.primary} font-semibold`}
-                      >
-                        Product
-                      </TableHead>
-                      <TableHead
-                        className={`${colors.texts.primary} font-semibold`}
-                      >
-                        SKU
-                      </TableHead>
-                      <TableHead
-                        className={`${colors.texts.primary} font-semibold`}
-                      >
-                        Category
-                      </TableHead>
-                      <TableHead
-                        className={`${colors.texts.primary} font-semibold`}
-                      >
-                        Stock
-                      </TableHead>
-                      <TableHead
-                        className={`${colors.texts.primary} font-semibold`}
-                      >
-                        Status
-                      </TableHead>
-                      <TableHead
-                        className={`${colors.texts.primary} font-semibold`}
-                      >
-                        Unit Price
-                      </TableHead>
-                      <TableHead
-                        className={`${colors.texts.primary} font-semibold`}
-                      >
-                        Total Value
-                      </TableHead>
-                      <TableHead
-                        className={`${colors.texts.primary} font-semibold`}
-                      >
-                        Last Updated
-                      </TableHead>
-                      <TableHead
-                        className={`${colors.texts.primary} font-semibold`}
-                      >
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAndSortedInventory.map((item: Inventory) => {
-                      const itemStatus = getStatusDisplay(item);
-                      const badgeColor = getStatusBadgeColor(itemStatus);
-                      const totalValue =
-                        item.stockValue || item.pricePerUnit * item.quantity;
+              {/* Mobile Card View (visible on sm and below) */}
+              <div className="block md:hidden space-y-4 p-4">
+                {paginatedItems.map((item: Inventory) => {
+                  const itemStatus = getStatusDisplay(item);
+                  const badgeColor = getStatusBadgeColor(itemStatus);
+                  const totalValue =
+                    item.stockValue || item.pricePerUnit * item.quantity;
+                  const availableStock =
+                    (item.quantity || 0) -
+                    (item.damagedQuantity || 0) -
+                    (item.reservedQuantity || 0) -
+                    (item.committedQuantity || 0);
 
-                      return (
-                        <TableRow
-                          key={item._id}
-                          className={`border-b ${colors.borders.secondary} ${colors.backgrounds.hover} transition-colors rounded-none`}
+                  return (
+                    <Card
+                      key={item._id}
+                      className={`${colors.cards.base} rounded-none shadow-none p-4`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`h-12 w-12 rounded-none ${colors.backgrounds.primary} flex items-center justify-center flex-shrink-0`}
                         >
-                          <TableCell className="pl-8 pr-4">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`h-10 w-10 rounded-none ${colors.backgrounds.primary} flex items-center justify-center`}
-                              >
-                                {item.images &&
-                                item.images.length > 0 &&
-                                item.images[0] ? (
-                                  // Show image if exists
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={
-                                      typeof item.images[0] === "string"
-                                        ? item.images[0]
-                                        : item.images[0]?.url
-                                    }
-                                    alt={item.name}
-                                    className="h-10 w-10 object-cover rounded-none"
-                                    style={{
-                                      minWidth: 40,
-                                      minHeight: 40,
-                                      background: "#f3f4f6",
-                                    }}
-                                  />
-                                ) : (
-                                  // Fallback to CubeIcon
-                                  <CubeIcon
-                                    className={`h-5 w-5 ${colors.texts.primary}`}
-                                  />
-                                )}
-                              </div>
-                              <div>
-                                <p
-                                  className={`font-medium ${colors.texts.primary} text-xs`}
-                                >
-                                  {item.name}
-                                </p>
-                                <p className={`text-xs ${colors.texts.muted}`}>
-                                  Origin: {item.supplierName || "N/A"}
-                                </p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <Badge
-                              variant="outline"
-                              className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-mono text-xs px-2 py-1 rounded-none"
-                            >
-                              {item.sku}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <Badge
-                              variant="outline"
-                              className="font-medium text-xs border-0 rounded-none"
-                            >
-                              {item.category}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <div>
-                              <p className="font-bold text-gray-900 dark:text-gray-100 text-xs">
-                                {item.quantity.toLocaleString()}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                Min: {item.minStockLevel}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
+                          {item.images &&
+                          item.images.length > 0 &&
+                          item.images[0] ? (
+                            <img
+                              src={
+                                typeof item.images[0] === "string"
+                                  ? item.images[0]
+                                  : item.images[0]?.url
+                              }
+                              alt={item.name}
+                              className="h-12 w-12 object-cover rounded-none"
+                            />
+                          ) : (
+                            <CubeIcon
+                              className={`h-6 w-6 ${colors.texts.primary}`}
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4
+                            className={`font-semibold text-sm ${colors.texts.primary} truncate`}
+                          >
+                            {item.name}
+                          </h4>
+                          <p className={`text-xs ${colors.texts.muted} mb-2`}>
+                            SKU: {item.sku} | Category: {item.category}
+                          </p>
+                          <div className="flex items-center justify-between mb-2">
                             <Badge
                               className={`text-xs px-2 py-1 font-medium ${badgeColor.bg} ${badgeColor.border} ${badgeColor.text} flex items-center gap-1 rounded-none`}
                               variant="secondary"
@@ -727,57 +762,321 @@ export default function SupplierInventoryPage() {
                               )}
                               {capitalizeStatus(itemStatus)}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                              {formatCurrencyAbbreviated(item.pricePerUnit)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
-                            <span className="font-bold text-green-600 dark:text-green-400 text-xs">
-                              {formatCurrencyAbbreviated(totalValue)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-4">
                             <span className="text-xs text-gray-600 dark:text-gray-400">
                               {formatDate(item.updatedAt)}
                             </span>
-                          </TableCell>
-                          <TableCell className="pl-4 pr-8">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  router.push(
-                                    `/supplier/inventory/${item._id}/`
-                                  )
-                                }
-                                className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none`}
-                              >
-                                <EyeIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
-                                View
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  router.push(
-                                    `/supplier/inventory/${item._id}/edit`
-                                  )
-                                }
-                                className={`h-8 px-3 ${colors.buttons.secondary} cursor-pointer rounded-none`}
-                              >
-                                <PencilIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
-                                Edit
-                              </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="font-medium">Stock:</span>{" "}
+                              {item.quantity.toLocaleString()} (Avail:{" "}
+                              {availableStock.toLocaleString()})
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                            <div>
+                              <span className="font-medium">Value:</span>{" "}
+                              <span className="text-green-600 dark:text-green-400">
+                                {formatCurrencyAbbreviated(totalValue)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 cursor-pointer rounded-none flex-shrink-0"
+                            >
+                              <EllipsisVerticalIcon className="h-4 w-4 text-black dark:text-white" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="rounded-none"
+                          >
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(`/supplier/inventory/${item._id}/`)
+                              }
+                              className="cursor-pointer"
+                            >
+                              <EyeIcon className="h-4 w-4 mr-2" />
+                              View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(
+                                  `/supplier/inventory/${item._id}/edit`
+                                )
+                              }
+                              className="cursor-pointer"
+                            >
+                              <PencilIcon className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(item)}
+                              className="cursor-pointer text-red-600"
+                            >
+                              <TrashIcon className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+              {/* Desktop Table View (hidden on sm and below) */}
+              <div className="hidden md:block">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow
+                        className={`border-b ${colors.borders.secondary}`}
+                      >
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold`}
+                        >
+                          Product
+                        </TableHead>
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold`}
+                        >
+                          SKU
+                        </TableHead>
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold`}
+                        >
+                          Category
+                        </TableHead>
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold`}
+                        >
+                          Total Stock
+                        </TableHead>
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold`}
+                        >
+                          Available Stock
+                        </TableHead>
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold`}
+                        >
+                          Status
+                        </TableHead>
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold`}
+                        >
+                          Unit Price
+                        </TableHead>
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold`}
+                        >
+                          Total Value
+                        </TableHead>
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold`}
+                        >
+                          Last Updated
+                        </TableHead>
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold`}
+                        >
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedItems.map((item: Inventory) => {
+                        const itemStatus = getStatusDisplay(item);
+                        const badgeColor = getStatusBadgeColor(itemStatus);
+                        const totalValue =
+                          item.stockValue || item.pricePerUnit * item.quantity;
+
+                        return (
+                          <TableRow
+                            key={item._id}
+                            className={`border-b ${colors.borders.secondary} ${colors.backgrounds.hover} transition-colors rounded-none`}
+                          >
+                            <TableCell className="pl-8 pr-4">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`h-10 w-10 rounded-none ${colors.backgrounds.primary} flex items-center justify-center`}
+                                >
+                                  {item.images &&
+                                  item.images.length > 0 &&
+                                  item.images[0] ? (
+                                    // Show image if exists
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={
+                                        typeof item.images[0] === "string"
+                                          ? item.images[0]
+                                          : item.images[0]?.url
+                                      }
+                                      alt={item.name}
+                                      className="h-10 w-10 object-cover rounded-none"
+                                      style={{
+                                        minWidth: 40,
+                                        minHeight: 40,
+                                        background: "#f3f4f6",
+                                      }}
+                                    />
+                                  ) : (
+                                    // Fallback to CubeIcon
+                                    <CubeIcon
+                                      className={`h-5 w-5 ${colors.texts.primary}`}
+                                    />
+                                  )}
+                                </div>
+                                <div>
+                                  <p
+                                    className={`font-medium ${colors.texts.primary} text-xs`}
+                                  >
+                                    {item.name}
+                                  </p>
+                                  <p
+                                    className={`text-xs ${colors.texts.muted}`}
+                                  >
+                                    Origin: {item.supplierName || "N/A"}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <Badge
+                                variant="outline"
+                                className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-mono text-xs px-2 py-1 rounded-none"
+                              >
+                                {item.sku}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <Badge
+                                variant="outline"
+                                className="font-medium text-xs border-0 rounded-none"
+                              >
+                                {item.category}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <div>
+                                <p className="font-bold text-gray-900 dark:text-gray-100 text-xs">
+                                  {item.quantity.toLocaleString()}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-500">
+                                  Min: {item.minStockLevel}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <p className="font-bold text-gray-900 dark:text-gray-100 text-xs">
+                                {(
+                                  (item.quantity || 0) -
+                                  (item.damagedQuantity || 0) -
+                                  (item.reservedQuantity || 0) -
+                                  (item.committedQuantity || 0)
+                                ).toLocaleString()}
+                              </p>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <Badge
+                                className={`text-xs px-2 py-1 font-medium ${badgeColor.bg} ${badgeColor.border} ${badgeColor.text} flex items-center gap-1 rounded-none`}
+                                variant="secondary"
+                              >
+                                {itemStatus === "active" && (
+                                  <CheckCircleIcon
+                                    className={`h-3 w-3 ${badgeColor.icon}`}
+                                  />
+                                )}
+                                {itemStatus === "low_stock" && (
+                                  <ExclamationCircleIcon
+                                    className={`h-3 w-3 ${badgeColor.icon}`}
+                                  />
+                                )}
+                                {itemStatus === "out_of_stock" && (
+                                  <XCircleIcon
+                                    className={`h-3 w-3 ${badgeColor.icon}`}
+                                  />
+                                )}
+                                {itemStatus === "inactive" && (
+                                  <ClockIcon
+                                    className={`h-3 w-3 ${badgeColor.icon}`}
+                                  />
+                                )}
+                                {capitalizeStatus(itemStatus)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                                {formatCurrencyAbbreviated(item.pricePerUnit)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <span className="font-bold text-green-600 dark:text-green-400 text-xs">
+                                {formatCurrencyAbbreviated(totalValue)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-4">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">
+                                {formatDate(item.updatedAt)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="pl-4 pr-8">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 cursor-pointer rounded-none"
+                                  >
+                                    <EllipsisVerticalIcon className="h-4 w-4 text-black dark:text-white" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="rounded-none"
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      router.push(
+                                        `/supplier/inventory/${item._id}/`
+                                      )
+                                    }
+                                    className="cursor-pointer"
+                                  >
+                                    <EyeIcon className="h-4 w-4 mr-2" />
+                                    View
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      router.push(
+                                        `/supplier/inventory/${item._id}/edit`
+                                      )
+                                    }
+                                    className="cursor-pointer"
+                                  >
+                                    <PencilIcon className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(item)}
+                                    className="cursor-pointer text-red-600"
+                                  >
+                                    <TrashIcon className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -831,6 +1130,108 @@ export default function SupplierInventoryPage() {
           </Card>
         )}
       </div>
+
+      {/* Pagination */}
+      {filteredAndSortedInventory.length > itemsPerPage && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+            {Math.min(
+              currentPage * itemsPerPage,
+              filteredAndSortedInventory.length
+            )}{" "}
+            of {filteredAndSortedInventory.length} items
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="text-xs cursor-pointer rounded-none"
+            >
+              Previous
+            </Button>
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(
+                  (page) =>
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                )
+                .map((page) => (
+                  <Button
+                    key={page}
+                    variant={page === currentPage ? "default" : "outline"}
+                    onClick={() => setCurrentPage(page)}
+                    className="text-xs cursor-pointer rounded-none min-w-[32px]"
+                  >
+                    {page}
+                  </Button>
+                ))}
+            </div>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
+              disabled={currentPage === totalPages}
+              className="text-xs cursor-pointer rounded-none"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent
+          className={`max-w-md ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none shadow-none`}
+        >
+          <DialogHeader>
+            <DialogTitle
+              className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+            >
+              <div className="h-10 w-10 flex items-center justify-center">
+                <TrashIcon className="h-5 w-5 text-red-600" />
+              </div>
+              Delete Inventory Item
+            </DialogTitle>
+            <DialogDescription className={`text-xs ${colors.texts.secondary}`}>
+              Are you sure you want to delete &quot;{deletingProduct?.name}
+              &quot;? This action cannot be undone and will permanently remove
+              the item from your inventory.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setIsDeleteOpen(false)}
+              disabled={isDeleting}
+              className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-gray-900 dark:text-white bg-transparent border border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors cursor-pointer rounded-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+            >
+              Cancel
+            </button>
+            <Button
+              variant="outline"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="flex items-center justify-center gap-1 px-3 py-2 text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+            >
+              {isDeleting ? (
+                <>
+                  <ArrowPathIcon className="h-3 w-3 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <TrashIcon className="h-3 w-3 mr-2" />
+                  Delete Item
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

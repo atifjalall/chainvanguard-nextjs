@@ -59,7 +59,7 @@ import {
   BanknotesIcon,
   ReceiptPercentIcon,
   ArrowTrendingDownIcon,
-  CreditCardIcon,
+  ArrowsRightLeftIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
@@ -75,7 +75,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import {
   getSupplierRequests,
-  getRequestStats,
   getRequestById,
 } from "@/lib/api/supplier.vendor.request.api";
 
@@ -109,13 +108,7 @@ const RsIcon = () => (
   </svg>
 );
 
-const transactionTypes = [
-  "All Types",
-  "sale",
-  "purchase",
-  "adjustment",
-  "transfer",
-];
+const transactionTypes = ["All Types", "sale", "adjustment", "transfer"];
 
 const transactionStatuses = ["All Status", "completed", "pending", "cancelled"];
 
@@ -331,9 +324,6 @@ export default function SupplierTransactionsPage() {
   const totalSales = transactions
     .filter((t) => t.type === "sale" && t.status === "completed")
     .reduce((sum, t) => sum + t.amount, 0);
-  const totalPurchases = transactions
-    .filter((t) => t.type === "purchase" && t.status === "completed")
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
@@ -457,12 +447,30 @@ export default function SupplierTransactionsPage() {
               <p className={`text-base ${colors.texts.secondary}`}>
                 Track all blockchain transactions and financial activities
               </p>
+              <div className={`flex items-center gap-3 mt-2`}>
+                <Badge
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                >
+                  <ArrowsRightLeftIcon
+                    className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
+                  />
+                  On-Chain Transactions
+                </Badge>
+                <Badge
+                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                >
+                  <ShieldCheckIcon
+                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                  />
+                  Blockchain Verified
+                </Badge>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Button
                 onClick={loadTransactions}
                 variant="outline"
-                className={`hidden lg:flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.secondary} transition-all`}
+                className={`hidden lg:flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.secondary} transition-all hover:border-black dark:hover:border-white`}
               >
                 <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
                 Refresh
@@ -487,7 +495,7 @@ export default function SupplierTransactionsPage() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
                 title: "Total Transactions",
@@ -506,12 +514,6 @@ export default function SupplierTransactionsPage() {
                 value: formatCurrencyAbbreviated(totalSales),
                 subtitle: "Revenue generated",
                 icon: ArrowTrendingUpIcon,
-              },
-              {
-                title: "Total Purchases",
-                value: formatCurrencyAbbreviated(totalPurchases),
-                subtitle: "Supply investments",
-                icon: CreditCardIcon,
               },
               {
                 title: "Completed",
@@ -750,10 +752,10 @@ export default function SupplierTransactionsPage() {
                   <div>
                     <Badge
                       variant="secondary"
-                      className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs !rounded-none flex items-center`}
+                      className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} text-xs !rounded-none flex items-center`}
                     >
                       <ShieldCheckIcon
-                        className={`h-3 w-3 mr-1 ${badgeColors.blue.icon}`}
+                        className={`h-3 w-3 mr-1 ${badgeColors.cyan.icon}`}
                       />
                       Blockchain Verified
                     </Badge>
@@ -951,7 +953,7 @@ export default function SupplierTransactionsPage() {
                                 onClick={() =>
                                   handleViewDetails(transaction.id)
                                 }
-                                className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer !rounded-none`}
+                                className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer !rounded-none transition-all hover:border-black dark:hover:border-white`}
                               >
                                 <EyeIcon className="h-3 w-3 mr-1" />
                                 View
@@ -965,7 +967,7 @@ export default function SupplierTransactionsPage() {
                                     "Blockchain hash"
                                   )
                                 }
-                                className={`h-8 w-8 p-0 ${colors.buttons.outline} cursor-pointer !rounded-none`}
+                                className={`h-8 w-8 p-0 ${colors.buttons.outline} cursor-pointer !rounded-none transition-all hover:border-black dark:hover:border-white`}
                               >
                                 <DocumentDuplicateIcon className="h-3 w-3" />
                               </Button>
@@ -1324,7 +1326,7 @@ export default function SupplierTransactionsPage() {
                   <Button
                     variant="outline"
                     onClick={() => setIsDetailsOpen(false)}
-                    className={`${colors.buttons.outline} !rounded-none`}
+                    className={`${colors.buttons.outline} !rounded-none transition-all hover:border-black dark:hover:border-white w-24 cursor-pointer`}
                   >
                     Close
                   </Button>

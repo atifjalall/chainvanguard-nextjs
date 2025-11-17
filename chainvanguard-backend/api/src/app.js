@@ -32,15 +32,17 @@ import inventoryBrowseRoutes from "./routes/inventory.browse.routes.js";
 import checkoutRoutes from "./routes/checkout.routes.js";
 import vendorTransactionRoutes from "./routes/vendor.transaction.routes.js";
 import customerBrowseRoutes from "./routes/customer.browse.routes.js";
+import supplierRatingRoutes from "./routes/supplier.rating.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// ========================================
-// MIDDLEWARE
-// ========================================
+/**
+ * Middleware
+ */
 app.use(helmet());
 app.use(
   cors({
@@ -58,9 +60,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// ========================================
-// SERVICE INITIALIZATION
-// ========================================
+/**
+ * Service Initialization
+ */
 const initializeServices = async () => {
   try {
     console.log("\n🔧 Initializing services...\n");
@@ -90,9 +92,9 @@ const initializeServices = async () => {
 // Initialize services on startup
 initializeServices();
 
-// ========================================
-// HEALTH CHECK ENDPOINT
-// ========================================
+/**
+ * Health Check Endpoint
+ */
 app.get("/health", async (req, res) => {
   const health = {
     status: "OK",
@@ -152,9 +154,9 @@ app.get("/health", async (req, res) => {
   res.status(allServicesHealthy ? 200 : 503).json(health);
 });
 
-// ========================================
-// API ROUTES
-// ========================================
+/**
+ * API Routes
+ */
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
@@ -180,12 +182,13 @@ app.use("/api/returns", returnRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/vendor-customers", supplierVendorRoutes);
 app.use("/api/vendor/inventory", vendorInventoryRoutes);
+app.use("/api/ai", aiRoutes);
 app.use("/api/vendor", vendorTransactionRoutes);
+app.use("/api/suppliers", supplierRatingRoutes);
 
-
-// ========================================
-// API INFO ENDPOINT
-// ========================================
+/**
+ * API Info Endpoint
+ */
 app.get("/api", (req, res) => {
   res.json({
     name: "ChainVanguard API",
@@ -408,7 +411,9 @@ app.get("/api", (req, res) => {
   });
 });
 
-// Root endpoint
+/**
+ * Root Endpoint
+ */
 app.get("/", (req, res) => {
   res.json({
     message: "🚀 ChainVanguard API is running",
@@ -419,11 +424,9 @@ app.get("/", (req, res) => {
   });
 });
 
-// ========================================
-// ERROR HANDLERS
-// ========================================
-
-// 404 handler
+/**
+ * Error Handlers
+ */
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -461,9 +464,9 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json(errorResponse);
 });
 
-// ========================================
-// START SERVER
-// ========================================
+/**
+ * Start Server
+ */
 const server = app.listen(PORT, () => {
   console.log("\n" + "=".repeat(70));
   console.log("🚀 ChainVanguard API Server Started Successfully");
@@ -489,9 +492,9 @@ const server = app.listen(PORT, () => {
   console.log("✅ Ready to accept requests!\n");
 });
 
-// ========================================
-// GRACEFUL SHUTDOWN
-// ========================================
+/**
+ * Graceful Shutdown
+ */
 process.on("SIGTERM", () => {
   console.log("\n⚠️  SIGTERM signal received: closing HTTP server");
   server.close(() => {

@@ -32,6 +32,7 @@ import {
   InboxArrowDownIcon,
   ExclamationTriangleIcon,
   BanknotesIcon,
+  Bars3Icon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "@/components/common/dashboard-sidebar";
@@ -46,7 +47,7 @@ export function DashboardHeader({
 } = {}) {
   const { user, logout } = useAuth();
   const { currentWallet, balance, disconnectWallet } = useWallet();
-  const { isCollapsed, setIsCollapsed } = useSidebar();
+  const { isCollapsed, setIsCollapsed, setIsOpen, isMobile } = useSidebar();
   const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -466,7 +467,17 @@ export function DashboardHeader({
     >
       <div className="flex h-14 items-center justify-between px-4">
         <div className="flex items-center space-x-3">
-          {/* Add collapse button next to logo, visible only on desktop */}
+          {/* Mobile: Hamburger menu button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsOpen(true)}
+            className="md:hidden h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded-none"
+          >
+            <Bars3Icon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+          </Button>
+
+          {/* Desktop: Sidebar collapse toggle */}
           <Button
             variant="ghost"
             size="icon"

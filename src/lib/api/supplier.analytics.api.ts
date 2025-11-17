@@ -140,6 +140,10 @@ export interface SupplierAnalyticsResponse {
       orderCount: number;
       currentStock: number;
       avgOrderSize: number;
+      quantity: number;
+      reservedQuantity: number;
+      damagedQuantity: number;
+      committedQuantity: number;
     }>;
     categoryRevenue?: Array<{
       _id: string;

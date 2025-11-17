@@ -299,22 +299,23 @@ export function DashboardSidebar() {
                 const isActive = pathname === item.href;
                 return (
                   <Button
-                    key={item.href}
-                    variant={isActive ? "default" : "ghost"}
+                    key={`${item.href}-${isActive}`}
+                    variant="ghost"
                     className={cn(
-                      "w-full text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 rounded-none",
-                      isActive &&
-                        "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 hover:text-white dark:hover:text-gray-900",
-                      "justify-start"
+                      "w-full justify-start rounded-none",
+                      isActive
+                        ? "bg-gray-900 dark:bg-white !text-white dark:!text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 hover:!text-white dark:hover:!text-gray-900 [&>*]:!text-white [&>*]:dark:!text-gray-900"
+                        : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-150"
                     )}
                     asChild
                     title={isCollapsed && !isMobile ? item.label : undefined}
                   >
                     <Link href={item.href} className="flex items-center">
-                      <Icon className={cn("h-4 w-4 flex-shrink-0", "mr-3")} />
+                      <Icon className={cn("h-4 w-4 flex-shrink-0 mr-3")} />
                       <span
                         className={cn(
-                          "transition-all duration-300 ease-in-out whitespace-nowrap",
+                          "whitespace-nowrap",
+                          isActive && "!text-white dark:!text-gray-900",
                           isCollapsed && !isMobile
                             ? "opacity-0 w-0 overflow-hidden"
                             : "opacity-100 w-auto"

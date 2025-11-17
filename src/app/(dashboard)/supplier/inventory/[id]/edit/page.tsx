@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArchiveBoxIcon,
   ArrowUpTrayIcon,
   XMarkIcon,
   ExclamationTriangleIcon,
@@ -41,14 +40,16 @@ import {
   DocumentTextIcon,
   EyeIcon,
   EyeSlashIcon,
-  InboxIcon,
   CubeIcon,
   BuildingStorefrontIcon,
-  PencilIcon,
   SparklesIcon,
+  PlusIcon,
+  BookmarkIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useGeminiAI } from "@/hooks/use-gemini-ai";
 import { Loader2 } from "lucide-react";
 import {
   Breadcrumb,
@@ -59,7 +60,11 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { badgeColors, colors } from "@/lib/colorConstants";
-import { updateInventory, getInventoryById } from "@/lib/api/inventory.api";
+import {
+  updateInventory,
+  getInventoryById,
+  addStock,
+} from "@/lib/api/inventory.api";
 import { InventoryFormData } from "@/types";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -267,7 +272,7 @@ const statuses = [
   "quarantined",
 ];
 
-const currencies = ["PKR", "USD", "EUR"];
+const currencies = ["PKR"];
 
 const warehouseLocations = [
   "Karachi Main Warehouse",
@@ -429,6 +434,7 @@ type FormDataType = {
 
   // Supplier
   supplierName: string;
+  companyName: string;
   supplierContact: {
     phone: string;
     email: string;
@@ -461,6 +467,7 @@ type FormDataType = {
   autoReorderEnabled: boolean;
   isBatchTracked: boolean;
 
+  // Storage - ADD THESE
   warehouseLocation: string;
   storageLocations: Array<{
     warehouse: string;
@@ -498,343 +505,205 @@ type ErrorsType = {
 // Preview Card Component
 const PreviewCard = ({
   formData,
-  existingImages,
+  originalFormData,
 }: {
   formData: FormDataType;
-  existingImages: string[];
+  originalFormData: FormDataType | null;
 }) => {
-  const getStockStatus = () => {
-    const qty = parseInt(formData.quantity) || 0;
-    if (qty === 0) return { label: "Out of Stock", color: "red" };
-    if (qty < 20) return { label: "Low Stock", color: "yellow" };
-    return { label: "In Stock", color: "green" };
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageError, setImageError] = useState(false);
+  const [imageKey, setImageKey] = useState(0);
+
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+    setCurrentImageIndex(0);
+    setImageKey((prev) => prev + 1);
+  }, [formData.images]);
+
+  const isLowStock =
+    parseInt(formData.quantity || "0") > 0 &&
+    parseInt(formData.quantity || "0") < 20;
+
+  const handleMouseEnter = () => {
+    if (formData.images && formData.images.length > 1) {
+      setCurrentImageIndex(1);
+    }
   };
 
-  const stockStatus = getStockStatus();
+  const handleMouseLeave = () => {
+    setCurrentImageIndex(0);
+  };
+
+  const getImageSrc = () => {
+    if (!formData.images || formData.images.length === 0 || imageError) {
+      return "/placeholder-product.png";
+    }
+    const imageUrl = formData.images[currentImageIndex];
+    if (!imageUrl || typeof imageUrl !== "string") {
+      return "/placeholder-product.png";
+    }
+    return imageUrl;
+  };
+
+  const PlaceholderImage = () => (
+    <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 flex items-center justify-center">
+      <CubeIcon className="h-16 w-16 text-gray-400" />
+    </div>
+  );
 
   return (
-    <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300 rounded-none overflow-hidden w-full p-0 shadow-none">
-      {/* Image Section - Even Larger */}
-      <div className="relative w-full h-96 bg-gray-100 dark:bg-gray-800 overflow-hidden m-0">
-        {formData.images.length > 0 || existingImages.length > 0 ? (
-          <img
-            src={
-              formData.images.length > 0
-                ? formData.images[0]
-                : existingImages[0]
-            }
-            alt={formData.name}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-600">
-            <ArchiveBoxIcon className="h-20 w-20" />
-          </div>
-        )}
-
-        {/* Stock Status Badge */}
-        <div className="absolute top-2 right-2">
-          <Badge
-            className={`
-              ${stockStatus.color === "green" ? "bg-green-100/10 dark:bg-green-900/10 border-green-200 dark:border-green-900 text-green-700 dark:text-green-400" : ""}
-              ${stockStatus.color === "yellow" ? "bg-yellow-100/10 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-900 text-yellow-700 dark:text-yellow-400" : ""}
-              ${stockStatus.color === "red" ? "bg-red-100/10 dark:bg-red-900/10 border-red-100 dark:border-red-900 text-red-700 dark:text-red-400" : ""}
-              border text-xs rounded-none backdrop-blur-sm
-            `}
+    <div className="group relative w-full">
+      <div className="relative bg-gray-100 w-full">
+        <div className="block">
+          <div
+            className="relative w-full aspect-[4/5] overflow-hidden"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
           >
-            {stockStatus.label}
-          </Badge>
+            {!imageError && formData.images && formData.images.length > 0 ? (
+              <img
+                key={`${imageKey}-${currentImageIndex}`}
+                src={getImageSrc()}
+                alt={formData.name || "Preview"}
+                className={`w-full h-full object-cover transition-all duration-300 ${
+                  imageLoaded ? "opacity-100" : "opacity-0"
+                } group-hover:scale-105`}
+                onLoad={() => {
+                  setImageLoaded(true);
+                  setImageError(false);
+                }}
+                onError={() => {
+                  setImageError(true);
+                  setImageLoaded(false);
+                }}
+              />
+            ) : (
+              <PlaceholderImage />
+            )}
+
+            {!imageLoaded &&
+              !imageError &&
+              formData.images &&
+              formData.images.length > 0 && (
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse" />
+              )}
+          </div>
         </div>
 
-        {/* Category Badge */}
-        <div className="absolute top-2 left-2">
-          <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none backdrop-blur-sm">
-            {formData.category || "Category"}
-          </Badge>
-        </div>
+        <button
+          className="absolute bottom-3 left-3 w-5 h-5 bg-white flex items-center justify-center opacity-100 transition-opacity duration-200 cursor-pointer"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <PlusIcon className="w-4 h-4 text-black" />
+        </button>
       </div>
 
-      {/* Content Section */}
-      <CardContent className="p-3 space-y-2.5">
-        {/* Name and SKU */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-0.5 line-clamp-2 leading-tight">
-            {formData.name || "Sample Inventory Item"}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-500">
-            SKU: {formData.sku || "N/A"}
-          </p>
+      <div className="pt-3 pb-4">
+        <div className="mb-2">
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 dark:bg-gray-800">
+            <BuildingStorefrontIcon className="h-3 w-3 text-gray-500" />
+            <span className="text-xs text-gray-600 dark:text-gray-400">
+              {formData.companyName || "Company Name"}
+            </span>
+          </div>
         </div>
 
-        {/* Price Section */}
-        <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 rounded-none">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              Unit Price
-            </span>
-            <span className="text-base font-bold text-gray-900 dark:text-gray-100">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex-1">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+              {formData.name || "Item Name"}
+            </h3>
+          </div>
+          <button
+            className="flex items-center justify-center flex-shrink-0 mt-0.5"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <BookmarkIcon className="w-4 h-4 text-gray-400 hover:text-black transition-colors cursor-pointer" />
+          </button>
+        </div>
+
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          {formData.sku || "SKU"} • {formData.category || "Category"}
+        </p>
+
+        <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
               Rs {parseFloat(formData.pricePerUnit || "0").toFixed(2)}
             </span>
+            <span className="text-xs text-gray-500">per {formData.unit}</span>
           </div>
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-gray-600 dark:text-gray-400">
-              Available Quantity
+          <div className="flex flex-col items-end">
+            <span
+              className={`text-xs font-medium ${
+                isLowStock ? "text-yellow-600" : "text-gray-600"
+              }`}
+            >
+              {(() => {
+                const quantityToAdd = parseInt(formData.quantity || "0");
+                const originalQty = parseInt(originalFormData?.quantity || "0");
+                const reserved = parseInt(
+                  originalFormData?.reservedQuantity || "0"
+                );
+                const committed = parseInt(
+                  originalFormData?.committedQuantity || "0"
+                );
+                const damaged = parseInt(
+                  originalFormData?.damagedQuantity || "0"
+                );
+
+                return (
+                  quantityToAdd > 0
+                    ? originalQty +
+                      quantityToAdd -
+                      reserved -
+                      committed -
+                      damaged
+                    : originalQty - reserved - committed - damaged
+                ).toLocaleString();
+              })()}{" "}
+              {formData.unit}
             </span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">
-              {formData.quantity || "0"} {formData.unit}
-            </span>
+            <span className="text-xs text-gray-500">available</span>
           </div>
         </div>
-
-        {/* Textile Details Grid */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 rounded-none">
-            <p className="text-xs text-gray-500 dark:text-gray-500 mb-0.5">
-              Color
-            </p>
-            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">
-              {formData.textileDetails?.color || "N/A"}
-            </p>
-          </div>
-
-          <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 rounded-none">
-            <p className="text-xs text-gray-500 dark:text-gray-500 mb-0.5">
-              Fabric Type
-            </p>
-            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">
-              {formData.textileDetails?.fabricType || "N/A"}
-            </p>
-          </div>
-        </div>
-
-        {/* Total Value - Grey Background */}
-        <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 rounded-none">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              Total Inventory Value
-            </span>
-            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-              Rs{" "}
-              {(
-                parseFloat(formData.pricePerUnit || "0") *
-                parseInt(formData.quantity || "0")
-              ).toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            className="w-full text-xs font-medium h-8 bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white rounded-none cursor-not-allowed opacity-90"
-          >
-            <InboxIcon className="h-4 w-4 mr-1.5" />
-            Request
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            className="w-full text-xs font-medium h-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-900 dark:border-white rounded-none cursor-not-allowed"
-          >
-            <EyeIcon className="h-4 w-4 mr-1.5 text-gray-900 dark:text-gray-100" />
-            View
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
 export default function EditInventoryPage() {
   const router = useRouter();
+  const params = useParams();
+  const inventoryId = params?.id as string;
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const [showPreview, setShowPreview] = useState<boolean>(true);
   const [currentStep, setCurrentStep] = useState<number>(1);
-  const [isFetching, setIsFetching] = useState<boolean>(true);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+  const [originalFormData, setOriginalFormData] = useState<FormDataType | null>(
+    null
+  );
   const totalSteps = 6;
-  const params = useParams();
-  const inventoryId = params?.id as string;
+
+  const { isGenerating, generateInventoryDescription } = useGeminiAI();
 
   useEffect(() => {
     setIsVisible(true);
-
-    const fetchInventoryData = async () => {
-      if (!inventoryId) {
-        toast.error("Inventory ID not found");
-        router.push("/supplier/inventory");
-        return;
-      }
-
-      try {
-        setIsFetching(true);
-        const response = await getInventoryById(inventoryId);
-
-        if (response.success && response.data) {
-          const inventory = response.data;
-
-          // --- Extract manufactureDate and expiryDate ---
-          let manufactureDate = "";
-          let expiryDate = "";
-
-          if (
-            inventory.isBatchTracked &&
-            Array.isArray(inventory.batches) &&
-            inventory.batches.length > 0
-          ) {
-            // Use batch dates if batch-tracked
-            const batch = inventory.batches[0];
-            manufactureDate = batch.manufactureDate
-              ? new Date(batch.manufactureDate).toISOString().split("T")[0]
-              : "";
-            expiryDate = batch.expiryDate
-              ? new Date(batch.expiryDate).toISOString().split("T")[0]
-              : "";
-          } else {
-            // Use top-level fields if present
-            manufactureDate = inventory.manufactureDate
-              ? new Date(inventory.manufactureDate).toISOString().split("T")[0]
-              : "";
-            expiryDate = inventory.expiryDate
-              ? new Date(inventory.expiryDate).toISOString().split("T")[0]
-              : "";
-          }
-
-          // Populate form with existing data
-          setFormData({
-            name: inventory.name || "",
-            description: inventory.description || "",
-            category: inventory.category || "",
-            subcategory: inventory.subcategory || "",
-            pricePerUnit: String(inventory.pricePerUnit || ""),
-            currency: inventory.currency || "PKR",
-            quantity: String(inventory.quantity || ""),
-            unit: inventory.unit || "meters",
-            minStockLevel: String(inventory.minStockLevel || "10"),
-            reorderLevel: String(inventory.reorderLevel || "20"),
-            reorderQuantity: String(inventory.reorderQuantity || "50"),
-            sku: inventory.sku || "",
-            materialType: inventory.materialType || "",
-            costPrice: String(inventory.costPrice || ""),
-            qualityGrade: inventory.qualityGrade || "",
-            countryOfOrigin: inventory.countryOfOrigin || "",
-            season: inventory.season || "All Season",
-            status: inventory.status || "active",
-            warehouseLocation:
-              inventory.primaryLocation ||
-              inventory.warehouseLocation ||
-              inventory.defaultLocation ||
-              "",
-            isBatchTracked: inventory.isBatchTracked || false,
-
-            // Convert Date to string
-            manufactureDate: manufactureDate
-              ? typeof manufactureDate === "string"
-                ? manufactureDate
-                : new Date(manufactureDate).toISOString().split("T")[0]
-              : new Date().toISOString().split("T")[0],
-
-            expiryDate: expiryDate
-              ? typeof expiryDate === "string"
-                ? expiryDate
-                : new Date(expiryDate).toISOString().split("T")[0]
-              : "",
-
-            safetyStockLevel: String(inventory.safetyStockLevel || ""),
-            damagedQuantity: String(inventory.damagedQuantity || "0"),
-            shelfLife: String(inventory.shelfLife || "730"),
-            autoReorderEnabled: inventory.autoReorderEnabled || false,
-
-            textileDetails: {
-              fabricType: inventory.textileDetails?.fabricType || "",
-              composition: inventory.textileDetails?.composition || "",
-              gsm: String(inventory.textileDetails?.gsm || ""),
-              width: String(inventory.textileDetails?.width || ""),
-              fabricWeight: inventory.textileDetails?.fabricWeight || "",
-              color: inventory.textileDetails?.color || "",
-              colorCode: inventory.textileDetails?.colorCode || "#000000",
-              pattern: inventory.textileDetails?.pattern || "Solid",
-              finish: inventory.textileDetails?.finish || "",
-              careInstructions:
-                inventory.textileDetails?.careInstructions || "",
-              shrinkage: inventory.textileDetails?.shrinkage || "",
-              washability: inventory.textileDetails?.washability || "",
-            },
-
-            supplierContact: {
-              phone: inventory.supplierContact?.phone || "",
-              email: inventory.supplierContact?.email || "",
-              address: inventory.supplierContact?.address || "",
-            },
-
-            // Convert dimensions to string
-            dimensions:
-              typeof inventory.dimensions === "string"
-                ? inventory.dimensions
-                : inventory.dimensions
-                  ? JSON.stringify(inventory.dimensions)
-                  : "",
-
-            specifications: inventory.specifications || {},
-            tags: inventory.tags || [],
-            certifications: inventory.certifications || [],
-            suitableFor: inventory.suitableFor || [],
-            storageLocations: inventory.storageLocations || [],
-            brand: "",
-            originalPrice: "",
-            discount: "",
-            reservedQuantity: String(inventory.reservedQuantity || ""),
-            committedQuantity: String(inventory.committedQuantity || ""),
-            maximumQuantity: "",
-            weight: "",
-            manufacturer: inventory.manufacturer || "",
-            supplierName: inventory.supplierName || "",
-            isSustainable: false,
-            sustainabilityCertifications: [],
-            complianceStandards: [],
-            leadTime: String(inventory.leadTime || "7"),
-            estimatedDeliveryDays: "7",
-            images: [],
-            imageFiles: [],
-            notes: inventory.notes || "",
-            internalCode: inventory.internalCode || "",
-            barcode: inventory.barcode || "",
-            carbonFootprint: "",
-            recycledContent: "",
-          });
-
-          // Store existing images
-          if (inventory.images && inventory.images.length > 0) {
-            setExistingImages(
-              inventory.images.map((img: any) => img.url || img)
-            );
-          }
-
-          toast.success("Inventory data loaded");
-        }
-      } catch (error: any) {
-        console.error("Error fetching inventory:", error);
-        toast.error(
-          error.response?.data?.message || "Failed to load inventory"
-        );
-        router.push("/supplier/inventory");
-      } finally {
-        setIsFetching(false);
-      }
-    };
-
-    fetchInventoryData();
-  }, [inventoryId, router]);
+  }, []);
 
   const [formData, setFormData] = useState<FormDataType>({
     // Basic
@@ -879,9 +748,10 @@ export default function EditInventoryPage() {
     dimensions: "",
     tags: [],
     season: "All Season",
-    countryOfOrigin: "",
+    countryOfOrigin: "Pakistan",
     manufacturer: "",
     supplierName: "",
+    companyName: "",
     supplierContact: {
       phone: "",
       email: "",
@@ -910,28 +780,179 @@ export default function EditInventoryPage() {
     storageLocations: [],
     specifications: {},
     suitableFor: [],
-    manufactureDate: new Date().toISOString().split("T")[0], // Today's date
+    manufactureDate: new Date().toISOString().split("T")[0],
     expiryDate: "",
   });
 
+  // Fetch existing inventory data
+  useEffect(() => {
+    const fetchInventoryData = async () => {
+      if (!inventoryId) return;
+
+      try {
+        setIsLoadingData(true);
+        const response = await getInventoryById(inventoryId);
+
+        if (response.success && response.data) {
+          const inventory = response.data;
+
+          // Populate form with existing data
+          const loadedData: FormDataType = {
+            name: inventory.name || "",
+            description: inventory.description || "",
+            category: inventory.category || "",
+            subcategory: inventory.subcategory || "",
+            materialType: inventory.materialType || "",
+            brand: "",
+
+            textileDetails: {
+              fabricType: inventory.textileDetails?.fabricType || "",
+              composition: inventory.textileDetails?.composition || "",
+              gsm: inventory.textileDetails?.gsm?.toString() || "",
+              width: inventory.textileDetails?.width?.toString() || "",
+              fabricWeight: inventory.textileDetails?.fabricWeight || "",
+              color: inventory.textileDetails?.color || "",
+              colorCode: inventory.textileDetails?.colorCode || "#000000",
+              pattern: inventory.textileDetails?.pattern || "Solid",
+              finish: inventory.textileDetails?.finish || "",
+              careInstructions:
+                inventory.textileDetails?.careInstructions || "",
+              shrinkage: inventory.textileDetails?.shrinkage || "",
+              washability: inventory.textileDetails?.washability || "",
+            },
+
+            pricePerUnit: inventory.pricePerUnit?.toString() || "",
+            costPrice: inventory.costPrice?.toString() || "",
+            originalPrice: "",
+            discount: "",
+            currency: inventory.currency || "PKR",
+
+            quantity: inventory.quantity?.toString() || "",
+            reservedQuantity: inventory.reservedQuantity?.toString() || "",
+            committedQuantity: inventory.committedQuantity?.toString() || "",
+            damagedQuantity: inventory.damagedQuantity?.toString() || "",
+            minStockLevel: inventory.minStockLevel?.toString() || "10",
+            reorderLevel: inventory.reorderLevel?.toString() || "20",
+            reorderQuantity: inventory.reorderQuantity?.toString() || "50",
+            maximumQuantity: "",
+            safetyStockLevel: inventory.safetyStockLevel?.toString() || "",
+            unit: inventory.unit || "pieces",
+            sku: inventory.sku || "",
+
+            weight: "",
+            dimensions: "",
+            tags: inventory.tags || [],
+            season: inventory.season || "All Season",
+            countryOfOrigin: inventory.countryOfOrigin || "Pakistan",
+            manufacturer: inventory.manufacturer || "",
+
+            supplierName: inventory.supplierName || "",
+            companyName: "",
+            supplierContact: {
+              phone: inventory.supplierContact?.phone || "",
+              email: inventory.supplierContact?.email || "",
+              address: inventory.supplierContact?.address || "",
+            },
+
+            status: inventory.status || "active",
+            isSustainable: inventory.isSustainable || false,
+            certifications: inventory.certifications || [],
+            sustainabilityCertifications: [],
+            complianceStandards: [],
+            qualityGrade: inventory.qualityGrade || "",
+
+            leadTime: "",
+            estimatedDeliveryDays: "",
+            shelfLife: inventory.shelfLife?.toString() || "",
+            images: Array.isArray(inventory.images)
+              ? inventory.images.map((img: any) =>
+                  typeof img === "string" ? img : img.url || img.imageUrl || ""
+                )
+              : [],
+            imageFiles: [],
+            notes: inventory.notes || "",
+            internalCode: inventory.internalCode || "",
+            barcode: inventory.barcode || "",
+            carbonFootprint: "",
+            recycledContent: "",
+            autoReorderEnabled: inventory.autoReorderEnabled ?? false,
+            isBatchTracked: inventory.isBatchTracked ?? false,
+
+            warehouseLocation:
+              inventory.warehouseLocation ||
+              (inventory as any).primaryLocation ||
+              (inventory as any).defaultLocation ||
+              (inventory.storageLocations &&
+              inventory.storageLocations.length > 0
+                ? inventory.storageLocations[0].warehouse
+                : "") ||
+              "",
+            storageLocations: inventory.storageLocations || [],
+            specifications: inventory.specifications || {},
+            suitableFor: inventory.suitableFor || [],
+
+            // Dates are stored in batches[0], not at top level
+            manufactureDate:
+              inventory.batches &&
+              inventory.batches.length > 0 &&
+              inventory.batches[0].manufactureDate
+                ? new Date(inventory.batches[0].manufactureDate)
+                    .toISOString()
+                    .split("T")[0]
+                : new Date().toISOString().split("T")[0],
+            expiryDate:
+              inventory.batches &&
+              inventory.batches.length > 0 &&
+              inventory.batches[0].expiryDate
+                ? new Date(inventory.batches[0].expiryDate)
+                    .toISOString()
+                    .split("T")[0]
+                : "",
+          };
+
+          // Save original form data with actual quantity for display
+          setOriginalFormData(loadedData);
+
+          // Set form data with quantity at 0 (for adding stock)
+          setFormData({
+            ...loadedData,
+            quantity: "0", // User will enter amount to add
+          });
+        }
+      } catch (error: any) {
+        console.error("Error fetching inventory:", error);
+        toast.error("Failed to load inventory data");
+        router.push("/supplier/inventory");
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    fetchInventoryData();
+  }, [inventoryId, router]);
+
   // Add this useEffect to populate supplier fields with current user data
   useEffect(() => {
-    if (user) {
+    if (user && isLoadingData === false) {
       setFormData((prev) => ({
         ...prev,
-        supplierName: user.name || prev.supplierName,
+        supplierName: prev.supplierName || user.name || "",
+        companyName: prev.companyName || user.companyName || "",
         supplierContact: {
           ...prev.supplierContact,
-          phone: user.phone || prev.supplierContact.phone,
-          email: user.email || prev.supplierContact.email,
-          // Address can be kept as is or populated if user has it
-          address: user.address || prev.supplierContact.address,
+          phone: prev.supplierContact.phone || user.phone || "",
+          email: prev.supplierContact.email || user.email || "",
+          address: prev.supplierContact.address || user.address || "",
         },
       }));
     }
-  }, [user]);
+  }, [user, isLoadingData]);
 
+  // Don't regenerate SKU on edit page - only generate if SKU is empty
   useEffect(() => {
+    // Skip if we already have a SKU (edit mode) or still loading data
+    if (formData.sku || isLoadingData) return;
+
     let sku = "";
     if (formData.category) sku += categoryCodes[formData.category] + "-";
     if (formData.subcategory)
@@ -943,7 +964,13 @@ export default function EditInventoryPage() {
       sku = sku.slice(0, -1) + "-" + randomId;
     }
     setFormData((prev) => ({ ...prev, sku }));
-  }, [formData.category, formData.subcategory, formData.materialType]);
+  }, [
+    formData.category,
+    formData.subcategory,
+    formData.materialType,
+    formData.sku,
+    isLoadingData,
+  ]);
 
   const [errors, setErrors] = useState<ErrorsType>({});
   const [tagInput, setTagInput] = useState<string>("");
@@ -1164,20 +1191,20 @@ export default function EditInventoryPage() {
     }
   };
 
-  const removeImage = (index: number, isExisting: boolean = false) => {
-    if (isExisting) {
-      // For existing images, add to delete list and remove from existingImages
-      const imageUrl = existingImages[index];
-      setImagesToDelete((prev) => [...prev, imageUrl]);
-      setExistingImages((prev) => prev.filter((_, i) => i !== index));
-    } else {
-      // For new images, remove from formData
-      setFormData((prev) => ({
-        ...prev,
-        images: prev.images.filter((_, i) => i !== index),
-        imageFiles: prev.imageFiles.filter((_, i) => i !== index),
-      }));
+  const removeImage = (indexToRemove: number) => {
+    const imageToRemove = formData.images[indexToRemove];
+
+    // Check if this is an existing image (URL string from server) vs a newly uploaded image (blob URL)
+    if (imageToRemove && !imageToRemove.startsWith("blob:")) {
+      // This is an existing image from the server, mark it for deletion
+      setImagesToDelete((prev) => [...prev, imageToRemove]);
     }
+
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, index) => index !== indexToRemove),
+      imageFiles: prev.imageFiles.filter((_, index) => index !== indexToRemove),
+    }));
   };
 
   const validateForm = () => {
@@ -1260,136 +1287,212 @@ export default function EditInventoryPage() {
   };
 
   const resetForm = () => {
-    setFormData({
-      // Basic
-      name: "",
-      description: "",
-      category: "",
-      subcategory: "",
-      materialType: "",
-      brand: "",
-      textileDetails: {
-        fabricType: "",
-        composition: "",
-        gsm: "",
-        width: "",
-        fabricWeight: "",
-        color: "",
-        colorCode: "#000000",
-        pattern: "Solid",
-        finish: "",
-        careInstructions: "",
-        shrinkage: "",
-        washability: "",
-      },
-      pricePerUnit: "",
-      costPrice: "",
-      originalPrice: "",
-      discount: "",
-      quantity: "",
-      reservedQuantity: "",
-      committedQuantity: "",
-      damagedQuantity: "",
-      minStockLevel: "10",
-      reorderLevel: "20",
-      reorderQuantity: "50",
-      maximumQuantity: "",
-      safetyStockLevel: "",
-      unit: "pieces",
-      sku: "",
-      weight: "",
-      dimensions: "",
-      tags: [],
-      season: "All Season",
-      countryOfOrigin: "",
-      manufacturer: "",
-      supplierName: "",
-      supplierContact: { phone: "", email: "", address: "" },
-      status: "active",
-      isSustainable: false,
-      certifications: [],
-      sustainabilityCertifications: [],
-      complianceStandards: [],
-      qualityGrade: "",
-      leadTime: "7",
-      estimatedDeliveryDays: "7",
-      shelfLife: "730",
-      images: [],
-      notes: "",
-      internalCode: "",
-      barcode: "",
-      carbonFootprint: "",
-      recycledContent: "",
-      autoReorderEnabled: false,
-      isBatchTracked: true,
-      currency: "PKR",
-      imageFiles: [],
-      warehouseLocation: "",
-      storageLocations: [],
-      specifications: {},
-      suitableFor: [],
-      manufactureDate: new Date().toISOString().split("T")[0], // Today's date
-      expiryDate: "",
-    });
+    // Reset to original loaded data
+    if (originalFormData) {
+      setFormData(originalFormData);
+      setImagesToDelete([]);
+      toast.success("Form reset to original values");
+    }
     setCurrentStep(1);
     setErrors({});
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-
-    if (!validateStep(currentStep)) {
-      toast.error("Please fill in all required fields correctly");
-      return;
-    }
-
-    if (!inventoryId) {
-      toast.error("Inventory ID not found");
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      toast.error("Please fix the errors before submitting");
       return;
     }
 
     setIsLoading(true);
+
     try {
-      // Validate all steps
-      for (let step = 1; step <= totalSteps; step++) {
-        if (!validateStep(step)) {
-          toast.error(`Please complete step ${step} correctly`);
-          setCurrentStep(step);
-          setIsLoading(false);
-          return;
-        }
+      // Prepare data for API
+      const apiData: InventoryFormData = {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        subcategory: formData.subcategory,
+        materialType: formData.materialType,
+
+        // ADD THESE:
+        isBatchTracked: formData.isBatchTracked,
+        ...(formData.manufactureDate &&
+        !isNaN(Date.parse(formData.manufactureDate))
+          ? { manufactureDate: formData.manufactureDate }
+          : {}),
+        ...(formData.expiryDate && !isNaN(Date.parse(formData.expiryDate))
+          ? { expiryDate: formData.expiryDate }
+          : {}),
+
+        textileDetails: {
+          fabricType: formData.textileDetails.fabricType,
+          composition: formData.textileDetails.composition,
+          gsm: formData.textileDetails.gsm
+            ? parseInt(formData.textileDetails.gsm)
+            : undefined,
+          width: formData.textileDetails.width
+            ? parseInt(formData.textileDetails.width)
+            : undefined,
+          color: formData.textileDetails.color,
+          colorCode: formData.textileDetails.colorCode,
+          pattern: formData.textileDetails.pattern,
+          finish: formData.textileDetails.finish,
+          careInstructions: formData.textileDetails.careInstructions,
+          shrinkage: formData.textileDetails.shrinkage,
+          washability: formData.textileDetails.washability,
+          fabricWeight: formData.textileDetails.fabricWeight,
+        },
+
+        pricePerUnit: parseFloat(formData.pricePerUnit),
+        costPrice: formData.costPrice
+          ? parseFloat(formData.costPrice)
+          : undefined,
+        currency: formData.currency || "PKR",
+
+        quantity: parseInt(formData.quantity),
+        unit: formData.unit,
+        minStockLevel: parseInt(formData.minStockLevel),
+        reorderLevel: parseInt(formData.reorderLevel),
+        reorderQuantity: parseInt(formData.reorderQuantity),
+
+        sku: formData.sku || `SKU-${Date.now()}`,
+
+        dimensions: formData.dimensions
+          ? {
+              unit: "cm",
+              length: 0,
+              width: 0,
+              height: 0,
+            }
+          : undefined,
+
+        specifications: formData.specifications,
+
+        tags: formData.tags,
+        season: formData.season,
+        countryOfOrigin: formData.countryOfOrigin,
+
+        supplierContact: {
+          phone: formData.supplierContact.phone,
+          email: formData.supplierContact.email,
+          address: formData.supplierContact.address,
+        },
+
+        status: formData.status,
+        certifications: formData.certifications,
+        qualityGrade: formData.qualityGrade,
+
+        primaryLocation: formData.warehouseLocation, // Backend uses primaryLocation
+        storageLocations: formData.storageLocations,
+        suitableFor: formData.suitableFor,
+
+        images: [], // Will be uploaded
+        damagedQuantity:
+          formData.damagedQuantity !== undefined &&
+          formData.damagedQuantity !== null &&
+          formData.damagedQuantity !== ""
+            ? parseInt(formData.damagedQuantity)
+            : 0,
+
+        // ADD MISSING FIELDS:
+        internalCode: formData.internalCode || undefined,
+        barcode: formData.barcode || undefined,
+        shelfLife: formData.shelfLife
+          ? parseInt(formData.shelfLife)
+          : undefined,
+        autoReorderEnabled: formData.autoReorderEnabled,
+        safetyStockLevel: formData.safetyStockLevel
+          ? parseInt(formData.safetyStockLevel)
+          : undefined,
+        notes: formData.notes || undefined,
+      };
+
+      // Call API
+      const updateData = {
+        ...apiData,
+        imagesToDelete: imagesToDelete.length > 0 ? imagesToDelete : undefined,
+      };
+
+      // Check if quantity needs to be added
+      const quantityToAdd = parseInt(formData.quantity || "0");
+      const hasQuantityToAdd = quantityToAdd > 0;
+
+      // If there's quantity to add, call addStock API first
+      if (hasQuantityToAdd) {
+        console.log(`📦 Adding ${quantityToAdd} units to inventory...`);
+        await addStock(inventoryId, {
+          quantity: quantityToAdd,
+          notes: `Added ${quantityToAdd} ${formData.unit} to inventory via stock update`,
+        });
+        toast.success(`Added ${quantityToAdd} ${formData.unit} to inventory!`);
       }
 
-      toast.loading("Updating inventory...");
+      // Remove quantity from update data (it's handled by addStock)
+      const { quantity: _quantity, ...updateDataWithoutQuantity } = updateData;
+      const finalUpdateData = updateDataWithoutQuantity;
 
-      // Prepare data for update
-      const updateData: any = { ...formData, imagesToDelete };
+      // Debug logging
+      console.log("📤 Sending update data to API:", {
+        manufactureDate: finalUpdateData.manufactureDate,
+        expiryDate: finalUpdateData.expiryDate,
+        primaryLocation: finalUpdateData.primaryLocation,
+        shelfLife: finalUpdateData.shelfLife,
+        autoReorderEnabled: finalUpdateData.autoReorderEnabled,
+        internalCode: finalUpdateData.internalCode,
+        barcode: finalUpdateData.barcode,
+      });
+      console.log(
+        "📦 FULL UPDATE OBJECT:",
+        JSON.stringify(finalUpdateData, null, 2)
+      );
 
-      // Update inventory with new files if any
       const response = await updateInventory(
         inventoryId,
-        updateData,
+        finalUpdateData,
         formData.imageFiles
       );
 
       if (response.success) {
-        toast.dismiss();
-        toast.success("Inventory updated successfully!");
+        toast.success("Inventory item updated successfully!");
 
-        setTimeout(() => {
-          router.push("/supplier/inventory");
-        }, 1500);
+        // Close the confirmation dialog
+        setIsConfirmOpen(false);
+
+        // Redirect immediately after successful update
+        router.push("/supplier/inventory");
+      } else {
+        throw new Error(response.message || "Failed to update inventory");
       }
     } catch (error: any) {
-      console.error("Update error:", error);
-      toast.dismiss();
-      toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to update inventory"
-      );
+      toast.error(error.message || "Failed to update inventory item");
+      console.error("Error updating inventory:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateDescription = async () => {
+    // Validate required fields before generating
+    if (!formData.name || !formData.category) {
+      toast.error("Please fill in Name and Category first");
+      return;
+    }
+
+    // Build data from Step 1 fields
+    const inventoryData = {
+      name: formData.name,
+      category: formData.category,
+      subcategory: formData.subcategory,
+      specifications: formData.specifications,
+      unit: formData.unit,
+      manufacturer: formData.manufacturer,
+      origin: formData.countryOfOrigin,
+    };
+
+    const description = await generateInventoryDescription(inventoryData);
+
+    if (description) {
+      handleInputChange("description", description);
     }
   };
 
@@ -1422,16 +1525,18 @@ export default function EditInventoryPage() {
 
     if (step === 1) {
       if (!formData.name.trim()) newErrors.name = "Item name is required";
-      if (!formData.description.trim())
-        newErrors.description = "Description is required";
       if (!formData.category) newErrors.category = "Category is required";
       if (!formData.subcategory)
         newErrors.subcategory = "Subcategory is required";
       if (!formData.materialType)
         newErrors.materialType = "Material type is required";
-    } else if (step === 2) {
       if (!formData.textileDetails.color.trim())
         newErrors["textileDetails.color"] = "Color is required";
+      if (!formData.textileDetails.colorCode)
+        newErrors["textileDetails.colorCode"] = "Color code is required";
+    } else if (step === 2) {
+      if (!formData.description.trim())
+        newErrors.description = "Description is required";
       if (!formData.textileDetails.fabricType)
         newErrors["textileDetails.fabricType"] = "Fabric type is required";
       if (!formData.textileDetails.composition.trim())
@@ -1442,8 +1547,6 @@ export default function EditInventoryPage() {
         newErrors["textileDetails.gsm"] = "GSM is required";
       if (!formData.textileDetails.width.trim())
         newErrors["textileDetails.width"] = "Width is required";
-      if (!formData.textileDetails.colorCode)
-        newErrors["textileDetails.colorCode"] = "Color code is required";
     } else if (step === 3) {
       if (!formData.pricePerUnit || parseFloat(formData.pricePerUnit) <= 0)
         newErrors.pricePerUnit = "Valid price is required";
@@ -1503,1918 +1606,1954 @@ export default function EditInventoryPage() {
     return newErrors;
   };
 
-  return (
-    <>
-      {isFetching ? (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto text-orange-600" />
-            <p className="text-gray-600">Loading inventory data...</p>
-          </div>
+  // Show loading state while fetching data
+  if (isLoadingData) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">
+            Loading inventory data...
+          </p>
         </div>
-      ) : (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-          <div className="relative z-10 p-4 md:p-6">
-            {/* Breadcrumbs */}
-            <Breadcrumb className="mb-4 md:mb-6">
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/supplier">Dashboard</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/supplier/inventory">
-                    Inventory
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Edit Inventory</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+      </div>
+    );
+  }
 
-            {/* Header */}
-            <div
-              className={`transform transition-all duration-700 mb-4 md:mb-6 ${
-                isVisible
-                  ? "translate-y-0 opacity-100"
-                  : "translate-y-4 opacity-0"
-              }`}
-            >
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                <div className="space-y-2">
-                  <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
-                    Edit Inventory Item
-                  </h1>
-                  <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
-                    Update existing textile materials and components in
-                    inventory
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge
-                        className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
-                      >
-                        <CubeIcon
-                          className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
-                        />
-                        Inventory Management
-                      </Badge>
-                      <Badge
-                        className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
-                      >
-                        <ShieldCheckIcon
-                          className={`h-3 w-3 ${badgeColors.cyan.icon}`}
-                        />
-                        Blockchain Verified
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={resetForm}
-                    size="sm"
-                    className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
-                  >
-                    <ArrowPathIcon className="h-3 w-3 mr-2" />
-                    Reset
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowPreview(!showPreview)}
-                    size="sm"
-                    className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all"
-                  >
-                    {showPreview ? (
-                      <>
-                        <EyeSlashIcon className="h-3 w-3 mr-2" />
-                        Hide Preview
-                      </>
-                    ) : (
-                      <>
-                        <EyeIcon className="h-3 w-3 mr-2" />
-                        Show Preview
-                      </>
-                    )}
-                  </Button>
-                </div>
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="relative z-10 p-4 md:p-6">
+        {/* Breadcrumbs */}
+        <Breadcrumb className="mb-4 md:mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/supplier">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/supplier/inventory">
+                Inventory
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Edit Inventory</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        {/* Header */}
+        <div
+          className={`transform transition-all duration-700 mb-4 md:mb-6 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div className="space-y-2">
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
+                Edit Inventory Item
+              </h1>
+              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
+                Update textile materials and component details
+              </p>
+              <div className="flex items-center gap-3 mt-2">
+                <Badge
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                >
+                  <CubeIcon
+                    className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
+                  />
+                  Inventory Management
+                </Badge>
+                <Badge
+                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                >
+                  <ShieldCheckIcon
+                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                  />
+                  Blockchain Verified
+                </Badge>
               </div>
             </div>
+            <div className="flex flex-wrap items-center gap-2 md:gap-3">
+              <Button
+                variant="outline"
+                onClick={resetForm}
+                size="sm"
+                className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none transition-all hover:border-black dark:hover:border-white"
+              >
+                <ArrowPathIcon className="h-3 w-3 mr-2" />
+                Reset
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowPreview(!showPreview)}
+                size="sm"
+                className="text-xs cursor-pointer h-8 border-black dark:border-white bg-black text-white dark:bg-white dark:text-black rounded-none hover:bg-gray-800 hover:text-white dark:hover:bg-gray-200 dark:hover:text-black transition-all"
+              >
+                {showPreview ? (
+                  <>
+                    <EyeSlashIcon className="h-3 w-3 mr-2" />
+                    Hide Preview
+                  </>
+                ) : (
+                  <>
+                    <EyeIcon className="h-3 w-3 mr-2" />
+                    Show Preview
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
 
-            {/* Main Content - Form with Preview */}
-            <div
-              className={`grid gap-4 md:gap-6 ${showPreview ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1"}`}
+        {/* Main Content - Form with Preview */}
+        <div
+          className={`grid gap-4 md:gap-6 ${showPreview ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1"}`}
+        >
+          {/* Form Section with Progress Bar */}
+          <div className={showPreview ? "lg:col-span-9" : "lg:col-span-12"}>
+            {/* Progress Bar - Matches Form Width */}
+            <Card
+              className={`${colors.cards.base} transition-all duration-300 rounded-none mb-4 md:mb-6 shadow-none`}
             >
-              {/* Form Section with Progress Bar */}
-              <div className={showPreview ? "lg:col-span-9" : "lg:col-span-12"}>
-                {/* Progress Bar - Matches Form Width */}
-                <Card
-                  className={`${colors.cards.base} transition-all duration-300 rounded-none mb-4 md:mb-6 shadow-none`}
-                >
-                  <CardContent className="p-4 md:p-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-                        Step {currentStep} of {totalSteps}
-                      </h3>
-                      <span className="text-xs text-gray-500 dark:text-gray-500">
-                        {Math.round(getStepProgress())}% Complete
-                      </span>
-                    </div>
-                    <Progress
-                      value={getStepProgress()}
-                      className="h-2 mb-4 rounded-none"
-                    />
-                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
-                      {[
-                        {
-                          step: 1,
-                          title: "Basic Info",
-                          icon: DocumentTextIcon,
-                        },
-                        { step: 2, title: "Textile Details", icon: SwatchIcon },
-                        { step: 3, title: "Stock & Pricing", icon: CubeIcon },
-                        { step: 4, title: "Quality", icon: ShieldCheckIcon },
-                        {
-                          step: 5,
-                          title: "Supplier",
-                          icon: BuildingStorefrontIcon,
-                        },
-                        { step: 6, title: "Media", icon: CameraIcon },
-                      ].map(({ step, title, icon: Icon }) => {
-                        const isSelected = step === currentStep;
-                        const isCompleted = step < currentStep;
-                        const canGoToNext =
-                          step === currentStep + 1 &&
-                          Object.keys(validateStep(currentStep)).length === 0;
-                        const isDisabled = step > currentStep && !canGoToNext;
-                        return (
-                          <button
-                            key={step}
-                            onClick={() => {
-                              if (step < currentStep) {
-                                setCurrentStep(step);
-                              } else if (step === currentStep + 1) {
-                                const stepErrors = validateStep(currentStep);
-                                if (Object.keys(stepErrors).length === 0) {
-                                  setCurrentStep(step);
-                                }
-                              }
-                            }}
-                            disabled={isDisabled}
-                            className={`flex items-center gap-1 md:gap-2 p-2 rounded-none transition-all cursor-pointer text-xs md:text-sm
-                              ${
-                                isSelected
-                                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
-                                  : isCompleted
-                                    ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                                    : isDisabled
-                                      ? "bg-gray-50 dark:bg-gray-900 text-gray-400 cursor-not-allowed"
-                                      : "bg-gray-50 dark:bg-gray-900 text-gray-500"
-                              }
-                              ${
-                                !isSelected && !isDisabled
-                                  ? "border border-transparent hover:border-black dark:hover:border-white"
-                                  : ""
-                              }
-                            `}
-                            style={{
-                              // Remove outline on click for consistency
-                              outline: "none",
-                            }}
-                            type="button"
-                          >
-                            <Icon
-                              className={`h-3 w-3 md:h-4 md:w-4 ${
-                                isSelected
-                                  ? "text-white dark:text-gray-900"
-                                  : "text-gray-900 dark:text-gray-100"
-                              }`}
-                            />
-                            <span className="text-xs font-medium hidden md:inline">
-                              {title}
-                            </span>
-                            <span className="text-xs font-medium md:hidden">
-                              {title.split(" ")[0]}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+              <CardContent className="">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+                    Step {currentStep} of {totalSteps}
+                  </h3>
+                  <span className="text-xs text-gray-500 dark:text-gray-500">
+                    {Math.round(getStepProgress())}% Complete
+                  </span>
+                </div>
+                <Progress
+                  value={getStepProgress()}
+                  className="h-2 mb-4 rounded-none"
+                />
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                  {[
+                    { step: 1, title: "Basic Info", icon: DocumentTextIcon },
+                    { step: 2, title: "Textile Details", icon: SwatchIcon },
+                    { step: 3, title: "Stock & Pricing", icon: CubeIcon },
+                    { step: 4, title: "Quality", icon: ShieldCheckIcon },
+                    {
+                      step: 5,
+                      title: "Supplier",
+                      icon: BuildingStorefrontIcon,
+                    },
+                    { step: 6, title: "Media", icon: CameraIcon },
+                  ].map(({ step, title, icon: Icon }) => {
+                    const isSelected = step === currentStep;
+                    const isCompleted = step < currentStep;
+                    const canGoToNext =
+                      step === currentStep + 1 &&
+                      Object.keys(validateStep(currentStep)).length === 0;
+                    const isDisabled = step > currentStep && !canGoToNext;
+                    return (
+                      <button
+                        key={step}
+                        onClick={() => {
+                          if (step < currentStep) {
+                            setCurrentStep(step);
+                          } else if (step === currentStep + 1) {
+                            const stepErrors = validateStep(currentStep);
+                            if (Object.keys(stepErrors).length === 0) {
+                              setCurrentStep(step);
+                            }
+                          }
+                        }}
+                        disabled={isDisabled}
+                        className={`flex items-center justify-center gap-1 md:gap-2 p-2 rounded-none transition-all cursor-pointer text-xs md:text-sm
+                          ${
+                            isSelected
+                              ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                              : isCompleted
+                                ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                                : isDisabled
+                                  ? "bg-gray-50 dark:bg-gray-900 text-gray-400 cursor-not-allowed"
+                                  : "bg-gray-50 dark:bg-gray-900 text-gray-500"
+                          }
+                          ${
+                            !isSelected && !isDisabled
+                              ? "border border-transparent hover:border-black dark:hover:border-white"
+                              : ""
+                          }
+                        `}
+                        style={{
+                          // Remove outline on click for consistency
+                          outline: "none",
+                        }}
+                        type="button"
+                      >
+                        <Icon
+                          className={`h-3 w-3 md:h-4 md:w-4 ${
+                            isSelected
+                              ? "text-white dark:text-gray-900"
+                              : "text-gray-900 dark:text-gray-100"
+                          }`}
+                        />
+                        <span className="text-xs font-medium hidden md:inline">
+                          {title}
+                        </span>
+                        <span className="text-xs font-medium md:hidden">
+                          {title.split(" ")[0]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
-                {/* Form Card */}
-                <Card
-                  className={`${colors.cards.base} transition-all duration-300 rounded-none shadow-none`}
-                >
-                  <CardContent className="p-4 md:p-6">
-                    {/* Step 1: Basic Information */}
-                    {currentStep === 1 && (
-                      <div className="space-y-4 md:space-y-6">
-                        <div className="flex items-center gap-3 mb-4 md:mb-6">
-                          <div>
-                            <h3
-                              className={`text-sm md:text-base font-semibold ${colors.texts.primary}`}
-                            >
-                              Basic Item Information
-                            </h3>
+            {/* Form Card */}
+            <Card
+              className={`${colors.cards.base} transition-all duration-300 rounded-none shadow-none`}
+            >
+              <CardContent className="">
+                {/* Step 1: Basic Information */}
+                {currentStep === 1 && (
+                  <div className="space-y-2 md:space-y-4">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
+                      <div>
+                        <h3
+                          className={`text-sm md:text-base font-semibold ${colors.texts.primary}`}
+                        >
+                          Basic Item Information
+                        </h3>
+                        <p
+                          className={`text-xs md:text-sm ${colors.texts.secondary}`}
+                        >
+                          Essential details about the inventory item
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-2">
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="name"
+                          className={`text-xs md:text-sm font-medium ${colors.texts.accent}`}
+                        >
+                          Item Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="name"
+                          placeholder="e.g., Premium Cotton Fabric"
+                          value={formData.name}
+                          onChange={(e) =>
+                            handleInputChange("name", e.target.value)
+                          }
+                          className={`text-sm h-9 md:h-10 ${colors.inputs.base} ${colors.inputs.focus} transition-colors duration-200 ${
+                            errors.name ? `border-red-500` : ""
+                          } rounded-none hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.name && (
                             <p
-                              className={`text-xs md:text-sm ${colors.texts.secondary}`}
+                              className={`text-xs ${colors.texts.error} flex items-center gap-1`}
                             >
-                              Essential details about the inventory item
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.name}
                             </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4">
-                          <div className="space-y-1">
-                            <Label
-                              htmlFor="name"
-                              className={`text-xs md:text-sm font-medium ${colors.texts.accent}`}
-                            >
-                              Item Name *
-                            </Label>
-                            <Input
-                              id="name"
-                              placeholder="e.g., Premium Cotton Fabric"
-                              value={formData.name}
-                              onChange={(e) =>
-                                handleInputChange("name", e.target.value)
-                              }
-                              className={`text-sm h-9 md:h-10 ${colors.inputs.base} ${colors.inputs.focus} transition-colors duration-200 ${
-                                errors.name ? `border-red-500` : ""
-                              } rounded-none hover:border-black`}
-                            />
-                            <div className="min-h-4">
-                              {errors.name && (
-                                <p
-                                  className={`text-xs ${colors.texts.error} flex items-center gap-1`}
-                                >
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.name}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <Label
-                                htmlFor="category"
-                                className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                              >
-                                Category *
-                              </Label>
-                              <Select
-                                value={formData.category}
-                                onValueChange={(value) => {
-                                  handleInputChange("category", value);
-                                  handleInputChange("subcategory", "");
-                                }}
-                              >
-                                <SelectTrigger
-                                  className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
-                                    errors.category
-                                      ? "border-red-500"
-                                      : "border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white"
-                                  }`}
-                                >
-                                  <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-[300px]">
-                                  {inventoryCategories.map((cat) => (
-                                    <SelectItem
-                                      key={cat}
-                                      value={cat}
-                                      className="text-sm h-9"
-                                    >
-                                      {cat}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="min-h-4">
-                                {errors.category && (
-                                  <p className="text-xs text-red-500 flex items-center gap-1">
-                                    <ExclamationTriangleIcon className="h-3 w-3" />
-                                    {errors.category}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label
-                                htmlFor="subcategory"
-                                className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                              >
-                                Subcategory *
-                              </Label>
-                              <Select
-                                value={formData.subcategory}
-                                onValueChange={(value) =>
-                                  handleInputChange("subcategory", value)
-                                }
-                                disabled={!formData.category}
-                              >
-                                <SelectTrigger
-                                  className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
-                                    errors.subcategory
-                                      ? "border-red-500"
-                                      : "border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white"
-                                  }`}
-                                >
-                                  <SelectValue placeholder="Select subcategory" />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-[300px]">
-                                  {formData.category &&
-                                    subcategoryMap[formData.category]?.map(
-                                      (subcat) => (
-                                        <SelectItem
-                                          key={subcat}
-                                          value={subcat}
-                                          className="text-sm"
-                                        >
-                                          {subcat}
-                                        </SelectItem>
-                                      )
-                                    )}
-                                </SelectContent>
-                              </Select>
-                              <div className="min-h-4">
-                                {errors.subcategory && (
-                                  <p className="text-xs text-red-500 flex items-center gap-1">
-                                    <ExclamationTriangleIcon className="h-3 w-3" />
-                                    {errors.subcategory}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <Label
-                                htmlFor="materialType"
-                                className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                              >
-                                Material Type *
-                              </Label>
-                              <Select
-                                value={formData.materialType}
-                                onValueChange={(value) =>
-                                  handleSelectChange("materialType", value)
-                                }
-                              >
-                                <SelectTrigger
-                                  className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none hover:border-black ${
-                                    errors.materialType ? "border-red-500" : ""
-                                  }`}
-                                >
-                                  <SelectValue placeholder="Select material type" />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-[300px]">
-                                  {materialTypes.map((type) => (
-                                    <SelectItem
-                                      key={type}
-                                      value={type}
-                                      className="text-sm"
-                                    >
-                                      {type}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="min-h-4">
-                                {errors.materialType && (
-                                  <p className="text-xs text-red-500 flex items-center gap-1">
-                                    <ExclamationTriangleIcon className="h-3 w-3" />
-                                    {errors.materialType}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label
-                                htmlFor="unit"
-                                className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                              >
-                                Unit *
-                              </Label>
-                              <Select
-                                value={formData.unit}
-                                onValueChange={(value) =>
-                                  handleInputChange("unit", value)
-                                }
-                              >
-                                <SelectTrigger className="text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none hover:border-black">
-                                  <SelectValue placeholder="Select unit" />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-[300px]">
-                                  {units.map((unit) => (
-                                    <SelectItem
-                                      key={unit}
-                                      value={unit}
-                                      className="text-sm"
-                                    >
-                                      {unit}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              SKU (Auto-generated)
-                            </Label>
-                            <Input
-                              placeholder="Auto-generated"
-                              value={formData.sku}
-                              readOnly
-                              className="text-sm h-9 md:h-10 bg-gray-100 dark:bg-gray-800 border rounded-none border-gray-200 dark:border-gray-700 cursor-not-allowed"
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label
-                              htmlFor="description"
-                              className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                              Item Description *
-                            </Label>
-                            <div className="relative group">
-                              <Textarea
-                                id="description"
-                                placeholder="Provide a detailed description of the inventory item..."
-                                value={formData.description}
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    "description",
-                                    e.target.value
-                                  )
-                                }
-                                maxLength={1000}
-                                rows={8}
-                                className={`text-sm resize-none bg-white dark:bg-gray-900 border rounded-none group-hover:border-black focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
-                                  errors.description
-                                    ? "border-red-500"
-                                    : "border-gray-200 dark:border-gray-700"
-                                }`}
-                              />
-                              <Button
-                                type="button"
-                                className="absolute top-1 right-1 h-8 px-2 bg-transparent text-gray-500 border-none rounded-none flex items-center gap-1 hover:text-black hover:bg-transparent focus-visible:ring-0 active:bg-transparent cursor-pointer"
-                              >
-                                <SparklesIcon className="h-4 w-4" />
-                                Generate
-                              </Button>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              {errors.description ? (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.description}
-                                </p>
-                              ) : (
-                                <span />
-                              )}
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                {formData.description.length}/1000 characters
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label
-                              htmlFor="internalCode"
-                              className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                              Internal Code
-                            </Label>
-                            <Input
-                              id="internalCode"
-                              value={formData.internalCode}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "internalCode",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Optional internal tracking code"
-                              className="text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black"
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label
-                              htmlFor="barcode"
-                              className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                              Barcode
-                            </Label>
-                            <Input
-                              id="barcode"
-                              value={formData.barcode}
-                              onChange={(e) =>
-                                handleInputChange("barcode", e.target.value)
-                              }
-                              placeholder="Optional product barcode"
-                              className="text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end">
-                          <Button
-                            onClick={nextStep}
-                            size="sm"
-                            className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all`}
-                          >
-                            Next Step
-                            <ArrowRightIcon className="h-3 w-3 ml-2" />
-                          </Button>
+                          )}
                         </div>
                       </div>
-                    )}
 
-                    {/* Step 2: Textile Details */}
-                    {currentStep === 2 && (
-                      <div className="space-y-4 md:space-y-6">
-                        <div className="flex items-center gap-3 mb-4 md:mb-6">
-                          <div>
-                            <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-                              Textile Details & Properties
-                            </h3>
-                            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                              Specific textile characteristics
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Color *
-                            </Label>
-                            <Input
-                              placeholder="e.g., Navy Blue"
-                              value={formData.textileDetails.color}
-                              onChange={(e) =>
-                                handleTextileDetailChange(
-                                  "color",
-                                  e.target.value
-                                )
-                              }
-                              className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none hover:border-black focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 ${
-                                errors["textileDetails.color"]
-                                  ? "border-red-500"
-                                  : "border-gray-200 dark:border-gray-700"
-                              }`}
-                            />
-                            <div className="min-h-4">
-                              {errors["textileDetails.color"] && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors["textileDetails.color"]}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Fabric Type *
-                            </Label>
-                            <Select
-                              value={formData.textileDetails.fabricType}
-                              onValueChange={(value) =>
-                                handleTextileDetailChange("fabricType", value)
-                              }
-                            >
-                              <SelectTrigger
-                                className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white hover:border-black ${
-                                  errors["textileDetails.fabricType"]
-                                    ? "border-red-500"
-                                    : ""
-                                }`}
-                              >
-                                <SelectValue placeholder="Select fabric type" />
-                              </SelectTrigger>
-                              <SelectContent className="max-h-[300px]">
-                                {fabricTypes.map((type) => (
-                                  <SelectItem
-                                    key={type}
-                                    value={type}
-                                    className="text-sm"
-                                  >
-                                    {type}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <div className="min-h-4">
-                              {errors["textileDetails.fabricType"] && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors["textileDetails.fabricType"]}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Composition *
-                            </Label>
-                            <Input
-                              placeholder="e.g., 100% Cotton"
-                              value={formData.textileDetails.composition}
-                              onChange={(e) =>
-                                handleTextileDetailChange(
-                                  "composition",
-                                  e.target.value
-                                )
-                              }
-                              className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black dark:focus:border-white ${
-                                errors["textileDetails.composition"]
-                                  ? "border-red-500"
-                                  : ""
-                              }`}
-                            />
-                            <div className="min-h-4">
-                              {errors["textileDetails.composition"] && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors["textileDetails.composition"]}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Pattern *
-                            </Label>
-                            <Select
-                              value={formData.textileDetails.pattern}
-                              onValueChange={(value) =>
-                                handleTextileDetailChange("pattern", value)
-                              }
-                            >
-                              <SelectTrigger
-                                className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white hover:border-black ${
-                                  errors["textileDetails.pattern"]
-                                    ? "border-red-500"
-                                    : ""
-                                }`}
-                              >
-                                <SelectValue placeholder="Select pattern" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {patterns.map((pattern) => (
-                                  <SelectItem key={pattern} value={pattern}>
-                                    {pattern}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <div className="min-h-4">
-                              {errors["textileDetails.pattern"] && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors["textileDetails.pattern"]}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              GSM *
-                            </Label>
-                            <Input
-                              type="number"
-                              placeholder="e.g., 180"
-                              value={formData.textileDetails.gsm}
-                              onChange={(e) =>
-                                handleTextileDetailChange("gsm", e.target.value)
-                              }
-                              min="0"
-                              className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                                errors["textileDetails.gsm"]
-                                  ? "border-red-500"
-                                  : ""
-                              }`}
-                            />
-                            <div className="min-h-4">
-                              {errors["textileDetails.gsm"] && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors["textileDetails.gsm"]}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Width (cm) *
-                            </Label>
-                            <Input
-                              type="number"
-                              placeholder="e.g., 150"
-                              value={formData.textileDetails.width}
-                              onChange={(e) =>
-                                handleTextileDetailChange(
-                                  "width",
-                                  e.target.value
-                                )
-                              }
-                              min="0"
-                              className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                                errors["textileDetails.width"]
-                                  ? "border-red-500"
-                                  : ""
-                              }`}
-                            />
-                            <div className="min-h-4">
-                              {errors["textileDetails.width"] && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors["textileDetails.width"]}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Add Color Code field */}
-                          <div className="space-y-1">
-                            <Label
-                              htmlFor="textileDetails.colorCode"
-                              className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                              Color Code *
-                            </Label>
-                            <Input
-                              id="textileDetails.colorCode"
-                              name="textileDetails.colorCode"
-                              type="color"
-                              value={
-                                formData.textileDetails?.colorCode || "#000000"
-                              }
-                              onChange={(e) =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  textileDetails: {
-                                    ...prev.textileDetails,
-                                    colorCode: e.target.value,
-                                  },
-                                }))
-                              }
-                              className={`rounded-none ${
-                                errors["textileDetails.colorCode"]
-                                  ? "border-red-500"
-                                  : ""
-                              }`}
-                            />
-                            <div className="min-h-4">
-                              {errors["textileDetails.colorCode"] && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors["textileDetails.colorCode"]}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-between">
-                          <Button
-                            variant="outline"
-                            onClick={prevStep}
-                            size="sm"
-                            className="text-xs md:text-sm cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none"
-                          >
-                            <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
-                            Previous
-                          </Button>
-                          <Button
-                            onClick={nextStep}
-                            size="sm"
-                            className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all`}
-                          >
-                            Next Step
-                            <ArrowRightIcon className="h-3 w-3 ml-2" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Step 3: Stock & Pricing */}
-                    {currentStep === 3 && (
-                      <div className="space-y-4 md:space-y-6">
-                        <div className="flex items-center gap-3 mb-4 md:mb-6">
-                          <div>
-                            <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-                              Stock Management & Pricing
-                            </h3>
-                            <p className="text-xs md:textsm text-gray-600 dark:text-gray-400">
-                              Inventory levels and pricing
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Unit Price *
-                            </Label>
-                            <div className="relative">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                placeholder="0.00"
-                                value={formData.pricePerUnit}
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    "pricePerUnit",
-                                    e.target.value
-                                  )
-                                }
-                                min="0"
-                                className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                                  errors.pricePerUnit
-                                    ? "border-red-500"
-                                    : "border-gray-200 dark:border-gray-700"
-                                } hover:border-black`}
-                              />
-                            </div>
-                            <div className="min-h-4">
-                              {errors.pricePerUnit && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.pricePerUnit}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Cost Price *
-                            </Label>
-                            <div className="relative">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                placeholder="0.00"
-                                value={formData.costPrice}
-                                onChange={(e) =>
-                                  handleInputChange("costPrice", e.target.value)
-                                }
-                                min="0"
-                                className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                                  errors.costPrice
-                                    ? "border-red-500"
-                                    : "border-gray-200 dark:border-gray-700"
-                                } hover:border-black`}
-                              />
-                            </div>
-                            <div className="min-h-4">
-                              {errors.costPrice && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.costPrice}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Current Quantity *
-                            </Label>
-                            <Input
-                              type="number"
-                              placeholder="e.g., 1000"
-                              value={formData.quantity}
-                              onChange={(e) =>
-                                handleInputChange("quantity", e.target.value)
-                              }
-                              min="0"
-                              className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                                errors.quantity
-                                  ? "border-red-500"
-                                  : "border-gray-200 dark:border-gray-700"
-                              } hover:border-black`}
-                            />
-                            <div className="min-h-4">
-                              {errors.quantity && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.quantity}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Reorder Level *
-                            </Label>
-                            <Input
-                              type="number"
-                              placeholder="20"
-                              value={formData.reorderLevel}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "reorderLevel",
-                                  e.target.value
-                                )
-                              }
-                              className="text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black"
-                            />
-                            <div className="min-h-4">
-                              {errors.reorderLevel && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.reorderLevel}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Min Stock Level *
-                            </Label>
-                            <Input
-                              type="number"
-                              placeholder="10"
-                              value={formData.minStockLevel}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "minStockLevel",
-                                  e.target.value
-                                )
-                              }
-                              min="0"
-                              className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                                errors.minStockLevel
-                                  ? "border-red-500"
-                                  : "border-gray-200 dark:border-gray-700"
-                              } hover:border-black`}
-                            />
-                            <div className="min-h-4">
-                              {errors.minStockLevel && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.minStockLevel}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label
-                              htmlFor="safetyStockLevel"
-                              className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                              Safety Stock Level *
-                            </Label>
-                            <Input
-                              id="safetyStockLevel"
-                              name="safetyStockLevel"
-                              type="number"
-                              value={formData.safetyStockLevel}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "safetyStockLevel",
-                                  e.target.value
-                                )
-                              }
-                              min="0"
-                              placeholder="Minimum safety stock"
-                              className={`text-sm h-9 md:h-10 rounded-none ${
-                                errors.safetyStockLevel ? "border-red-500" : ""
-                              } hover:border-black`}
-                            />
-                            <div className="min-h-4">
-                              {errors.safetyStockLevel && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.safetyStockLevel}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Damaged Quantity *
-                            </Label>
-                            <Input
-                              id="damagedQuantity"
-                              name="damagedQuantity"
-                              type="number"
-                              value={formData.damagedQuantity}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "damagedQuantity",
-                                  e.target.value
-                                )
-                              }
-                              min="0"
-                              placeholder="0"
-                              className={`text-sm h-9 md:h-10 rounded-none ${
-                                errors.damagedQuantity ? "border-red-500" : ""
-                              } hover:border-black`}
-                            />
-                            <div className="min-h-4">
-                              {errors.damagedQuantity && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.damagedQuantity}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Shelf Life (Days) *
-                            </Label>
-                            <Input
-                              id="shelfLife"
-                              name="shelfLife"
-                              type="number"
-                              value={formData.shelfLife}
-                              onChange={(e) =>
-                                handleInputChange("shelfLife", e.target.value)
-                              }
-                              min="0"
-                              placeholder="e.g., 730"
-                              className={`text-sm h-9 md:h-10 rounded-none ${
-                                errors.shelfLife ? "border-red-500" : ""
-                              } hover:border-black`}
-                            />
-                            <div className="min-h-4">
-                              {errors.shelfLife && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.shelfLife}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1 md:col-span-2">
-                            <Label className="text-xs md:text-sm font-medium">
-                              Auto Reorder *
-                            </Label>
-                            <Select
-                              value={
-                                formData.autoReorderEnabled ? "true" : "false"
-                              }
-                              onValueChange={(value) =>
-                                handleSelectChange(
-                                  "autoReorderEnabled",
-                                  value === "true"
-                                )
-                              }
-                            >
-                              <SelectTrigger
-                                className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
-                                  errors.autoReorderEnabled
-                                    ? "border-red-500"
-                                    : "border-gray-200 dark:border-gray-700"
-                                } hover:border-black`}
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="true">Enabled</SelectItem>
-                                <SelectItem value="false">Disabled</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <div className="min-h-4">
-                              {errors.autoReorderEnabled && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.autoReorderEnabled}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Batch Tracking Fields */}
-                        <div className="space-y-4 mt-4 md:mt-6 p-3 md:p-4 border border-gray-200 dark:border-gray-700 rounded-none">
-                          <div className="flex items-center gap-2 mb-4">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Batch Tracking
-                            </Label>
-                            <Badge className="bg-blue-100/10 border border-blue-200 text-blue-700 text-xs rounded-none">
-                              {formData.isBatchTracked ? "Enabled" : "Disabled"}
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1 md:col-span-2">
-                              <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Enable Batch Tracking
-                              </Label>
-                              <Select
-                                value={
-                                  formData.isBatchTracked ? "true" : "false"
-                                }
-                                onValueChange={(value) =>
-                                  handleSelectChange(
-                                    "isBatchTracked",
-                                    value === "true"
-                                  )
-                                }
-                              >
-                                <SelectTrigger className="text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="true">Yes</SelectItem>
-                                  <SelectItem value="false">No</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            {/* Manufacture Date and Expiry Date remain as single columns */}
-                            {formData.isBatchTracked && (
-                              <>
-                                <div className="space-y-1">
-                                  <Label
-                                    htmlFor="manufactureDate"
-                                    className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                                  >
-                                    Manufacture Date *
-                                  </Label>
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        className={cn(
-                                          "text-sm h-9 md:h-10 w-full justify-start text-left font-normal bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black",
-                                          !formData.manufactureDate &&
-                                            "text-muted-foreground"
-                                        )}
-                                      >
-                                        {formData.manufactureDate ? (
-                                          new Date(
-                                            formData.manufactureDate
-                                          ).toLocaleDateString()
-                                        ) : (
-                                          <span>Pick a date</span>
-                                        )}
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                      className="w-auto p-0"
-                                      align="start"
-                                    >
-                                      <Calendar
-                                        mode="single"
-                                        selected={
-                                          formData.manufactureDate
-                                            ? new Date(formData.manufactureDate)
-                                            : undefined
-                                        }
-                                        onSelect={(date) => {
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            manufactureDate: date
-                                              ? date.toLocaleDateString("en-CA")
-                                              : "",
-                                            expiryDate: "", // Reset expiry date when manufacture date changes
-                                          }));
-                                        }}
-                                        initialFocus
-                                      />
-                                    </PopoverContent>
-                                  </Popover>
-                                  <div className="min-h-4">
-                                    {errors.manufactureDate && (
-                                      <p className="text-xs text-red-500 flex items-center gap-1">
-                                        <ExclamationTriangleIcon className="h-3 w-3" />
-                                        {errors.manufactureDate}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label
-                                    htmlFor="expiryDate"
-                                    className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
-                                  >
-                                    Expiry Date (Optional)
-                                  </Label>
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        className={cn(
-                                          "text-sm h-9 md:h-10 w-full justify-start text-left font-normal bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black",
-                                          !formData.expiryDate &&
-                                            "text-muted-foreground"
-                                        )}
-                                      >
-                                        {formData.expiryDate ? (
-                                          new Date(
-                                            formData.expiryDate
-                                          ).toLocaleDateString()
-                                        ) : (
-                                          <span>Pick a date</span>
-                                        )}
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                      className="w-auto p-0"
-                                      align="start"
-                                    >
-                                      <Calendar
-                                        mode="single"
-                                        selected={
-                                          formData.expiryDate
-                                            ? new Date(formData.expiryDate)
-                                            : undefined
-                                        }
-                                        onSelect={(date) => {
-                                          if (
-                                            formData.manufactureDate &&
-                                            date &&
-                                            new Date(date) <
-                                              new Date(formData.manufactureDate)
-                                          ) {
-                                            toast.error(
-                                              "Expiry date cannot be before manufacture date"
-                                            );
-                                            return;
-                                          }
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            expiryDate: date
-                                              ? date.toLocaleDateString("en-CA")
-                                              : "",
-                                          }));
-                                        }}
-                                        fromDate={
-                                          formData.manufactureDate
-                                            ? new Date(formData.manufactureDate)
-                                            : undefined
-                                        }
-                                        initialFocus
-                                      />
-                                    </PopoverContent>
-                                  </Popover>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Auto-calculated from shelf life if not
-                                    provided
-                                  </p>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                         <div className="space-y-1">
-                          <Label className="text-xs md:text-sm font-medium">
-                            Currency *
+                          <Label
+                            htmlFor="category"
+                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >
+                            Category <span className="text-red-500">*</span>
                           </Label>
                           <Select
-                            value={formData.currency}
-                            onValueChange={(value) =>
-                              handleInputChange("currency", value)
-                            }
+                            value={formData.category}
+                            onValueChange={(value) => {
+                              handleInputChange("category", value);
+                              handleInputChange("subcategory", "");
+                            }}
                           >
                             <SelectTrigger
-                              className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
-                                errors.currency
+                              className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
+                                errors.category
                                   ? "border-red-500"
-                                  : "border-gray-200 dark:border-gray-700"
-                              } hover:border-black`}
+                                  : "border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white"
+                              }`}
                             >
-                              <SelectValue placeholder="Select currency" />
+                              <SelectValue placeholder="Select category" />
                             </SelectTrigger>
-                            <SelectContent>
-                              {currencies.map((curr) => (
+                            <SelectContent className="max-h-[300px]">
+                              {inventoryCategories.map((cat) => (
                                 <SelectItem
-                                  key={curr}
-                                  value={curr}
-                                  className="text-sm"
+                                  key={cat}
+                                  value={cat}
+                                  className="text-sm h-9"
                                 >
-                                  {curr}
+                                  {cat}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                           <div className="min-h-4">
-                            {errors.currency && (
+                            {errors.category && (
                               <p className="text-xs text-red-500 flex items-center gap-1">
-                                <ExclamationTriangleIcon className="h-3 w-3" />
-                                {errors.currency}
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors.category}
                               </p>
                             )}
                           </div>
                         </div>
 
+                        <div className="space-y-1">
+                          <Label
+                            htmlFor="subcategory"
+                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >
+                            Subcategory <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={formData.subcategory}
+                            onValueChange={(value) =>
+                              handleInputChange("subcategory", value)
+                            }
+                            disabled={!formData.category}
+                          >
+                            <SelectTrigger
+                              className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
+                                errors.subcategory
+                                  ? "border-red-500"
+                                  : "border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white"
+                              }`}
+                            >
+                              <SelectValue placeholder="Select subcategory" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[300px]">
+                              {formData.category &&
+                                subcategoryMap[formData.category]?.map(
+                                  (subcat) => (
+                                    <SelectItem
+                                      key={subcat}
+                                      value={subcat}
+                                      className="text-sm"
+                                    >
+                                      {subcat}
+                                    </SelectItem>
+                                  )
+                                )}
+                            </SelectContent>
+                          </Select>
+                          <div className="min-h-4">
+                            {errors.subcategory && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors.subcategory}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Material Type{" "}
+                            <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={formData.materialType}
+                            onValueChange={(value) =>
+                              handleSelectChange("materialType", value)
+                            }
+                          >
+                            <SelectTrigger
+                              className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none hover:border-black ${
+                                errors.materialType ? "border-red-500" : ""
+                              }`}
+                            >
+                              <SelectValue placeholder="Select material type" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[300px]">
+                              {materialTypes.map((type) => (
+                                <SelectItem
+                                  key={type}
+                                  value={type}
+                                  className="text-sm"
+                                >
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="min-h-4">
+                            {errors.materialType && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors.materialType}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label
+                            htmlFor="unit"
+                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >
+                            Unit <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={formData.unit}
+                            onValueChange={(value) =>
+                              handleInputChange("unit", value)
+                            }
+                          >
+                            <SelectTrigger className="text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none hover:border-black">
+                              <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[300px]">
+                              {units.map((unit) => (
+                                <SelectItem
+                                  key={unit}
+                                  value={unit}
+                                  className="text-sm"
+                                >
+                                  {unit}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
                         <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Warehouse Location *
+                          SKU (Auto-generated)
+                        </Label>
+                        <Input
+                          placeholder="Auto-generated"
+                          value={formData.sku}
+                          readOnly
+                          className="text-sm h-9 md:h-10 bg-gray-100 dark:bg-gray-800 border rounded-none border-gray-200 dark:border-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Color <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            placeholder="e.g., Navy Blue"
+                            value={formData.textileDetails.color}
+                            onChange={(e) =>
+                              handleTextileDetailChange("color", e.target.value)
+                            }
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none hover:border-black focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 ${
+                              errors["textileDetails.color"]
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            }`}
+                          />
+                          <div className="min-h-4">
+                            {errors["textileDetails.color"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.color"]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label
+                            htmlFor="textileDetails.colorCode"
+                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >
+                            Color Code <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="textileDetails.colorCode"
+                            name="textileDetails.colorCode"
+                            type="color"
+                            value={
+                              formData.textileDetails?.colorCode || "#000000"
+                            }
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                textileDetails: {
+                                  ...prev.textileDetails,
+                                  colorCode: e.target.value,
+                                },
+                              }))
+                            }
+                            className={`rounded-none hover:border-black ${
+                              errors["textileDetails.colorCode"]
+                                ? "border-red-500"
+                                : ""
+                            }`}
+                          />
+                          <div className="min-h-4">
+                            {errors["textileDetails.colorCode"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.colorCode"]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="internalCode"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Internal Code
+                        </Label>
+                        <Input
+                          id="internalCode"
+                          value={formData.internalCode}
+                          onChange={(e) =>
+                            handleInputChange("internalCode", e.target.value)
+                          }
+                          placeholder="Optional internal tracking code"
+                          className="text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="barcode"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Barcode
+                        </Label>
+                        <Input
+                          id="barcode"
+                          value={formData.barcode}
+                          onChange={(e) =>
+                            handleInputChange("barcode", e.target.value)
+                          }
+                          placeholder="Optional product barcode"
+                          className="text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={nextStep}
+                        size="sm"
+                        className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all`}
+                      >
+                        Next Step
+                        <ArrowRightIcon className="h-3 w-3 ml-2" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Textile Details */}
+                {currentStep === 2 && (
+                  <div className="space-y-2 md:space-y-4">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
+                      <div>
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+                          Textile Details & Properties
+                        </h3>
+                        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                          Specific textile characteristics
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Fabric Type <span className="text-red-500">*</span>
                         </Label>
                         <Select
-                          value={formData.warehouseLocation}
+                          value={formData.textileDetails.fabricType}
                           onValueChange={(value) =>
-                            handleInputChange("warehouseLocation", value)
+                            handleTextileDetailChange("fabricType", value)
                           }
                         >
                           <SelectTrigger
-                            className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
-                              errors.warehouseLocation
+                            className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white hover:border-black ${
+                              errors["textileDetails.fabricType"]
                                 ? "border-red-500"
-                                : "border-gray-200 dark:border-gray-700"
-                            } hover:border-black`}
+                                : ""
+                            }`}
                           >
-                            <SelectValue placeholder="Select warehouse location" />
+                            <SelectValue placeholder="Select fabric type" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {warehouseLocations.map((loc) => (
+                          <SelectContent className="max-h-[300px]">
+                            {fabricTypes.map((type) => (
                               <SelectItem
-                                key={loc}
-                                value={loc}
+                                key={type}
+                                value={type}
                                 className="text-sm"
                               >
-                                {loc}
+                                {type}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         <div className="min-h-4">
-                          {errors.warehouseLocation && (
+                          {errors["textileDetails.fabricType"] && (
                             <p className="text-xs text-red-500 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="h-3 w-3" />
-                              {errors.warehouseLocation}
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors["textileDetails.fabricType"]}
                             </p>
                           )}
                         </div>
-
-                        <div className="flex flex-col sm:flex-row justify-between gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={prevStep}
-                            size="sm"
-                            className="text-xs md:text-sm cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none"
-                          >
-                            <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
-                            Previous
-                          </Button>
-                          <Button
-                            onClick={nextStep}
-                            size="sm"
-                            className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
-                          >
-                            Next Step
-                            <ArrowRightIcon className="h-3 w-3 ml-2" />
-                          </Button>
-                        </div>
                       </div>
-                    )}
 
-                    {/* Step 4: Quality */}
-                    {currentStep === 4 && (
-                      <div className="space-y-4 md:space-y-6">
-                        <div className="flex items-center gap-3 mb-4 md:mb-6">
-                          <div>
-                            <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-                              Quality & Compliance
-                            </h3>
-                            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                              Certifications and quality information
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Quality Grade *
-                            </Label>
-                            <Select
-                              value={formData.qualityGrade}
-                              onValueChange={(value) =>
-                                handleInputChange("qualityGrade", value)
-                              }
-                            >
-                              <SelectTrigger
-                                className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
-                                  errors.qualityGrade
-                                    ? "border-red-500"
-                                    : "border-gray-200 dark:border-gray-700"
-                                } focus:border-black dark:focus:border-white hover:border-black`}
-                              >
-                                <SelectValue placeholder="Select quality grade" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {qualityGrades.map((grade) => (
-                                  <SelectItem key={grade} value={grade}>
-                                    Grade {grade}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {errors.qualityGrade && (
-                              <div className="min-h-4">
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.qualityGrade}
-                                </p>
-                              </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Composition <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            placeholder="e.g., 100% Cotton"
+                            value={formData.textileDetails.composition}
+                            onChange={(e) =>
+                              handleTextileDetailChange(
+                                "composition",
+                                e.target.value
+                              )
+                            }
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none hover:border-black focus:border-black dark:focus:border-white ${
+                              errors["textileDetails.composition"]
+                                ? "border-red-500"
+                                : ""
+                            }`}
+                          />
+                          <div className="min-h-4">
+                            {errors["textileDetails.composition"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.composition"]}
+                              </p>
                             )}
                           </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Country of Origin *
-                            </Label>
-                            <Input
-                              placeholder="e.g., Pakistan"
-                              value={formData.countryOfOrigin}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "countryOfOrigin",
-                                  e.target.value
-                                )
-                              }
-                              className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                                errors.countryOfOrigin
-                                  ? "border-red-500"
-                                  : "border-gray-200 dark:border-gray-700"
-                              } hover:border-black`}
-                            />
-                            <div className="min-h-4">
-                              {errors.countryOfOrigin && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.countryOfOrigin}
-                                </p>
-                              )}
-                            </div>
-                          </div>
                         </div>
 
                         <div className="space-y-1">
-                          <Label className="text-xs md:text-sm font-medium">
-                            Certifications
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Pattern <span className="text-red-500">*</span>
                           </Label>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
-                            {certifications.map((cert) => (
-                              <label
-                                key={cert}
-                                className="flex items-center gap-2 p-2 md:p-3 bg-white/50 dark:bg-gray-800/50 border rounded-none cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors"
-                              >
-                                <Checkbox
-                                  checked={formData.certifications.includes(
-                                    cert
-                                  )}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setFormData((prev) => ({
-                                        ...prev,
-                                        certifications: [
-                                          ...prev.certifications,
-                                          cert,
-                                        ],
-                                      }));
-                                    } else {
-                                      setFormData((prev) => ({
-                                        ...prev,
-                                        certifications:
-                                          prev.certifications.filter(
-                                            (c) => c !== cert
-                                          ),
-                                      }));
-                                    }
-                                  }}
-                                />
-                                <span className="text-xs md:text-sm">
-                                  {cert}
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row justify-between gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={prevStep}
-                            size="sm"
-                            className="text-xs md:text-sm cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none"
+                          <Select
+                            value={formData.textileDetails.pattern}
+                            onValueChange={(value) =>
+                              handleTextileDetailChange("pattern", value)
+                            }
                           >
-                            <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
-                            Previous
-                          </Button>
-                          <Button
-                            onClick={nextStep}
-                            size="sm"
-                            className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
-                          >
-                            Next Step
-                            <ArrowRightIcon className="h-3 w-3 md:h-4 md:w-4 ml-2" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Step 5: Supplier */}
-                    {currentStep === 5 && (
-                      <div className="space-y-4 md:space-y-6">
-                        <div className="flex items-center gap-3 mb-4 md:mb-6">
-                          <div>
-                            <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-                              Supplier Information
-                            </h3>
-                            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                              Supplier details and contact
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Supplier Name *
-                            </Label>
-                            <Input
-                              placeholder="e.g., ABC Textiles Ltd."
-                              value={formData.supplierName}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "supplierName",
-                                  e.target.value
-                                )
-                              }
-                              className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                                errors.supplierName
+                            <SelectTrigger
+                              className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer transition-colors duration-200 border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white hover:border-black ${
+                                errors["textileDetails.pattern"]
                                   ? "border-red-500"
-                                  : "border-gray-200 dark:border-gray-700"
-                              } hover:border-black`}
-                            />
-                            <div className="min-h-4">
-                              {errors.supplierName && (
-                                <p className="text-xs text-red-500 flex items-center gap-1">
-                                  <ExclamationTriangleIcon className="h-3 w-3" />
-                                  {errors.supplierName}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Phone *
-                              </Label>
-                              <Input
-                                placeholder="e.g., +92 300 1234567"
-                                value={formData.supplierContact.phone}
-                                onChange={(e) =>
-                                  handleSupplierContactChange(
-                                    "phone",
-                                    e.target.value
-                                  )
-                                }
-                                type="tel"
-                                required
-                                maxLength={15}
-                                minLength={15}
-                                pattern="\+92\s\d{3}\s\d{7}"
-                                className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                                  errors["supplierContact.phone"]
-                                    ? "border-red-500"
-                                    : "border-gray-200 dark:border-gray-700"
-                                } hover:border-black`}
-                              />
-                              <div className="min-h-4">
-                                {errors["supplierContact.phone"] && (
-                                  <p className="text-xs text-red-500 flex items-center gap-1">
-                                    <ExclamationTriangleIcon className="h-3 w-3" />
-                                    {errors["supplierContact.phone"]}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Email *
-                              </Label>
-                              <Input
-                                type="email"
-                                placeholder="e.g., contact@supplier.com"
-                                value={formData.supplierContact.email}
-                                onChange={(e) =>
-                                  handleSupplierContactChange(
-                                    "email",
-                                    e.target.value
-                                  )
-                                }
-                                className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
-                                  errors["supplierContact.email"]
-                                    ? "border-red-500"
-                                    : "border-gray-200 dark:border-gray-700"
-                                } hover:border-black`}
-                              />
-                              <div className="min-h-4">
-                                {errors["supplierContact.email"] && (
-                                  <p className="text-xs text-red-500 flex items-center gap-1">
-                                    <ExclamationTriangleIcon className="h-3 w-3" />
-                                    {errors["supplierContact.email"]}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row justify-between gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={prevStep}
-                            size="sm"
-                            className="text-xs md:text-sm cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none"
-                          >
-                            <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
-                            Previous
-                          </Button>
-                          <Button
-                            onClick={nextStep}
-                            size="sm"
-                            className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
-                          >
-                            Next Step
-                            <ArrowRightIcon className="h-3 w-3 md:h-4 md:w-4 ml-2" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Step 6: Media & Final */}
-                    {currentStep === 6 && (
-                      <div className="space-y-4 md:space-y-6">
-                        <div className="flex items-center gap-3 mb-4 md:mb-6">
-                          <div>
-                            <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-                              Media Upload
-                            </h3>
-                            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                              Add images and finalize
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label className="text-xs md:text-sm font-medium">
-                            Product Images *
-                          </Label>
-                          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-none p-4 md:p-6 bg-white/30 dark:bg-gray-800/30">
-                            <div className="text-center">
-                              <div className="mx-auto h-10 w-10 md:h-12 md:w-12 flex items-center justify-center rounded-none mb-3">
-                                {isUploading ? (
-                                  <Loader2 className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-gray-100 animate-spin" />
-                                ) : (
-                                  <ArrowUpTrayIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-gray-100" />
-                                )}
-                              </div>
-                              <div className="mb-3">
-                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                  {isUploading
-                                    ? "Uploading..."
-                                    : "Upload Item Images"}
-                                </p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                  Drag and drop or click to browse
-                                </p>
-                              </div>
-                              <input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={(e) =>
-                                  handleImageUpload(e.target.files)
-                                }
-                                className="hidden"
-                                id="image-upload"
-                                disabled={isUploading}
-                              />
-                              <label
-                                htmlFor="image-upload"
-                                className={`inline-flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 ${colors.buttons.primary} text-sm font-medium cursor-pointer rounded-none`}
-                              >
-                                Choose Images
-                              </label>
-                            </div>
-                          </div>
-
-                          {/* Uploaded Images Preview - update grid and image size */}
-                          {formData.images.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-4">
-                              {formData.images.map((image, index) => (
-                                <div
-                                  key={index}
-                                  className="relative w-20 h-20 md:w-24 md:h-24 bg-gray-100 dark:bg-gray-800 rounded-none overflow-hidden group"
-                                >
-                                  <img
-                                    src={image}
-                                    alt={`Item ${index + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                  <button
-                                    type="button"
-                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 rounded-none w-5 h-5 md:w-6 md:h-6 p-0 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white transition-opacity"
-                                    onClick={() => removeImage(index)}
-                                  >
-                                    <XMarkIcon className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                  </button>
-                                  {index === 0 && (
-                                    <Badge className="absolute top-1 left-1 bg-blue-100/10 text-blue-700 dark:text-blue-400 text-xs rounded-none px-1 py-0 text-[10px]">
-                                      Main
-                                    </Badge>
-                                  )}
-                                </div>
+                                  : ""
+                              }`}
+                            >
+                              <SelectValue placeholder="Select pattern" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {patterns.map((pattern) => (
+                                <SelectItem key={pattern} value={pattern}>
+                                  {pattern}
+                                </SelectItem>
                               ))}
-                            </div>
-                          )}
-                          {errors.images && (
-                            <div className="min-h-4">
+                            </SelectContent>
+                          </Select>
+                          <div className="min-h-4">
+                            {errors["textileDetails.pattern"] && (
                               <p className="text-xs text-red-500 flex items-center gap-1">
-                                <ExclamationTriangleIcon className="h-3 w-3" />
-                                {errors.images}
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.pattern"]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            GSM <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 180"
+                            value={formData.textileDetails.gsm}
+                            onChange={(e) =>
+                              handleTextileDetailChange("gsm", e.target.value)
+                            }
+                            min="0"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors["textileDetails.gsm"]
+                                ? "border-red-500"
+                                : ""
+                            } hover:border-black`}
+                          />
+                          <div className="min-h-4">
+                            {errors["textileDetails.gsm"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.gsm"]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Width (cm) <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 150"
+                            value={formData.textileDetails.width}
+                            onChange={(e) =>
+                              handleTextileDetailChange("width", e.target.value)
+                            }
+                            min="0"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors["textileDetails.width"]
+                                ? "border-red-500"
+                                : ""
+                            } hover:border-black`}
+                          />
+                          <div className="min-h-4">
+                            {errors["textileDetails.width"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["textileDetails.width"]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="description"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Item Description{" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="relative group">
+                          <Textarea
+                            id="description"
+                            placeholder="Provide a detailed description of the inventory item..."
+                            value={formData.description}
+                            onChange={(e) =>
+                              handleInputChange("description", e.target.value)
+                            }
+                            maxLength={5000}
+                            rows={8}
+                            className={`text-sm resize-none bg-white dark:bg-gray-900 border rounded-none group-hover:border-black hover:border-black focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none min-h-[180px] h-[180px] ${
+                              errors.description
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            }`}
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleGenerateDescription}
+                            disabled={
+                              isGenerating ||
+                              !formData.name ||
+                              !formData.category
+                            }
+                            className="absolute top-1 right-1 h-8 px-2 bg-transparent text-gray-500 border-none rounded-none flex items-center gap-1 hover:text-black hover:bg-transparent focus-visible:ring-0 active:bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isGenerating ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <SparklesIcon className="h-4 w-4" />
+                            )}
+                            {isGenerating ? "Generating..." : "Generate"}
+                          </Button>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          {errors.description ? (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.description}
+                            </p>
+                          ) : (
+                            <span />
+                          )}
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            {formData.description.length}/5000 characters
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <Button
+                        variant="outline"
+                        onClick={prevStep}
+                        size="sm"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all hover:border-black dark:hover:border-white"
+                      >
+                        <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
+                        Previous
+                      </Button>
+                      <Button
+                        onClick={nextStep}
+                        size="sm"
+                        className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all`}
+                      >
+                        Next Step
+                        <ArrowRightIcon className="h-3 w-3 ml-2" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Stock & Pricing */}
+                {currentStep === 3 && (
+                  <div className="space-y-2 md:space-y-4">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
+                      <div>
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+                          Stock Management & Pricing
+                        </h3>
+                        <p className="text-xs md:textsm text-gray-600 dark:text-gray-400">
+                          Inventory levels and pricing
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Unit Price <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={formData.pricePerUnit}
+                            onChange={(e) =>
+                              handleInputChange("pricePerUnit", e.target.value)
+                            }
+                            min="0"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors.pricePerUnit
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } hover:border-black`}
+                          />
+                        </div>
+                        <div className="min-h-4">
+                          {errors.pricePerUnit && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.pricePerUnit}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Cost Price <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={formData.costPrice}
+                            onChange={(e) =>
+                              handleInputChange("costPrice", e.target.value)
+                            }
+                            min="0"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors.costPrice
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } hover:border-black`}
+                          />
+                        </div>
+                        <div className="min-h-4">
+                          {errors.costPrice && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.costPrice}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Add Quantity{" "}
+                              <span className="text-red-500">*</span>
+                            </Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                >
+                                  <QuestionMarkCircleIcon className="h-4 w-4" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="w-80 rounded-none"
+                                align="start"
+                              >
+                                <div className="space-y-2 rounded-none">
+                                  <h4 className="font-medium text-sm">
+                                    Add to Existing Quantity
+                                  </h4>
+
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                                    Enter the quantity you want to{" "}
+                                    <strong>add</strong> to your current stock.
+                                    The new quantity will be added to your
+                                    existing quantity, not replace it.
+                                  </p>
+
+                                  <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-900/20 rounded-none border border-gray-300 dark:border-gray-700">
+                                    <p className="text-xs text-gray-800 dark:text-gray-200">
+                                      <strong>Example:</strong> Current:{" "}
+                                      {originalFormData?.quantity || "1000"}{" "}
+                                      {formData.unit}
+                                      <br />
+                                      You enter: 600 {formData.unit}
+                                      <br />
+                                      New total:{" "}
+                                      {(
+                                        parseInt(
+                                          originalFormData?.quantity || "1000"
+                                        ) + 600
+                                      ).toLocaleString()}{" "}
+                                      {formData.unit}
+                                    </p>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            Available:{" "}
+                            <strong>
+                              {formData.quantity &&
+                              parseInt(formData.quantity) > 0
+                                ? (
+                                    parseInt(
+                                      originalFormData?.quantity || "0"
+                                    ) +
+                                    parseInt(formData.quantity || "0") -
+                                    parseInt(
+                                      originalFormData?.reservedQuantity || "0"
+                                    ) -
+                                    parseInt(
+                                      originalFormData?.committedQuantity || "0"
+                                    ) -
+                                    parseInt(
+                                      originalFormData?.damagedQuantity || "0"
+                                    )
+                                  ).toLocaleString()
+                                : (
+                                    parseInt(
+                                      originalFormData?.quantity || "0"
+                                    ) -
+                                    parseInt(
+                                      originalFormData?.reservedQuantity || "0"
+                                    ) -
+                                    parseInt(
+                                      originalFormData?.committedQuantity || "0"
+                                    ) -
+                                    parseInt(
+                                      originalFormData?.damagedQuantity || "0"
+                                    )
+                                  ).toLocaleString()}{" "}
+                              {formData.unit}
+                            </strong>
+                          </div>
+                        </div>
+                        <Input
+                          type="number"
+                          placeholder="Enter quantity to add (e.g., 600)"
+                          value={formData.quantity}
+                          onChange={(e) =>
+                            handleInputChange("quantity", e.target.value)
+                          }
+                          min="0"
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                            errors.quantity
+                              ? "border-red-500"
+                              : "border-gray-200 dark:border-gray-700"
+                          } hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.quantity && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.quantity}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Reorder Level <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="number"
+                          placeholder="20"
+                          value={formData.reorderLevel}
+                          onChange={(e) =>
+                            handleInputChange("reorderLevel", e.target.value)
+                          }
+                          className="text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black"
+                        />
+                        <div className="min-h-4">
+                          {errors.reorderLevel && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.reorderLevel}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Min Stock Level{" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="number"
+                          placeholder="10"
+                          value={formData.minStockLevel}
+                          onChange={(e) =>
+                            handleInputChange("minStockLevel", e.target.value)
+                          }
+                          min="0"
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                            errors.minStockLevel
+                              ? "border-red-500"
+                              : "border-gray-200 dark:border-gray-700"
+                          } hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.minStockLevel && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.minStockLevel}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="safetyStockLevel"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Safety Stock Level{" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="safetyStockLevel"
+                          name="safetyStockLevel"
+                          type="number"
+                          value={formData.safetyStockLevel}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "safetyStockLevel",
+                              e.target.value
+                            )
+                          }
+                          min="0"
+                          placeholder="Minimum safety stock"
+                          className={`text-sm h-9 md:h-10 rounded-none ${
+                            errors.safetyStockLevel ? "border-red-500" : ""
+                          } hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.safetyStockLevel && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.safetyStockLevel}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="damagedQuantity"
+                          className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Damaged Quantity{" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="damagedQuantity"
+                          name="damagedQuantity"
+                          type="number"
+                          value={formData.damagedQuantity}
+                          onChange={(e) =>
+                            handleInputChange("damagedQuantity", e.target.value)
+                          }
+                          min="0"
+                          placeholder="0"
+                          className={`text-sm h-9 md:h-10 rounded-none ${
+                            errors.damagedQuantity ? "border-red-500" : ""
+                          } hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.damagedQuantity && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.damagedQuantity}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Shelf Life (Days){" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="shelfLife"
+                          name="shelfLife"
+                          type="number"
+                          value={formData.shelfLife}
+                          onChange={(e) =>
+                            handleInputChange("shelfLife", e.target.value)
+                          }
+                          min="0"
+                          placeholder="e.g., 730"
+                          className={`text-sm h-9 md:h-10 rounded-none ${
+                            errors.shelfLife ? "border-red-500" : ""
+                          } hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.shelfLife && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.shelfLife}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 md:col-span-2">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Auto Reorder <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.autoReorderEnabled ? "true" : "false"}
+                          onValueChange={(value) =>
+                            handleSelectChange(
+                              "autoReorderEnabled",
+                              value === "true"
+                            )
+                          }
+                        >
+                          <SelectTrigger
+                            className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
+                              errors.autoReorderEnabled
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } hover:border-black`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">Enabled</SelectItem>
+                            <SelectItem value="false">Disabled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="min-h-4">
+                          {errors.autoReorderEnabled && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.autoReorderEnabled}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Batch Tracking Fields */}
+                    <div className="space-y-2 mt-2 md:mt-4 p-3 md:p-4 border border-gray-200 dark:border-gray-700 rounded-none">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Batch Tracking
+                        </Label>
+                        <Badge className="bg-blue-100/10 border border-blue-200 text-blue-700 text-xs rounded-none">
+                          {formData.isBatchTracked ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                        <div className="space-y-1 md:col-span-2">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Enable Batch Tracking
+                          </Label>
+                          <Select
+                            value={formData.isBatchTracked ? "true" : "false"}
+                            onValueChange={(value) =>
+                              handleSelectChange(
+                                "isBatchTracked",
+                                value === "true"
+                              )
+                            }
+                          >
+                            <SelectTrigger className="text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="true">Yes</SelectItem>
+                              <SelectItem value="false">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {/* Manufacture Date and Expiry Date remain as single columns */}
+                        {formData.isBatchTracked && (
+                          <>
+                            <div className="space-y-1">
+                              <Label
+                                htmlFor="manufactureDate"
+                                className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                              >
+                                Manufacture Date{" "}
+                                <span className="text-red-500">*</span>
+                              </Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "text-sm h-9 md:h-10 w-full justify-start text-left font-normal bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black",
+                                      !formData.manufactureDate &&
+                                        "text-muted-foreground"
+                                    )}
+                                  >
+                                    {formData.manufactureDate ? (
+                                      new Date(
+                                        formData.manufactureDate
+                                      ).toLocaleDateString()
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-auto p-0"
+                                  align="start"
+                                >
+                                  <Calendar
+                                    mode="single"
+                                    selected={
+                                      formData.manufactureDate
+                                        ? new Date(formData.manufactureDate)
+                                        : undefined
+                                    }
+                                    onSelect={(date) => {
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        manufactureDate: date
+                                          ? date.toLocaleDateString("en-CA")
+                                          : "",
+                                        expiryDate: "", // Reset expiry date when manufacture date changes
+                                      }));
+                                    }}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <div className="min-h-4">
+                                {errors.manufactureDate && (
+                                  <p className="text-xs text-red-500 flex items-center gap-1">
+                                    <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                    {errors.manufactureDate}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label
+                                htmlFor="expiryDate"
+                                className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                              >
+                                Expiry Date (Optional)
+                              </Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "text-sm h-9 md:h-10 w-full justify-start text-left font-normal bg-white dark:bg-gray-900 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black",
+                                      !formData.expiryDate &&
+                                        "text-muted-foreground"
+                                    )}
+                                  >
+                                    {formData.expiryDate ? (
+                                      new Date(
+                                        formData.expiryDate
+                                      ).toLocaleDateString()
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-auto p-0"
+                                  align="start"
+                                >
+                                  <Calendar
+                                    mode="single"
+                                    selected={
+                                      formData.expiryDate
+                                        ? new Date(formData.expiryDate)
+                                        : undefined
+                                    }
+                                    onSelect={(date) => {
+                                      // Only allow expiry date >= manufacture date
+                                      if (
+                                        formData.manufactureDate &&
+                                        date &&
+                                        new Date(date) <
+                                          new Date(formData.manufactureDate)
+                                      ) {
+                                        toast.error(
+                                          "Expiry date cannot be before manufacture date"
+                                        );
+                                        return;
+                                      }
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        expiryDate: date
+                                          ? date.toLocaleDateString("en-CA")
+                                          : "",
+                                      }));
+                                    }}
+                                    // Optionally, set fromDate to manufactureDate for UI restriction
+                                    fromDate={
+                                      formData.manufactureDate
+                                        ? new Date(formData.manufactureDate)
+                                        : undefined
+                                    }
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Auto-calculated from shelf life if not provided
                               </p>
                             </div>
-                          )}
-                        </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
 
-                        {/* Existing Images */}
-                        {existingImages.length > 0 && (
-                          <div className="space-y-2">
-                            <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Existing Images
-                            </Label>
-                            <div className="flex flex-wrap gap-2">
-                              {existingImages.map((url, index) => (
-                                <div
-                                  key={index}
-                                  className="relative w-20 h-20 md:w-28 md:h-28 bg-gray-100 dark:bg-gray-800 rounded-none overflow-hidden group"
-                                >
-                                  <img
-                                    src={url}
-                                    alt={`Existing ${index + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                  {index === 0 && (
-                                    <Badge className="absolute top-1 left-1 bg-blue-100/10 text-blue-700 dark:text-blue-400 text-xs rounded-none px-1 py-0 text-[10px]">
-                                      Main
-                                    </Badge>
-                                  )}
-                                  <button
-                                    type="button"
-                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 rounded-none w-5 h-5 md:w-6 md:h-6 p-0 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white transition-opacity"
-                                    onClick={() => removeImage(index, true)}
-                                  >
-                                    <XMarkIcon className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Currency <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.currency}
+                        onValueChange={(value) =>
+                          handleInputChange("currency", value)
+                        }
+                      >
+                        <SelectTrigger
+                          className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
+                            errors.currency
+                              ? "border-red-500"
+                              : "border-gray-200 dark:border-gray-700"
+                          } hover:border-black`}
+                        >
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currencies.map((curr) => (
+                            <SelectItem
+                              key={curr}
+                              value={curr}
+                              className="text-sm"
+                            >
+                              {curr}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="min-h-4">
+                        {errors.currency && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                            {errors.currency}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Warehouse Location{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.warehouseLocation}
+                        onValueChange={(value) =>
+                          handleInputChange("warehouseLocation", value)
+                        }
+                      >
+                        <SelectTrigger
+                          className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
+                            errors.warehouseLocation
+                              ? "border-red-500"
+                              : "border-gray-200 dark:border-gray-700"
+                          } hover:border-black`}
+                        >
+                          <SelectValue placeholder="Select warehouse location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {warehouseLocations.map((loc) => (
+                            <SelectItem
+                              key={loc}
+                              value={loc}
+                              className="text-sm"
+                            >
+                              {loc}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="min-h-4">
+                        {errors.warehouseLocation && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                            {errors.warehouseLocation}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row justify-between gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={prevStep}
+                        size="sm"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all hover:border-black dark:hover:border-white"
+                      >
+                        <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
+                        Previous
+                      </Button>
+                      <Button
+                        onClick={nextStep}
+                        size="sm"
+                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
+                      >
+                        Next Step
+                        <ArrowRightIcon className="h-3 w-3 ml-2" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 4: Quality */}
+                {currentStep === 4 && (
+                  <div className="space-y-2 md:space-y-4">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
+                      <div>
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+                          Quality & Compliance
+                        </h3>
+                        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                          Certifications and quality information
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Quality Grade <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.qualityGrade}
+                          onValueChange={(value) =>
+                            handleInputChange("qualityGrade", value)
+                          }
+                        >
+                          <SelectTrigger
+                            className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none ${
+                              errors.qualityGrade
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } focus:border-black dark:focus:border-white hover:border-black`}
+                          >
+                            <SelectValue placeholder="Select quality grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {qualityGrades.map((grade) => (
+                              <SelectItem key={grade} value={grade}>
+                                Grade {grade}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {errors.qualityGrade && (
+                          <div className="min-h-4">
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.qualityGrade}
+                            </p>
                           </div>
                         )}
+                      </div>
 
-                        <div className="flex flex-col sm:flex-row justify-between gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={prevStep}
-                            size="sm"
-                            className="text-xs md:text-sm cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none"
-                          >
-                            <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
-                            Previous
-                          </Button>
-                          <Button
-                            onClick={() => setIsConfirmOpen(true)}
-                            disabled={isLoading}
-                            size="sm"
-                            className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none`}
-                          >
-                            {isLoading ? (
-                              <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                            ) : (
-                              <CheckCircleIcon className="h-3 w-3 mr-2" />
-                            )}
-                            {isLoading ? "Updating..." : "Update"}
-                          </Button>
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Country of Origin{" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          placeholder="e.g., Pakistan"
+                          value={formData.countryOfOrigin}
+                          onChange={(e) =>
+                            handleInputChange("countryOfOrigin", e.target.value)
+                          }
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                            errors.countryOfOrigin
+                              ? "border-red-500"
+                              : "border-gray-200 dark:border-gray-700"
+                          } hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.countryOfOrigin && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.countryOfOrigin}
+                            </p>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                    </div>
 
-              {/* Preview Section - Narrower and Separate */}
-              {showPreview && (
-                <div className="lg:col-span-3">
-                  <div className="sticky top-6">
-                    <PreviewCard
-                      formData={formData}
-                      existingImages={existingImages}
-                    />{" "}
-                  </div>
-                </div>
-              )}
-            </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs md:text-sm font-medium">
+                        Certifications
+                      </Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 md:gap-x-6 md:gap-y-3">
+                        {certifications.map((cert) => (
+                          <label
+                            key={cert}
+                            className="flex items-center gap-2 p-2 md:p-3 bg-white/50 dark:bg-gray-800/50 border rounded-none cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                          >
+                            <Checkbox
+                              checked={formData.certifications.includes(cert)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    certifications: [
+                                      ...prev.certifications,
+                                      cert,
+                                    ],
+                                  }));
+                                } else {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    certifications: prev.certifications.filter(
+                                      (c) => c !== cert
+                                    ),
+                                  }));
+                                }
+                              }}
+                            />
+                            <span className="text-xs md:text-sm">{cert}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
 
-            {/* Confirmation Dialog */}
-            <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-              <DialogContent
-                className={`${colors.backgrounds.modal} ${colors.borders.primary} rounded-none shadow-none max-w-sm md:max-w-md`}
-              >
-                <DialogHeader>
-                  <DialogTitle
-                    className={`text-sm md:text-base font-bold flex items-center gap-3 ${colors.texts.primary}`}
-                  >
-                    <PencilIcon className="h-4 w-4" />
-                    Update Inventory
-                  </DialogTitle>
-                  <DialogDescription
-                    className={`text-xs md:text-sm ${colors.texts.secondary}`}
-                  >
-                    Are you ready to update this item in the inventory?
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div
-                    className={`${badgeColors.blue.bg} rounded-none p-3 md:p-4`}
-                  >
-                    <ul
-                      className={`space-y-2 text-xs md:text-sm ${colors.texts.primary}`}
-                    >
-                      <li className="flex items-center gap-2">
-                        <CheckCircleIcon
-                          className={`h-3 w-3 md:h-4 md:w-4 ${colors.texts.success}`}
-                        />
-                        Update inventory record on blockchain
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircleIcon
-                          className={`h-3 w-3 md:h-4 md:w-4 ${colors.texts.success}`}
-                        />
-                        Update item images securely
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircleIcon
-                          className={`h-3 w-3 md:h-4 md:w-4 ${colors.texts.success}`}
-                        />
-                        Update stock tracking
-                      </li>
-                    </ul>
+                    <div className="flex flex-col sm:flex-row justify-between gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={prevStep}
+                        size="sm"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all hover:border-black dark:hover:border-white"
+                      >
+                        <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
+                        Previous
+                      </Button>
+                      <Button
+                        onClick={nextStep}
+                        size="sm"
+                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
+                      >
+                        Next Step
+                        <ArrowRightIcon className="h-3 w-3 md:h-4 md:w-4 ml-2" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <DialogFooter className="gap-2 md:gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsConfirmOpen(false)}
-                    size="sm"
-                    className={`text-xs md:text-sm cursor-pointer h-8 md:h-9 ${colors.buttons.outline} shadow-none hover:shadow-none rounded-none`}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isLoading}
-                    size="sm"
-                    className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none shadow-none hover:shadow-none`}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircleIcon className="h-3 w-3 mr-2" />
-                    )}
-                    {isLoading ? "Updating..." : "Update"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                )}
+
+                {/* Step 5: Supplier */}
+                {currentStep === 5 && (
+                  <div className="space-y-2 md:space-y-4">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
+                      <div>
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+                          Supplier Information
+                        </h3>
+                        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                          Supplier details and contact
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Supplier Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          placeholder="e.g., ABC Textiles Ltd."
+                          value={formData.supplierName}
+                          onChange={(e) =>
+                            handleInputChange("supplierName", e.target.value)
+                          }
+                          className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                            errors.supplierName
+                              ? "border-red-500"
+                              : "border-gray-200 dark:border-gray-700"
+                          } hover:border-black`}
+                        />
+                        <div className="min-h-4">
+                          {errors.supplierName && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                              {errors.supplierName}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Phone <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            placeholder="e.g., +92 300 1234567"
+                            value={formData.supplierContact.phone}
+                            onChange={(e) =>
+                              handleSupplierContactChange(
+                                "phone",
+                                e.target.value
+                              )
+                            }
+                            type="tel"
+                            required
+                            maxLength={15}
+                            minLength={15}
+                            pattern="\+92\s\d{3}\s\d{7}"
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors["supplierContact.phone"]
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } hover:border-black`}
+                          />
+                          <div className="min-h-4">
+                            {errors["supplierContact.phone"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["supplierContact.phone"]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Email <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            type="email"
+                            placeholder="e.g., contact@supplier.com"
+                            value={formData.supplierContact.email}
+                            onChange={(e) =>
+                              handleSupplierContactChange(
+                                "email",
+                                e.target.value
+                              )
+                            }
+                            className={`text-sm h-9 md:h-10 bg-white dark:bg-gray-900 border rounded-none ${
+                              errors["supplierContact.email"]
+                                ? "border-red-500"
+                                : "border-gray-200 dark:border-gray-700"
+                            } hover:border-black`}
+                          />
+                          <div className="min-h-4">
+                            {errors["supplierContact.email"] && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors["supplierContact.email"]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row justify-between gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={prevStep}
+                        size="sm"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all hover:border-black dark:hover:border-white"
+                      >
+                        <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
+                        Previous
+                      </Button>
+                      <Button
+                        onClick={nextStep}
+                        size="sm"
+                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
+                      >
+                        Next Step
+                        <ArrowRightIcon className="h-3 w-3 md:h-4 md:w-4 ml-2" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 6: Media & Final */}
+                {currentStep === 6 && (
+                  <div className="space-y-2 md:space-y-4">
+                    <div className="flex items-center gap-3 mb-4 md:mb-6">
+                      <div>
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+                          Media Upload
+                        </h3>
+                        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                          Add images and finalize
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs md:text-sm font-medium">
+                        Product Images <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="bg-yellow-50/80 dark:bg-yellow-950/30 backdrop-blur-sm border-none rounded-none p-4">
+                        <div className="flex items-start gap-2">
+                          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+                              Image Requirements
+                            </p>
+                            <ul className="text-sm text-yellow-700 dark:text-yellow-300 mt-1 list-disc list-inside">
+                              <li>At least 1 image required (maximum 5)</li>
+                              <li>Formats: JPG, PNG, WebP</li>
+                              <li>Max size: 10MB per image</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-none p-8 text-center hover:border-gray-500 dark:hover:border-gray-500 transition-colors bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm cursor-pointer mt-6">
+                        <div className="text-center">
+                          <div className="mb-3">
+                            <label
+                              htmlFor="image-upload"
+                              className="cursor-pointer block"
+                            >
+                              <ArrowUpTrayIcon className="!h-20 !w-20 md:h-24 md:w-24 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                              <p className="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">
+                                Upload Product Images
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Click to browse or drag and drop
+                              </p>
+                            </label>
+                          </div>
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e.target.files)}
+                            className="hidden"
+                            id="image-upload"
+                            disabled={isUploading}
+                          />
+                        </div>
+                      </div>
+
+                      {formData.images.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {formData.images.map((image, index) => (
+                            <div
+                              key={index}
+                              className="relative w-20 h-16 md:w-28 md:h-28 bg-gray-100 dark:bg-gray-800 rounded-none overflow-hidden group"
+                            >
+                              <img
+                                src={image}
+                                alt={`Item ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 rounded-none w-5 h-5 md:w-6 md:h-6 p-0 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white transition-opacity"
+                                onClick={() => removeImage(index)}
+                              >
+                                <XMarkIcon className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                              </button>
+                              {index === 0 && (
+                                <Badge className="absolute top-1 left-1 bg-blue-100/10 text-blue-700 text-xs rounded-none px-1 py-0 text-[10px]">
+                                  Main
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {errors.images && (
+                        <div className="min-h-4">
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                            {errors.images}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row justify-between gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={prevStep}
+                        size="sm"
+                        className="text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all hover:border-black dark:hover:border-white"
+                      >
+                        <ArrowLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
+                        Previous
+                      </Button>
+                      <Button
+                        onClick={() => setIsConfirmOpen(true)}
+                        disabled={isLoading}
+                        size="sm"
+                        className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none`}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircleIcon className="h-3 w-3 mr-2" />
+                        )}
+                        {isLoading ? "Updating..." : "Update Inventory"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
+
+          {/* Preview Section - Narrower and Separate */}
+          {showPreview && (
+            <div className="lg:col-span-3">
+              <div className="sticky top-20">
+                <PreviewCard
+                  formData={formData}
+                  originalFormData={originalFormData}
+                />
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </>
+
+        {/* Confirmation Dialog */}
+        <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+          <DialogContent
+            className={`${colors.backgrounds.modal} ${colors.borders.primary} rounded-none shadow-none max-w-sm md:max-w-md`}
+          >
+            <DialogHeader>
+              <DialogTitle
+                className={`text-sm md:text-base font-bold flex items-center gap-3 ${colors.texts.primary}`}
+              >
+                <CubeIcon className="h-4 w-4" />
+                Update Inventory
+              </DialogTitle>
+              <DialogDescription
+                className={`text-xs md:text-sm ${colors.texts.secondary}`}
+              >
+                Are you ready to update this inventory item?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className={`${badgeColors.blue.bg} rounded-none p-3 md:p-4`}>
+                <ul
+                  className={`space-y-2 text-xs md:text-sm ${colors.texts.primary}`}
+                >
+                  <li className="flex items-center gap-2">
+                    <CheckCircleIcon
+                      className={`h-3 w-3 md:h-4 md:w-4 ${colors.texts.success}`}
+                    />
+                    Update inventory record on blockchain
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircleIcon
+                      className={`h-3 w-3 md:h-4 md:w-4 ${colors.texts.success}`}
+                    />
+                    Update item images securely
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircleIcon
+                      className={`h-3 w-3 md:h-4 md:w-4 ${colors.texts.success}`}
+                    />
+                    Maintain stock tracking
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <DialogFooter className="gap-2 md:gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsConfirmOpen(false)}
+                size="sm"
+                className={`text-xs md:text-sm cursor-pointer h-8 md:h-9 ${colors.buttons.outline} shadow-none hover:shadow-none rounded-none`}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={isLoading}
+                size="sm"
+                className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none shadow-none hover:shadow-none`}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircleIcon className="h-3 w-3 mr-2" />
+                )}
+                {isLoading ? "Updating..." : "Confirm Update"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
   );
 }
