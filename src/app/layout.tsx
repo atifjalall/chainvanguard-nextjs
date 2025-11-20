@@ -5,6 +5,7 @@ import { WalletProvider } from "@/components/providers/wallet-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/_ui/sonner";
+import Footer from "@/components/common/customer-footer";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -39,7 +40,10 @@ export default function RootLayout({
         <ThemeProvider>
           <WalletProvider>
             <AuthProvider>
-              <div className="min-h-screen bg-background">{children}</div>
+              <div className="min-h-screen bg-background flex flex-col">
+                {children}
+                <Footer />
+              </div>
               <Toaster />
             </AuthProvider>
           </WalletProvider>

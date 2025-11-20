@@ -1,117 +1,294 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWallet } from "@/components/providers/wallet-provider";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  CubeIcon,
-  ArrowRightOnRectangleIcon,
-  Cog6ToothIcon,
-  UserIcon,
-  WalletIcon,
   BookmarkIcon,
-  BellIcon,
   ShoppingCartIcon,
-  MagnifyingGlassIcon,
+  BellIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Package } from "lucide-react";
+import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 
 const APPAREL_CATEGORIES = {
   Men: {
-    label: "Men",
+    label: "MEN",
+    images: [
+      "https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1617137968427-85924c800a22?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=300&fit=crop",
+    ],
     subcategories: [
-      "T-Shirts",
-      "Shirts",
-      "Hoodies",
-      "Sweaters",
-      "Jackets",
-      "Coats",
-      "Jeans",
-      "Trousers",
-      "Shorts",
-      "Suits",
-      "Activewear",
-      "Sleepwear",
-      "Underwear",
+      "BEST SELLERS",
+      "NEW ARRIVALS",
+      "T-SHIRTS",
+      "SHIRTS",
+      "HOODIES",
+      "SWEATERS",
+      "JACKETS",
+      "COATS",
+      "JEANS",
+      "TROUSERS",
+      "SHORTS",
+      "SUITS",
+      "KURTA",
+      "SHALWAR KAMEEZ",
+      "ACTIVEWEAR",
+      "SLEEPWEAR",
+      "SWIMWEAR",
+      "UNDERWEAR",
     ],
   },
   Women: {
-    label: "Women",
+    label: "WOMEN",
+    images: [
+      "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=400&h=300&fit=crop",
+    ],
     subcategories: [
-      "T-Shirts",
-      "Blouses",
-      "Shirts",
-      "Dresses",
-      "Skirts",
-      "Jeans",
-      "Trousers",
-      "Shorts",
-      "Jackets",
-      "Coats",
-      "Sweaters",
-      "Hoodies",
-      "Suits",
-      "Jumpsuits",
-      "Activewear",
-      "Sleepwear",
-      "Swimwear",
-      "Underwear",
+      "BEST SELLERS",
+      "NEW ARRIVALS",
+      "T-SHIRTS",
+      "BLOUSES",
+      "SHIRTS",
+      "DRESSES",
+      "SKIRTS",
+      "JEANS",
+      "TROUSERS",
+      "SHORTS",
+      "JACKETS",
+      "COATS",
+      "SWEATERS",
+      "HOODIES",
+      "SUITS",
+      "JUMPSUITS",
+      "SHALWAR KAMEEZ",
+      "KURTA",
+      "LAWN SUITS",
+      "SAREES",
+      "LEHENGA",
+      "DUPATTA",
+      "SHAWLS",
+      "ACTIVEWEAR",
+      "SLEEPWEAR",
+      "SWIMWEAR",
+      "UNDERWEAR",
     ],
   },
   Kids: {
-    label: "Kids",
+    label: "KIDS",
+    images: [
+      "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1514090458221-65bb69cf63e6?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=400&h=300&fit=crop",
+    ],
     subcategories: [
-      "T-Shirts",
-      "Shirts",
-      "Sweaters",
-      "Hoodies",
-      "Jeans",
-      "Trousers",
-      "Shorts",
-      "Dresses",
-      "Jackets",
-      "Coats",
-      "Activewear",
-      "Sleepwear",
-      "Underwear",
+      "BEST SELLERS",
+      "NEW ARRIVALS",
+      "T-SHIRTS",
+      "SHIRTS",
+      "SWEATERS",
+      "HOODIES",
+      "JEANS",
+      "TROUSERS",
+      "SHORTS",
+      "DRESSES",
+      "JACKETS",
+      "COATS",
+      "KURTA",
+      "SHALWAR KAMEEZ",
+      "ACTIVEWEAR",
+      "SLEEPWEAR",
+      "SWIMWEAR",
+      "UNDERWEAR",
     ],
   },
-  Accessories: {
-    label: "Accessories",
+  Unisex: {
+    label: "UNISEX",
+    images: [
+      "https://images.unsplash.com/photo-1620799140188-3b2a02fd9a77?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1614251056198-ff101ebaba5e?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1622445275576-721325763afe?w=400&h=300&fit=crop",
+    ],
     subcategories: [
-      "Bags",
-      "Wallets",
-      "Belts",
-      "Hats",
-      "Scarves",
-      "Sunglasses",
-      "Watches",
-      "Jewelry",
+      "BEST SELLERS",
+      "NEW ARRIVALS",
+      "T-SHIRTS",
+      "HOODIES",
+      "SWEATERS",
+      "JACKETS",
+      "ACTIVEWEAR",
+      "SLEEPWEAR",
+      "SWIMWEAR",
     ],
   },
 };
 
+// Mock Notifications (top 10)
+const MOCK_NOTIFICATIONS = [
+  {
+    id: "1",
+    title: "Order Delivered",
+    message: "Your order #ORD12345 has been delivered successfully.",
+    timestamp: "2024-01-18T10:30:00",
+    read: false,
+    link: "/customer/orders/ORD12345",
+  },
+  {
+    id: "2",
+    title: "Return Approved",
+    message: "Your return request #RET001 has been approved.",
+    timestamp: "2024-01-17T15:45:00",
+    read: false,
+    link: "/customer/return/RET001",
+  },
+  {
+    id: "3",
+    title: "Refund Processed",
+    message: "$89.99 has been refunded to your wallet.",
+    timestamp: "2024-01-16T09:20:00",
+    read: false,
+    link: "/customer/wallet",
+  },
+  {
+    id: "4",
+    title: "Order Shipped",
+    message: "Your order #ORD12346 has been shipped.",
+    timestamp: "2024-01-15T14:00:00",
+    read: true,
+    link: "/customer/orders/ORD12346",
+  },
+  {
+    id: "5",
+    title: "Special Offer - 20% Off",
+    message: "Get 20% off on all winter collection items.",
+    timestamp: "2024-01-14T08:00:00",
+    read: true,
+    link: "/customer/browse",
+  },
+  {
+    id: "6",
+    title: "Order Confirmed",
+    message: "Your order #ORD12347 has been confirmed.",
+    timestamp: "2024-01-13T11:30:00",
+    read: true,
+    link: "/customer/orders/ORD12347",
+  },
+  {
+    id: "7",
+    title: "Profile Updated",
+    message: "Your profile information has been updated successfully.",
+    timestamp: "2024-01-12T16:45:00",
+    read: true,
+    link: "/customer/profile",
+  },
+  {
+    id: "8",
+    title: "Return Received",
+    message: "We have received your returned item.",
+    timestamp: "2024-01-11T10:15:00",
+    read: true,
+    link: "/customer/return/RET002",
+  },
+  {
+    id: "9",
+    title: "New Arrivals",
+    message: "Check out our latest collection.",
+    timestamp: "2024-01-10T09:00:00",
+    read: true,
+    link: "/customer/browse",
+  },
+  {
+    id: "10",
+    title: "Order Out for Delivery",
+    message: "Your order #ORD12345 is out for delivery.",
+    timestamp: "2024-01-09T07:30:00",
+    read: true,
+    link: "/customer/orders/ORD12345",
+  },
+];
+
 export default function CustomerHeader() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
-  const [openCategory, setOpenCategory] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("Men");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(
+    null
+  );
+  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
 
   const { user, logout } = useAuth();
-  const { currentWallet, balance, disconnectWallet } = useWallet();
+  const { disconnectWallet } = useWallet();
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Prevent body scroll when menu is open and prevent layout shift
+  useEffect(() => {
+    if (menuOpen) {
+      // Get the scrollbar width
+      const scrollbarWidth =
+        window.innerWidth - document.documentElement.clientWidth;
+
+      // Prevent scrolling
+      document.body.style.overflow = "hidden";
+
+      // Add padding to prevent layout shift
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    } else {
+      // Re-enable scrolling
+      document.body.style.overflow = "unset";
+
+      // Remove padding
+      document.body.style.paddingRight = "0px";
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = "unset";
+      document.body.style.paddingRight = "0px";
+    };
+  }, [menuOpen]);
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (
+        notificationOpen &&
+        !target.closest(".notification-dropdown") &&
+        !target.closest(".notification-button")
+      ) {
+        setNotificationOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [notificationOpen]);
+
+  // Update selectedCategory and selectedSubcategory based on URL params
+  useEffect(() => {
+    if (!searchParams) return;
+    const category = searchParams.get("category");
+    const subcategory = searchParams.get("subcategory");
+    if (category) {
+      setSelectedCategory(category.charAt(0).toUpperCase() + category.slice(1));
+    }
+    setSelectedSubcategory(subcategory);
+  }, [searchParams]);
 
   const handleLogout = () => {
     disconnectWallet();
@@ -127,36 +304,54 @@ export default function CustomerHeader() {
   };
 
   const handleCategoryClick = (category: string, subcategory?: string) => {
-    setOpenCategory(null);
+    setMenuOpen(false);
+    setSelectedSubcategory(subcategory?.toLowerCase() || null);
     if (subcategory) {
       router.push(
-        `/customer/products?category=${category}&subcategory=${subcategory}`
+        `/customer/browse?category=${category.toLowerCase()}&subcategory=${subcategory.toLowerCase()}`
       );
     } else {
-      router.push(`/customer/products?category=${category}`);
+      router.push(`/customer/browse?category=${category.toLowerCase()}`);
     }
   };
 
-  const formatAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const handleMarkAsRead = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNotifications(
+      notifications.map((notif) =>
+        notif.id === id ? { ...notif, read: true } : notif
+      )
+    );
   };
 
-  const getUserInitials = () => {
-    if (user?.name) {
-      return user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase();
+  const handleNotificationClick = (notification: any) => {
+    if (!notification.read) {
+      setNotifications(
+        notifications.map((notif) =>
+          notif.id === notification.id ? { ...notif, read: true } : notif
+        )
+      );
     }
-    if (user?.walletName) {
-      return user.walletName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase();
-    }
-    return "U";
+    setNotificationOpen(false);
+    router.push(notification.link);
+  };
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return "Just now";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800)
+      return `${Math.floor(diffInSeconds / 86400)}d ago`;
+
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
   };
 
   const getDisplayName = () => {
@@ -164,255 +359,375 @@ export default function CustomerHeader() {
   };
 
   return (
-    <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-[100]">
-      {/* Top Bar */}
-      <div className="flex h-16 items-center justify-between px-6 gap-8">
-        {/* Logo */}
-        {/* Logo on the far left */}
-        <Link
-          href="/"
-          className="flex items-center space-x-3 group cursor-pointer"
-        >
-          <Package className="h-6 w-6 text-gray-900 dark:text-white" />
-          <span className="text-xl font-light text-gray-900 dark:text-white">
-            ChainVanguard
-          </span>
-        </Link>
-        {/* Search Bar - Desktop */}
-        <div className="hidden md:flex flex-1 max-w-xl">
-          <form onSubmit={handleSearch} className="relative w-full">
-            <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              type="search"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 h-11 bg-transparent border border-gray-200 dark:border-gray-800 focus-visible:ring-0 focus-visible:border-gray-900 dark:focus-visible:border-white transition-colors rounded-none"
-            />
+    <>
+      {/* Hamburger Button - Always visible on top */}
+      <button
+        onClick={() => setMenuOpen(!menuOpen)}
+        className="fixed top-2 left-12 lg:left-16 text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-all duration-300 w-12 h-12 z-[300]"
+      >
+        <div className="w-10 h-10 flex flex-col justify-center items-center">
+          <span
+            className={`block h-px w-10 bg-current absolute transition-all duration-300 ${
+              menuOpen ? "rotate-45" : "-translate-y-2"
+            }`}
+          />
+          <span
+            className={`block h-px w-10 bg-current absolute transition-all duration-300 ${
+              menuOpen ? "-rotate-45" : "translate-y-2"
+            }`}
+          />
+        </div>
+      </button>
+
+      <header className="relative bg-white dark:bg-gray-950 sticky top-0 z-[250]">
+        {/* Main Header */}
+        <div className="flex h-16 items-center justify-between px-12 lg:px-16">
+          {/* Left Section - Spacer for hamburger */}
+          <div className="w-12" />
+
+          {/* Center Section - Search */}
+          <div className="hidden md:flex md:flex-none md:w-[640px] md:absolute md:left-1/2 md:transform md:-translate-x-1/2">
+            <form onSubmit={handleSearch} className="relative w-full">
+              <div className="flex items-center border-b border-gray-900 dark:border-white pb-px">
+                <input
+                  type="search"
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-10 px-3 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                />
+              </div>
+            </form>
+          </div>
+
+          {/* Right Section - Actions */}
+          <div className="flex items-center gap-6">
+            {/* Group icons together with a smaller gap */}
+            <div className="flex items-center gap-3">
+              {/* Notifications */}
+              <div className="relative">
+                <button
+                  onClick={() => setNotificationOpen(!notificationOpen)}
+                  aria-label="Notifications"
+                  className="notification-button h-10 w-10 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-900 relative transition-colors cursor-pointer"
+                >
+                  <BellIcon className="h-4 w-4 text-gray-900 dark:text-white" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 h-4 w-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] flex items-center justify-center font-normal">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown */}
+                {notificationOpen && (
+                  <div className="notification-dropdown absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 z-50">
+                    {/* Header */}
+                    <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                          Notifications
+                        </h3>
+                        {unreadCount > 0 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {unreadCount} unread
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notifications List */}
+                    <div className="max-h-[480px] overflow-y-auto">
+                      {notifications.map((notification, index) => (
+                        <div
+                          key={notification.id}
+                          className={`${
+                            index !== notifications.length - 1
+                              ? "border-b border-gray-200 dark:border-gray-800"
+                              : ""
+                          }`}
+                        >
+                          <button
+                            onClick={() =>
+                              handleNotificationClick(notification)
+                            }
+                            className="w-full p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-left group"
+                          >
+                            <div className="flex items-start gap-3">
+                              {/* Unread Indicator - Grey Square */}
+                              {!notification.read && (
+                                <div className="h-2 w-2 bg-gray-400 dark:bg-gray-600 flex-shrink-0 mt-1" />
+                              )}
+
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                <h4
+                                  className={`text-xs mb-1 ${
+                                    notification.read
+                                      ? "font-normal text-gray-600 dark:text-gray-400"
+                                      : "font-medium text-gray-900 dark:text-white"
+                                  }`}
+                                >
+                                  {notification.title}
+                                </h4>
+                                <p
+                                  className={`text-xs mb-1 line-clamp-2 ${
+                                    notification.read
+                                      ? "text-gray-500 dark:text-gray-500"
+                                      : "text-gray-600 dark:text-gray-400"
+                                  }`}
+                                >
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-gray-400 dark:text-gray-600">
+                                  {formatTime(notification.timestamp)}
+                                </p>
+                              </div>
+
+                              {/* Mark as Read Button */}
+                              {!notification.read && (
+                                <button
+                                  onClick={(e) =>
+                                    handleMarkAsRead(notification.id, e)
+                                  }
+                                  className="h-6 w-6 border border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Mark as read"
+                                >
+                                  <CheckIcon className="h-3 w-3 text-gray-900 dark:text-white" />
+                                </button>
+                              )}
+                            </div>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+                      <button
+                        onClick={() => {
+                          setNotificationOpen(false);
+                          router.push("/customer/notifications");
+                        }}
+                        className="w-full text-center text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
+                      >
+                        View All Notifications
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Wishlist */}
+              <button
+                onClick={() => router.push("/customer/saved-items")}
+                aria-label="Saved items"
+                className="h-10 w-10 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
+              >
+                <BookmarkIcon className="h-4 w-4 text-gray-900 dark:text-white" />
+              </button>
+
+              {/* Cart */}
+              <button
+                onClick={() => router.push("/customer/cart")}
+                aria-label="Cart"
+                className="h-10 w-10 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-900 relative transition-colors cursor-pointer"
+              >
+                <ShoppingCartIcon className="h-4 w-4 text-gray-900 dark:text-white" />
+                <span className="absolute top-1 right-1 h-4 w-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] flex items-center justify-center font-normal">
+                  3
+                </span>
+              </button>
+            </div>
+
+            {/* User Info Section */}
+            <div className="flex items-center gap-6 pl-6 border-l border-gray-200 dark:border-gray-800">
+              {/* User Name - clickable */}
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.push("/customer/profile");
+                }}
+                aria-label="Profile"
+                className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium hidden sm:block cursor-pointer text-left"
+              >
+                {getDisplayName()}
+              </button>
+
+              {/* Wallet Button */}
+              <button
+                onClick={() => router.push("/customer/wallet")}
+                className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors cursor-pointer"
+              >
+                Wallet
+              </button>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors cursor-pointer"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Search */}
+        <div className="md:hidden px-12 py-3 border-t border-gray-200 dark:border-gray-800">
+          <form onSubmit={handleSearch}>
+            <div className="flex items-center border-b border-gray-900 dark:border-white pb-px">
+              <input
+                type="search"
+                placeholder="Search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 h-10 px-3 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+              />
+            </div>
           </form>
         </div>
-        {/* Right Actions */}
-        <div className="flex items-center space-x-1 flex-shrink-0">
-          {/* Notifications */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-none cursor-pointer"
-          >
-            <BellIcon className="h-5 w-5 text-gray-900 dark:text-white" />
-          </Button>
+      </header>
 
-          {/* Wishlist */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-none cursor-pointer"
-            onClick={() => router.push("/customer/wishlist")}
-          >
-            <BookmarkIcon className="h-5 w-5 text-gray-900 dark:text-white" />
-          </Button>
+      {/* Sidebar Menu with Framer Motion */}
+      <AnimatePresence>
+        {menuOpen && (
+          <>
+            {/* Backdrop - Minimal white balance (85% opacity) */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+              className="fixed inset-0 bg-white/85 dark:bg-black/85 z-[260]"
+              onClick={() => setMenuOpen(false)}
+            />
 
-          {/* Cart */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 hover:bg-gray-50 dark:hover:bg-gray-900 relative rounded-none cursor-pointer"
-            onClick={() => router.push("/customer/cart")}
-          >
-            <ShoppingCartIcon className="h-5 w-5 text-gray-900 dark:text-white" />
-            <span className="absolute top-1 right-1 h-4 w-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] flex items-center justify-center font-medium">
-              3
-            </span>
-          </Button>
-
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="relative h-10 w-10 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 ml-2 cursor-pointer"
-              >
-                <Avatar className="h-8 w-8 rounded-none">
-                  <AvatarFallback className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-medium rounded-none">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent
-              className="w-64 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 rounded-none"
-              align="end"
-              forceMount
-              sideOffset={8}
-              style={{ zIndex: 150 }}
+            {/* Sidebar - Hidden scrollbar */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed top-0 left-0 h-full w-full md:w-1/2 bg-white dark:bg-gray-950 z-[270] overflow-y-auto scrollbar-hide"
+              style={{
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+              }}
             >
-              <DropdownMenuLabel className="font-normal py-3">
-                <div className="flex flex-col space-y-2">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {getDisplayName()}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {user?.email}
-                  </p>
-                  <Badge
-                    variant="outline"
-                    className="text-xs w-fit py-0.5 px-2 border-gray-200 dark:border-gray-800 rounded-none"
+              <style jsx>{`
+                div::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+              <div className="flex flex-col h-full">
+                {/* Sidebar Header - Logo moved down */}
+                <div className="flex items-center px-12 lg:px-16 py-12 border-b border-gray-200 dark:border-gray-800">
+                  <Link
+                    href="/customer"
+                    className="flex items-center ml-32"
+                    onClick={() => setMenuOpen(false)}
                   >
-                    Customer
-                  </Badge>
+                    <span className="text-3xl lg:text-4xl font-thin text-gray-900 dark:text-white tracking-wide">
+                      ChainVanguard
+                    </span>
+                  </Link>
                 </div>
-              </DropdownMenuLabel>
 
-              {currentWallet && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="font-normal py-3">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Wallet
-                      </p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {currentWallet.name}
-                      </p>
-                      <p className="text-xs font-mono text-gray-500 dark:text-gray-400">
-                        {formatAddress(currentWallet.address)}
-                      </p>
-                      <p className="text-xs text-gray-900 dark:text-white">
-                        Balance: ${balance}
-                      </p>
+                {/* Categories Grid */}
+                <div className="flex-1 px-12 lg:px-16 py-8">
+                  <div className="grid grid-cols-[200px_1fr] gap-16">
+                    {/* Left Column - Main Categories */}
+                    <div className="space-y-3">
+                      {Object.entries(APPAREL_CATEGORIES).map(
+                        ([key, category]) => (
+                          <button
+                            key={key}
+                            onClick={() => setSelectedCategory(key)}
+                            className={`text-left text-[10px] uppercase tracking-[0.2em] py-1 transition-all duration-200 block ${
+                              selectedCategory === key
+                                ? "text-gray-900 dark:text-white font-semibold"
+                                : "text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                            }`}
+                          >
+                            {category.label}
+                          </button>
+                        )
+                      )}
+
+                      {/* Additional Links */}
+                      <div className="pt-6 mt-6 border-t border-gray-200 dark:border-gray-800 space-y-3">
+                        <button
+                          onClick={() => {
+                            setMenuOpen(false);
+                            router.push("/customer/deals");
+                          }}
+                          className="text-left text-[10px] uppercase tracking-[0.2em] py-1 text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors block"
+                        >
+                          SALE
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMenuOpen(false);
+                            router.push("/customer/new");
+                          }}
+                          className="text-left text-[10px] uppercase tracking-[0.2em] py-1 text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors block"
+                        >
+                          NEW ARRIVALS
+                        </button>
+                      </div>
                     </div>
-                  </DropdownMenuLabel>
-                </>
-              )}
 
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-sm py-2 rounded-none">
-                <UserIcon className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-sm py-2 rounded-none"
-                onClick={() => router.push("/customer/orders")}
-              >
-                <ShoppingCartIcon className="mr-2 h-4 w-4" />
-                <span>My Orders</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-sm py-2 rounded-none">
-                <WalletIcon className="mr-2 h-4 w-4" />
-                <span>Wallet</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-sm py-2 rounded-none">
-                <Cog6ToothIcon className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className="text-sm py-2 text-gray-900 dark:text-white rounded-none"
-              >
-                <ArrowRightOnRectangleIcon className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+                    {/* Right Column - Multiple Images and Subcategories */}
+                    <div className="space-y-6">
+                      {/* Multiple Fashion Images Grid - Different for each category */}
+                      <div className="grid grid-cols-4 gap-2">
+                        {APPAREL_CATEGORIES[
+                          selectedCategory as keyof typeof APPAREL_CATEGORIES
+                        ]?.images.map((image, index) => (
+                          <div
+                            key={index}
+                            className="relative w-full h-32 overflow-hidden"
+                          >
+                            <Image
+                              src={image}
+                              alt={`${selectedCategory} ${index + 1}`}
+                              fill
+                              className="object-cover"
+                              priority
+                            />
+                          </div>
+                        ))}
+                      </div>
 
-      {/* Categories Bar */}
-      <div className="border-t border-gray-200 dark:border-gray-800">
-        <div
-          className="flex items-center gap-0 px-6 h-12 overflow-x-auto scrollbar-hide"
-          onMouseLeave={() => setOpenCategory(null)}
-        >
-          {/* Category Links */}
-          {Object.entries(APPAREL_CATEGORIES).map(([key, category]) => (
-            <DropdownMenu
-              key={key}
-              open={openCategory === key}
-              onOpenChange={(open) => setOpenCategory(open ? key : null)}
-            >
-              <DropdownMenuTrigger asChild>
-                <button
-                  onMouseEnter={() => setOpenCategory(key)}
-                  className="px-6 py-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors whitespace-nowrap focus-visible:outline-none cursor-pointer"
-                >
-                  {category.label}
-                </button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent
-                className="w-80 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 rounded-none p-0"
-                align="start"
-                sideOffset={0}
-                style={{ zIndex: 150 }}
-              >
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {category.label}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Browse all {category.label.toLowerCase()} products
-                  </p>
+                      {/* Subcategories */}
+                      <div className="space-y-3">
+                        {APPAREL_CATEGORIES[
+                          selectedCategory as keyof typeof APPAREL_CATEGORIES
+                        ]?.subcategories.map((subcat) => (
+                          <button
+                            key={subcat}
+                            onClick={() =>
+                              handleCategoryClick(selectedCategory, subcat)
+                            }
+                            className={`text-left text-[10px] uppercase tracking-[0.2em] py-1 transition-colors block ${
+                              selectedSubcategory === subcat.toLowerCase()
+                                ? "text-gray-900 dark:text-white font-semibold"
+                                : "text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                            }`}
+                          >
+                            {subcat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-0 p-4">
-                  {category.subcategories.map((subcat) => (
-                    <button
-                      key={subcat}
-                      onClick={() => handleCategoryClick(key, subcat)}
-                      className="text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors rounded-none cursor-pointer"
-                    >
-                      {subcat}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="border-t border-gray-200 dark:border-gray-800 p-4">
-                  <button
-                    onClick={() => handleCategoryClick(key)}
-                    className="w-full px-4 py-2 text-sm font-medium bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 transition-colors rounded-none cursor-pointer"
-                  >
-                    View All {category.label}
-                  </button>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ))}
-
-          {/* Sale Link */}
-          <button
-            onClick={() => router.push("/customer/deals")}
-            className="px-6 py-3 text-sm text-gray-900 dark:text-white font-medium whitespace-nowrap transition-colors ml-auto"
-          >
-            Sale
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Search Bar */}
-      <div className="md:hidden border-t border-gray-200 dark:border-gray-800 px-6 py-3">
-        <form onSubmit={handleSearch} className="relative">
-          <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <Input
-            type="search"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 h-11 bg-transparent border border-gray-200 dark:border-gray-800 focus-visible:ring-0 focus-visible:border-gray-900 dark:focus-visible:border-white transition-colors rounded-none"
-          />
-        </form>
-      </div>
-
-      <style jsx global>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
-    </header>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

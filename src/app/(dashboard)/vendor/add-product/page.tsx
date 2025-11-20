@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -58,6 +58,23 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { aiApi } from "@/lib/api/ai.api";
+import {
+  CATEGORIES,
+  PRODUCT_TYPES,
+  getSizesForProduct,
+  getFabricTypes,
+  hasNeckline,
+  hasSleeves,
+  needsSize,
+  categoryCodes,
+  subcategoryCodes,
+  FIT_TYPES,
+  PATTERNS,
+  NECKLINES,
+  SLEEVE_LENGTHS,
+  SEASONS,
+} from "@/lib/categories.constants";
 
 const RsIcon = () => (
   <svg
@@ -89,173 +106,7 @@ const RsIcon = () => (
   </svg>
 );
 
-// Categories and subcategories
-const CATEGORIES = {
-  Men: [
-    "T-Shirts",
-    "Shirts",
-    "Sweaters",
-    "Hoodies",
-    "Jackets",
-    "Coats",
-    "Jeans",
-    "Trousers",
-    "Shorts",
-    "Suits",
-    "Activewear",
-    "Sleepwear",
-    "Swimwear",
-    "Underwear",
-    "Shoes",
-    "Sneakers",
-    "Boots",
-    "Sandals",
-  ],
-  Women: [
-    "T-Shirts",
-    "Blouses",
-    "Sweaters",
-    "Hoodies",
-    "Jackets",
-    "Coats",
-    "Jeans",
-    "Trousers",
-    "Shorts",
-    "Skirts",
-    "Dresses",
-    "Jumpsuits",
-    "Activewear",
-    "Sleepwear",
-    "Swimwear",
-    "Underwear",
-    "Shoes",
-    "Sneakers",
-    "Boots",
-    "Sandals",
-  ],
-  Kids: [
-    "T-Shirts",
-    "Shirts",
-    "Sweaters",
-    "Hoodies",
-    "Jackets",
-    "Jeans",
-    "Trousers",
-    "Shorts",
-    "Dresses",
-    "Activewear",
-    "Sleepwear",
-    "Swimwear",
-    "Shoes",
-    "Sneakers",
-    "Boots",
-    "Sandals",
-  ],
-  Unisex: [
-    "T-Shirts",
-    "Hoodies",
-    "Jackets",
-    "Activewear",
-    "Sleepwear",
-    "Scarves",
-    "Belts",
-    "Hats",
-    "Bags",
-  ],
-};
-
-const PRODUCT_TYPES = [
-  "Casual",
-  "Formal",
-  "Sports",
-  "Party",
-  "Traditional",
-  "Workwear",
-];
-
-const CATEGORY_SIZES = {
-  Men: ["S", "M", "L", "XL", "XXL", "XXXL"],
-  Women: ["XXS", "XS", "S", "M", "L", "XL", "XXL"],
-  Kids: ["2T", "3T", "4T", "5", "6", "7", "8", "10", "12", "14"],
-  Unisex: ["XS", "S", "M", "L", "XL", "XXL", "XXXL"],
-};
-
-const FIT_TYPES = ["Slim Fit", "Regular Fit", "Loose Fit", "Oversized"];
-const PATTERNS = [
-  "Solid",
-  "Striped",
-  "Checked",
-  "Printed",
-  "Embroidered",
-  "Other",
-];
-const FABRIC_TYPES = [
-  "Cotton",
-  "Polyester",
-  "Silk",
-  "Wool",
-  "Linen",
-  "Denim",
-  "Jersey",
-  "Chiffon",
-  "Satin",
-  "Velvet",
-];
-const NECKLINES = [
-  "Crew Neck",
-  "V-Neck",
-  "Round Neck",
-  "Collar",
-  "Off-Shoulder",
-  "Boat Neck",
-  "Turtleneck",
-  "Other",
-];
-const SLEEVE_LENGTHS = [
-  "Sleeveless",
-  "Short Sleeve",
-  "3/4 Sleeve",
-  "Long Sleeve",
-];
-const SEASONS = ["Spring", "Summer", "Autumn", "Winter", "All Season"];
-
-const categoryCodes: { [key: string]: string } = {
-  Men: "MN",
-  Women: "WM",
-  Kids: "KD",
-  Unisex: "UX",
-};
-
-const subcategoryCodes: { [key: string]: string } = {
-  "T-Shirts": "TSH",
-  Shirts: "SHT",
-  Sweaters: "SWT",
-  Hoodies: "HOD",
-  Jackets: "JKT",
-  Coats: "CAT",
-  Jeans: "JNS",
-  Trousers: "TRS",
-  Shorts: "SHT",
-  Suits: "SUT",
-  Activewear: "ACT",
-  Sleepwear: "SLP",
-  Swimwear: "SWM",
-  Underwear: "UND",
-  Shoes: "SHO",
-  Sneakers: "SNK",
-  Boots: "BOT",
-  Sandals: "SDL",
-  Blouses: "BLS",
-  Dresses: "DRS",
-  Jumpsuits: "JMP",
-  Skirts: "SKT",
-  Belts: "BLT",
-  Hats: "HAT",
-  Bags: "BAG",
-  Scarves: "SCR",
-};
-
-const MAX_DESCRIPTION_LENGTH = 1000;
+const MAX_DESCRIPTION_LENGTH = 5000;
 
 // Add this constant for consistent spacing
 const FORM_SPACING = "space-y-4 md:space-y-2";
@@ -475,6 +326,7 @@ export default function AddProductPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -576,21 +428,39 @@ export default function AddProductPage() {
     updateFormData("apparelDetails.size", "");
   };
 
-  // AI generate description
   const generateDescriptionWithAI = async () => {
-    // Placeholder for AI generation - replace with actual API call
-    const prompt = `Generate a product description for: ${formData.name}, Category: ${formData.category}, Subcategory: ${formData.subcategory}, Size: ${formData.apparelDetails.size}, Color: ${formData.apparelDetails.color}, Material: ${formData.apparelDetails.material}, Price: ${formData.price}`;
+    if (!formData.name || !formData.category) {
+      toast.error("Please fill in product name and category first");
+      return;
+    }
+
+    setIsGeneratingDescription(true);
     try {
-      // Assume an API call here, e.g., const response = await fetch('/api/generate-description', { method: 'POST', body: JSON.stringify({ prompt }) });
-      // For now, set a sample description
-      const aiDescription = `This ${formData.category} ${formData.subcategory} in ${formData.apparelDetails.color} color, made from ${formData.apparelDetails.material}, offers comfort and style at an affordable price of $${formData.price}.`;
-      updateFormData(
-        "description",
-        aiDescription.slice(0, MAX_DESCRIPTION_LENGTH)
-      );
-      toast.success("Description generated with AI");
-    } catch (error) {
-      toast.error("Failed to generate description");
+      const result = await aiApi.generateProductDescription({
+        name: formData.name,
+        category: formData.category,
+        subcategory: formData.subcategory,
+        materials: formData.apparelDetails.material
+          ? [formData.apparelDetails.material]
+          : undefined,
+        features: formData.tags.length > 0 ? formData.tags : undefined,
+        color: formData.apparelDetails.color,
+        brand: formData.brand,
+        specifications: {
+          size: formData.apparelDetails.size,
+          fit: formData.apparelDetails.fit,
+          pattern: formData.apparelDetails.pattern,
+          neckline: formData.apparelDetails.neckline,
+          sleeveLength: formData.apparelDetails.sleeveLength,
+        },
+      });
+
+      updateFormData("description", result.description);
+      toast.success("Description generated successfully!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate description");
+    } finally {
+      setIsGeneratingDescription(false);
     }
   };
 
@@ -966,9 +836,7 @@ export default function AddProductPage() {
 
       if (data.success) {
         toast.success("Product created successfully!");
-        setTimeout(() => {
-          router.push("/vendor/my-products");
-        }, 1000);
+        router.push("/vendor/my-products");
       } else {
         throw new Error(data.message || "Failed to create product");
       }
@@ -1011,18 +879,32 @@ export default function AddProductPage() {
       if (!formData.productType)
         newErrors.productType = "Product type is required";
     } else if (step === 2) {
-      if (!formData.apparelDetails.size) newErrors.size = "Size is required";
-      if (!formData.apparelDetails.fit) newErrors.fit = "Fit type is required";
+      // Only validate size for items that need it
+      if (formData.subcategory && needsSize(formData.subcategory) && !formData.apparelDetails.size) {
+        newErrors.size = "Size is required";
+      }
+      // Only validate fit for items that need size
+      if (
+        formData.subcategory &&
+        needsSize(formData.subcategory) &&
+        !formData.apparelDetails.fit
+      ) {
+        newErrors.fit = "Fit type is required";
+      }
       if (!formData.apparelDetails.color?.trim())
         newErrors.color = "Color is required";
       if (!formData.apparelDetails.material?.trim())
         newErrors.material = "Material is required";
       if (!formData.apparelDetails.pattern)
         newErrors.pattern = "Pattern is required";
-      if (!formData.apparelDetails.neckline)
+      // Only validate neckline for items that have necklines
+      if (formData.subcategory && hasNeckline(formData.subcategory) && !formData.apparelDetails.neckline) {
         newErrors.neckline = "Neckline is required";
-      if (!formData.apparelDetails.sleeveLength)
+      }
+      // Only validate sleeve length for items that have sleeves
+      if (formData.subcategory && hasSleeves(formData.subcategory) && !formData.apparelDetails.sleeveLength) {
         newErrors.sleeveLength = "Sleeve length is required";
+      }
     } else if (step === 3) {
       if (!formData.apparelDetails.fabricType)
         newErrors.fabricType = "Fabric type is required";
@@ -1175,7 +1057,7 @@ export default function AddProductPage() {
             <SelectContent className="w-full">
               {formData.category &&
                 CATEGORIES[formData.category as keyof typeof CATEGORIES]?.map(
-                  (sub) => (
+                  (sub: string) => (
                     <SelectItem key={sub} value={sub} className="text-sm">
                       {sub}
                     </SelectItem>
@@ -1233,11 +1115,14 @@ export default function AddProductPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="w-full">
-              {PRODUCT_TYPES.map((type) => (
-                <SelectItem key={type} value={type} className="text-sm">
-                  {type}
-                </SelectItem>
-              ))}
+              {formData.category &&
+                PRODUCT_TYPES[
+                  formData.category as keyof typeof PRODUCT_TYPES
+                ]?.map((type: string) => (
+                  <SelectItem key={type} value={type} className="text-sm">
+                    {type}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
           <div className={`min-h-4 ${ERROR_MARGIN}`}>
@@ -1288,95 +1173,108 @@ export default function AddProductPage() {
       </div>
 
       <div className={`grid grid-cols-1 md:grid-cols-2 ${FIELD_GAP}`}>
-        <div>
-          <Label
-            htmlFor="size"
-            className={`${LABEL_MARGIN} block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300`}
-          >
-            Size <span className="text-red-500">*</span>
-          </Label>
-          <Select
-            value={formData.apparelDetails.size}
-            onValueChange={(value) => {
-              updateFormData("apparelDetails.size", value);
-              if (sizeError) setSizeError("");
-            }}
-            disabled={!formData.category}
-          >
-            <SelectTrigger
-              className={`text-sm h-9 md:h-10 w-full rounded-none bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all ${
-                sizeError ? "border-red-500" : ""
-              } ${!formData.category ? "opacity-50 cursor-not-allowed" : ""}`}
+        {formData.subcategory && needsSize(formData.subcategory) && (
+          <div>
+            <Label
+              htmlFor="size"
+              className={`${LABEL_MARGIN} block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300`}
             >
-              <SelectValue
-                placeholder={
-                  formData.category ? "Select size" : "Select category first"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent className="w-full max-h-60 overflow-y-auto">
-              {formData.category &&
-                CATEGORY_SIZES[
-                  formData.category as keyof typeof CATEGORY_SIZES
-                ]?.map((size) => (
-                  <SelectItem
-                    key={size}
-                    value={size}
-                    className="text-sm h-9 md:h-10"
-                  >
-                    {size}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-          <div className={`min-h-4 ${ERROR_MARGIN}`}>
-            {sizeError && (
-              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                <ExclamationTriangleIcon className="h-3 w-3" />
-                {sizeError}
-              </p>
-            )}
+              Size <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={formData.apparelDetails.size}
+              onValueChange={(value) => {
+                updateFormData("apparelDetails.size", value);
+                if (sizeError) setSizeError("");
+              }}
+              disabled={!formData.category}
+            >
+              <SelectTrigger
+                className={`text-sm h-9 md:h-10 w-full rounded-none bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all ${
+                  sizeError ? "border-red-500" : ""
+                } ${!formData.category ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <SelectValue
+                  placeholder={
+                    !formData.category
+                      ? "Select category first"
+                      : !formData.subcategory
+                      ? "Select subcategory first"
+                      : "Select size"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent className="w-full max-h-60 overflow-y-auto">
+                {formData.category &&
+                  formData.subcategory &&
+                  getSizesForProduct(
+                    formData.category,
+                    formData.subcategory
+                  )?.map((size: string) => (
+                    <SelectItem
+                      key={size}
+                      value={size}
+                      className="text-sm h-9 md:h-10"
+                    >
+                      {size}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <div className={`min-h-4 ${ERROR_MARGIN}`}>
+              {sizeError && (
+                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <ExclamationTriangleIcon className="h-3 w-3" />
+                  {sizeError}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        <div>
-          <Label
-            htmlFor="fit"
-            className={`${LABEL_MARGIN} block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300`}
-          >
-            Fit Type <span className="text-red-500">*</span>
-          </Label>
-          <Select
-            value={formData.apparelDetails.fit}
-            onValueChange={(value) => {
-              updateFormData("apparelDetails.fit", value);
-              if (fitError) setFitError("");
-            }}
-          >
-            <SelectTrigger
-              className={`text-sm h-9 md:h-10 w-full rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all bg-white/50 dark:bg-gray-900/50 ${
-                fitError ? "border-red-500" : ""
-              }`}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="w-full">
-              {FIT_TYPES.map((fit) => (
-                <SelectItem key={fit} value={fit} className="text-sm">
-                  {fit}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className={`min-h-4 ${ERROR_MARGIN}`}>
-            {fitError && (
-              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                <ExclamationTriangleIcon className="h-3 w-3" />
-                {fitError}
-              </p>
-            )}
-          </div>
-        </div>
+        {formData.subcategory && needsSize(formData.subcategory) && (
+            <div>
+              <Label
+                htmlFor="fit"
+                className={`${LABEL_MARGIN} block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300`}
+              >
+                Fit Type <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.apparelDetails.fit}
+                onValueChange={(value) => {
+                  updateFormData("apparelDetails.fit", value);
+                  if (fitError) setFitError("");
+                }}
+              >
+                <SelectTrigger
+                  className={`text-sm h-9 md:h-10 w-full rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all bg-white/50 dark:bg-gray-900/50 ${
+                    fitError ? "border-red-500" : ""
+                  }`}
+                >
+                  <SelectValue placeholder="Select fit type" />
+                </SelectTrigger>
+                <SelectContent className="w-full">
+                  {formData.category &&
+                    FIT_TYPES[
+                      formData.category as keyof typeof FIT_TYPES
+                    ]?.map((fit: string) => (
+                      <SelectItem key={fit} value={fit} className="text-sm">
+                        {fit}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <div className={`min-h-4 ${ERROR_MARGIN}`}>
+                {fitError && (
+                  <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                    <ExclamationTriangleIcon className="h-3 w-3" />
+                    {fitError}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
       </div>
 
       <div>
@@ -1460,11 +1358,14 @@ export default function AddProductPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="w-full">
-              {PATTERNS.map((pattern) => (
-                <SelectItem key={pattern} value={pattern} className="text-sm">
-                  {pattern}
-                </SelectItem>
-              ))}
+              {formData.category &&
+                PATTERNS[
+                  formData.category as keyof typeof PATTERNS
+                ]?.map((pattern: string) => (
+                  <SelectItem key={pattern} value={pattern} className="text-sm">
+                    {pattern}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
           <div className={`min-h-4 ${ERROR_MARGIN}`}>
@@ -1479,83 +1380,87 @@ export default function AddProductPage() {
       </div>
 
       <div className={`grid grid-cols-1 md:grid-cols-2 ${FIELD_GAP}`}>
-        <div>
-          <Label
-            htmlFor="neckline"
-            className={`${LABEL_MARGIN} block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300`}
-          >
-            Neckline <span className="text-red-500">*</span>
-          </Label>
-          <Select
-            value={formData.apparelDetails.neckline}
-            onValueChange={(value) => {
-              updateFormData("apparelDetails.neckline", value);
-              if (necklineError) setNecklineError("");
-            }}
-          >
-            <SelectTrigger
-              className={`text-sm h-9 md:h-10 w-full rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all bg-white/50 dark:bg-gray-900/50 ${
-                necklineError ? "border-red-500" : ""
-              }`}
+        {formData.subcategory && hasNeckline(formData.subcategory) && (
+          <div>
+            <Label
+              htmlFor="neckline"
+              className={`${LABEL_MARGIN} block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300`}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="w-full">
-              {NECKLINES.map((neckline) => (
-                <SelectItem key={neckline} value={neckline} className="text-sm">
-                  {neckline}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className={`min-h-4 ${ERROR_MARGIN}`}>
-            {necklineError && (
-              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                <ExclamationTriangleIcon className="h-3 w-3" />
-                {necklineError}
-              </p>
-            )}
+              Neckline <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={formData.apparelDetails.neckline}
+              onValueChange={(value) => {
+                updateFormData("apparelDetails.neckline", value);
+                if (necklineError) setNecklineError("");
+              }}
+            >
+              <SelectTrigger
+                className={`text-sm h-9 md:h-10 w-full rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all bg-white/50 dark:bg-gray-900/50 ${
+                  necklineError ? "border-red-500" : ""
+                }`}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="w-full">
+                {NECKLINES.map((neckline: string) => (
+                  <SelectItem key={neckline} value={neckline} className="text-sm">
+                    {neckline}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className={`min-h-4 ${ERROR_MARGIN}`}>
+              {necklineError && (
+                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <ExclamationTriangleIcon className="h-3 w-3" />
+                  {necklineError}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        <div>
-          <Label
-            htmlFor="sleeveLength"
-            className={`${LABEL_MARGIN} block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300`}
-          >
-            Sleeve Length <span className="text-red-500">*</span>
-          </Label>
-          <Select
-            value={formData.apparelDetails.sleeveLength}
-            onValueChange={(value) => {
-              updateFormData("apparelDetails.sleeveLength", value);
-              if (sleeveLengthError) setSleeveLengthError("");
-            }}
-          >
-            <SelectTrigger
-              className={`text-sm h-9 md:h-10 w-full rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all bg-white/50 dark:bg-gray-900/50 ${
-                sleeveLengthError ? "border-red-500" : ""
-              }`}
+        {formData.subcategory && hasSleeves(formData.subcategory) && (
+          <div>
+            <Label
+              htmlFor="sleeveLength"
+              className={`${LABEL_MARGIN} block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300`}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="w-full">
-              {SLEEVE_LENGTHS.map((sleeve) => (
-                <SelectItem key={sleeve} value={sleeve} className="text-sm">
-                  {sleeve}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className={`min-h-4 ${ERROR_MARGIN}`}>
-            {sleeveLengthError && (
-              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                <ExclamationTriangleIcon className="h-3 w-3" />
-                {sleeveLengthError}
-              </p>
-            )}
+              Sleeve Length <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={formData.apparelDetails.sleeveLength}
+              onValueChange={(value) => {
+                updateFormData("apparelDetails.sleeveLength", value);
+                if (sleeveLengthError) setSleeveLengthError("");
+              }}
+            >
+              <SelectTrigger
+                className={`text-sm h-9 md:h-10 w-full rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all bg-white/50 dark:bg-gray-900/50 ${
+                  sleeveLengthError ? "border-red-500" : ""
+                }`}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="w-full">
+                {SLEEVE_LENGTHS.map((sleeve: string) => (
+                  <SelectItem key={sleeve} value={sleeve} className="text-sm">
+                    {sleeve}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className={`min-h-4 ${ERROR_MARGIN}`}>
+              {sleeveLengthError && (
+                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <ExclamationTriangleIcon className="h-3 w-3" />
+                  {sleeveLengthError}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div>
@@ -1604,11 +1509,15 @@ export default function AddProductPage() {
               <SelectValue placeholder="Select fabric type" />
             </SelectTrigger>
             <SelectContent className="w-full">
-              {FABRIC_TYPES.map((fabric) => (
-                <SelectItem key={fabric} value={fabric} className="text-sm">
-                  {fabric}
-                </SelectItem>
-              ))}
+              {formData.category &&
+                formData.subcategory &&
+                getFabricTypes(formData.category, formData.subcategory)?.map(
+                  (fabric: string) => (
+                    <SelectItem key={fabric} value={fabric} className="text-sm">
+                      {fabric}
+                    </SelectItem>
+                  )
+                )}
             </SelectContent>
           </Select>
           <div className={`min-h-4 ${ERROR_MARGIN}`}>
@@ -1958,10 +1867,23 @@ export default function AddProductPage() {
           />
           <Button
             type="button"
-            className="absolute top-1 right-1 h-8 px-2 bg-transparent text-gray-500 border-none rounded-none flex items-center gap-1 hover:text-black dark:hover:text-white hover:bg-transparent focus-visible:ring-0 active:bg-transparent cursor-pointer"
+            onClick={generateDescriptionWithAI}
+            disabled={
+              isGeneratingDescription || !formData.name || !formData.category
+            }
+            className="absolute top-1 right-1 h-8 px-2 bg-transparent text-gray-500 border-none rounded-none flex items-center gap-1 hover:text-black dark:hover:text-white hover:bg-transparent focus-visible:ring-0 active:bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <SparklesIcon className="h-4 w-4" />
-            Generate
+            {isGeneratingDescription ? (
+              <>
+                <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <SparklesIcon className="h-4 w-4" />
+                Generate
+              </>
+            )}
           </Button>
         </div>
         <div className="flex justify-between items-center">
@@ -2004,7 +1926,7 @@ export default function AddProductPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="w-full">
-              {SEASONS.map((season) => (
+              {SEASONS.map((season: string) => (
                 <SelectItem
                   key={season}
                   value={season}
@@ -2355,6 +2277,13 @@ export default function AddProductPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Memoize preview images to prevent blinking when typing
+  const previewImages = useMemo(() => {
+    return formData.imagePreviews.length > 0
+      ? formData.imagePreviews
+      : ["/placeholder-product.png"];
+  }, [formData.imagePreviews]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-sm">
       {/* Breadcrumb - match add-inventory */}
@@ -2626,11 +2555,7 @@ export default function AddProductPage() {
                     }
                     price={parseFloat(formData.price) || 0}
                     costPrice={parseFloat(formData.costPrice) || undefined}
-                    images={
-                      formData.imagePreviews.length > 0
-                        ? formData.imagePreviews
-                        : ["/placeholder-product.png"]
-                    }
+                    images={previewImages}
                     category={formData.category || "Category"}
                     subcategory={formData.subcategory}
                     brand={formData.brand}
@@ -2680,11 +2605,7 @@ export default function AddProductPage() {
               }
               price={parseFloat(formData.price) || 0}
               costPrice={parseFloat(formData.costPrice) || undefined}
-              images={
-                formData.imagePreviews.length > 0
-                  ? formData.imagePreviews
-                  : ["/placeholder-product.png"]
-              }
+              images={previewImages}
               category={formData.category || "Category"}
               subcategory={formData.subcategory}
               brand={formData.brand}

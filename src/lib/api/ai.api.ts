@@ -1,61 +1,79 @@
 import { apiClient } from "./client";
 
+interface ProductData {
+  name: string;
+  category: string;
+  subcategory?: string;
+  materials?: string[];
+  dimensions?: Record<string, string | number>;
+  features?: string[];
+  specifications?: Record<string, string | number>;
+  color?: string;
+  weight?: string;
+  brand?: string;
+  warranty?: string;
+}
+
+interface InventoryData {
+  name: string;
+  category: string;
+  subcategory?: string;
+  specifications?: Record<string, string | number>;
+  unit?: string;
+  manufacturer?: string;
+  origin?: string;
+}
+
+interface AIResponse {
+  success: boolean;
+  description: string;
+  metadata: {
+    model: string;
+    generatedAt: Date;
+  };
+}
+
+interface HealthResponse {
+  success: boolean;
+  data: {
+    service: string;
+    model: string;
+    configured: boolean;
+    status: string;
+  };
+}
+
 export const aiApi = {
   /**
-   * Generate inventory description using Gemini AI
-   * @param {Object} inventoryData - Inventory data for description generation
-   * @returns {Promise<{success: boolean, description: string, metadata: Object}}>}
+   * Generate product description using Gemini AI
    */
-  async generateInventoryDescription(inventoryData: {
-    name: string;
-    category: string;
-    subcategory?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    specifications?: Record<string, any>;
-    unit?: string;
-    manufacturer?: string;
-    origin?: string;
-  }) {
-    const response = (await apiClient.post(
-      "/ai/generate-inventory-description",
-      inventoryData
-    )) as { data: { success: boolean; description: string; metadata: object } };
+  async generateProductDescription(productData: ProductData): Promise<AIResponse> {
+    const response = await apiClient.post<{ data: AIResponse }>(
+      "/ai/generate-product-description",
+      productData
+    );
     return response.data;
   },
 
   /**
-   * Generate product description using Gemini AI
-   * @param {Object} productData - Product data for description generation
-   * @returns {Promise<{success: boolean, description: string, metadata: Object}}>}
+   * Generate inventory description using Gemini AI
    */
-  async generateProductDescription(productData: {
-    name: string;
-    category: string;
-    materials?: string[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    dimensions?: Record<string, any>;
-    features?: string[];
-    color?: string;
-    weight?: string;
-  }) {
-    const response = (await apiClient.post(
-      "/ai/generate-product-description",
-      productData
-    )) as { data: { success: boolean; description: string; metadata: object } };
+  async generateInventoryDescription(inventoryData: InventoryData): Promise<AIResponse> {
+    const response = await apiClient.post<{ data: AIResponse }>(
+      "/ai/generate-inventory-description",
+      inventoryData
+    );
     return response.data;
   },
 
   /**
    * Check AI service health
-   * @returns {Promise<{success: boolean, data: {service: string, configured: boolean, status: string}}>}
    */
-  async checkHealth() {
-    const response = (await apiClient.get("/ai/health")) as {
-      data: {
-        success: boolean;
-        data: { service: string; configured: boolean; status: string };
-      };
+  async checkHealth(): Promise<HealthResponse> {
+    const response = await apiClient.get<{ data: HealthResponse["data"] }>("/ai/health");
+    return {
+      success: true,
+      data: response.data,
     };
-    return response.data;
   },
 };

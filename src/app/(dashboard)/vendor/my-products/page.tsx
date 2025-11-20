@@ -14,7 +14,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -34,7 +33,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -508,7 +506,7 @@ export default function VendorMyProductsPage() {
             {product.blockchainVerified && (
               <Badge
                 variant="outline"
-                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-[10px] h-5 px-2 rounded-none`}
+                className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} text-[10px] h-5 px-2 rounded-none`}
               >
                 <ShieldCheckIcon className="h-2.5 w-2.5 mr-1" />
                 Verified

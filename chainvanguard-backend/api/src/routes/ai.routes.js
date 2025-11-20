@@ -6,6 +6,70 @@ import logger from "../utils/logger.js";
 const router = express.Router();
 
 // ========================================
+// GENERATE PRODUCT DESCRIPTION
+// POST /api/ai/generate-product-description
+// ========================================
+router.post(
+  "/generate-product-description",
+  authenticate,
+  authorizeRoles("vendor"),
+  async (req, res) => {
+    try {
+      const {
+        name,
+        category,
+        subcategory,
+        materials,
+        dimensions,
+        features,
+        specifications,
+        color,
+        weight,
+        brand,
+        warranty,
+      } = req.body;
+
+      // Validation
+      if (!name || !category) {
+        return res.status(400).json({
+          success: false,
+          message: "Name and category are required",
+        });
+      }
+
+      const productData = {
+        name,
+        category,
+        subcategory,
+        materials,
+        dimensions,
+        features,
+        specifications,
+        color,
+        weight,
+        brand,
+        warranty,
+      };
+
+      const result =
+        await geminiService.generateProductDescription(productData);
+
+      res.json({
+        success: true,
+        data: result,
+        message: "Product description generated successfully",
+      });
+    } catch (error) {
+      logger.error("Error generating product description:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to generate description",
+      });
+    }
+  }
+);
+
+// ========================================
 // GENERATE INVENTORY DESCRIPTION
 // POST /api/ai/generate-inventory-description
 // ========================================
@@ -25,7 +89,6 @@ router.post(
         origin,
       } = req.body;
 
-      // Validation
       if (!name || !category) {
         return res.status(400).json({
           success: false,
@@ -49,10 +112,10 @@ router.post(
       res.json({
         success: true,
         data: result,
-        message: "Description generated successfully",
+        message: "Inventory description generated successfully",
       });
     } catch (error) {
-      logger.error("Error in POST /ai/generate-inventory-description:", error);
+      logger.error("Error generating inventory description:", error);
       res.status(500).json({
         success: false,
         message: error.message || "Failed to generate description",
@@ -62,59 +125,10 @@ router.post(
 );
 
 // ========================================
-// GENERATE PRODUCT DESCRIPTION
-// POST /api/ai/generate-product-description
-// ========================================
-router.post(
-  "/generate-product-description",
-  authenticate,
-  authorizeRoles("vendor"),
-  async (req, res) => {
-    try {
-      const { name, category, materials, dimensions, features, color, weight } =
-        req.body;
-
-      // Validation
-      if (!name || !category) {
-        return res.status(400).json({
-          success: false,
-          message: "Name and category are required",
-        });
-      }
-
-      const productData = {
-        name,
-        category,
-        materials,
-        dimensions,
-        features,
-        color,
-        weight,
-      };
-
-      const result =
-        await geminiService.generateProductDescription(productData);
-
-      res.json({
-        success: true,
-        data: result,
-        message: "Product description generated successfully",
-      });
-    } catch (error) {
-      logger.error("Error in POST /ai/generate-product-description:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message || "Failed to generate product description",
-      });
-    }
-  }
-);
-
-// ========================================
 // HEALTH CHECK
 // GET /api/ai/health
 // ========================================
-router.get("/health", authenticate, async (req, res) => {
+router.get("/health", async (req, res) => {
   try {
     const hasApiKey = !!process.env.GEMINI_API_KEY;
 
@@ -122,12 +136,13 @@ router.get("/health", authenticate, async (req, res) => {
       success: true,
       data: {
         service: "Gemini AI",
+        model: "gemini-2.5-flash",
         configured: hasApiKey,
         status: hasApiKey ? "ready" : "not configured",
       },
     });
   } catch (error) {
-    logger.error("Error in GET /ai/health:", error);
+    logger.error("AI health check error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to check AI service status",
