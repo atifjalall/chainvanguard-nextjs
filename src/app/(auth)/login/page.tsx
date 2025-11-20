@@ -5,46 +5,20 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWallet } from "@/components/providers/wallet-provider";
-import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   EyeIcon,
   EyeSlashIcon,
-  ArrowPathIcon,
   ExclamationTriangleIcon,
-  ArrowRightEndOnRectangleIcon,
-  LockClosedIcon,
-  PencilIcon,
-  KeyIcon,
+  WalletIcon,
+  ChevronDownIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
-import { WalletIcon as WalletIconSolid } from "@heroicons/react/24/solid";
-import { WalletIcon as WalletIconOutline } from "@heroicons/react/24/outline";
-
+import { Package } from "lucide-react";
 import { WalletData } from "@/types/web3";
 import { authAPI } from "@/lib/api/auth.api";
 import { AnimatePresence, motion } from "framer-motion";
-import { Skeleton } from "@/components/ui/skeleton";
 import { AuthRouteGuard } from "@/components/guards/auth-route-guard";
-
-const FORM_SPACING = "space-y-4";
-const SECTION_MARGIN = "mb-4 md:mb-6";
-const NAVIGATION_MARGIN = "mt-6";
-const GRID_GAP = "gap-4";
-const CONTAINER_PADDING = "p-4 md:p-6";
-const FIELD_GAP = "gap-6";
-const LABEL_MARGIN = "mb-1";
-const ERROR_MARGIN = "mt-1";
-const HEADER_GAP = "gap-3";
 
 type WalletInputMode = "select" | "manual";
 
@@ -58,6 +32,7 @@ export default function LoginPage() {
   const [manualWalletAddress, setManualWalletAddress] = useState("");
   const [walletInputMode, setWalletInputMode] =
     useState<WalletInputMode>("select");
+  const [showWalletDropdown, setShowWalletDropdown] = useState(false);
 
   const [walletError, setWalletError] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -210,7 +185,7 @@ export default function LoginPage() {
         toast.error("Incorrect password");
       } else if (error.response?.status === 404) {
         setWalletError("Wallet not found");
-        toast.error("Wallet not found - Please sign up for first");
+        toast.error("Wallet not found - Please sign up first");
       } else if (error.response?.status === 429) {
         toast.error("Too many login attempts. Try again in a few minutes");
       } else {
@@ -228,130 +203,95 @@ export default function LoginPage() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  const getSelectedWalletName = () => {
+    const wallet = availableWallets.find((w) => w.id === selectedWallet);
+    return wallet ? wallet.name : "Select your wallet";
+  };
+
   return (
     <AuthRouteGuard>
-      <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
+      <div className="min-h-screen bg-white dark:bg-gray-950">
         {/* Header */}
-        <header className="fixed top-0 w-full z-50 bg-white dark:bg-gray-950">
-          <div className={`w-full px-6 h-16 flex items-center`}>
-            {/* Logo on the far left */}
-            <Link
-              href="/"
-              className="flex items-center space-x-3 group cursor-pointer"
-            >
-              <span className="text-xl font-light text-gray-900 dark:text-white">
+        <header className="border-gray-200 dark:border-gray-800">
+          <div className="max-w-[1600px] mx-auto px-12 lg:px-16 h-16 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3">
+              <span className="text-lg font-light text-gray-900 dark:text-white tracking-wide">
                 ChainVanguard
               </span>
             </Link>
 
-            {/* Push navbar to the right */}
-            <nav className={`flex items-center gap-2 ml-auto ${HEADER_GAP}`}>
-              <ThemeToggle />
-              <Link href="/register">
-                <Button
-                  size="sm"
-                  className="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 rounded-none cursor-pointer text-xs h-9 px-4"
-                >
-                  Create Account
-                </Button>
-              </Link>
-            </nav>
+            <Link href="/register">
+              <button className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors">
+                Create Account
+              </button>
+            </Link>
           </div>
         </header>
 
         {/* Main Content */}
-        <div
-          className={`flex-1 flex items-center justify-center p-3 sm:p-4 min-h-[calc(100vh-8rem)]`}
-        >
-          <div className="w-full max-w-2xl">
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] py-16">
+          <div className="w-full max-w-3xl mx-auto px-12 lg:px-16">
             {isInitializing ? (
-              <div
-                className={`bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 ${CONTAINER_PADDING}`}
-              >
-                {/* Header Skeleton */}
-                <div className={`text-center space-y-2 ${SECTION_MARGIN}`}>
-                  <Skeleton className="h-12 w-12 mx-auto mb-2 rounded-none" />
-                  <Skeleton className="h-6 w-40 mx-auto rounded-none" />
-                  <Skeleton className="h-4 w-56 mx-auto rounded-none" />
+              <div className="space-y-12">
+                <div className="text-center space-y-4">
+                  <div className="h-12 w-12 bg-gray-100 dark:bg-gray-900 mx-auto animate-pulse" />
+                  <div className="h-8 w-48 bg-gray-100 dark:bg-gray-900 mx-auto animate-pulse" />
+                  <div className="h-4 w-64 bg-gray-100 dark:bg-gray-900 mx-auto animate-pulse" />
                 </div>
-                {/* Form Skeleton */}
-                <form className={FORM_SPACING}>
-                  {/* Wallet Input Mode Toggle */}
-                  <Skeleton className="h-9 w-full rounded-none" />
-                  {/* Wallet Input */}
-                  <div className="relative h-[60px] mb-3">
-                    <div className="space-y-1.5 absolute inset-0">
-                      <Skeleton className="h-4 w-32 mb-1 rounded-none" />
-                      <Skeleton className="h-9 w-full rounded-none" />
-                    </div>
-                  </div>
-                  {/* Password */}
-                  <div className="space-y-1">
-                    <Skeleton className="h-4 w-28 mb-1 rounded-none" />
-                    <Skeleton className="h-9 w-full rounded-none" />
-                  </div>
-                  {/* Submit Button */}
-                  <Skeleton className="h-9 w-full mt-1 rounded-none" />
-                  {/* Forgot Password Button */}
-                  <Skeleton className="h-8 w-full mt-1 rounded-none" />
-                </form>
-                {/* Sign Up Link */}
-                <div className={`mt-8 text-center`}>
-                  <Skeleton className="h-4 w-52 mx-auto rounded-none" />
+                <div className="space-y-6">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div
+                      key={i}
+                      className="h-12 w-full bg-gray-100 dark:bg-gray-900 animate-pulse"
+                    />
+                  ))}
                 </div>
-                {/* No Wallets Warning */}
-                {/* Optionally, you can show a skeleton for the warning box if needed */}
-                {/* Network Status */}
-                <Skeleton className="h-9 w-full mt-1 rounded-none" />
               </div>
             ) : (
-              <div
-                className={`bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 ${CONTAINER_PADDING}`}
-              >
+              <div className="space-y-12">
                 {/* Header */}
-                <div className={`text-center space-y-2 ${SECTION_MARGIN}`}>
-                  <WalletIconOutline className="h-12 w-12 mx-auto text-gray-900 dark:text-white mb-2" />
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                    Welcome Back
-                  </h1>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Connect your Hyperledger Fabric wallet to access the supply
-                    chain network
-                  </p>
+                <div className="text-center space-y-4">
+                  <WalletIcon className="h-12 w-12 mx-auto text-gray-900 dark:text-white opacity-70" />
+                  <div className="space-y-2">
+                    <h1 className="text-4xl font-extralight text-gray-900 dark:text-white tracking-tight">
+                      Welcome Back
+                    </h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-light">
+                      Connect your wallet to access the network
+                    </p>
+                  </div>
                 </div>
 
-                <form onSubmit={handleWalletLogin} className={FORM_SPACING}>
+                {/* Form */}
+                <form onSubmit={handleWalletLogin} className="space-y-4">
                   {/* Wallet Input Mode Toggle */}
-                  <div
-                    className={`flex p-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-800`}
-                  >
+                  <div className="flex border border-gray-200 dark:border-gray-800">
                     <button
                       type="button"
                       onClick={() => setWalletInputMode("select")}
-                      className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer ${
+                      className={`flex-1 h-11 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors ${
                         walletInputMode === "select"
-                          ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                          : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                          ? "bg-black dark:bg-white text-white dark:text-black"
+                          : "bg-white dark:bg-gray-950 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                       }`}
                     >
-                      <WalletIconOutline className="h-3.5 w-3.5 inline mr-1.5" />
                       Select Wallet
                     </button>
                     <button
                       type="button"
                       onClick={() => setWalletInputMode("manual")}
-                      className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer ${
+                      className={`flex-1 h-11 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors ${
                         walletInputMode === "manual"
-                          ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                          : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                          ? "bg-black dark:bg-white text-white dark:text-black"
+                          : "bg-white dark:bg-gray-950 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                       }`}
                     >
-                      <PencilIcon className="h-3.5 w-3.5 inline mr-1.5" />
                       Enter Manually
                     </button>
                   </div>
+
                   {/* Wallet Input */}
-                  <div className="relative h-[60px]">
+                  <div className="relative h-[100px]">
                     <AnimatePresence mode="wait">
                       {walletInputMode === "select" ? (
                         <motion.div
@@ -360,62 +300,80 @@ export default function LoginPage() {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
                           transition={{ duration: 0.3, ease: "easeInOut" }}
-                          className={`space-y-0.5 absolute inset-0`}
+                          className="absolute inset-0"
                         >
-                          <Label
-                            className={`flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ${LABEL_MARGIN}`}
-                          >
-                            <WalletIconOutline className="h-3 w-3" />
-                            Select Your Wallet
-                          </Label>
-                          <Select
-                            value={selectedWallet}
-                            onValueChange={setSelectedWallet}
-                          >
-                            <SelectTrigger
-                              className={`h-9 w-full border rounded-none bg-white/50 dark:bg-gray-800/50 text-xs hover:border-gray-900 dark:hover:border-white transition-colors ${
-                                walletError
-                                  ? "border-red-500 dark:border-red-500"
-                                  : "border-gray-200 dark:border-gray-700"
-                              }`}
-                            >
-                              <SelectValue placeholder="Choose your wallet" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-none">
-                              {availableWallets.map((wallet) => (
-                                <SelectItem
-                                  key={wallet.id}
-                                  value={wallet.id}
-                                  className="cursor-pointer py-2 px-2.5"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <WalletIconOutline className="h-4 w-4 text-gray-900 dark:text-white" />
-                                    <div className="flex-1 text-left">
-                                      <div className="font-medium text-xs text-gray-900 dark:text-gray-100 leading-tight">
-                                        {wallet.name}
-                                      </div>
-                                      <div className="text-xs text-gray-500 dark:text-gray-400 font-mono leading-tight mt-0.5">
-                                        {formatAddress(wallet.address)}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                              {availableWallets.length === 0 && (
-                                <SelectItem value="no-wallet" disabled>
-                                  No wallets found
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <div className="h-4">
-                            {walletError && (
-                              <p
-                                className={`text-xs text-red-600 dark:text-red-400 flex items-center gap-1`}
+                          <div className="space-y-3">
+                            <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                              Wallet
+                            </label>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setShowWalletDropdown(!showWalletDropdown)
+                                }
+                                className={`w-full flex items-center justify-between border-b ${
+                                  walletError
+                                    ? "border-red-500 dark:border-red-500"
+                                    : "border-gray-900 dark:border-white"
+                                } pb-px`}
                               >
-                                <ExclamationTriangleIcon className="h-3 w-3" />
-                                {walletError}
-                              </p>
+                                <span className="h-12 flex items-center text-sm text-gray-900 dark:text-white">
+                                  {getSelectedWalletName()}
+                                </span>
+                                <ChevronDownIcon
+                                  className={`h-4 w-4 text-gray-400 transition-transform ${
+                                    showWalletDropdown ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </button>
+
+                              {showWalletDropdown && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-10"
+                                    onClick={() => setShowWalletDropdown(false)}
+                                  />
+                                  <div className="absolute z-20 w-full mt-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 max-h-64 overflow-y-auto">
+                                    {availableWallets.length > 0 ? (
+                                      availableWallets.map((wallet) => (
+                                        <button
+                                          key={wallet.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setSelectedWallet(wallet.id);
+                                            setShowWalletDropdown(false);
+                                          }}
+                                          className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-0"
+                                        >
+                                          <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                            {wallet.name}
+                                          </p>
+                                          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
+                                            {formatAddress(wallet.address)}
+                                          </p>
+                                        </button>
+                                      ))
+                                    ) : (
+                                      <div className="p-4">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                          No wallets found
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="h-4 mt-1">
+                            {walletError && (
+                              <div className="flex items-center gap-2">
+                                <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                                <p className="text-xs text-red-500">
+                                  {walletError}
+                                </p>
+                              </div>
                             )}
                           </div>
                         </motion.div>
@@ -426,35 +384,38 @@ export default function LoginPage() {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -20 }}
                           transition={{ duration: 0.3, ease: "easeInOut" }}
-                          className={`space-y-0.5 absolute inset-0`}
+                          className="absolute inset-0"
                         >
-                          <Label
-                            className={`flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ${LABEL_MARGIN}`}
-                          >
-                            <PencilIcon className="h-3 w-3" />
-                            Enter Wallet Address
-                          </Label>
-                          <Input
-                            type="text"
-                            placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
-                            value={manualWalletAddress}
-                            onChange={(e) =>
-                              setManualWalletAddress(e.target.value)
-                            }
-                            className={`h-9 border rounded-none bg-white/50 dark:bg-gray-800/50 font-mono text-xs placeholder:text-xs hover:border-gray-900 dark:hover:border-white transition-colors cursor-text ${
-                              walletError
-                                ? "border-red-300 dark:border-red-700"
-                                : "border-gray-200 dark:border-gray-700"
-                            }`}
-                          />
-                          <div className="h-4">
+                          <div className="space-y-3">
+                            <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                              Wallet Address
+                            </label>
+                            <div
+                              className={`border-b ${
+                                walletError
+                                  ? "border-red-500 dark:border-red-500"
+                                  : "border-gray-900 dark:border-white"
+                              } pb-px`}
+                            >
+                              <input
+                                type="text"
+                                placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+                                value={manualWalletAddress}
+                                onChange={(e) =>
+                                  setManualWalletAddress(e.target.value)
+                                }
+                                className="w-full h-12 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none font-mono"
+                              />
+                            </div>
+                          </div>
+                          <div className="h-4 mt-1">
                             {walletError && (
-                              <p
-                                className={`text-xs text-red-600 dark:text-red-400 flex items-center gap-1`}
-                              >
-                                <ExclamationTriangleIcon className="h-3 w-3" />
-                                {walletError}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                                <p className="text-xs text-red-500">
+                                  {walletError}
+                                </p>
+                              </div>
                             )}
                           </div>
                         </motion.div>
@@ -463,91 +424,89 @@ export default function LoginPage() {
                   </div>
 
                   {/* Password */}
-                  <div className="space-y-0.5">
-                    <Label
-                      className={`flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ${LABEL_MARGIN}`}
-                    >
-                      <LockClosedIcon className="h-3 w-3" />
-                      Wallet Password
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your wallet password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className={`h-9 border rounded-none bg-white/50 dark:bg-gray-800/50 pr-9 text-xs placeholder:text-xs hover:border-gray-900 dark:hover:border-white transition-colors cursor-text ${
-                          passwordError
-                            ? "border-red-300 dark:border-red-700"
-                            : "border-gray-200 dark:border-gray-700"
-                        }`}
-                        required
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-9 w-9 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-none cursor-pointer"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeSlashIcon className="h-3.5 w-3.5 text-gray-500" />
-                        ) : (
-                          <EyeIcon className="h-3.5 w-3.5 text-gray-500" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="h-4">
-                      {passwordError && (
-                        <p
-                          className={`text-xs text-red-600 dark:text-red-400 flex items-center gap-1`}
+                  <div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <div
+                          className={`border-b ${
+                            passwordError
+                              ? "border-red-500 dark:border-red-500"
+                              : "border-gray-900 dark:border-white"
+                          } pb-px`}
                         >
-                          <ExclamationTriangleIcon className="h-3 w-3" />
-                          {passwordError}
-                        </p>
+                          <div className="flex items-center">
+                            <input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Enter your password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              className="flex-1 h-12 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="h-12 px-3 -mr-3 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            >
+                              {showPassword ? (
+                                <EyeSlashIcon className="h-4 w-4" />
+                              ) : (
+                                <EyeIcon className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="h-4 mt-1">
+                      {passwordError && (
+                        <div className="flex items-center gap-2">
+                          <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                          <p className="text-xs text-red-500">
+                            {passwordError}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Submit Button */}
-                  <Button
-                    type="submit"
-                    className="w-full h-9 text-xs font-semibold bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 rounded-none cursor-pointer -mt-6"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <ArrowPathIcon className="mr-2 h-3.5 w-3.5 animate-spin" />
-                        Connecting to Network...
-                      </>
-                    ) : (
-                      <>
-                        Connect Wallet
-                        <ArrowRightEndOnRectangleIcon className="ml-2 h-3.5 w-3.5" />
-                      </>
-                    )}
-                  </Button>
+                  {/* Submit Button and Forgot Password */}
+                  <div className="space-y-3">
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-black dark:bg-white text-white dark:text-black h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <>
+                          <ArrowPathIcon className="mr-2 h-3.5 w-3.5 animate-spin inline" />
+                          Connecting...
+                        </>
+                      ) : (
+                        "Connect Wallet"
+                      )}
+                    </button>
 
-                  {/* Forgot Password */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-8 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all duration-200 rounded-none cursor-pointer bg-white/50 dark:bg-gray-800/50 text-xs font-medium"
-                    size="sm"
-                    onClick={() => router.push("/forgot-password")}
-                  >
-                    <KeyIcon className="mr-2 h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
-                    Forgot Password?
-                  </Button>
+                    {/* Forgot Password */}
+                    <button
+                      type="button"
+                      onClick={() => router.push("/forgot-password")}
+                      className="w-full border border-black dark:border-white text-black dark:text-white h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
                 </form>
 
                 {/* Sign Up Link */}
-                <div className={`mt-4 text-center`}>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                <div className="text-center pt-8 border-t border-gray-200 dark:border-gray-800">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     Don&apos;t have a wallet?{" "}
                     <Link
                       href="/register"
-                      className="text-gray-900 dark:text-white font-medium hover:underline transition-colors cursor-pointer"
+                      className="text-gray-900 dark:text-white hover:underline transition-colors"
                     >
                       Create New Wallet
                     </Link>
@@ -557,45 +516,33 @@ export default function LoginPage() {
                 {/* No Wallets Warning */}
                 {availableWallets.length === 0 &&
                   walletInputMode === "select" && (
-                    <div
-                      className={`mt-4 p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700`}
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <ExclamationTriangleIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
-                          <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
-                            No Hyperledger Fabric wallets found. Create a new
-                            wallet or enter your wallet address manually.
+                    <div className="border border-gray-200 dark:border-gray-800 p-6">
+                      <div className="flex items-start gap-3">
+                        <ExclamationTriangleIcon className="h-5 w-5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                        <div className="space-y-3">
+                          <p className="text-xs text-gray-900 dark:text-white">
+                            No wallets found. Create a new wallet or enter your
+                            wallet address manually.
                           </p>
+                          <button
+                            type="button"
+                            onClick={() => router.push("/register")}
+                            className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                          >
+                            Create Wallet
+                          </button>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full h-8 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-none cursor-pointer text-xs font-medium"
-                          onClick={() => router.push("/register")}
-                        >
-                          <WalletIconOutline className="mr-2 h-3.5 w-3.5" />
-                          Create Wallet
-                        </Button>
                       </div>
                     </div>
                   )}
-
-                {/* Network Status */}
-                <div className="mt-4 p-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                  <p className="text-xs text-gray-900 dark:text-white text-center flex items-center justify-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-green-500 animate-pulse"></span>
-                    Hyperledger Fabric Network - Secure Enterprise Blockchain
-                  </p>
-                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Network Status */}
+        {/* Network Status - Fixed Bottom Right */}
         <div className="fixed bottom-4 right-4 hidden sm:block">
-          <div className="bg-white dark:bg-gray-900 backdrop-blur-sm border border-gray-200 dark:border-gray-700 px-4 py-2 transition-all duration-200 cursor-pointer rounded-none">
+          <div className="bg-white dark:bg-gray-900 backdrop-blur-sm border border-gray-200 dark:border-gray-700 px-4 py-2 transition-all duration-200">
             <div className="flex items-center gap-1.5 text-xs">
               <div className="w-1.5 h-1.5 bg-green-500 animate-pulse" />
               <span className="text-gray-600 dark:text-gray-400">

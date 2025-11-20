@@ -781,7 +781,7 @@ class ProductService {
       console.log(`✅ Product updated successfully: ${productId}`);
       console.log(`✅ Final image count: ${product.images.length}`);
 
-      if (updates.price && updates.price !== product.price) {
+      if (updateData.price && updateData.price !== product.price) {
         // Notify customers who have this in cart or wishlist
         const carts = await Cart.find({ "items.productId": product._id });
         for (const cart of carts) {
@@ -804,8 +804,8 @@ class ProductService {
 
       // Notify for out of stock
       if (
-        updates.quantity !== undefined &&
-        updates.quantity === 0 &&
+        updateData.quantity !== undefined &&
+        updateData.quantity === 0 &&
         product.quantity > 0
       ) {
         await notificationService.createNotification({
@@ -822,7 +822,7 @@ class ProductService {
       }
 
       // Notify for back in stock
-      if (updates.quantity > 0 && product.quantity === 0) {
+      if (updateData.quantity > 0 && product.quantity === 0) {
         // Notify wishlist users
         const wishlists = await Wishlist.find({
           "items.productId": product._id,

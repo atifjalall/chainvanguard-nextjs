@@ -1,5 +1,6 @@
 // ========================================
-// APPAREL CATEGORIES CONFIGURATION
+// APPAREL CATEGORIES CONFIGURATION - TEXTILE/CLOTHING ONLY
+// Includes: Traditional clothing subcategories
 // ========================================
 
 export const APPAREL_CATEGORIES = {
@@ -16,8 +17,11 @@ export const APPAREL_CATEGORIES = {
       "Trousers",
       "Shorts",
       "Suits",
+      "Kurta",
+      "Shalwar Kameez",
       "Activewear",
       "Sleepwear",
+      "Swimwear",
       "Underwear",
     ],
     sizes: ["S", "M", "L", "XL", "XXL", "XXXL"],
@@ -40,6 +44,15 @@ export const APPAREL_CATEGORIES = {
       "Hoodies",
       "Suits",
       "Jumpsuits",
+      // Traditional
+      "Shalwar Kameez",
+      "Kurta",
+      "Lawn Suits",
+      "Sarees",
+      "Lehenga",
+      "Dupatta",
+      "Shawls",
+      // Regular
       "Activewear",
       "Sleepwear",
       "Swimwear",
@@ -53,19 +66,24 @@ export const APPAREL_CATEGORIES = {
     subcategories: [
       "T-Shirts",
       "Shirts",
-      "Sweaters", // ADDED
+      "Sweaters",
       "Hoodies",
       "Jeans",
       "Trousers",
       "Shorts",
       "Dresses",
       "Jackets",
-      "Coats", // ADDED
+      "Coats",
+      // Traditional
+      "Kurta",
+      "Shalwar Kameez",
+      // Regular
       "Activewear",
       "Sleepwear",
+      "Swimwear",
       "Underwear",
     ],
-    sizes: ["2T", "3T", "4T", "5", "6", "7", "8", "10", "12", "14", "16"], // Added 16
+    sizes: ["2T", "3T", "4T", "5", "6", "7", "8", "10", "12", "14", "16"],
     description: "Kids' clothing and apparel",
   },
   Unisex: {
@@ -77,6 +95,7 @@ export const APPAREL_CATEGORIES = {
       "Jackets",
       "Activewear",
       "Sleepwear",
+      "Swimwear",
     ],
     sizes: ["XS", "S", "M", "L", "XL", "XXL", "XXXL"],
     description: "Unisex clothing and apparel",
@@ -93,6 +112,7 @@ export const PRODUCT_TYPES = {
     { value: "Sports", label: "Sports" },
     { value: "Workwear", label: "Workwear" },
     { value: "Party", label: "Party" },
+    { value: "Traditional", label: "Traditional" },
   ],
   Women: [
     { value: "Casual", label: "Casual" },
@@ -101,12 +121,14 @@ export const PRODUCT_TYPES = {
     { value: "Party", label: "Party" },
     { value: "Traditional", label: "Traditional" },
     { value: "Evening", label: "Evening Wear" },
+    { value: "Bridal", label: "Bridal Wear" },
   ],
   Kids: [
     { value: "Casual", label: "Casual" },
     { value: "Sports", label: "Sports" },
     { value: "Party", label: "Party" },
     { value: "School", label: "School Wear" },
+    { value: "Traditional", label: "Traditional" },
   ],
   Unisex: [
     { value: "Casual", label: "Casual" },
@@ -116,7 +138,7 @@ export const PRODUCT_TYPES = {
 };
 
 // ========================================
-// FIT TYPES - GENDER SPECIFIC
+// FIT TYPES - GENDER SPECIFIC (For Clothing)
 // ========================================
 export const FIT_TYPES = {
   Men: [
@@ -156,6 +178,7 @@ export const PATTERNS = {
     { value: "Checked", label: "Checked" },
     { value: "Plaid", label: "Plaid" },
     { value: "Printed", label: "Printed" },
+    { value: "Embroidered", label: "Embroidered" },
   ],
   Women: [
     { value: "Solid", label: "Solid" },
@@ -167,6 +190,7 @@ export const PATTERNS = {
     { value: "Geometric", label: "Geometric" },
     { value: "Embroidered", label: "Embroidered" },
     { value: "Printed", label: "Printed" },
+    { value: "Digital Print", label: "Digital Print" },
   ],
   Kids: [
     { value: "Solid", label: "Solid" },
@@ -184,7 +208,7 @@ export const PATTERNS = {
 };
 
 // ========================================
-// FABRIC TYPES - GENDER SPECIFIC
+// FABRIC TYPES - GENDER SPECIFIC (For Clothing)
 // ========================================
 export const FABRIC_TYPES = {
   Men: [
@@ -195,6 +219,8 @@ export const FABRIC_TYPES = {
     { value: "Wool", label: "Wool" },
     { value: "Jersey", label: "Jersey" },
     { value: "Fleece", label: "Fleece" },
+    { value: "Khaddar", label: "Khaddar" },
+    { value: "Karandi", label: "Karandi" },
   ],
   Women: [
     { value: "Cotton", label: "Cotton" },
@@ -207,6 +233,11 @@ export const FABRIC_TYPES = {
     { value: "Denim", label: "Denim" },
     { value: "Jersey", label: "Jersey" },
     { value: "Lace", label: "Lace" },
+    { value: "Lawn", label: "Lawn" },
+    { value: "Khaddar", label: "Khaddar" },
+    { value: "Karandi", label: "Karandi" },
+    { value: "Organza", label: "Organza" },
+    { value: "Net", label: "Net" },
   ],
   Kids: [
     { value: "Cotton", label: "Cotton" },
@@ -234,7 +265,8 @@ export const NECKLINES = [
   { value: "Off-Shoulder", label: "Off-Shoulder" },
   { value: "Boat Neck", label: "Boat Neck" },
   { value: "Turtleneck", label: "Turtleneck" },
-  { value: "Other", label: "Other" },
+  { value: "Scoop Neck", label: "Scoop Neck" },
+  { value: "Square Neck", label: "Square Neck" },
 ];
 
 // ========================================
@@ -245,6 +277,7 @@ export const SLEEVE_LENGTHS = [
   { value: "Short Sleeve", label: "Short Sleeve" },
   { value: "3/4 Sleeve", label: "3/4 Sleeve" },
   { value: "Long Sleeve", label: "Long Sleeve" },
+  { value: "Cap Sleeve", label: "Cap Sleeve" },
 ];
 
 // ========================================
@@ -303,6 +336,9 @@ export const COMMON_MATERIALS = [
   "Viscose",
   "Spandex",
   "Elastane",
+  "Lawn", // Pakistani fabric
+  "Khaddar", // Pakistani fabric
+  "Karandi", // Pakistani fabric
 ];
 
 // ========================================
@@ -326,6 +362,9 @@ export const COMMON_COLORS = [
   "Olive",
   "Cream",
   "Multicolor",
+  "Gold",
+  "Silver",
+  "Mustard",
 ];
 
 // ========================================
@@ -359,7 +398,7 @@ export const getSubcategoriesByCategory = (category) => {
 };
 
 /**
- * Get sizes for a specific category
+ * Get sizes for a specific category (textile/clothing only)
  */
 export const getSizesByCategory = (category) => {
   if (!APPAREL_CATEGORIES[category]) {
@@ -376,14 +415,13 @@ export const getSizesByCategory = (category) => {
  */
 export const getProductTypesByCategory = (category) => {
   if (!PRODUCT_TYPES[category]) {
-    // Return all types if category not found
     return PRODUCT_TYPES.Men;
   }
   return PRODUCT_TYPES[category];
 };
 
 /**
- * Get fit types for a specific category
+ * Get fit types for a specific category (textile/clothing only)
  */
 export const getFitTypesByCategory = (category) => {
   if (!FIT_TYPES[category]) {
@@ -403,7 +441,7 @@ export const getPatternsByCategory = (category) => {
 };
 
 /**
- * Get fabric types for a specific category
+ * Get fabric types for a specific category (textile/clothing only)
  */
 export const getFabricTypesByCategory = (category) => {
   if (!FABRIC_TYPES[category]) {
@@ -423,7 +461,7 @@ export const validateCategorySubcategory = (category, subcategory) => {
 };
 
 /**
- * Validate if a size belongs to a category
+ * Validate if a size belongs to a category (textile/clothing only)
  */
 export const validateCategorySize = (category, size) => {
   if (!APPAREL_CATEGORIES[category]) {
@@ -433,7 +471,23 @@ export const validateCategorySize = (category, size) => {
 };
 
 /**
- * Get formatted categories for API response
+ * Check if subcategory is traditional
+ */
+export const isTraditionalSubcategory = (subcategory) => {
+  const traditionalSubcategories = [
+    "Shalwar Kameez",
+    "Kurta",
+    "Lawn Suits",
+    "Sarees",
+    "Lehenga",
+    "Dupatta",
+    "Shawls",
+  ];
+  return traditionalSubcategories.includes(subcategory);
+};
+
+/**
+ * Get formatted categories for API response (textile/clothing only)
  */
 export const getCategoriesForAPI = () => {
   return {
@@ -507,6 +561,7 @@ export default {
   getFabricTypesByCategory,
   validateCategorySubcategory,
   validateCategorySize,
+  isTraditionalSubcategory,
   getCategoriesForAPI,
   getAllSizes,
   getAllSubcategories,

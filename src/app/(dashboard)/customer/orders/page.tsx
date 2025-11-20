@@ -1,725 +1,505 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Badge } from "@/components/_ui/badge";
-import { Progress } from "@/components/_ui/progress";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/_ui/tabs";
-import {
-  Package,
-  Truck,
-  CheckCircle,
-  Clock,
-  MapPin,
-  Eye,
-  MessageCircle,
-  AlertCircle,
-  Home,
-  Star,
-  Plane,
-} from "lucide-react";
+  ChevronRightIcon,
+  FunnelIcon,
+  XMarkIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  TruckIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/outline";
 
-const mockActiveOrders = [
+// Mock Orders Data
+const ORDERS_DATA = [
   {
-    id: "ORD-2025-007",
-    date: "2025-08-15",
-    status: "shipped",
-    total: 156.78,
-    estimatedDelivery: "2025-08-18",
-    trackingId: "TRK-2025-007",
-    items: [
+    id: "ORD-2024-001",
+    date: "2024-11-15",
+    status: "delivered",
+    items: 3,
+    total: 209.97,
+    transactionHash: "0x1a2b3c4d5e6f7g8h9i0j",
+    products: [
       {
-        id: "1",
-        name: "Wireless Gaming Mouse",
+        id: 1,
+        name: "Premium Cotton T-Shirt",
+        image:
+          "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200",
+        quantity: 2,
+        price: 29.99,
+      },
+      {
+        id: 2,
+        name: "Classic Denim Jacket",
+        image:
+          "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=200",
         quantity: 1,
         price: 89.99,
-        vendor: "Tech Solutions Inc.",
-      },
-      {
-        id: "2",
-        name: "Mouse Pad Pro",
-        quantity: 1,
-        price: 24.99,
-        vendor: "Gaming Gear Co.",
       },
     ],
-    currentLocation: "Distribution Center - Frankfurt, DE",
-    progress: 75,
-    trackingSteps: [
-      {
-        step: "Order Confirmed",
-        completed: true,
-        date: "2025-08-15",
-        time: "10:30 AM",
-      },
-      {
-        step: "Payment Processed",
-        completed: true,
-        date: "2025-08-15",
-        time: "10:35 AM",
-      },
-      {
-        step: "Preparing Shipment",
-        completed: true,
-        date: "2025-08-15",
-        time: "2:45 PM",
-      },
-      { step: "Shipped", completed: true, date: "2025-08-16", time: "9:15 AM" },
-      {
-        step: "In Transit",
-        completed: true,
-        date: "2025-08-16",
-        time: "11:30 AM",
-      },
-      {
-        step: "Out for Delivery",
-        completed: false,
-        date: "2025-08-18",
-        time: "Expected",
-      },
-      {
-        step: "Delivered",
-        completed: false,
-        date: "2025-08-18",
-        time: "Expected",
-      },
-    ],
-    vendor: "Multiple Vendors",
-    canCancel: false,
-    priority: "standard",
   },
   {
-    id: "ORD-2025-008",
-    date: "2025-08-16",
+    id: "ORD-2024-002",
+    date: "2024-11-12",
+    status: "shipped",
+    items: 2,
+    total: 169.98,
+    transactionHash: "0x9i8h7g6f5e4d3c2b1a0j",
+    products: [
+      {
+        id: 3,
+        name: "Casual Sneakers",
+        image:
+          "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200",
+        quantity: 1,
+        price: 79.99,
+      },
+      {
+        id: 4,
+        name: "Sport Watch",
+        image:
+          "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200",
+        quantity: 1,
+        price: 149.99,
+      },
+    ],
+  },
+  {
+    id: "ORD-2024-003",
+    date: "2024-11-10",
     status: "processing",
-    total: 245.5,
-    estimatedDelivery: "2025-08-20",
-    trackingId: "TRK-2025-008",
-    items: [
+    items: 1,
+    total: 59.99,
+    transactionHash: "0xabcdef1234567890abcd",
+    products: [
       {
-        id: "3",
-        name: "Premium Coffee Beans",
-        quantity: 3,
-        price: 29.99,
-        vendor: "Green Farm Co.",
-      },
-      {
-        id: "4",
-        name: "French Press Coffee Maker",
+        id: 5,
+        name: "Summer Dress",
+        image:
+          "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=200",
         quantity: 1,
-        price: 155.53,
-        vendor: "Kitchen Essentials",
+        price: 59.99,
       },
     ],
-    currentLocation: "Vendor Facility - Processing",
-    progress: 25,
-    trackingSteps: [
-      {
-        step: "Order Confirmed",
-        completed: true,
-        date: "2025-08-16",
-        time: "3:20 PM",
-      },
-      {
-        step: "Payment Processed",
-        completed: true,
-        date: "2025-08-16",
-        time: "3:25 PM",
-      },
-      {
-        step: "Preparing Shipment",
-        completed: false,
-        date: "2025-08-17",
-        time: "In Progress",
-      },
-      {
-        step: "Shipped",
-        completed: false,
-        date: "2025-08-17",
-        time: "Expected",
-      },
-      {
-        step: "In Transit",
-        completed: false,
-        date: "2025-08-18",
-        time: "Expected",
-      },
-      {
-        step: "Out for Delivery",
-        completed: false,
-        date: "2025-08-20",
-        time: "Expected",
-      },
-      {
-        step: "Delivered",
-        completed: false,
-        date: "2025-08-20",
-        time: "Expected",
-      },
-    ],
-    vendor: "Multiple Vendors",
-    canCancel: true,
-    priority: "express",
   },
   {
-    id: "ORD-2025-009",
-    date: "2025-08-16",
-    status: "confirmed",
-    total: 67.98,
-    estimatedDelivery: "2025-08-19",
-    trackingId: null,
-    items: [
+    id: "ORD-2024-004",
+    date: "2024-11-08",
+    status: "delivered",
+    items: 4,
+    total: 289.96,
+    transactionHash: "0x0987654321fedcba0987",
+    products: [
       {
-        id: "5",
-        name: "Eco Water Bottle",
+        id: 6,
+        name: "Leather Wallet",
+        image:
+          "https://images.unsplash.com/photo-1627123424574-724758594e93?w=200",
         quantity: 2,
-        price: 22.99,
-        vendor: "Green Living Co.",
+        price: 39.99,
       },
       {
-        id: "6",
-        name: "Bamboo Utensil Set",
+        id: 7,
+        name: "Casual Backpack",
+        image:
+          "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200",
         quantity: 1,
-        price: 21.99,
-        vendor: "Eco Accessories",
+        price: 69.99,
+      },
+      {
+        id: 8,
+        name: "Designer Sunglasses",
+        image:
+          "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=200",
+        quantity: 1,
+        price: 129.99,
       },
     ],
-    currentLocation: "Order Processing",
-    progress: 15,
-    trackingSteps: [
+  },
+  {
+    id: "ORD-2024-005",
+    date: "2024-11-05",
+    status: "cancelled",
+    items: 1,
+    total: 189.99,
+    transactionHash: "0xfedcba9876543210fedc",
+    products: [
       {
-        step: "Order Confirmed",
-        completed: true,
-        date: "2025-08-16",
-        time: "6:45 PM",
-      },
-      {
-        step: "Payment Processed",
-        completed: false,
-        date: "2025-08-17",
-        time: "Pending",
-      },
-      {
-        step: "Preparing Shipment",
-        completed: false,
-        date: "2025-08-17",
-        time: "Pending",
-      },
-      {
-        step: "Shipped",
-        completed: false,
-        date: "2025-08-17",
-        time: "Pending",
-      },
-      {
-        step: "In Transit",
-        completed: false,
-        date: "2025-08-18",
-        time: "Pending",
-      },
-      {
-        step: "Out for Delivery",
-        completed: false,
-        date: "2025-08-19",
-        time: "Pending",
-      },
-      {
-        step: "Delivered",
-        completed: false,
-        date: "2025-08-19",
-        time: "Pending",
+        id: 9,
+        name: "Winter Coat",
+        image:
+          "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=200",
+        quantity: 1,
+        price: 189.99,
       },
     ],
-    vendor: "Multiple Vendors",
-    canCancel: true,
-    priority: "standard",
+  },
+  {
+    id: "ORD-2024-006",
+    date: "2024-11-03",
+    status: "delivered",
+    items: 2,
+    total: 149.98,
+    transactionHash: "0x1122334455667788990a",
+    products: [
+      {
+        id: 10,
+        name: "Wool Sweater",
+        image:
+          "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=200",
+        quantity: 1,
+        price: 79.99,
+      },
+      {
+        id: 11,
+        name: "Casual Backpack",
+        image:
+          "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200",
+        quantity: 1,
+        price: 69.99,
+      },
+    ],
   },
 ];
 
-export default function MyOrdersPage() {
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState<"active" | "tracking">(
-    "active"
-  );
-  const [isVisible, setIsVisible] = useState(false);
+const STATUS_CONFIG = {
+  processing: {
+    label: "Processing",
+    icon: ClockIcon,
+    color: "text-gray-900 dark:text-white",
+    bg: "bg-gray-100 dark:bg-gray-900",
+  },
+  shipped: {
+    label: "Shipped",
+    icon: TruckIcon,
+    color: "text-gray-900 dark:text-white",
+    bg: "bg-gray-100 dark:bg-gray-900",
+  },
+  delivered: {
+    label: "Delivered",
+    icon: CheckCircleIcon,
+    color: "text-gray-900 dark:text-white",
+    bg: "bg-gray-100 dark:bg-gray-900",
+  },
+  cancelled: {
+    label: "Cancelled",
+    icon: XCircleIcon,
+    color: "text-gray-500 dark:text-gray-400",
+    bg: "bg-gray-100 dark:bg-gray-900",
+  },
+};
 
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
+const FILTER_OPTIONS = [
+  { label: "All Orders", value: "all" },
+  { label: "Processing", value: "processing" },
+  { label: "Shipped", value: "shipped" },
+  { label: "Delivered", value: "delivered" },
+  { label: "Cancelled", value: "cancelled" },
+];
 
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case "confirmed":
-        return {
-          color:
-            "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-          icon: Clock,
-          label: "Confirmed",
-        };
-      case "processing":
-        return {
-          color:
-            "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-          icon: Package,
-          label: "Processing",
-        };
-      case "shipped":
-        return {
-          color:
-            "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-          icon: Truck,
-          label: "Shipped",
-        };
-      case "delivered":
-        return {
-          color:
-            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-          icon: CheckCircle,
-          label: "Delivered",
-        };
+const SORT_OPTIONS = [
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+  { label: "Highest Amount", value: "amount-desc" },
+  { label: "Lowest Amount", value: "amount-asc" },
+];
+
+export default function OrdersPage() {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Filter and sort orders
+  const filteredOrders = ORDERS_DATA.filter((order) => {
+    const matchesSearch =
+      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.transactionHash.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      selectedStatus === "all" || order.status === selectedStatus;
+    return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case "newest":
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      case "oldest":
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      case "amount-desc":
+        return b.total - a.total;
+      case "amount-asc":
+        return a.total - b.total;
       default:
-        return {
-          color:
-            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-          icon: Package,
-          label: "Unknown",
-        };
+        return 0;
     }
-  };
+  });
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
       month: "short",
       day: "numeric",
-      year: "numeric",
     });
   };
 
-  const toggleOrderExpansion = (orderId: string) => {
-    setExpandedOrder(expandedOrder === orderId ? null : orderId);
-  };
-
-  const ActiveOrderCard = ({ order }: { order: any }) => {
-    const statusConfig = getStatusConfig(order.status);
-    const StatusIcon = statusConfig.icon;
-    const isExpanded = expandedOrder === order.id;
-
-    return (
-      <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-        <CardContent className="p-6">
-          {/* Order Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center">
-                <StatusIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {order.id}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Ordered {formatDate(order.date)}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {order.priority === "express" && (
-                <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                  <Plane className="h-3 w-3 mr-1" />
-                  Express
-                </Badge>
-              )}
-              <Badge className={statusConfig.color}>
-                <StatusIcon className="h-3 w-3 mr-1" />
-                {statusConfig.label}
-              </Badge>
-            </div>
-          </div>
-
-          {/* Progress Section */}
-          <div className="mb-4">
-            <div className="flex justify-between items-center text-sm mb-2">
-              <span className="text-gray-600 dark:text-gray-400">
-                Order Progress
-              </span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">
-                {order.progress}%
-              </span>
-            </div>
-            <Progress value={order.progress} className="h-2 mb-2" />
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600 dark:text-gray-400">
-                {order.currentLocation}
-              </span>
-              <span className="text-gray-600 dark:text-gray-400">
-                Est. {formatDate(order.estimatedDelivery)}
-              </span>
-            </div>
-          </div>
-
-          {/* Order Summary */}
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <span className="text-gray-600 dark:text-gray-400">
-                {order.items.length} item{order.items.length > 1 ? "s" : ""}
-              </span>
-              {order.trackingId && (
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  Tracking: {order.trackingId}
-                </p>
-              )}
-            </div>
-            <div className="text-right">
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                ${order.total.toFixed(2)}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Delivery: {formatDate(order.estimatedDelivery)}
-              </p>
-            </div>
-          </div>
-
-          {/* Items Details */}
-          {!isExpanded ? (
-            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                {order.items
-                  .map((item: any) => `${item.quantity}× ${item.name}`)
-                  .join(", ")}
-              </p>
-            </div>
-          ) : (
-            <div className="mb-4 space-y-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-              {order.items.map((item: any, index: number) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between py-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                      <Package className="h-5 w-5 text-gray-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
-                        {item.quantity}× {item.name}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        by {item.vendor}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => toggleOrderExpansion(order.id)}
-              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-            >
-              {isExpanded ? "Show Less" : "View Details"}
-            </Button>
-
-            <div className="flex items-center gap-2">
-              {order.trackingId && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedTab("tracking")}
-                  className="h-9 w-9 p-0 text-gray-600 dark:text-gray-400 hover:text-blue-600"
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-              )}
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-9 w-9 p-0 text-gray-600 dark:text-gray-400 hover:text-blue-600"
-              >
-                <MessageCircle className="h-4 w-4" />
-              </Button>
-
-              {order.canCancel && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0 text-gray-600 dark:text-gray-400 hover:text-red-600"
-                >
-                  <AlertCircle className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const TrackingView = ({ order }: { order: any }) => (
-    <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-3 text-xl">
-          <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <MapPin className="h-4 w-4 text-white" />
-          </div>
-          Order Tracking - {order.id}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Current Status */}
-        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-gray-900 dark:text-gray-100">
-                Current Location
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {order.currentLocation}
-              </p>
-            </div>
-            <Badge className={getStatusConfig(order.status).color}>
-              {getStatusConfig(order.status).label}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Tracking Timeline */}
-        <div className="space-y-4">
-          {order.trackingSteps.map((step: any, index: number) => (
-            <div key={index} className="flex items-center gap-4">
-              <div
-                className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${
-                  step.completed
-                    ? "bg-green-100 border-green-500 text-green-700 dark:bg-green-900/30 dark:border-green-400 dark:text-green-400"
-                    : "bg-gray-100 border-gray-300 text-gray-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
-                }`}
-              >
-                {step.completed ? (
-                  <CheckCircle className="h-5 w-5" />
-                ) : (
-                  <Clock className="h-5 w-5" />
-                )}
-              </div>
-              <div className="flex-1">
-                <p
-                  className={`font-medium ${
-                    step.completed
-                      ? "text-gray-900 dark:text-gray-100"
-                      : "text-gray-600 dark:text-gray-400"
-                  }`}
-                >
-                  {step.step}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {step.date} • {step.time}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Estimated Delivery */}
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-          <div className="flex items-center gap-3 text-base">
-            <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            <span className="text-gray-600 dark:text-gray-400">
-              Estimated delivery:
-            </span>
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              {formatDate(order.estimatedDelivery)}
-            </span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  const stats = [
-    {
-      label: "Active Orders",
-      value: mockActiveOrders.length,
-      icon: Package,
-    },
-    {
-      label: "In Transit",
-      value: mockActiveOrders.filter((o) => o.status === "shipped").length,
-      icon: Truck,
-    },
-    {
-      label: "Processing",
-      value: mockActiveOrders.filter((o) => o.status === "processing").length,
-      icon: Clock,
-    },
-    {
-      label: "Total Value",
-      value: `$${mockActiveOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}`,
-      icon: Star,
-    },
-  ];
-
   return (
-    <div className="space-y-8 p-6">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
+      {/* Breadcrumb */}
+      <div className="">
+        <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push("/customer")}
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              Home
+            </button>
+            <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
+            <span className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white">
+              Orders
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
-              <Package className="h-5 w-5 text-white" />
+      <section className="py-16 border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-px w-16 bg-gray-300 dark:bg-gray-700" />
+              <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
+                Order History
+              </p>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="flex items-center justify-between">
+              <h1 className="text-5xl font-extralight text-gray-900 dark:text-white tracking-tight">
                 My Orders
               </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Track your orders and delivery status
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {filteredOrders.length}{" "}
+                {filteredOrders.length === 1 ? "order" : "orders"}
               </p>
             </div>
           </div>
-
-          {/* Tab Toggle */}
-          <Tabs
-            value={selectedTab}
-            onValueChange={setSelectedTab as any}
-            className="w-auto"
-          >
-            <TabsList className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-              <TabsTrigger
-                value="active"
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Active Orders
-              </TabsTrigger>
-              <TabsTrigger
-                value="tracking"
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-              >
-                <MapPin className="h-4 w-4 mr-2" />
-                Track Orders
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
         </div>
-      </div>
+      </section>
 
-      {/* Stats Cards */}
-      <div
-        className={`transform transition-all duration-700 delay-200 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card
-                key={index}
-                className="border-0 shadow-lg bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                      <Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+      {/* Search and Filters */}
+      <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
+          <div className="py-6 space-y-6">
+            {/* Search Bar */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1 flex items-center gap-3 border-b border-gray-900 dark:border-white pb-px">
+                <input
+                  type="text"
+                  placeholder="Search by order ID or transaction hash"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 h-10 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Sort Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setFiltersOpen(!filtersOpen)}
+                  className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
+                >
+                  <FunnelIcon className="h-4 w-4" />
+                  Sort
+                </button>
+
+                {filtersOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setFiltersOpen(false)}
+                    />
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 z-50">
+                      <div className="p-2">
+                        {SORT_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => {
+                              setSortBy(option.value);
+                              setFiltersOpen(false);
+                            }}
+                            className={`block w-full text-left px-4 py-3 text-xs transition-colors ${
+                              sortBy === option.value
+                                ? "text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900"
+                                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                        {stat.value}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {stat.label}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+                  </>
+                )}
+              </div>
+            </div>
 
-      {/* Main Content */}
-      <div
-        className={`transform transition-all duration-700 delay-400 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
-        <Tabs value={selectedTab} onValueChange={setSelectedTab as any}>
-          <TabsContent value="active" className="space-y-6 mt-0">
-            {mockActiveOrders.length > 0 ? (
-              mockActiveOrders.map((order) => (
-                <ActiveOrderCard key={order.id} order={order} />
-              ))
-            ) : (
-              <Card className="text-center py-16 border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-                <CardContent>
-                  <div className="h-20 w-20 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                    <Package className="h-10 w-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                    No active orders
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-8">
-                    You don&apos;t have any orders in progress
-                  </p>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    Start Shopping
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="tracking" className="space-y-6 mt-0">
-            {mockActiveOrders
-              .filter((order) => order.trackingId)
-              .map((order) => (
-                <TrackingView key={order.id} order={order} />
+            {/* Status Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+              {FILTER_OPTIONS.map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setSelectedStatus(filter.value)}
+                  className={`px-5 h-10 text-[10px] uppercase tracking-[0.2em] font-medium whitespace-nowrap transition-all ${
+                    selectedStatus === filter.value
+                      ? "bg-black dark:bg-white text-white dark:text-black"
+                      : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
+                  }`}
+                >
+                  {filter.label}
+                </button>
               ))}
-
-            {mockActiveOrders.filter((order) => order.trackingId).length ===
-              0 && (
-              <Card className="text-center py-16 border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-                <CardContent>
-                  <div className="h-20 w-20 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                    <MapPin className="h-10 w-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                    No trackable orders
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Orders with tracking information will appear here
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Orders List */}
+      <section className="py-16">
+        <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
+          {filteredOrders.length > 0 ? (
+            <div className="space-y-6">
+              {filteredOrders.map((order) => {
+                const statusConfig = STATUS_CONFIG[order.status];
+                const StatusIcon = statusConfig.icon;
+
+                return (
+                  <div
+                    key={order.id}
+                    className="hover:border-black dark:hover:border-white transition-all group cursor-pointer"
+                    onClick={() => router.push(`/customer/orders/${order.id}`)}
+                  >
+                    <div className="p-8">
+                      {/* Order Header */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-sm font-medium text-gray-900 dark:text-white uppercase tracking-wider">
+                              {order.id}
+                            </h3>
+                            <div
+                              className={`flex items-center gap-2 px-3 py-1 ${statusConfig.bg}`}
+                            >
+                              <StatusIcon
+                                className={`h-3 w-3 ${statusConfig.color}`}
+                              />
+                              <span
+                                className={`text-[10px] uppercase tracking-wider font-medium ${statusConfig.color}`}
+                              >
+                                {statusConfig.label}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                            <span>{formatDate(order.date)}</span>
+                            <span>•</span>
+                            <span>
+                              {order.items}{" "}
+                              {order.items === 1 ? "item" : "items"}
+                            </span>
+                            <span>•</span>
+                            <span className="font-mono">
+                              {order.transactionHash.slice(0, 10)}...
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                              Total
+                            </p>
+                            <p className="text-xl font-light text-gray-900 dark:text-white">
+                              Rs {order.total.toFixed(2)}
+                            </p>
+                          </div>
+                          <ChevronRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-600 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
+                        </div>
+                      </div>
+
+                      {/* Order Items */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {order.products.slice(0, 5).map((product) => (
+                          <div key={product.id} className="space-y-2">
+                            <div className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4]">
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                              {product.quantity > 1 && (
+                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-medium">
+                                  {product.quantity}
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-gray-600 dark:text-gray-400 uppercase tracking-wide line-clamp-1">
+                              {product.name}
+                            </p>
+                          </div>
+                        ))}
+                        {order.products.length > 5 && (
+                          <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-900 aspect-[3/4]">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              +{order.products.length - 5} more
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-32">
+              <div className="space-y-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  No orders found
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedStatus("all");
+                    setSortBy("newest");
+                  }}
+                  className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <style jsx global>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 }

@@ -5,46 +5,23 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWallet } from "@/components/providers/wallet-provider";
-import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import {
-  Package,
-  Wallet,
-  Eye,
-  EyeOff,
-  Shield,
-  AlertTriangle,
-  RefreshCw,
-  ChevronLeft,
-  ChevronRight,
-  Lock,
-  KeyRound,
-  CheckCircle2,
-  BadgeCheck,
-  ArrowLeft,
-  Search,
-  HelpCircle,
-  Edit3,
-  Check,
-} from "lucide-react";
+  WalletIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  ShieldCheckIcon,
+  ExclamationTriangleIcon,
+  ArrowPathIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CheckCircleIcon,
+  CheckBadgeIcon,
+  ArrowLeftIcon,
+  MagnifyingGlassIcon,
+  CheckIcon,
+  ChevronDownIcon,
+} from "@heroicons/react/24/outline";
 import { WalletData } from "@/types/web3";
 import { motion, AnimatePresence } from "framer-motion";
 import { authAPI } from "@/lib/api/auth.api";
@@ -54,21 +31,16 @@ type RecoveryMode = "known-wallet" | "forgot-wallet" | null;
 type WalletInputMode = "select" | "manual";
 
 export default function ForgotPasswordPage() {
-  // Recovery Mode Selection
   const [recoveryMode, setRecoveryMode] = useState<RecoveryMode>(null);
-
-  // Current step in the multi-step form
   const [currentStep, setCurrentStep] = useState(0);
   const [totalSteps, setTotalSteps] = useState(3);
-
-  // Animation states
   const [isVisible, setIsVisible] = useState(false);
 
-  // Form State
   const [availableWallets, setAvailableWallets] = useState<WalletData[]>([]);
   const [walletInputMode, setWalletInputMode] =
     useState<WalletInputMode>("select");
   const [selectedWallet, setSelectedWallet] = useState("");
+  const [showWalletDropdown, setShowWalletDropdown] = useState(false);
   const [manualWalletAddress, setManualWalletAddress] = useState("");
   const [recoveryPhrase, setRecoveryPhrase] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -77,20 +49,17 @@ export default function ForgotPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Wallet Recovery State
   const [recoveredWallet, setRecoveredWallet] = useState<WalletData | null>(
     null
   );
   const [isRecoveringWallet, setIsRecoveringWallet] = useState(false);
 
-  // Validation - SEPARATE STATE FOR EACH ERROR (Login/Register approach)
   const [walletError, setWalletError] = useState("");
   const [recoveryPhraseError, setRecoveryPhraseError] = useState("");
   const [newPasswordError, setNewPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [phraseWords, setPhraseWords] = useState<string[]>([]);
 
-  // Password strength checks
   const [passwordChecks, setPasswordChecks] = useState({
     length: false,
     uppercase: false,
@@ -101,7 +70,6 @@ export default function ForgotPasswordPage() {
   const { getAllWallets } = useWallet();
   const router = useRouter();
 
-  // Update password strength checks
   useEffect(() => {
     setPasswordChecks({
       length: newPassword.length >= 8,
@@ -110,20 +78,17 @@ export default function ForgotPasswordPage() {
     });
   }, [newPassword]);
 
-  // Initialize
   useEffect(() => {
     setIsVisible(true);
     const wallets = getAllWallets();
     setAvailableWallets(wallets);
   }, [getAllWallets]);
 
-  // Update phrase words when recovery phrase changes
   useEffect(() => {
     const words = recoveryPhrase.trim().split(/\s+/).filter(Boolean);
     setPhraseWords(words);
   }, [recoveryPhrase]);
 
-  // Update total steps based on recovery mode
   useEffect(() => {
     if (recoveryMode === "known-wallet") {
       setTotalSteps(3);
@@ -132,7 +97,6 @@ export default function ForgotPasswordPage() {
     }
   }, [recoveryMode]);
 
-  // Handle mode selection
   const handleModeSelection = (mode: RecoveryMode) => {
     setRecoveryMode(mode);
     setIsVisible(false);
@@ -142,7 +106,6 @@ export default function ForgotPasswordPage() {
     }, 300);
   };
 
-  // Handle step transitions
   const nextStep = () => {
     if (currentStep < totalSteps) {
       setIsVisible(false);
@@ -181,22 +144,15 @@ export default function ForgotPasswordPage() {
 
   const progress = currentStep === 0 ? 0 : (currentStep / totalSteps) * 100;
 
-  // ADD NEW FUNCTION - Verify wallet exists in database
   const verifyWalletExists = async (address: string): Promise<boolean> => {
     try {
-      console.log("[FORGOT PASSWORD] 🔍 Checking if wallet exists:", address);
-
-      const response = await authAPI.checkWalletExists(address);
-
-      console.log("[FORGOT PASSWORD] ✅ Wallet exists");
+      await authAPI.checkWalletExists(address);
       return true;
     } catch (error: any) {
-      console.error("[FORGOT PASSWORD] ❌ Wallet not found:", error);
       return false;
     }
   };
 
-  // Validation functions - UPDATED TO USE SEPARATE STATE
   const validateStep = (step: number): boolean => {
     let hasErrors = false;
 
@@ -294,8 +250,6 @@ export default function ForgotPasswordPage() {
     return false;
   };
 
-  // WALLET RECOVERY - FORGOT WALLET FLOW
-
   const handleRecoverWallet = async () => {
     if (phraseWords.length !== 12) {
       setRecoveryPhraseError("Recovery phrase must be exactly 12 words");
@@ -307,19 +261,10 @@ export default function ForgotPasswordPage() {
     setRecoveryPhraseError("");
 
     try {
-      console.log("[FORGOT PASSWORD] 🔍 Finding wallet by mnemonic...");
-
-      // ✅ CALL BACKEND API
       const response = await authAPI.findWalletByMnemonic(
         recoveryPhrase.trim()
       );
 
-      console.log(
-        "[FORGOT PASSWORD] ✅ Wallet found:",
-        response.data.walletAddress
-      );
-
-      // ✅ Set recovered wallet data
       const walletData: WalletData = {
         id: Date.now().toString(),
         name: response.data.walletName || "Recovered Wallet",
@@ -330,7 +275,6 @@ export default function ForgotPasswordPage() {
 
       setRecoveredWallet(walletData);
 
-      // ✅ Save to localStorage for later use
       localStorage.setItem(
         "temp_recovered_wallet",
         JSON.stringify(response.data)
@@ -344,29 +288,18 @@ export default function ForgotPasswordPage() {
         nextStep();
       }, 1000);
     } catch (error: any) {
-      console.error("[FORGOT PASSWORD] Error:", error);
-
-      // ✅ BETTER USER-FRIENDLY ERROR MESSAGES
       let errorMessage = "Unable to find wallet with this recovery phrase";
 
       if (error.response) {
         const statusCode = error.response.status;
         const backendError = error.response.data?.error;
 
-        console.error("[FORGOT PASSWORD] Backend error:", {
-          status: statusCode,
-          error: backendError,
-          data: error.response.data,
-        });
-
-        // ✅ SIMPLIFIED ERROR MESSAGES
         if (statusCode === 404) {
           errorMessage = "No wallet found with this recovery phrase";
         } else if (statusCode === 429) {
           errorMessage =
-            "⏳ Too many attempts. Please wait a few minutes and try again";
+            "Too many attempts. Please wait a few minutes and try again";
         } else if (statusCode === 500) {
-          // ✅ BETTER MESSAGE FOR 500 ERROR
           errorMessage =
             "Invalid recovery phrase. Please check your 12 words and try again";
         } else if (statusCode === 400) {
@@ -378,10 +311,8 @@ export default function ForgotPasswordPage() {
             "Unable to find wallet. Please verify your recovery phrase";
         }
       } else if (error.message) {
-        // Network error
         if (error.message.includes("Network")) {
-          errorMessage =
-            "🌐 Network error. Please check your internet connection";
+          errorMessage = "Network error. Please check your internet connection";
         } else {
           errorMessage = `${error.message}`;
         }
@@ -471,11 +402,6 @@ export default function ForgotPasswordPage() {
               );
               const recoveredAddress = response.data.walletAddress;
 
-              console.log("[FORGOT PASSWORD] Comparing addresses:", {
-                selected: walletAddress,
-                recovered: recoveredAddress,
-              });
-
               if (
                 recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()
               ) {
@@ -488,11 +414,6 @@ export default function ForgotPasswordPage() {
                 hasErrors = true;
               }
             } catch (error: any) {
-              console.error(
-                "[FORGOT PASSWORD] ❌ Mnemonic verification failed:",
-                error
-              );
-
               let errorMessage = "Invalid recovery phrase";
 
               if (error.response) {
@@ -519,7 +440,6 @@ export default function ForgotPasswordPage() {
           break;
 
         case 3:
-          // ✅ STEP 3: VALIDATE PASSWORD
           if (!newPassword || newPassword.length < 8) {
             setNewPasswordError("Password must be at least 8 characters");
             toast.error("Password must be at least 8 characters");
@@ -537,7 +457,6 @@ export default function ForgotPasswordPage() {
         nextStep();
       }
     } else if (recoveryMode === "forgot-wallet") {
-      // ✅ FORGOT WALLET FLOW
       if (currentStep === 1) {
         handleRecoverWallet();
         return;
@@ -547,8 +466,6 @@ export default function ForgotPasswordPage() {
       }
     }
   };
-
-  // PASSWORD RESET - BOTH FLOWS
 
   const handleResetPassword = async () => {
     if (!validateStep(totalSteps)) {
@@ -568,17 +485,13 @@ export default function ForgotPasswordPage() {
     try {
       let walletAddress = "";
 
-      // GET WALLET ADDRESS
-
       if (recoveryMode === "forgot-wallet") {
-        // Use recovered wallet address
         walletAddress = recoveredWallet?.address || "";
 
         if (!walletAddress) {
           throw new Error("No wallet address found");
         }
       } else if (recoveryMode === "known-wallet") {
-        // Get wallet address from selection or manual input
         if (walletInputMode === "manual") {
           walletAddress = manualWalletAddress.trim();
         } else {
@@ -593,50 +506,30 @@ export default function ForgotPasswordPage() {
         }
       }
 
-      console.log(
-        "[FORGOT PASSWORD] 🔐 Resetting password for:",
-        walletAddress
-      );
-
-      // ✅ CALL BACKEND API TO RESET PASSWORD
-
-      const response = await authAPI.recoverWalletPassword({
+      await authAPI.recoverWalletPassword({
         mnemonic: recoveryPhrase.trim(),
         walletAddress: walletAddress,
         newPassword: newPassword,
       });
-
-      console.log("[FORGOT PASSWORD] ✅ Password reset successful!");
-
-      // UPDATE LOCAL STORAGE (Optional - for offline use)
 
       try {
         const walletsData = JSON.parse(
           localStorage.getItem("chainvanguard_wallets") || "[]"
         );
 
-        // Find wallet by address
         const walletIndex = walletsData.findIndex(
           (w: any) => w.address.toLowerCase() === walletAddress.toLowerCase()
         );
 
         if (walletIndex !== -1) {
-          // Update password in localStorage
           localStorage.setItem(
             `wallet_${walletsData[walletIndex].id}_password`,
             newPassword
           );
-          console.log("[FORGOT PASSWORD] ✅ Local wallet password updated");
         }
       } catch (error) {
-        console.warn(
-          "[FORGOT PASSWORD] ⚠️ Could not update local wallet:",
-          error
-        );
-        // Not critical - backend is source of truth
+        console.warn("Could not update local wallet:", error);
       }
-
-      // CLEANUP & REDIRECT
 
       localStorage.removeItem("temp_recovered_wallet");
 
@@ -649,8 +542,6 @@ export default function ForgotPasswordPage() {
         router.push("/login");
       }, 2000);
     } catch (error: any) {
-      console.error("[FORGOT PASSWORD] Reset error:", error);
-
       setIsLoading(false);
 
       let errorMessage = "Unable to reset password";
@@ -659,11 +550,6 @@ export default function ForgotPasswordPage() {
       if (error.response) {
         const statusCode = error.response.status;
         const backendError = error.response.data?.error;
-
-        console.error("[FORGOT PASSWORD] Backend error:", {
-          status: statusCode,
-          error: backendError,
-        });
 
         switch (statusCode) {
           case 401:
@@ -674,8 +560,7 @@ export default function ForgotPasswordPage() {
             errorMessage = "Wallet not found. Please check the wallet address";
             break;
           case 429:
-            errorMessage =
-              "⏳ Too many attempts. Please wait 10 minutes and try again";
+            errorMessage = "Too many attempts. Please wait 10 minutes";
             break;
           case 400:
             if (backendError?.includes("password")) {
@@ -721,6 +606,11 @@ export default function ForgotPasswordPage() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  const getSelectedWalletName = () => {
+    const wallet = availableWallets.find((w) => w.id === selectedWallet);
+    return wallet ? wallet.name : "Select your wallet";
+  };
+
   const getStepTitle = () => {
     if (currentStep === 0) return "Choose Recovery Method";
 
@@ -756,86 +646,36 @@ export default function ForgotPasswordPage() {
     return "";
   };
 
-  const getStepIcon = () => {
-    if (currentStep === 0) return <HelpCircle className="h-7 w-7" />;
-
-    if (recoveryMode === "known-wallet") {
-      if (currentStep === 1) return <Wallet className="h-7 w-7" />;
-      if (currentStep === 2) return <KeyRound className="h-7 w-7" />;
-      if (currentStep === 3) return <Lock className="h-7 w-7" />;
-    } else if (recoveryMode === "forgot-wallet") {
-      if (currentStep === 1) return <Search className="h-7 w-7" />;
-      if (currentStep === 2) return <CheckCircle2 className="h-7 w-7" />;
-      if (currentStep === 3) return <Lock className="h-7 w-7" />;
-    }
-    return <Wallet className="h-7 w-7" />;
-  };
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.4,
-        ease: "easeOut",
-      },
-    },
-    exit: {
-      opacity: 0,
-      y: -20,
-      transition: {
-        duration: 0.3,
-        ease: "easeOut",
-      },
-    },
-  };
-
   return (
     <AuthRouteGuard>
-      <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
+      <div className="min-h-screen bg-white dark:bg-gray-950">
         {/* Header */}
-        <header className="fixed top-0 w-full z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
-          <div className="w-full px-6 h-16 flex items-center">
-            {/* Logo on the far left */}
-            <Link
-              href="/"
-              className="flex items-center space-x-3 group cursor-pointer"
-            >
-              <Package className="h-6 w-6 text-gray-900 dark:text-white" />
-              <span className="text-xl font-light text-gray-900 dark:text-white">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-950">
+          <div className="max-w-[1600px] mx-auto px-12 lg:px-16 h-16 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3">
+              <span className="text-lg font-light text-gray-900 dark:text-white tracking-wide">
                 ChainVanguard
               </span>
             </Link>
 
-            {/* Push navbar to the right */}
-            <nav className="flex items-center gap-2 ml-auto">
-              <ThemeToggle />
+            <div className="flex items-center gap-3">
               <Link href="/login">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-gray-900 dark:border-white text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-none cursor-pointer text-xs h-9 px-4"
-                >
+                <button className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
                   Back to Login
-                </Button>
+                </button>
               </Link>
               <Link href="/register">
-                <Button
-                  size="sm"
-                  className="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 rounded-none cursor-pointer text-xs h-9 px-4"
-                >
+                <button className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors">
                   Create Account
-                </Button>
+                </button>
               </Link>
-            </nav>
+            </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-[calc(100vh-8rem)]">
-          <div className="w-full max-w-2xl">
+        <div className="flex items-center justify-center min-h-screen py-16 pt-16">
+          <div className="w-full max-w-3xl mx-auto px-12 lg:px-16">
             {/* Progress Bar */}
             <AnimatePresence mode="wait">
               {currentStep > 0 && (
@@ -843,15 +683,15 @@ export default function ForgotPasswordPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mb-6 overflow-hidden"
+                  className="mb-8 overflow-hidden"
                 >
-                  <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
+                  <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-3">
                     <span>
                       Step {currentStep} of {totalSteps}
                     </span>
                     <span>{Math.round(progress)}%</span>
                   </div>
-                  <div className="relative h-1.5 bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                  <div className="relative h-px bg-gray-200 dark:bg-gray-800 overflow-hidden">
                     <motion.div
                       className="h-full bg-gray-900 dark:bg-white transition-all duration-500 ease-out"
                       initial={{ width: 0 }}
@@ -863,7 +703,7 @@ export default function ForgotPasswordPage() {
             </AnimatePresence>
 
             {/* Recovery Card */}
-            <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">
+            <div className="space-y-12">
               {/* Header */}
               <AnimatePresence mode="wait">
                 <motion.div
@@ -871,15 +711,12 @@ export default function ForgotPasswordPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="text-center mb-6"
+                  className="text-center space-y-4"
                 >
-                  <div className="inline-flex items-center justify-center w-12 h-12 mb-3">
-                    {getStepIcon()}
-                  </div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                  <h1 className="text-4xl font-extralight text-gray-900 dark:text-white tracking-tight">
                     {getStepTitle()}
                   </h1>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 font-light max-w-md mx-auto">
                     {getStepDescription()}
                   </p>
                 </motion.div>
@@ -893,69 +730,70 @@ export default function ForgotPasswordPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.3 }}
+                  className="space-y-4"
                 >
                   {/* Step 0: Mode Selection */}
                   {currentStep === 0 && (
                     <div className="space-y-4">
-                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                        <div className="flex items-start gap-2">
-                          <Shield className="h-3.5 w-3.5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                      <div className="border border-gray-200 dark:border-gray-800 p-4">
+                        <div className="flex items-start gap-3">
+                          <ShieldCheckIcon className="h-4 w-4 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
                           <p className="text-xs text-gray-900 dark:text-white">
                             Choose how you want to recover access to your wallet
                           </p>
                         </div>
                       </div>
 
-                      <div className="grid gap-3">
+                      <div className="space-y-0">
                         {/* Known Wallet Option */}
                         <button
                           onClick={() => handleModeSelection("known-wallet")}
-                          className="w-full p-4 text-left border border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer rounded-none"
+                          className="w-full p-6 text-left border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                         >
-                          <div className="flex items-start gap-3">
-                            <Wallet className="h-5 w-5 text-gray-900 dark:text-white mt-0.5" />
+                          <div className="flex items-start gap-4">
+                            <WalletIcon className="h-5 w-5 text-gray-900 dark:text-white mt-0.5" />
                             <div className="flex-1">
-                              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                                 I Know My Wallet
                               </h3>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
                                 Select your wallet and reset password using
                                 recovery phrase
                               </p>
                             </div>
-                            <ChevronRight className="h-4 w-4 text-gray-400 mt-0.5" />
+                            <ChevronRightIcon className="h-4 w-4 text-gray-400 mt-0.5" />
                           </div>
                         </button>
 
                         {/* Forgot Wallet Option */}
                         <button
                           onClick={() => handleModeSelection("forgot-wallet")}
-                          className="w-full p-4 text-left border border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer rounded-none"
+                          className="w-full p-6 text-left border-t-0 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                         >
-                          <div className="flex items-start gap-3">
-                            <Search className="h-5 w-5 text-gray-900 dark:text-white mt-0.5" />
+                          <div className="flex items-start gap-4">
+                            <MagnifyingGlassIcon className="h-5 w-5 text-gray-900 dark:text-white mt-0.5" />
                             <div className="flex-1">
-                              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                                 I Forgot My Wallet
                               </h3>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
                                 Use recovery phrase to find wallet, then reset
                                 password
                               </p>
                             </div>
-                            <ChevronRight className="h-4 w-4 text-gray-400 mt-0.5" />
+                            <ChevronRightIcon className="h-4 w-4 text-gray-400 mt-0.5" />
                           </div>
                         </button>
                       </div>
 
-                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                        <div className="flex items-start gap-2">
-                          <BadgeCheck className="h-3.5 w-3.5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                      <div className="border border-gray-200 dark:border-gray-800 p-4">
+                        <div className="flex items-start gap-3">
+                          <CheckBadgeIcon className="h-4 w-4 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
                           <div>
-                            <h4 className="text-xs font-medium text-gray-900 dark:text-white mb-1">
+                            <h4 className="text-xs font-medium text-gray-900 dark:text-white mb-2">
                               What You&apos;ll Need
                             </h4>
-                            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                            <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                               <li>• Your 12-word recovery phrase</li>
                               <li>• Words in the correct order</li>
                               <li>• Correctly spelled words</li>
@@ -969,9 +807,9 @@ export default function ForgotPasswordPage() {
                   {/* Known Wallet Flow - Step 1: Select Wallet */}
                   {recoveryMode === "known-wallet" && currentStep === 1 && (
                     <div className="space-y-4">
-                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                        <div className="flex items-start gap-2">
-                          <Shield className="h-3.5 w-3.5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                      <div className="border border-gray-200 dark:border-gray-800 p-4">
+                        <div className="flex items-start gap-3">
+                          <ShieldCheckIcon className="h-4 w-4 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
                           <p className="text-xs text-gray-900 dark:text-white">
                             Have your 12-word recovery phrase ready before
                             continuing
@@ -980,159 +818,177 @@ export default function ForgotPasswordPage() {
                       </div>
 
                       {/* Wallet Input Mode Toggle */}
-                      <div className="flex p-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <div className="flex border border-gray-200 dark:border-gray-800">
                         <button
+                          type="button"
                           onClick={() => setWalletInputMode("select")}
-                          className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer ${
+                          className={`flex-1 h-11 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors ${
                             walletInputMode === "select"
-                              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                              ? "bg-black dark:bg-white text-white dark:text-black"
+                              : "bg-white dark:bg-gray-950 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                           }`}
                         >
-                          <Wallet className="h-3.5 w-3.5 inline mr-1.5" />
                           Select Wallet
                         </button>
                         <button
+                          type="button"
                           onClick={() => setWalletInputMode("manual")}
-                          className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer ${
+                          className={`flex-1 h-11 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors ${
                             walletInputMode === "manual"
-                              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                              ? "bg-black dark:bg-white text-white dark:text-black"
+                              : "bg-white dark:bg-gray-950 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                           }`}
                         >
-                          <Edit3 className="h-3.5 w-3.5 inline mr-1.5" />
                           Enter Manually
                         </button>
                       </div>
 
-                      <AnimatePresence mode="wait">
-                        {walletInputMode === "select" ? (
-                          <motion.div
-                            key="select"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            transition={{ duration: 0.3 }}
-                            className="space-y-1.5"
-                          >
-                            <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                              <Wallet className="h-3 w-3" />
-                              Select Your Wallet
-                            </Label>
-                            <Select
-                              value={selectedWallet}
-                              onValueChange={(value) => {
-                                setSelectedWallet(value);
-                                if (walletError) setWalletError("");
-                              }}
+                      {/* Wallet Input */}
+                      <div className="relative h-[100px]">
+                        <AnimatePresence mode="wait">
+                          {walletInputMode === "select" ? (
+                            <motion.div
+                              key="select"
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: 20 }}
+                              transition={{ duration: 0.3, ease: "easeInOut" }}
+                              className="absolute inset-0"
                             >
-                              <SelectTrigger className="h-9 w-full border rounded-none bg-white/50 dark:bg-gray-800/50 text-xs hover:border-gray-900 dark:hover:border-white transition-colors">
-                                <SelectValue placeholder="Choose your wallet" />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-none">
-                                {availableWallets.map((wallet) => (
-                                  <SelectItem
-                                    key={wallet.id}
-                                    value={wallet.id}
-                                    className="cursor-pointer py-2 px-2.5"
+                              <div className="space-y-3">
+                                <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                                  Wallet
+                                </label>
+                                <div className="relative">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setShowWalletDropdown(!showWalletDropdown)
+                                    }
+                                    className={`w-full flex items-center justify-between border-b ${
+                                      walletError
+                                        ? "border-red-500 dark:border-red-500"
+                                        : "border-gray-900 dark:border-white"
+                                    } pb-px`}
                                   >
-                                    <div className="flex items-center gap-2">
-                                      <div className="p-1 bg-gray-900 dark:bg-white">
-                                        <Wallet className="h-3 w-3 text-white dark:text-gray-900" />
-                                      </div>
-                                      <div>
-                                        <div className="text-xs font-medium">
-                                          {wallet.name}
-                                        </div>
-                                        <div className="text-xs text-gray-500 font-mono">
-                                          {formatAddress(wallet.address)}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                                {availableWallets.length === 0 && (
-                                  <SelectItem value="no-wallet" disabled>
-                                    No wallets found
-                                  </SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="manual"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                            className="space-y-1.5"
-                          >
-                            <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                              <Edit3 className="h-3 w-3" />
-                              Enter Wallet Address
-                            </Label>
-                            <Input
-                              type="text"
-                              placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
-                              value={manualWalletAddress}
-                              onChange={(e) => {
-                                setManualWalletAddress(e.target.value);
-                                if (walletError) setWalletError("");
-                              }}
-                              className="h-9 border rounded-none bg-white/50 dark:bg-gray-800/50 font-mono text-xs placeholder:text-xs hover:border-gray-900 dark:hover:border-white transition-colors cursor-text"
-                            />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                                    <span className="h-12 flex items-center text-sm text-gray-900 dark:text-white">
+                                      {getSelectedWalletName()}
+                                    </span>
+                                    <ChevronDownIcon
+                                      className={`h-4 w-4 text-gray-400 transition-transform ${
+                                        showWalletDropdown ? "rotate-180" : ""
+                                      }`}
+                                    />
+                                  </button>
 
-                      {walletError && (
-                        <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          {walletError}
-                        </p>
-                      )}
-
-                      <AnimatePresence>
-                        {(selectedWallet ||
-                          (manualWalletAddress &&
-                            manualWalletAddress.length > 10)) && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10, height: 0 }}
-                            animate={{ opacity: 1, y: 0, height: "auto" }}
-                            exit={{ opacity: 0, y: -10, height: 0 }}
-                            transition={{ duration: 0.4 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="p-3 bg-cyan-50/50 dark:bg-cyan-950/20 rounded-xl border border-cyan-200 dark:border-cyan-800">
-                              <div className="flex items-start gap-2.5">
-                                <BadgeCheck className="h-3.5 w-3.5 text-cyan-600 flex-shrink-0 mt-0.5" />
-                                <div>
-                                  <h4 className="text-xs font-semibold text-cyan-900 dark:text-cyan-100 mb-1.5">
-                                    Next Step
-                                  </h4>
-                                  <ul className="text-xs text-cyan-800 dark:text-cyan-200 space-y-0.5 leading-relaxed">
-                                    <li>
-                                      • Enter your 12-word recovery phrase
-                                    </li>
-                                    <li>• Words must be in correct order</li>
-                                    <li>• Check spelling carefully</li>
-                                  </ul>
+                                  {showWalletDropdown && (
+                                    <>
+                                      <div
+                                        className="fixed inset-0 z-10"
+                                        onClick={() =>
+                                          setShowWalletDropdown(false)
+                                        }
+                                      />
+                                      <div className="absolute z-20 w-full mt-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 max-h-64 overflow-y-auto">
+                                        {availableWallets.length > 0 ? (
+                                          availableWallets.map((wallet) => (
+                                            <button
+                                              key={wallet.id}
+                                              type="button"
+                                              onClick={() => {
+                                                setSelectedWallet(wallet.id);
+                                                setShowWalletDropdown(false);
+                                                if (walletError)
+                                                  setWalletError("");
+                                              }}
+                                              className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-0"
+                                            >
+                                              <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                                {wallet.name}
+                                              </p>
+                                              <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
+                                                {formatAddress(wallet.address)}
+                                              </p>
+                                            </button>
+                                          ))
+                                        ) : (
+                                          <div className="p-4">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                              No wallets found
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                              <div className="h-4 mt-1">
+                                {walletError && (
+                                  <div className="flex items-center gap-2">
+                                    <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                                    <p className="text-xs text-red-500">
+                                      {walletError}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              key="manual"
+                              initial={{ opacity: 0, x: 20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: -20 }}
+                              transition={{ duration: 0.3, ease: "easeInOut" }}
+                              className="absolute inset-0"
+                            >
+                              <div className="space-y-3">
+                                <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                                  Wallet Address
+                                </label>
+                                <div
+                                  className={`border-b ${
+                                    walletError
+                                      ? "border-red-500 dark:border-red-500"
+                                      : "border-gray-900 dark:border-white"
+                                  } pb-px`}
+                                >
+                                  <input
+                                    type="text"
+                                    placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+                                    value={manualWalletAddress}
+                                    onChange={(e) => {
+                                      setManualWalletAddress(e.target.value);
+                                      if (walletError) setWalletError("");
+                                    }}
+                                    className="w-full h-12 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none font-mono"
+                                  />
+                                </div>
+                              </div>
+                              <div className="h-4 mt-1">
+                                {walletError && (
+                                  <div className="flex items-center gap-2">
+                                    <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                                    <p className="text-xs text-red-500">
+                                      {walletError}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </div>
                   )}
 
                   {/* Forgot Wallet Flow - Step 1: Enter Recovery Phrase */}
                   {recoveryMode === "forgot-wallet" && currentStep === 1 && (
                     <div className="space-y-4">
-                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                        <div className="flex items-start gap-2">
-                          <Search className="h-3.5 w-3.5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                      <div className="border border-gray-200 dark:border-gray-800 p-4">
+                        <div className="flex items-start gap-3">
+                          <MagnifyingGlassIcon className="h-4 w-4 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
                           <p className="text-xs text-gray-900 dark:text-white">
                             Enter your recovery phrase and we&apos;ll locate
                             your wallet
@@ -1140,56 +996,62 @@ export default function ForgotPasswordPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                          <KeyRound className="h-3 w-3" />
-                          Recovery Phrase (12 words)
-                        </Label>
-                        <textarea
-                          className="w-full p-3 border border-gray-200 dark:border-gray-700 hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white rounded-none resize-none h-24 transition-colors cursor-text bg-white/50 dark:bg-gray-800/50 font-mono text-xs placeholder:text-xs focus:outline-none"
-                          placeholder="Enter your 12-word recovery phrase separated by spaces"
-                          value={recoveryPhrase}
-                          onChange={(e) => {
-                            setRecoveryPhrase(e.target.value);
-                            if (recoveryPhraseError) setRecoveryPhraseError("");
-                          }}
-                        />
-                        <div className="flex items-center justify-between text-xs">
-                          <span
-                            className={
-                              phraseWords.length === 12
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-gray-500 dark:text-gray-400"
-                            }
-                          >
-                            {phraseWords.length} / 12 words
-                          </span>
-                          {phraseWords.length === 12 && (
-                            <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Valid count
+                      <div>
+                        <div className="space-y-3">
+                          <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                            Recovery Phrase (12 words)
+                          </label>
+                          <textarea
+                            className="w-full p-3 border border-gray-200 dark:border-gray-800 resize-none h-24 transition-colors bg-transparent font-mono text-sm placeholder-gray-400 focus:outline-none focus:border-gray-900 dark:focus:border-white"
+                            placeholder="Enter your 12-word recovery phrase separated by spaces"
+                            value={recoveryPhrase}
+                            onChange={(e) => {
+                              setRecoveryPhrase(e.target.value);
+                              if (recoveryPhraseError)
+                                setRecoveryPhraseError("");
+                            }}
+                          />
+                          <div className="flex items-center justify-between text-xs">
+                            <span
+                              className={
+                                phraseWords.length === 12
+                                  ? "text-green-600 dark:text-green-400"
+                                  : "text-gray-500 dark:text-gray-400"
+                              }
+                            >
+                              {phraseWords.length} / 12 words
                             </span>
+                            {phraseWords.length === 12 && (
+                              <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                <CheckCircleIcon className="h-3 w-3" />
+                                Valid count
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="h-4 mt-1">
+                          {recoveryPhraseError && (
+                            <div className="flex items-center gap-2">
+                              <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                              <p className="text-xs text-red-500">
+                                {recoveryPhraseError}
+                              </p>
+                            </div>
                           )}
                         </div>
-                        {recoveryPhraseError && (
-                          <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                            <AlertTriangle className="h-3 w-3" />
-                            {recoveryPhraseError}
-                          </p>
-                        )}
                       </div>
 
                       {/* Word Preview Grid */}
                       {phraseWords.length > 0 && (
-                        <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                          <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <div className="border border-gray-200 dark:border-gray-800 p-4">
+                          <h4 className="text-xs font-medium text-gray-900 dark:text-white mb-3 uppercase tracking-[0.1em]">
                             Word Preview
                           </h4>
                           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                             {phraseWords.slice(0, 12).map((word, index) => (
                               <div
                                 key={index}
-                                className="flex items-center gap-1.5 p-1.5 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700"
+                                className="flex items-center gap-1.5 p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800"
                               >
                                 <span className="text-xs text-gray-500 dark:text-gray-400">
                                   {index + 1}.
@@ -1208,9 +1070,9 @@ export default function ForgotPasswordPage() {
                   {/* Step 2: Known Wallet - Recovery Phrase */}
                   {recoveryMode === "known-wallet" && currentStep === 2 && (
                     <div className="space-y-4">
-                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="h-3.5 w-3.5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                      <div className="border border-gray-200 dark:border-gray-800 p-4">
+                        <div className="flex items-start gap-3">
+                          <ExclamationTriangleIcon className="h-4 w-4 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
                           <p className="text-xs text-gray-900 dark:text-white">
                             Enter your recovery phrase exactly as provided. All
                             12 words in order.
@@ -1218,52 +1080,61 @@ export default function ForgotPasswordPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                          <KeyRound className="h-3 w-3" />
-                          Recovery Phrase (12 words)
-                        </Label>
-                        <textarea
-                          className="w-full p-3 border border-gray-200 dark:border-gray-700 hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white rounded-none resize-none h-24 transition-colors cursor-text bg-white/50 dark:bg-gray-800/50 font-mono text-xs placeholder:text-xs focus:outline-none"
-                          placeholder="Enter your 12-word recovery phrase separated by spaces"
-                          value={recoveryPhrase}
-                          onChange={(e) => setRecoveryPhrase(e.target.value)}
-                        />
-                        <div className="flex items-center justify-between text-xs">
-                          <span
-                            className={
-                              phraseWords.length === 12
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-gray-500 dark:text-gray-400"
-                            }
-                          >
-                            {phraseWords.length} / 12 words
-                          </span>
-                          {phraseWords.length === 12 && (
-                            <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Valid count
+                      <div>
+                        <div className="space-y-3">
+                          <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                            Recovery Phrase (12 words)
+                          </label>
+                          <textarea
+                            className="w-full p-3 border border-gray-200 dark:border-gray-800 resize-none h-24 transition-colors bg-transparent font-mono text-sm placeholder-gray-400 focus:outline-none focus:border-gray-900 dark:focus:border-white"
+                            placeholder="Enter your 12-word recovery phrase separated by spaces"
+                            value={recoveryPhrase}
+                            onChange={(e) => {
+                              setRecoveryPhrase(e.target.value);
+                              if (recoveryPhraseError)
+                                setRecoveryPhraseError("");
+                            }}
+                          />
+                          <div className="flex items-center justify-between text-xs">
+                            <span
+                              className={
+                                phraseWords.length === 12
+                                  ? "text-green-600 dark:text-green-400"
+                                  : "text-gray-500 dark:text-gray-400"
+                              }
+                            >
+                              {phraseWords.length} / 12 words
                             </span>
+                            {phraseWords.length === 12 && (
+                              <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                <CheckCircleIcon className="h-3 w-3" />
+                                Valid count
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="h-4 mt-1">
+                          {recoveryPhraseError && (
+                            <div className="flex items-center gap-2">
+                              <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                              <p className="text-xs text-red-500">
+                                {recoveryPhraseError}
+                              </p>
+                            </div>
                           )}
                         </div>
-                        {recoveryPhraseError && (
-                          <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                            <AlertTriangle className="h-3 w-3" />
-                            {recoveryPhraseError}
-                          </p>
-                        )}
                       </div>
 
                       {phraseWords.length > 0 && (
-                        <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                          <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <div className="border border-gray-200 dark:border-gray-800 p-4">
+                          <h4 className="text-xs font-medium text-gray-900 dark:text-white mb-3 uppercase tracking-[0.1em]">
                             Word Preview
                           </h4>
                           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                             {phraseWords.slice(0, 12).map((word, index) => (
                               <div
                                 key={index}
-                                className="flex items-center gap-1.5 p-1.5 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700"
+                                className="flex items-center gap-1.5 p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800"
                               >
                                 <span className="text-xs text-gray-500 dark:text-gray-400">
                                   {index + 1}.
@@ -1284,9 +1155,9 @@ export default function ForgotPasswordPage() {
                     currentStep === 2 &&
                     recoveredWallet && (
                       <div className="space-y-4">
-                        <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                          <div className="flex items-start gap-2">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div className="border border-gray-200 dark:border-gray-800 p-4">
+                          <div className="flex items-start gap-3">
+                            <CheckCircleIcon className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                             <p className="text-xs text-gray-900 dark:text-white">
                               Wallet found! Confirm this is correct before
                               proceeding
@@ -1294,18 +1165,16 @@ export default function ForgotPasswordPage() {
                           </div>
                         </div>
 
-                        <div className="p-4 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 bg-gray-900 dark:bg-white">
-                              <Wallet className="h-5 w-5 text-white dark:text-gray-900" />
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                        <div className="border border-gray-200 dark:border-gray-800 p-6">
+                          <div className="flex items-start gap-4">
+                            <WalletIcon className="h-6 w-6 text-gray-900 dark:text-white" />
+                            <div className="flex-1 space-y-3">
+                              <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                                 {recoveredWallet.name}
                               </h3>
-                              <div className="space-y-1.5">
-                                <div className="flex items-center justify-between p-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700">
-                                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-800">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-[0.1em]">
                                     Address
                                   </span>
                                   <span className="text-xs font-mono font-medium text-gray-900 dark:text-white">
@@ -1322,9 +1191,9 @@ export default function ForgotPasswordPage() {
                   {/* Step 3: New Password (Both Flows) */}
                   {currentStep === 3 && (
                     <div className="space-y-4">
-                      <div className="p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                        <div className="flex items-start gap-2">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div className="border border-gray-200 dark:border-gray-800 p-4">
+                        <div className="flex items-start gap-3">
+                          <CheckCircleIcon className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                           <p className="text-xs text-gray-900 dark:text-white">
                             {recoveryMode === "forgot-wallet"
                               ? "Wallet verified! Create a new secure password"
@@ -1333,135 +1202,166 @@ export default function ForgotPasswordPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <div>
-                          <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                            <Lock className="h-3 w-3" />
-                            New Password
-                          </Label>
-                          <div className="relative mt-1">
-                            <Input
-                              type={showNewPassword ? "text" : "password"}
-                              placeholder="Minimum 8 characters"
-                              value={newPassword}
-                              onFocus={() => {
-                                setPasswordFocused(true);
-                                if (newPasswordError) setNewPasswordError("");
-                              }}
-                              onBlur={() => setPasswordFocused(false)}
-                              onChange={(e) => {
-                                setNewPassword(e.target.value);
-                                if (newPasswordError) setNewPasswordError("");
-                              }}
-                              className="h-9 pr-9 border rounded-none bg-white/50 dark:bg-gray-800/50 text-xs placeholder:text-xs hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-colors cursor-text"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-0 top-0 h-9 w-9 cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900"
-                              onClick={() =>
-                                setShowNewPassword(!showNewPassword)
-                              }
-                            >
-                              {showNewPassword ? (
-                                <EyeOff className="h-3.5 w-3.5" />
-                              ) : (
-                                <Eye className="h-3.5 w-3.5" />
-                              )}
-                            </Button>
-                          </div>
-
-                          {/* Password Strength Indicator */}
-                          <motion.div
-                            initial={false}
-                            animate={
-                              passwordFocused || newPassword.length > 0
-                                ? { height: "auto", opacity: 1, marginTop: 12 }
-                                : { height: 0, opacity: 0, marginTop: 0 }
-                            }
-                            transition={{ duration: 0.3 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 rounded-none px-3 py-2 space-y-1.5">
-                              <div className="flex items-center gap-1.5 text-xs">
-                                <Check
-                                  className={`h-3.5 w-3.5 ${passwordChecks.length ? "text-green-500" : "text-red-500"}`}
-                                />
-                                <span className="text-xs">
-                                  At least 8 characters
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-xs">
-                                <Check
-                                  className={`h-3.5 w-3.5 ${passwordChecks.uppercase ? "text-green-500" : "text-red-500"}`}
-                                />
-                                <span className="text-xs">
-                                  One uppercase letter
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-xs">
-                                <Check
-                                  className={`h-3.5 w-3.5 ${passwordChecks.special ? "text-green-500" : "text-red-500"}`}
-                                />
-                                <span className="text-xs">
-                                  One special character
-                                </span>
+                          <div className="space-y-3">
+                            <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                              New Password
+                            </label>
+                            <div className="relative">
+                              <div
+                                className={`border-b ${
+                                  newPasswordError
+                                    ? "border-red-500 dark:border-red-500"
+                                    : "border-gray-900 dark:border-white"
+                                } pb-px`}
+                              >
+                                <div className="flex items-center">
+                                  <input
+                                    type={showNewPassword ? "text" : "password"}
+                                    placeholder="Minimum 8 characters"
+                                    value={newPassword}
+                                    onFocus={() => {
+                                      setPasswordFocused(true);
+                                      if (newPasswordError)
+                                        setNewPasswordError("");
+                                    }}
+                                    onBlur={() => setPasswordFocused(false)}
+                                    onChange={(e) => {
+                                      setNewPassword(e.target.value);
+                                      if (newPasswordError)
+                                        setNewPasswordError("");
+                                    }}
+                                    className="flex-1 h-12 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setShowNewPassword(!showNewPassword)
+                                    }
+                                    className="h-12 px-3 -mr-3 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                  >
+                                    {showNewPassword ? (
+                                      <EyeSlashIcon className="h-4 w-4" />
+                                    ) : (
+                                      <EyeIcon className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                          </motion.div>
+                          </div>
 
-                          {newPasswordError && (
-                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
-                              <AlertTriangle className="h-3 w-3" />
-                              {newPasswordError}
-                            </p>
-                          )}
+                          <div className="h-4 mt-1">
+                            {newPasswordError && (
+                              <div className="flex items-center gap-2">
+                                <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                                <p className="text-xs text-red-500">
+                                  {newPasswordError}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-3">
+                            {/* Password Strength Indicator */}
+                            <motion.div
+                              initial={false}
+                              animate={
+                                passwordFocused || newPassword.length > 0
+                                  ? {
+                                      height: "auto",
+                                      opacity: 1,
+                                    }
+                                  : { height: 0, opacity: 0 }
+                              }
+                              transition={{ duration: 0.3 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="border border-gray-200 dark:border-gray-800 p-3 space-y-2">
+                                <div className="flex items-center gap-2 text-xs">
+                                  <CheckIcon
+                                    className={`h-3.5 w-3.5 ${passwordChecks.length ? "text-green-500" : "text-red-500"}`}
+                                  />
+                                  <span>At least 8 characters</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs">
+                                  <CheckIcon
+                                    className={`h-3.5 w-3.5 ${passwordChecks.uppercase ? "text-green-500" : "text-red-500"}`}
+                                  />
+                                  <span>One uppercase letter</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs">
+                                  <CheckIcon
+                                    className={`h-3.5 w-3.5 ${passwordChecks.special ? "text-green-500" : "text-red-500"}`}
+                                  />
+                                  <span>One special character</span>
+                                </div>
+                              </div>
+                            </motion.div>
+                          </div>
                         </div>
 
                         <div>
-                          <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                            <Lock className="h-3 w-3" />
-                            Confirm New Password
-                          </Label>
-                          <div className="relative mt-1">
-                            <Input
-                              type={showConfirmPassword ? "text" : "password"}
-                              placeholder="Re-enter your password"
-                              value={confirmPassword}
-                              onFocus={() => {
-                                if (confirmPasswordError)
-                                  setConfirmPasswordError("");
-                              }}
-                              onChange={(e) => {
-                                setConfirmPassword(e.target.value);
-                                if (confirmPasswordError)
-                                  setConfirmPasswordError("");
-                              }}
-                              className="h-9 pr-9 border rounded-none bg-white/50 dark:bg-gray-800/50 text-xs placeholder:text-xs hover:border-gray-900 dark:hover:border-white focus:border-gray-900 dark:focus:border-white transition-colors cursor-text"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-0 top-0 h-9 w-9 cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900"
-                              onClick={() =>
-                                setShowConfirmPassword(!showConfirmPassword)
-                              }
-                            >
-                              {showConfirmPassword ? (
-                                <EyeOff className="h-3.5 w-3.5" />
-                              ) : (
-                                <Eye className="h-3.5 w-3.5" />
-                              )}
-                            </Button>
+                          <div className="space-y-3">
+                            <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                              Confirm New Password
+                            </label>
+                            <div className="relative">
+                              <div
+                                className={`border-b ${
+                                  confirmPasswordError
+                                    ? "border-red-500 dark:border-red-500"
+                                    : "border-gray-900 dark:border-white"
+                                } pb-px`}
+                              >
+                                <div className="flex items-center">
+                                  <input
+                                    type={
+                                      showConfirmPassword ? "text" : "password"
+                                    }
+                                    placeholder="Re-enter your password"
+                                    value={confirmPassword}
+                                    onFocus={() => {
+                                      if (confirmPasswordError)
+                                        setConfirmPasswordError("");
+                                    }}
+                                    onChange={(e) => {
+                                      setConfirmPassword(e.target.value);
+                                      if (confirmPasswordError)
+                                        setConfirmPasswordError("");
+                                    }}
+                                    className="flex-1 h-12 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setShowConfirmPassword(
+                                        !showConfirmPassword
+                                      )
+                                    }
+                                    className="h-12 px-3 -mr-3 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                  >
+                                    {showConfirmPassword ? (
+                                      <EyeSlashIcon className="h-4 w-4" />
+                                    ) : (
+                                      <EyeIcon className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          {confirmPasswordError && (
-                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
-                              <AlertTriangle className="h-3 w-3" />
-                              {confirmPasswordError}
-                            </p>
-                          )}
+                          <div className="h-4 mt-1">
+                            {confirmPasswordError && (
+                              <div className="flex items-center gap-2">
+                                <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                                <p className="text-xs text-red-500">
+                                  {confirmPasswordError}
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1470,42 +1370,38 @@ export default function ForgotPasswordPage() {
               </AnimatePresence>
 
               {/* Navigation Buttons */}
-              <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between pt-8 border-t border-gray-200 dark:border-gray-800">
                 {currentStep === 0 ? (
                   <Link href="/login">
-                    <Button
-                      variant="outline"
-                      className="flex items-center gap-1.5 cursor-pointer border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-xs h-9 px-3 rounded-none"
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" />
+                    <button className="border border-black dark:border-white text-black dark:text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2">
+                      <ArrowLeftIcon className="h-3.5 w-3.5" />
                       Back to Login
-                    </Button>
+                    </button>
                   </Link>
                 ) : (
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
                     onClick={prevStep}
                     disabled={isLoading || isRecoveringWallet}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed h-9 rounded-none cursor-pointer"
+                    className="border border-black dark:border-white text-black dark:text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <ChevronLeftIcon className="h-3.5 w-3.5" />
                     {currentStep === 1 ? "Change Method" : "Previous"}
-                  </Button>
+                  </button>
                 )}
 
                 {currentStep === 0 ? (
                   <div />
                 ) : currentStep < totalSteps ? (
-                  <Button
+                  <button
                     type="button"
                     onClick={handleContinue}
                     disabled={isRecoveringWallet || isLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-9 rounded-none"
+                    className="bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {isRecoveringWallet || isLoading ? (
                       <>
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
                         {isRecoveringWallet
                           ? "Finding Wallet..."
                           : "Verifying..."}
@@ -1515,57 +1411,57 @@ export default function ForgotPasswordPage() {
                         {recoveryMode === "forgot-wallet" &&
                         currentStep === 1 ? (
                           <>
-                            <Search className="h-3.5 w-3.5" />
+                            <MagnifyingGlassIcon className="h-3.5 w-3.5" />
                             Find My Wallet
                           </>
                         ) : (
                           <>
                             Continue
-                            <ChevronRight className="h-3.5 w-3.5" />
+                            <ChevronRightIcon className="h-3.5 w-3.5" />
                           </>
                         )}
                       </>
                     )}
-                  </Button>
+                  </button>
                 ) : (
-                  <Button
+                  <button
                     type="button"
                     onClick={handleResetPassword}
                     disabled={!isStepValid(totalSteps) || isLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-9 rounded-none"
+                    className="bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {isLoading ? (
                       <>
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
                         Resetting...
                       </>
                     ) : (
                       <>
-                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <CheckCircleIcon className="h-3.5 w-3.5" />
                         Reset Password
                       </>
                     )}
-                  </Button>
+                  </button>
                 )}
               </div>
             </div>
 
             {/* Help Links */}
-            <div className="mt-4 text-center space-y-1">
-              <p className="text-xs text-gray-600 dark:text-gray-400">
+            <div className="mt-8 text-center space-y-2 pt-8 border-t border-gray-200 dark:border-gray-800">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 Remember your password?{" "}
                 <Link
                   href="/login"
-                  className="text-gray-900 dark:text-white font-medium hover:underline transition-colors cursor-pointer"
+                  className="text-gray-900 dark:text-white hover:underline transition-colors"
                 >
                   Sign In
                 </Link>
               </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 Don&apos;t have a wallet?{" "}
                 <Link
                   href="/register"
-                  className="text-gray-900 dark:text-white font-medium hover:underline transition-colors cursor-pointer"
+                  className="text-gray-900 dark:text-white hover:underline transition-colors"
                 >
                   Create New Wallet
                 </Link>
@@ -1576,7 +1472,7 @@ export default function ForgotPasswordPage() {
 
         {/* Network Status */}
         <div className="fixed bottom-4 right-4 hidden sm:block">
-          <div className="bg-white dark:bg-gray-900 backdrop-blur-sm border border-gray-200 dark:border-gray-700 px-4 py-2 transition-all duration-200 cursor-pointer rounded-none">
+          <div className="bg-white dark:bg-gray-900 backdrop-blur-sm border border-gray-200 dark:border-gray-700 px-4 py-2 transition-all duration-200">
             <div className="flex items-center gap-1.5 text-xs">
               <div className="w-1.5 h-1.5 bg-green-500 animate-pulse" />
               <span className="text-gray-600 dark:text-gray-400">
