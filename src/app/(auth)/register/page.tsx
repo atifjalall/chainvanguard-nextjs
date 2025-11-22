@@ -179,6 +179,7 @@ export default function RegisterPage() {
   const [otpError, setOtpError] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
   // Dropdown states
@@ -353,8 +354,11 @@ export default function RegisterPage() {
     }
   };
 
-  const verifyOtp = async () => {
-    const otpValue = otp.join("");
+  const verifyOtp = async (otpArray?: string[]) => {
+    // Use provided OTP array or fallback to state
+    const otpToVerify = otpArray || otp;
+    const otpValue = otpToVerify.join("");
+
     if (otpValue.length !== 6) {
       setOtpError(true);
       toast.error("Please enter all 6 digits");
@@ -379,6 +383,39 @@ export default function RegisterPage() {
       }
 
       toast.success("Email verified successfully!");
+      setOtpVerified(true);
+
+      // Send welcome email with wallet details
+      const userData = localStorage.getItem("chainvanguard_auth_user");
+      if (userData && recoveryPhrase) {
+        try {
+          const user = JSON.parse(userData);
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"}/auth/send-welcome-email`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: user.email,
+                name: user.name,
+                walletAddress: user.walletAddress,
+                walletName: walletName,
+                mnemonic: recoveryPhrase,
+                role: user.role,
+                city: user.city,
+                state: user.state,
+                country: user.country,
+              }),
+            }
+          );
+          console.log("✅ Welcome email sent");
+          toast.success("Welcome email sent! Check your inbox for wallet details.");
+        } catch (emailError) {
+          console.error("Failed to send welcome email:", emailError);
+          // Don't block the flow if email fails
+        }
+      }
+
       nextStep();
     } catch (error: any) {
       setOtpError(true);
@@ -403,8 +440,10 @@ export default function RegisterPage() {
       document.getElementById(`otp-${index + 1}`)?.focus();
     }
 
+    // Auto-verify when all 6 digits are entered
     if (newOtp.every((digit) => digit !== "")) {
-      verifyOtp();
+      // Pass the new OTP array directly to avoid state race condition
+      verifyOtp(newOtp);
     }
   };
 
@@ -735,6 +774,11 @@ export default function RegisterPage() {
   };
 
   const handleComplete = async () => {
+    if (!otpVerified) {
+      toast.error("Please verify your email first");
+      return;
+    }
+
     if (!backupConfirmed) {
       toast.error("Please confirm you have backed up your recovery phrase");
       return;
@@ -2276,7 +2320,7 @@ export default function RegisterPage() {
                 ) : currentStep === totalSteps - 1 ? (
                   <button
                     type="button"
-                    onClick={verifyOtp}
+                    onClick={() => verifyOtp()}
                     disabled={isVerifyingOtp || otp.some((d) => !d)}
                     className={`bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2 ${
                       isVerifyingOtp || otp.some((d) => !d)
@@ -2300,8 +2344,8 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={handleComplete}
-                    disabled={!backupConfirmed}
-                    className={`bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2 ${!backupConfirmed ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={!backupConfirmed || !otpVerified}
+                    className={`bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2 ${!backupConfirmed || !otpVerified ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <BoltIcon className="h-3.5 w-3.5" />
                     Complete Setup

@@ -239,11 +239,13 @@ class CustomerBrowseService {
         images: product.images,
         category: product.category,
         subcategory: product.subcategory,
-        stock: product.quantity,
+        quantity: product.quantity, // Changed from 'stock' to 'quantity' for frontend consistency
         stockStatus: this._getStockStatus(product.quantity),
         minStockLevel: product.minStockLevel,
         sku: product.sku,
-        brand: product.brand,
+        slug: product.slug,
+        color: product.color || product.apparelDetails?.color, // Populate from apparelDetails if not set
+        size: product.size || product.apparelDetails?.size, // Populate from apparelDetails if not set
 
         // Ratings & Reviews
         rating: {
@@ -294,8 +296,9 @@ class CustomerBrowseService {
 
         // Shipping
         shipping: {
-          isFreeShipping: product.shippingInfo?.isFreeShipping || false,
-          estimatedDays: product.shippingInfo?.estimatedDeliveryDays || "5-7",
+          isFreeShipping: product.freeShipping || false,
+          cost: product.shippingCost || 0,
+          estimatedDays: product.estimatedDeliveryDays || "5-7",
           weight: product.shippingInfo?.weight,
           dimensions: product.shippingInfo?.dimensions,
         },
@@ -334,6 +337,11 @@ class CustomerBrowseService {
           businessType: product.sellerId.businessType,
           memberSince: product.sellerId.createdAt,
         };
+
+        // Add sellerName and sellerId for frontend compatibility
+        productDetails.sellerName =
+          product.sellerId.companyName || product.sellerId.name;
+        productDetails.sellerId = product.sellerId._id;
 
         // Get vendor stats
         const [productCount, avgRating] = await Promise.all([
@@ -445,8 +453,8 @@ class CustomerBrowseService {
       );
 
       return {
-        relatedProducts,
-        count: relatedProducts.length,
+        success: true,
+        products: relatedProducts,
       };
     } catch (error) {
       logger.error("Error in getRelatedProducts:", error);
@@ -469,32 +477,99 @@ class CustomerBrowseService {
       const priceMin = price * 0.7;
       const priceMax = price * 1.3;
 
+      // Get the base product to access tags and brand
+      const baseProduct = await Product.findById(productId).select(
+        "tags brand category subcategory"
+      );
+
+      console.log("Base product for related products:", baseProduct);
+      console.log(
+        "Query params - category:",
+        category,
+        "subcategory:",
+        subcategory,
+        "priceMin:",
+        priceMin,
+        "priceMax:",
+        priceMax
+      );
+
       const relatedProducts = await Product.find({
         _id: { $ne: productId },
         status: "active",
+        quantity: { $gt: 0 }, // Only in-stock products
         $or: [
           { category, subcategory }, // Same subcategory
           { category, price: { $gte: priceMin, $lte: priceMax } }, // Same category, similar price
+          { brand: baseProduct.brand, _id: { $ne: productId } }, // Same brand
+          { tags: { $in: baseProduct.tags } }, // Similar tags
         ],
       })
         .select(
           "name price discountPrice images category subcategory quantity " +
-            "averageRating totalReviews brand sellerId"
+            "averageRating totalReviews brand sellerId tags"
         )
         .populate("sellerId", "name companyName")
         .sort({ averageRating: -1, totalSold: -1 })
-        .limit(limit)
+        .limit(limit * 2) // Get more to allow mixing
         .lean();
 
-      return relatedProducts.map((p) => ({
+      console.log(
+        "Raw related products found:",
+        relatedProducts.length,
+        relatedProducts
+      );
+
+      // Mix the results: prioritize same subcategory, then same category, then brand, then tags
+      const sameSubcategory = relatedProducts.filter(
+        (p) => p.category === category && p.subcategory === subcategory
+      );
+      const sameCategory = relatedProducts.filter(
+        (p) => p.category === category && p.subcategory !== subcategory
+      );
+      const sameBrand = relatedProducts.filter(
+        (p) => p.brand === baseProduct.brand && p.category !== category
+      );
+      const similarTags = relatedProducts.filter(
+        (p) =>
+          p.tags.some((tag) => baseProduct.tags.includes(tag)) &&
+          !sameSubcategory.includes(p) &&
+          !sameCategory.includes(p) &&
+          !sameBrand.includes(p)
+      );
+
+      console.log(
+        "Categorized related products - sameSubcategory:",
+        sameSubcategory.length,
+        "sameCategory:",
+        sameCategory.length,
+        "sameBrand:",
+        sameBrand.length,
+        "similarTags:",
+        similarTags.length
+      );
+
+      // Combine and limit to ensure variety
+      const mixedProducts = [
+        ...sameSubcategory.slice(0, Math.ceil(limit * 0.4)), // 40% same subcategory
+        ...sameCategory.slice(0, Math.ceil(limit * 0.3)), // 30% same category
+        ...sameBrand.slice(0, Math.ceil(limit * 0.2)), // 20% same brand
+        ...similarTags.slice(0, Math.ceil(limit * 0.1)), // 10% similar tags
+      ].slice(0, limit); // Limit to requested number
+
+      console.log(
+        "Final mixed related products:",
+        mixedProducts.length,
+        mixedProducts
+      );
+
+      return mixedProducts.map((p) => ({
         id: p._id,
         name: p.name,
         price: p.price,
-        discountPrice: p.discountPrice,
-        finalPrice: p.discountPrice || p.price,
-        mainImage: p.images?.find((img) => img.isMain) || p.images?.[0],
-        category: p.category,
-        subcategory: p.subcategory,
+        costPrice: p.discountPrice,
+        images: p.images,
+        quantity: p.quantity,
         inStock: p.quantity > 0,
         rating: p.averageRating || 0,
         reviewCount: p.totalReviews || 0,
@@ -1314,6 +1389,55 @@ class CustomerBrowseService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     return new Date(createdAt) > thirtyDaysAgo;
+  }
+
+  /**
+   * Get similar products based on category
+   * @param {string} category - Category to find similar products for
+   * @param {number} limit - Number of products to return
+   * @returns {Promise<Object>} - Similar products
+   */
+  async getSimilarProducts(category, limit = 10) {
+    try {
+      const products = await Product.find({
+        category,
+        status: "active",
+        quantity: { $gt: 0 },
+        sellerId: { $exists: true, $type: "objectId" },
+      })
+        .select(
+          "name price discountPrice images category subcategory quantity " +
+            "averageRating totalReviews brand sellerId"
+        )
+        .populate("sellerId", "name companyName")
+        .sort({ averageRating: -1, totalSold: -1 })
+        .limit(limit)
+        .lean();
+
+      return {
+        products: products.map((p) => ({
+          _id: p._id,
+          id: p._id,
+          name: p.name,
+          price: p.price,
+          discountPrice: p.discountPrice,
+          originalPrice: p.discountPrice,
+          images: p.images,
+          quantity: p.quantity,
+          inStock: p.quantity > 0,
+          category: p.category,
+          subcategory: p.subcategory,
+          rating: p.averageRating || 0,
+          totalReviews: p.totalReviews || 0,
+          brand: p.brand,
+          apparelDetails: p.apparelDetails,
+        })),
+        count: products.length,
+      };
+    } catch (error) {
+      logger.error("Error in getSimilarProducts:", error);
+      throw error;
+    }
   }
 }
 

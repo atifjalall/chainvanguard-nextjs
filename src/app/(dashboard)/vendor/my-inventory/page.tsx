@@ -227,22 +227,26 @@ export default function VendorMyInventoryPage() {
       const calculatedStats = {
         totalItems: inventoryData.length,
         totalValue: inventoryData.reduce(
-          (sum: any, item: { cost: { totalCost: any; }; }) => sum + (item.cost?.totalCost || 0),
+          (sum: any, item: { cost: { totalCost: any } }) =>
+            sum + (item.cost?.totalCost || 0),
           0
         ),
         inStockItems: inventoryData.filter(
-          (item: { quantity: { current: number; }; reorderLevel: number; }) => item.quantity?.current > item.reorderLevel
+          (item: { quantity: { current: number }; reorderLevel: number }) =>
+            item.quantity?.current > item.reorderLevel
         ).length,
         lowStockItems: inventoryData.filter(
-          (item: { quantity: { current: number; }; reorderLevel: number; }) =>
+          (item: { quantity: { current: number }; reorderLevel: number }) =>
             item.quantity?.current > 0 &&
             item.quantity?.current <= item.reorderLevel
         ).length,
         outOfStockItems: inventoryData.filter(
-          (item: { quantity: { current: number; }; }) => item.quantity?.current === 0
+          (item: { quantity: { current: number } }) =>
+            item.quantity?.current === 0
         ).length,
         reservedItems: inventoryData.reduce(
-          (sum: any, item: { quantity: { reserved: any; }; }) => sum + (item.quantity?.reserved || 0),
+          (sum: any, item: { quantity: { reserved: any } }) =>
+            sum + (item.quantity?.reserved || 0),
           0
         ),
       };
@@ -438,7 +442,7 @@ export default function VendorMyInventoryPage() {
             {/* Header badges */}
             <div className="flex items-center gap-2 mt-2">
               <Badge
-                className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
               >
                 {stats.totalItems} Items
               </Badge>
@@ -554,7 +558,7 @@ export default function VendorMyInventoryPage() {
                   value={selectedStatus}
                   onValueChange={setSelectedStatus}
                 >
-                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 ${colors.borders.primary} rounded-none cursor-pointer hover:${colors.borders.hover} focus:${colors.borders.focus} outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
@@ -570,7 +574,7 @@ export default function VendorMyInventoryPage() {
                   </SelectContent>
                 </Select>
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 ${colors.borders.primary} rounded-none cursor-pointer hover:${colors.borders.hover} focus:${colors.borders.focus} outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
@@ -632,7 +636,7 @@ export default function VendorMyInventoryPage() {
           <Card
             className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
           >
-            <CardHeader className={`border-b ${colors.borders.primary}`}>
+            <CardHeader className={`${colors.borders.primary}`}>
               <div className="flex flex-row items-center gap-4">
                 <div className="flex flex-col">
                   <CardTitle
@@ -664,9 +668,7 @@ export default function VendorMyInventoryPage() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow
-                      className={`border-b ${colors.borders.secondary}`}
-                    >
+                    <TableRow className={`${colors.borders.secondary}`}>
                       <TableHead
                         className={`${colors.texts.primary} font-semibold`}
                       >
@@ -724,7 +726,7 @@ export default function VendorMyInventoryPage() {
                         return (
                           <TableRow
                             key={item._id}
-                            className={`border-b ${colors.borders.secondary} ${colors.backgrounds.hover} transition-colors rounded-none`}
+                            className={`${colors.borders.secondary} ${colors.backgrounds.hover} transition-colors rounded-none`}
                           >
                             <TableCell className="pl-8 pr-4">
                               <div className="flex items-center gap-3">
@@ -767,7 +769,7 @@ export default function VendorMyInventoryPage() {
                             <TableCell className="pl-4 pr-4">
                               <Badge
                                 variant="outline"
-                                className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-mono text-xs px-2 py-1 rounded-none"
+                                className="bg-gray-100 dark:bg-gray-800 ${colors.borders.primary} text-gray-700 dark:text-gray-300 font-mono text-xs px-2 py-1 rounded-none"
                               >
                                 {item.inventoryItem.sku}
                               </Badge>
@@ -775,7 +777,7 @@ export default function VendorMyInventoryPage() {
                             <TableCell className="pl-4 pr-4">
                               <Badge
                                 variant="outline"
-                                className="font-medium text-xs border-0 rounded-none"
+                                className="font-medium text-xs ${colors.borders.primary} rounded-none"
                               >
                                 {item.inventoryItem.category}
                               </Badge>
@@ -853,7 +855,7 @@ export default function VendorMyInventoryPage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleDeleteClick(item._id)}
-                                  className={`h-8 px-3 ${colors.buttons.secondary} cursor-pointer rounded-none hover:bg-red-50 dark:hover:bg-red-950 hover:border-red-500 dark:hover:border-red-500`}
+                                  className={`h-8 px-3 ${colors.buttons.secondary} cursor-pointer rounded-none hover:bg-red-50 dark:hover:bg-red-950 hover:${colors.borders.primary} hover:border-red-500 dark:hover:border-red-500`}
                                 >
                                   <TrashIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
                                   Delete

@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRightIcon,
@@ -14,74 +16,28 @@ import {
   CubeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
+import {
+  getCustomerReturns,
+  getEligibleOrders,
+  createReturn,
+  uploadReturnImages,
+  type ReturnRequest,
+  type ReturnReason,
+} from "@/lib/api/customer.returns.api";
+import type { Order } from "@/types";
 
-// Mock return requests
-const MOCK_RETURNS = [
-  {
-    id: "RET001",
-    orderId: "ORD12345",
-    product: {
-      name: "Classic Denim Jacket",
-      image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500",
-      price: 89.99,
-      sku: "DENIM-001",
-    },
-    reason: "Size doesn't fit",
-    description: "The jacket is too small. I need a larger size.",
-    images: ["image1.jpg", "image2.jpg"],
-    status: "pending",
-    submittedDate: "2024-01-15T10:30:00",
-    trackingNumber: null,
-  },
-  {
-    id: "RET002",
-    orderId: "ORD12344",
-    product: {
-      name: "Summer Dress",
-      image:
-        "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=500",
-      price: 59.99,
-      sku: "DRESS-005",
-    },
-    reason: "Damaged/Defective",
-    description: "The dress arrived with a tear in the fabric.",
-    images: ["image3.jpg"],
-    status: "approved",
-    submittedDate: "2024-01-10T14:20:00",
-    approvedDate: "2024-01-11T09:15:00",
-    trackingNumber: "TRK789012345",
-  },
-  {
-    id: "RET003",
-    orderId: "ORD12340",
-    product: {
-      name: "Leather Wallet",
-      image:
-        "https://images.unsplash.com/photo-1627123424574-724758594e93?w=500",
-      price: 39.99,
-      sku: "WALLET-003",
-    },
-    reason: "Wrong item received",
-    description: "I ordered a black wallet but received brown.",
-    images: ["image4.jpg"],
-    status: "rejected",
-    submittedDate: "2024-01-08T11:30:00",
-    rejectedDate: "2024-01-09T10:00:00",
-    rejectionReason: "Item shows signs of use beyond inspection.",
-  },
+const RETURN_REASONS: Array<{ value: ReturnReason; label: string }> = [
+  { value: "defective", label: "Product is Defective" },
+  { value: "damaged", label: "Product Damaged" },
+  { value: "wrong_item", label: "Wrong Item Received" },
+  { value: "not_as_described", label: "Not as Described" },
+  { value: "size_issue", label: "Size Doesn't Fit" },
+  { value: "quality_issues", label: "Quality Issues" },
+  { value: "changed_mind", label: "Changed My Mind" },
+  { value: "other", label: "Other Reason" },
 ];
 
-const RETURN_REASONS = [
-  "Size doesn't fit",
-  "Damaged/Defective",
-  "Wrong item received",
-  "Not as described",
-  "Changed my mind",
-  "Quality issues",
-  "Other",
-];
-
-type TabType = "submit" | "pending" | "approved" | "rejected";
+type TabType = "submit" | "requested" | "approved" | "rejected" | "refunded";
 
 export default function ReturnsPage() {
   const router = useRouter();
@@ -89,19 +45,85 @@ export default function ReturnsPage() {
   const preselectedOrderId = searchParams?.get("orderId");
 
   const [activeTab, setActiveTab] = useState<TabType>("submit");
-  const [selectedReason, setSelectedReason] = useState("");
+  const [selectedReason, setSelectedReason] = useState<ReturnReason | "">("");
   const [description, setDescription] = useState("");
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [returns, setReturns] = useState<ReturnRequest[]>([]);
+  const [eligibleOrders, setEligibleOrders] = useState<Order[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [uploading, setUploading] = useState(false);
 
-  // Mock product (would come from order in real app)
-  const [selectedProduct] = useState({
-    name: "Classic Denim Jacket",
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500",
-    price: 89.99,
-    sku: "DENIM-001",
-    orderId: preselectedOrderId || "ORD12345",
-  });
+  // Load returns when tab changes
+  useEffect(() => {
+    if (activeTab !== "submit") {
+      loadReturns();
+    }
+  }, [activeTab]);
+
+  // Load eligible orders on mount
+  useEffect(() => {
+    loadEligibleOrders();
+  }, []);
+
+  // Pre-select order if provided in URL
+  useEffect(() => {
+    if (preselectedOrderId && eligibleOrders.length > 0) {
+      const order = eligibleOrders.find((o) => o._id === preselectedOrderId);
+      if (order) {
+        setSelectedOrder(order);
+        setActiveTab("submit");
+      }
+    }
+  }, [preselectedOrderId, eligibleOrders]);
+
+  const loadReturns = async () => {
+    try {
+      setLoading(true);
+      const statusMap: Record<TabType, string | undefined> = {
+        submit: undefined,
+        requested: "requested",
+        approved: "approved",
+        rejected: "rejected",
+        refunded: "refunded",
+      };
+
+      const response = await getCustomerReturns({
+        status: statusMap[activeTab] as any,
+        page: 1,
+        limit: 50,
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      });
+
+      if (response.success && response.returns) {
+        setReturns(response.returns);
+      } else {
+        toast.error("Failed to load returns");
+      }
+    } catch (error: any) {
+      console.error("Error loading returns:", error);
+      toast.error(error.message || "Failed to load returns");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadEligibleOrders = async () => {
+    try {
+      const orders = await getEligibleOrders();
+      setEligibleOrders(orders);
+
+      // Auto-select first order if available
+      if (orders.length > 0 && !selectedOrder) {
+        setSelectedOrder(orders[0]);
+      }
+    } catch (error: any) {
+      console.error("Error loading eligible orders:", error);
+      toast.error("Failed to load orders");
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -109,6 +131,14 @@ export default function ReturnsPage() {
       toast.error("Maximum 5 images allowed");
       return;
     }
+
+    // Check file sizes (max 10MB each)
+    const oversizedFiles = files.filter((file) => file.size > 10 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      toast.error("Each image must be less than 10MB");
+      return;
+    }
+
     setUploadedImages([...uploadedImages, ...files]);
   };
 
@@ -118,6 +148,11 @@ export default function ReturnsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!selectedOrder) {
+      toast.error("Please select an order");
+      return;
+    }
 
     if (!selectedReason) {
       toast.error("Please select a return reason");
@@ -136,27 +171,58 @@ export default function ReturnsPage() {
 
     setIsSubmitting(true);
     try {
-      // API call to submit return request
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      toast.success("Return request submitted successfully");
-      setSelectedReason("");
-      setDescription("");
-      setUploadedImages([]);
-      setActiveTab("pending");
-    } catch (error) {
-      toast.error("Failed to submit return request");
+      // Upload images to Cloudinary
+      setUploading(true);
+      toast.loading("Uploading images...");
+      const imageUrls = await uploadReturnImages(uploadedImages);
+      toast.dismiss();
+      toast.success("Images uploaded successfully");
+      setUploading(false);
+
+      // Create return request with all order items
+      const returnData = {
+        orderId: selectedOrder._id || selectedOrder.id || "",
+        items: selectedOrder.items.map((item) => ({
+          productId:
+            typeof item.productId === "string"
+              ? item.productId
+              : item.productId._id,
+          quantity: item.quantity,
+        })),
+        reason: selectedReason as ReturnReason,
+        reasonDetails: description,
+        images: imageUrls,
+      };
+
+      const response = await createReturn(returnData);
+
+      if (response.success) {
+        toast.success("Return request submitted successfully");
+        setSelectedReason("");
+        setDescription("");
+        setUploadedImages([]);
+        setSelectedOrder(null);
+        setActiveTab("requested");
+        loadEligibleOrders(); // Refresh eligible orders
+      } else {
+        toast.error(response.message || "Failed to submit return request");
+      }
+    } catch (error: any) {
+      console.error("Submit return error:", error);
+      toast.error(error.message || "Failed to submit return request");
     } finally {
       setIsSubmitting(false);
+      setUploading(false);
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "pending":
+      case "requested":
         return (
           <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
             <ClockIcon className="h-4 w-4" />
-            <span className="text-xs uppercase tracking-[0.2em]">Pending</span>
+            <span className="text-xs uppercase tracking-[0.2em]">Requested</span>
           </div>
         );
       case "approved":
@@ -173,18 +239,26 @@ export default function ReturnsPage() {
             <span className="text-xs uppercase tracking-[0.2em]">Rejected</span>
           </div>
         );
+      case "refunded":
+        return (
+          <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+            <CheckCircleIcon className="h-4 w-4" />
+            <span className="text-xs uppercase tracking-[0.2em]">Refunded</span>
+          </div>
+        );
       default:
         return null;
     }
   };
 
-  const filteredReturns = MOCK_RETURNS.filter((ret) => {
-    if (activeTab === "submit") return false;
-    if (activeTab === "pending") return ret.status === "pending";
-    if (activeTab === "approved") return ret.status === "approved";
-    if (activeTab === "rejected") return ret.status === "rejected";
-    return true;
-  });
+  const getReturnsCounts = () => {
+    return {
+      requested: returns.filter((r) => r.status === "requested").length,
+      approved: returns.filter((r) => r.status === "approved").length,
+      rejected: returns.filter((r) => r.status === "rejected").length,
+      refunded: returns.filter((r) => r.status === "refunded").length,
+    };
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -194,6 +268,22 @@ export default function ReturnsPage() {
       year: "numeric",
     });
   };
+
+  const getProductImage = (order: Order) => {
+    const firstItem = order.items[0];
+    if (!firstItem) return "";
+
+    const product =
+      typeof firstItem.productId === "object" ? firstItem.productId : null;
+    return (
+      product?.images?.[0]?.url ||
+      firstItem.productSnapshot?.images?.[0]?.url ||
+      firstItem.productImage ||
+      ""
+    );
+  };
+
+  const counts = getReturnsCounts();
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -235,10 +325,10 @@ export default function ReturnsPage() {
       {/* Tabs */}
       <section className="border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
-          <div className="flex gap-0">
+          <div className="flex gap-0 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setActiveTab("submit")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 ${
+              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 activeTab === "submit"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -247,37 +337,44 @@ export default function ReturnsPage() {
               Submit Return
             </button>
             <button
-              onClick={() => setActiveTab("pending")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 ${
-                activeTab === "pending"
+              onClick={() => setActiveTab("requested")}
+              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+                activeTab === "requested"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              Pending (
-              {MOCK_RETURNS.filter((r) => r.status === "pending").length})
+              Requested ({counts.requested})
             </button>
             <button
               onClick={() => setActiveTab("approved")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 ${
+              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 activeTab === "approved"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              Approved (
-              {MOCK_RETURNS.filter((r) => r.status === "approved").length})
+              Approved ({counts.approved})
             </button>
             <button
               onClick={() => setActiveTab("rejected")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 ${
+              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 activeTab === "rejected"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              Rejected (
-              {MOCK_RETURNS.filter((r) => r.status === "rejected").length})
+              Rejected ({counts.rejected})
+            </button>
+            <button
+              onClick={() => setActiveTab("refunded")}
+              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+                activeTab === "refunded"
+                  ? "border-black dark:border-white text-gray-900 dark:text-white"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              Refunded ({counts.refunded})
             </button>
           </div>
         </div>
@@ -289,192 +386,239 @@ export default function ReturnsPage() {
           {activeTab === "submit" ? (
             /* Submit Return Form */
             <div className="max-w-4xl">
-              <form onSubmit={handleSubmit} className="space-y-12">
-                {/* Product Info */}
-                <div>
-                  <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
-                    Product Information
-                  </h2>
+              {eligibleOrders.length === 0 ? (
+                <div className="text-center py-32 border border-gray-200 dark:border-gray-800">
+                  <div className="space-y-4">
+                    <div className="flex justify-center">
+                      <div className="h-16 w-16 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                        <DocumentTextIcon className="h-8 w-8 text-gray-400 dark:text-gray-600" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-extralight text-gray-900 dark:text-white">
+                        No Eligible Orders
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        You don't have any delivered orders that can be returned
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-12">
+                  {/* Order Selection */}
+                  <div>
+                    <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
+                      Select Order
+                    </h2>
 
-                  <div className="border border-gray-200 dark:border-gray-800 p-8">
-                    <div className="flex items-center gap-8">
-                      <div className="h-24 w-24 bg-gray-100 dark:bg-gray-900 flex-shrink-0 overflow-hidden">
-                        <img
-                          src={selectedProduct.image}
-                          alt={selectedProduct.name}
-                          className="w-full h-full object-cover"
+                    <div className="grid gap-4">
+                      {eligibleOrders.map((order) => (
+                        <button
+                          key={order._id || order.id}
+                          type="button"
+                          onClick={() => setSelectedOrder(order)}
+                          className={`p-6 text-left border transition-colors ${
+                            selectedOrder?._id === order._id ||
+                            selectedOrder?.id === order.id
+                              ? "border-black dark:border-white bg-gray-50 dark:bg-gray-900"
+                              : "border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600"
+                          }`}
+                        >
+                          <div className="flex items-center gap-6">
+                            <div className="h-20 w-20 bg-gray-100 dark:bg-gray-900 flex-shrink-0 overflow-hidden">
+                              {getProductImage(order) ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={getProductImage(order)}
+                                  alt="Product"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <CubeIcon className="h-8 w-8 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                Order #{order.orderNumber}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                {order.items.length} item
+                                {order.items.length !== 1 ? "s" : ""} • Rs{" "}
+                                {order.total.toFixed(2)}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Delivered {formatDate(order.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Return Reason */}
+                  <div>
+                    <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
+                      Return Reason
+                    </h2>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {RETURN_REASONS.map((reason) => (
+                        <button
+                          key={reason.value}
+                          type="button"
+                          onClick={() => setSelectedReason(reason.value)}
+                          className={`p-6 text-left border transition-colors ${
+                            selectedReason === reason.value
+                              ? "border-black dark:border-white bg-gray-50 dark:bg-gray-900"
+                              : "border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600"
+                          }`}
+                        >
+                          <p className="text-sm text-gray-900 dark:text-white">
+                            {reason.label}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
+                      Description
+                    </h2>
+
+                    <div className="space-y-3">
+                      <div className="border border-gray-200 dark:border-gray-800 p-6">
+                        <textarea
+                          value={description}
+                          onChange={(e) => {
+                            if (e.target.value.length <= 2000) {
+                              setDescription(e.target.value);
+                            }
+                          }}
+                          placeholder="Please describe the issue with your order in detail..."
+                          className="w-full h-48 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none resize-none"
                         />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-normal text-gray-900 dark:text-white mb-2">
-                          {selectedProduct.name}
-                        </h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                          SKU: {selectedProduct.sku}
-                        </p>
-                        <p className="text-sm text-gray-900 dark:text-white">
-                          ${selectedProduct.price.toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="text-right">
+                      <div className="flex justify-between items-center">
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Order ID
+                          Provide detailed information about why you're returning
+                          this item
                         </p>
-                        <p className="text-sm font-mono text-gray-900 dark:text-white">
-                          {selectedProduct.orderId}
+                        <p
+                          className={`text-xs ${
+                            description.length >= 2000
+                              ? "text-red-500"
+                              : "text-gray-500 dark:text-gray-400"
+                          }`}
+                        >
+                          {description.length}/2000
                         </p>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Return Reason */}
-                <div>
-                  <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
-                    Return Reason
-                  </h2>
+                  {/* Image Upload */}
+                  <div>
+                    <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
+                      Upload Images
+                    </h2>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {RETURN_REASONS.map((reason) => (
-                      <button
-                        key={reason}
-                        type="button"
-                        onClick={() => setSelectedReason(reason)}
-                        className={`p-6 text-left border transition-colors ${
-                          selectedReason === reason
-                            ? "border-black dark:border-white bg-gray-50 dark:bg-gray-900"
-                            : "border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600"
-                        }`}
-                      >
-                        <p className="text-sm text-gray-900 dark:text-white">
-                          {reason}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
-                    Description
-                  </h2>
-
-                  <div className="space-y-3">
-                    <div className="border border-gray-200 dark:border-gray-800 p-6">
-                      <textarea
-                        value={description}
-                        onChange={(e) => {
-                          if (e.target.value.length <= 2000) {
-                            setDescription(e.target.value);
-                          }
-                        }}
-                        placeholder="Please describe the issue with your order in detail..."
-                        className="w-full h-48 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none resize-none"
-                      />
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Provide detailed information about why you're returning
-                        this item
-                      </p>
-                      <p
-                        className={`text-xs ${
-                          description.length >= 2000
-                            ? "text-red-500"
-                            : "text-gray-500 dark:text-gray-400"
-                        }`}
-                      >
-                        {description.length}/2000
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Image Upload */}
-                <div>
-                  <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
-                    Upload Images
-                  </h2>
-
-                  <div className="space-y-6">
-                    {/* Upload Area */}
-                    <label className="block border-2 border-dashed border-gray-200 dark:border-gray-800 p-12 hover:border-gray-400 dark:hover:border-gray-600 transition-colors cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                      <div className="text-center space-y-4">
-                        <div className="flex justify-center">
-                          <PhotoIcon className="h-12 w-12 text-gray-400 dark:text-gray-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-900 dark:text-white mb-2">
-                            Click to upload images
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            PNG, JPG up to 10MB (Max 5 images)
-                          </p>
-                        </div>
-                      </div>
-                    </label>
-
-                    {/* Preview Images */}
-                    {uploadedImages.length > 0 && (
-                      <div className="grid grid-cols-5 gap-4">
-                        {uploadedImages.map((file, index) => (
-                          <div
-                            key={index}
-                            className="relative aspect-square border border-gray-200 dark:border-gray-800 group"
-                          >
-                            <img
-                              src={URL.createObjectURL(file)}
-                              alt={`Upload ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeImage(index)}
-                              className="absolute top-2 right-2 h-6 w-6 bg-white dark:bg-gray-950 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <XMarkIcon className="h-4 w-4 text-gray-900 dark:text-white" />
-                            </button>
+                    <div className="space-y-6">
+                      {/* Upload Area */}
+                      <label className="block border-2 border-dashed border-gray-200 dark:border-gray-800 p-12 hover:border-gray-400 dark:hover:border-gray-600 transition-colors cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          disabled={uploading || isSubmitting}
+                        />
+                        <div className="text-center space-y-4">
+                          <div className="flex justify-center">
+                            <PhotoIcon className="h-12 w-12 text-gray-400 dark:text-gray-600" />
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                          <div>
+                            <p className="text-sm text-gray-900 dark:text-white mb-2">
+                              Click to upload images
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              PNG, JPG up to 10MB (Max 5 images)
+                            </p>
+                          </div>
+                        </div>
+                      </label>
 
-                {/* Submit Button */}
-                <div className="pt-8 border-t border-gray-200 dark:border-gray-800">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      "Submit Return Request"
-                    )}
-                  </button>
-                </div>
-              </form>
+                      {/* Preview Images */}
+                      {uploadedImages.length > 0 && (
+                        <div className="grid grid-cols-5 gap-4">
+                          {uploadedImages.map((file, index) => (
+                            <div
+                              key={index}
+                              className="relative aspect-square border border-gray-200 dark:border-gray-800 group"
+                            >
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={`Upload ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                disabled={uploading || isSubmitting}
+                                className="absolute top-2 right-2 h-6 w-6 bg-white dark:bg-gray-950 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                              >
+                                <XMarkIcon className="h-4 w-4 text-gray-900 dark:text-white" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-8 border-t border-gray-200 dark:border-gray-800">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || uploading}
+                      className="bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting || uploading ? (
+                        <>
+                          <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                          {uploading
+                            ? "Uploading Images..."
+                            : "Submitting..."}
+                        </>
+                      ) : (
+                        "Submit Return Request"
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          ) : loading ? (
+            /* Loading State */
+            <div className="text-center py-32">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Loading returns...
+              </p>
             </div>
           ) : (
             /* Returns List */
             <div className="space-y-8">
-              {filteredReturns.length > 0 ? (
-                filteredReturns.map((returnItem) => (
+              {returns.length > 0 ? (
+                returns.map((returnItem) => (
                   <div
-                    key={returnItem.id}
+                    key={returnItem._id}
                     className="border border-gray-200 dark:border-gray-800 p-8 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                   >
                     <div className="space-y-8">
@@ -483,18 +627,18 @@ export default function ReturnsPage() {
                         <div className="space-y-3">
                           <div className="flex items-center gap-4">
                             <h3 className="text-sm font-mono text-gray-900 dark:text-white">
-                              {returnItem.id}
+                              {returnItem.returnNumber}
                             </h3>
                             {getStatusBadge(returnItem.status)}
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Submitted on {formatDate(returnItem.submittedDate)}
+                            Submitted on {formatDate(returnItem.createdAt)}
                           </p>
                         </div>
 
                         <button
                           onClick={() =>
-                            router.push(`/customer/returns/${returnItem.id}`)
+                            router.push(`/customer/returns/${returnItem._id}`)
                           }
                           className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors"
                         >
@@ -502,25 +646,25 @@ export default function ReturnsPage() {
                         </button>
                       </div>
 
-                      {/* Product */}
+                      {/* Items Info */}
                       <div className="flex items-center gap-6 pt-8 border-t border-gray-200 dark:border-gray-800">
-                        <div className="h-20 w-20 bg-gray-100 dark:bg-gray-900 flex-shrink-0 overflow-hidden">
-                          <img
-                            src={returnItem.product.image}
-                            alt={returnItem.product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                            {returnItem.product.name}
+                            {returnItem.items.length} item
+                            {returnItem.items.length !== 1 ? "s" : ""}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                            Order: {returnItem.orderId}
+                            Order: {returnItem.orderNumber}
                           </p>
                           <p className="text-xs text-gray-900 dark:text-white">
-                            ${returnItem.product.price.toFixed(2)}
+                            Return Amount: Rs {returnItem.returnAmount.toFixed(2)}
                           </p>
+                          {returnItem.refundAmount !==
+                            returnItem.returnAmount && (
+                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                              Refund: Rs {returnItem.refundAmount.toFixed(2)}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -530,8 +674,8 @@ export default function ReturnsPage() {
                           <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-2">
                             Reason
                           </p>
-                          <p className="text-sm text-gray-900 dark:text-white">
-                            {returnItem.reason}
+                          <p className="text-sm text-gray-900 dark:text-white capitalize">
+                            {returnItem.reason.replace(/_/g, " ")}
                           </p>
                         </div>
                         <div>
@@ -539,53 +683,72 @@ export default function ReturnsPage() {
                             Description
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                            {returnItem.description}
+                            {returnItem.reasonDetails}
                           </p>
                         </div>
                       </div>
 
                       {/* Additional Info */}
-                      {returnItem.status === "approved" &&
-                        returnItem.trackingNumber && (
-                          <div className="pt-8 border-t border-gray-200 dark:border-gray-800 bg-green-50 dark:bg-green-900/20 p-6">
-                            <div className="flex items-start gap-3">
-                              <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                              <div className="space-y-2">
-                                <p className="text-xs font-medium text-gray-900 dark:text-white">
-                                  Return Approved
-                                </p>
+                      {returnItem.status === "approved" && (
+                        <div className="pt-8 border-t border-gray-200 dark:border-gray-800 bg-green-50 dark:bg-green-900/20 p-6">
+                          <div className="flex items-start gap-3">
+                            <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-gray-900 dark:text-white">
+                                Return Approved
+                              </p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                                Please ship your item back within 14 days
+                              </p>
+                              {returnItem.reviewNotes && (
                                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                                  Approved on{" "}
-                                  {formatDate(returnItem.approvedDate!)}
+                                  Note: {returnItem.reviewNotes}
                                 </p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                  Tracking: {returnItem.trackingNumber}
-                                </p>
-                              </div>
+                              )}
                             </div>
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                      {returnItem.status === "rejected" &&
-                        returnItem.rejectionReason && (
-                          <div className="pt-8 border-t border-gray-200 dark:border-gray-800 bg-red-50 dark:bg-red-900/20 p-6">
-                            <div className="flex items-start gap-3">
-                              <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                              <div className="space-y-2">
-                                <p className="text-xs font-medium text-gray-900 dark:text-white">
-                                  Return Rejected
-                                </p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                  Rejected on{" "}
-                                  {formatDate(returnItem.rejectedDate!)}
-                                </p>
+                      {returnItem.status === "rejected" && (
+                        <div className="pt-8 border-t border-gray-200 dark:border-gray-800 bg-red-50 dark:bg-red-900/20 p-6">
+                          <div className="flex items-start gap-3">
+                            <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-gray-900 dark:text-white">
+                                Return Rejected
+                              </p>
+                              {returnItem.rejectionReason && (
                                 <p className="text-xs text-gray-600 dark:text-gray-400">
                                   Reason: {returnItem.rejectionReason}
                                 </p>
-                              </div>
+                              )}
                             </div>
                           </div>
-                        )}
+                        </div>
+                      )}
+
+                      {returnItem.status === "refunded" && (
+                        <div className="pt-8 border-t border-gray-200 dark:border-gray-800 bg-green-50 dark:bg-green-900/20 p-6">
+                          <div className="flex items-start gap-3">
+                            <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-gray-900 dark:text-white">
+                                Refund Processed
+                              </p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                                Rs {returnItem.refundAmount.toFixed(2)} has been
+                                refunded to your wallet
+                              </p>
+                              {returnItem.refundedAt && (
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                  Refunded on {formatDate(returnItem.refundedAt)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
@@ -612,6 +775,16 @@ export default function ReturnsPage() {
           )}
         </div>
       </section>
+
+      <style jsx global>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 }

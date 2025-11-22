@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   XMarkIcon,
@@ -10,96 +10,27 @@ import {
   CubeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
+import {
+  getWishlist,
+  removeFromWishlist,
+  clearWishlist,
+  getSimilarProducts,
+} from "@/lib/api/customer.wishlist.api";
+import { addToCart } from "@/lib/api/customer.cart.api";
+import type { Product } from "@/types";
 
-// Mock Saved Items Data
-const INITIAL_SAVED_ITEMS = [
-  {
-    id: 1,
-    name: "Premium Cotton T-Shirt",
-    category: "Men",
-    price: 29.99,
-    costPrice: 49.99,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500",
-    size: "M",
-    color: "Black",
-    inStock: true,
-    quantity: 50,
-  },
-  {
-    id: 2,
-    name: "Classic Denim Jacket",
-    category: "Women",
-    price: 89.99,
-    costPrice: 129.99,
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500",
-    size: "L",
-    color: "Blue",
-    inStock: true,
-    quantity: 30,
-  },
-  {
-    id: 3,
-    name: "Casual Sneakers",
-    category: "Unisex",
-    price: 79.99,
-    costPrice: 119.99,
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500",
-    size: "42",
-    color: "White",
-    inStock: true,
-    quantity: 45,
-  },
-  {
-    id: 4,
-    name: "Summer Dress",
-    category: "Women",
-    price: 59.99,
-    costPrice: 89.99,
-    image: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=500",
-    size: "S",
-    color: "Floral",
-    inStock: false,
-    quantity: 0,
-  },
-  {
-    id: 5,
-    name: "Leather Wallet",
-    category: "Accessories",
-    price: 39.99,
-    costPrice: 59.99,
-    image: "https://images.unsplash.com/photo-1627123424574-724758594e93?w=500",
-    color: "Brown",
-    inStock: true,
-    quantity: 60,
-  },
-  {
-    id: 6,
-    name: "Sport Watch",
-    category: "Accessories",
-    price: 149.99,
-    costPrice: 199.99,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500",
-    color: "Silver",
-    inStock: true,
-    quantity: 15,
-  },
-];
+interface WishlistItem {
+  _id: string;
+  productId: Product;
+  notes?: string;
+  addedAt: string;
+  priceWhenAdded: number;
+}
 
 interface SavedItemCardProps {
-  item: {
-    id: number;
-    name: string;
-    category: string;
-    price: number;
-    costPrice?: number;
-    image: string;
-    size?: string;
-    color: string;
-    inStock: boolean;
-    quantity: number;
-  };
-  onRemove: (id: number) => void;
-  onAddToCart: (id: number) => void;
+  item: WishlistItem;
+  onRemove: (id: string) => void;
+  onAddToCart: (productId: string) => void;
 }
 
 function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
@@ -107,7 +38,11 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  const isOutOfStock = !item.inStock || item.quantity === 0;
+  const product = item.productId;
+  const isOutOfStock =
+    product.inStock !== undefined ? !product.inStock : product.quantity === 0;
+  const mainImage =
+    product.images?.find((img) => img.isMain)?.url || product.images?.[0]?.url;
 
   const PlaceholderImage = () => (
     <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 flex items-center justify-center">
@@ -118,15 +53,15 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
   return (
     <div className="group relative">
       {/* Product Image */}
-      <div className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4] overflow-hidden">
+      <div className="relative bg-gray-100 dark:bg-gray-900 overflow-hidden">
         <div
-          className="cursor-pointer"
-          onClick={() => router.push(`/customer/products/${item.id}`)}
+          className="relative w-full aspect-[3/4] cursor-pointer"
+          onClick={() => router.push(`/customer/products/${product._id}`)}
         >
-          {!imageError ? (
+          {!imageError && mainImage ? (
             <img
-              src={item.image}
-              alt={item.name}
+              src={mainImage}
+              alt={product.name}
               className={`w-full h-full object-cover transition-opacity duration-300 group-hover:scale-105 transition-transform duration-500 ${
                 imageLoaded ? "opacity-100" : "opacity-0"
               }`}
@@ -143,7 +78,7 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
             <PlaceholderImage />
           )}
 
-          {!imageLoaded && !imageError && (
+          {!imageLoaded && !imageError && mainImage && (
             <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse" />
           )}
 
@@ -158,7 +93,7 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
 
         {/* Remove Button */}
         <button
-          onClick={() => onRemove(item.id)}
+          onClick={() => onRemove(product._id)}
           className="absolute top-1.5 right-1.5 w-4 h-4 bg-white dark:bg-gray-950 flex items-center justify-center transition-colors z-10 cursor-pointer"
         >
           <XMarkIcon className="w-3 h-3 text-gray-900 dark:text-white" />
@@ -171,7 +106,7 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onAddToCart(item.id);
+              onAddToCart(product._id);
             }}
           >
             <PlusIcon className="w-3 h-3 text-black dark:text-white" />
@@ -183,40 +118,164 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
       <div className="pt-1 pb-1">
         <div className="flex items-center justify-between mb-0">
           <button
-            onClick={() => router.push(`/customer/products/${item.id}`)}
+            onClick={() => router.push(`/customer/products/${product._id}`)}
             className="block flex-1 text-left"
           >
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-              {item.name}
+              {product.name}
             </h3>
           </button>
         </div>
 
         <div className="flex items-baseline gap-1 mt-1">
           <span className="text-xs font-normal text-gray-900 dark:text-white">
-            Rs {item.price.toFixed(2)}
+            Rs {product.price.toFixed(2)}
           </span>
-          {item.costPrice && item.costPrice > item.price && (
+          {product.originalPrice && product.originalPrice > product.price && (
             <span className="text-[10px] text-gray-400 line-through">
-              Rs {item.costPrice.toFixed(2)}
+              Rs {product.originalPrice.toFixed(2)}
             </span>
           )}
         </div>
 
         {/* Size & Color */}
-        {(item.size || item.color) && (
+        {(product.apparelDetails?.size || product.apparelDetails?.color) && (
           <div className="flex items-center gap-2 mt-1">
-            {item.color && (
+            {product.apparelDetails?.color && (
               <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                {item.color}
+                {product.apparelDetails.color}
               </span>
             )}
-            {item.size && item.color && (
+            {product.apparelDetails?.size && product.apparelDetails?.color && (
               <span className="text-[10px] text-gray-400">•</span>
             )}
-            {item.size && (
+            {product.apparelDetails?.size && (
               <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                {item.size}
+                {product.apparelDetails.size}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface SimilarProductCardProps {
+  product: Product;
+  onAddToCart: (productId: string) => void;
+}
+
+function SimilarProductCard({ product, onAddToCart }: SimilarProductCardProps) {
+  const router = useRouter();
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  const isOutOfStock =
+    product.inStock !== undefined ? !product.inStock : product.quantity === 0;
+  const mainImage =
+    product.images?.find((img) => img.isMain)?.url || product.images?.[0]?.url;
+
+  const PlaceholderImage = () => (
+    <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 flex items-center justify-center">
+      <CubeIcon className="h-16 w-16 text-gray-400" />
+    </div>
+  );
+
+  return (
+    <div className="group relative">
+      {/* Product Image */}
+      <div className="relative bg-gray-100 dark:bg-gray-900 overflow-hidden">
+        <div
+          className="relative w-full aspect-[3/4] cursor-pointer"
+          onClick={() => router.push(`/customer/products/${product.id}`)}
+        >
+          {!imageError && mainImage ? (
+            <img
+              src={mainImage}
+              alt={product.name}
+              className={`w-full h-full object-cover transition-opacity duration-300 group-hover:scale-105 transition-transform duration-500 ${
+                imageLoaded ? "opacity-100" : "opacity-0"
+              }`}
+              onLoad={() => {
+                setImageLoaded(true);
+                setImageError(false);
+              }}
+              onError={() => {
+                setImageError(true);
+                setImageLoaded(false);
+              }}
+            />
+          ) : (
+            <PlaceholderImage />
+          )}
+
+          {!imageLoaded && !imageError && mainImage && (
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse" />
+          )}
+
+          {isOutOfStock && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
+              <span className="text-xs font-medium text-gray-900 uppercase tracking-wider">
+                Out of Stock
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Add to Cart Button */}
+        {!isOutOfStock && (
+          <button
+            className="absolute bottom-1.5 left-1.5 w-4 h-4 bg-white dark:bg-gray-950 flex items-center justify-center cursor-pointer z-10"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onAddToCart(product.id); // Changed from product._id to product.id
+            }}
+          >
+            <PlusIcon className="w-3 h-3 text-black dark:text-white" />
+          </button>
+        )}
+      </div>
+
+      {/* Product Info */}
+      <div className="pt-1 pb-1">
+        <div className="flex items-center justify-between mb-0">
+          <button
+            onClick={() => router.push(`/customer/products/${product.id}`)} // Changed from product._id to product.id
+            className="block flex-1 text-left"
+          >
+            <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              {product.name}
+            </h3>
+          </button>
+        </div>
+
+        <div className="flex items-baseline gap-1 mt-1">
+          <span className="text-xs font-normal text-gray-900 dark:text-white">
+            Rs {product.price.toFixed(2)}
+          </span>
+          {product.originalPrice && product.originalPrice > product.price && (
+            <span className="text-[10px] text-gray-400 line-through">
+              Rs {product.originalPrice.toFixed(2)}
+            </span>
+          )}
+        </div>
+
+        {/* Size & Color */}
+        {(product.apparelDetails?.size || product.apparelDetails?.color) && (
+          <div className="flex items-center gap-2 mt-1">
+            {product.apparelDetails?.color && (
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                {product.apparelDetails.color}
+              </span>
+            )}
+            {product.apparelDetails?.size && product.apparelDetails?.color && (
+              <span className="text-[10px] text-gray-400">•</span>
+            )}
+            {product.apparelDetails?.size && (
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                {product.apparelDetails.size}
               </span>
             )}
           </div>
@@ -228,21 +287,132 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
 
 export default function SavedItemsPage() {
   const router = useRouter();
-  const [savedItems, setSavedItems] = useState(INITIAL_SAVED_ITEMS);
+  const [savedItems, setSavedItems] = useState<WishlistItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
 
-  const handleRemove = (id: number) => {
-    setSavedItems((items) => items.filter((item) => item.id !== id));
-    toast.success("Removed from saved items");
+  useEffect(() => {
+    loadWishlist();
+  }, []);
+
+  const loadWishlist = async () => {
+    try {
+      setLoading(true);
+      const response = await getWishlist();
+      if (response.success && response.wishlist) {
+        setSavedItems(response.wishlist.items);
+        // Load similar products after wishlist
+        loadSimilarProducts(response.wishlist.items);
+      }
+    } catch (error) {
+      console.error("Error loading wishlist:", error);
+      toast.error("Failed to load saved items");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddToCart = (id: number) => {
-    toast.success("Added to cart");
+  const loadSimilarProducts = async (items: WishlistItem[]) => {
+    try {
+      setSimilarLoading(true);
+      const categories = [
+        ...new Set(
+          items.map((item) => item.productId.category).filter(Boolean)
+        ),
+      ];
+      let similar: Product[] = [];
+
+      if (categories.length === 1) {
+        // All items in same category, fetch from that category
+        const category = categories[0];
+        if (category) {
+          const response = await getSimilarProducts(category);
+          if (response.success && response.products) {
+            similar = response.products.filter(
+              (prod) => !items.some((item) => item.productId._id === prod._id)
+            );
+          }
+        }
+      } else {
+        // Mixed categories, fetch from all and combine
+        for (const category of categories) {
+          if (category) {
+            const response = await getSimilarProducts(category);
+            if (response.success && response.products) {
+              const filtered = response.products.filter(
+                (prod) => !items.some((item) => item.productId._id === prod._id)
+              );
+              similar.push(...filtered);
+            }
+          }
+        }
+        // Sort by rating descending and take top
+        similar.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      }
+
+      // Limit to 5 products
+      setSimilarProducts(similar.slice(0, 5));
+    } catch (error) {
+      console.error("Error loading similar products:", error);
+    } finally {
+      setSimilarLoading(false);
+    }
   };
 
-  const handleClearAll = () => {
-    setSavedItems([]);
-    toast.success("All items removed");
+  const handleRemove = async (productId: string) => {
+    try {
+      await removeFromWishlist(productId);
+      setSavedItems((items) =>
+        items.filter((item) => item.productId._id !== productId)
+      );
+      toast.success("Removed from saved items");
+    } catch (error) {
+      console.error("Error removing item:", error);
+      toast.error("Failed to remove item");
+    }
   };
+
+  const handleAddToCart = async (productId: string) => {
+    try {
+      await addToCart({
+        productId,
+        quantity: 1,
+      });
+      await removeFromWishlist(productId);
+      setSavedItems((items) =>
+        items.filter((item) => item.productId._id !== productId)
+      );
+      toast.success("Added to cart and removed from saved items");
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      toast.error("Failed to add to cart");
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await clearWishlist();
+      setSavedItems([]);
+      toast.success("All items removed");
+    } catch (error) {
+      console.error("Error clearing wishlist:", error);
+      toast.error("Failed to clear wishlist");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Loading saved items...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -302,7 +472,7 @@ export default function SavedItemsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
               {savedItems.map((item) => (
                 <SavedItemCard
-                  key={item.id}
+                  key={item._id}
                   item={item}
                   onRemove={handleRemove}
                   onAddToCart={handleAddToCart}
@@ -351,11 +521,30 @@ export default function SavedItemsPage() {
               </h2>
             </div>
 
-            <div className="text-center py-16">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Recommendations will appear here
-              </p>
-            </div>
+            {similarLoading ? (
+              <div className="text-center py-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Loading similar items...
+                </p>
+              </div>
+            ) : similarProducts.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
+                {similarProducts.map((product) => (
+                  <SimilarProductCard
+                    key={product.id}
+                    product={product}
+                    onAddToCart={handleAddToCart}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No similar items found
+                </p>
+              </div>
+            )}
           </div>
         </section>
       )}

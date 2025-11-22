@@ -40,11 +40,55 @@ class OrderService {
       );
 
       // 3. Calculate pricing
-      const pricing = this.calculateOrderPricing(
-        validatedItems,
-        orderData.shippingAddress,
-        orderData.discountCode
-      );
+      // ✅ UPDATED: Use frontend-provided values if available (for smart shipping logic)
+      let pricing;
+      if (
+        orderData.subtotal !== undefined &&
+        orderData.shippingCost !== undefined &&
+        orderData.total !== undefined
+      ) {
+        // Use values calculated by frontend (includes smart vendor-aware shipping)
+        pricing = {
+          subtotal: parseFloat(orderData.subtotal),
+          shippingCost: parseFloat(orderData.shippingCost),
+          tax: parseFloat(orderData.tax || 0),
+          discount: parseFloat(orderData.discount || 0),
+          total: parseFloat(orderData.total),
+        };
+        console.log("✅ Using frontend-calculated pricing:", pricing);
+      } else {
+        // Fallback to backend calculation if frontend doesn't provide values
+        pricing = this.calculateOrderPricing(
+          validatedItems,
+          orderData.shippingAddress,
+          orderData.discountCode
+        );
+        console.log("⚠️ Using backend-calculated pricing (fallback):", pricing);
+      }
+
+      // 3.1 Validate frontend calculations if provided
+      if (orderData.subtotal !== undefined) {
+        const calculatedSubtotal = validatedItems.reduce(
+          (sum, item) => sum + item.subtotal,
+          0
+        );
+        const subtotalDiff = Math.abs(pricing.subtotal - calculatedSubtotal);
+        if (subtotalDiff > 0.01) {
+          console.warn(
+            `⚠️ Subtotal mismatch: Frontend=${pricing.subtotal}, Calculated=${calculatedSubtotal.toFixed(2)}`
+          );
+        }
+
+        // Validate total calculation
+        const expectedTotal =
+          pricing.subtotal + pricing.shippingCost + pricing.tax - pricing.discount;
+        const totalDiff = Math.abs(pricing.total - expectedTotal);
+        if (totalDiff > 0.01) {
+          console.warn(
+            `⚠️ Total mismatch: Provided=${pricing.total}, Expected=${expectedTotal.toFixed(2)}`
+          );
+        }
+      }
 
       let loyaltyDiscount = {
         discount: 0,
@@ -193,9 +237,9 @@ class OrderService {
       order.statusHistory.push({
         status: "pending",
         timestamp: new Date(),
-        updatedBy: customerId,
-        userRole: "customer",
-        comment: "Order placed",
+        changedBy: customerId,
+        changedByRole: "customer",
+        notes: "Order placed",
       });
 
       // 8. Reserve product stock - FIXED: pass session
@@ -216,7 +260,7 @@ class OrderService {
         type: "order_placed",
         category: "order",
         title: "Order Placed Successfully",
-        message: `Your order #${order.orderNumber} has been placed successfully. Total: $${order.total.toFixed(2)}`,
+        message: `Your order #${order.orderNumber} has been placed successfully. Total: Rs ${order.total.toFixed(2)}`,
         orderId: order._id,
         priority: "high",
         actionType: "view_order",
@@ -958,24 +1002,24 @@ class OrderService {
         if (trackingInfo && trackingInfo.trackingNumber) {
           // ✅ Check if exists first
           order.trackingNumber = trackingInfo.trackingNumber;
-          order.courierName = trackingInfo.carrier || "Standard";
+          order.courierName = trackingInfo.carrier || "";
           if (trackingInfo.estimatedDelivery) {
             order.estimatedDeliveryDate = new Date(
               trackingInfo.estimatedDelivery
             );
           }
-          order.trackingUrl = this.generateTrackingUrl(
-            order.courierName,
-            order.trackingNumber
-          );
+          // Only generate tracking URL if carrier is provided
+          if (trackingInfo.carrier) {
+            order.trackingUrl = this.generateTrackingUrl(
+              order.courierName,
+              order.trackingNumber
+            );
+          }
         } else if (!order.trackingNumber) {
           // Auto-generate tracking number
           order.trackingNumber = `TRACK-${Date.now()}-${order.orderNumber.slice(-6)}`;
-          order.courierName = "Standard";
-          order.trackingUrl = this.generateTrackingUrl(
-            order.courierName,
-            order.trackingNumber
-          );
+          order.courierName = "";
+          // No tracking URL without courier
         }
       }
       if (newStatus === "delivered") order.deliveredAt = new Date();
@@ -1402,7 +1446,37 @@ class OrderService {
       // Release reserved stock
       await this.releaseProductStock(order.items);
 
+      // Process refund if payment was made
+      if (order.paymentStatus === "paid" && order.paymentMethod === "wallet") {
+        try {
+          await walletBalanceService.processRefund(
+            order.customerId,
+            order._id,
+            order.total,
+            `Refund for cancelled order ${order.orderNumber}: ${reason}`
+          );
+
+          order.paymentStatus = "refunded";
+          order.refundedAt = new Date();
+          order.refundAmount = order.total;
+
+          console.log(
+            `✅ Refund processed: Rs ${order.total} returned to customer wallet`
+          );
+        } catch (refundError) {
+          console.error("❌ Refund processing failed:", refundError);
+          // Continue with cancellation even if refund fails
+          // Admin can process refund manually later
+        }
+      }
+
       await order.save();
+
+      // Create notification with refund info if applicable
+      const refundMessage =
+        order.paymentStatus === "refunded"
+          ? `Your order #${order.orderNumber} has been cancelled. Rs ${order.total.toFixed(2)} has been refunded to your wallet.`
+          : `Your order #${order.orderNumber} has been cancelled.`;
 
       await notificationService.createNotification({
         userId: order.customerId,
@@ -1410,7 +1484,7 @@ class OrderService {
         type: "order_cancelled",
         category: "order",
         title: "Order Cancelled",
-        message: `Your order #${order.orderNumber} has been cancelled. Refund will be processed shortly.`,
+        message: refundMessage,
         orderId: order._id,
         priority: "high",
         actionType: "view_order",
@@ -3229,41 +3303,43 @@ class OrderService {
 
       const timeline = [];
 
-      timeline.push({
-        id: `created-${order._id}`,
-        type: "order_created",
-        status: "pending",
-        title: "Order Placed",
-        description: `Order ${order.orderNumber} was placed`,
-        timestamp: order.createdAt,
-        icon: "shopping-cart",
-      });
-
+      // ✅ FIXED: Only use statusHistory to avoid duplicates
+      // StatusHistory is the canonical source for order status changes
       order.statusHistory.forEach((history) => {
         timeline.push({
           id: `status-${history._id}`,
           type: "status_change",
           status: history.status,
-          title: `Order ${history.status.charAt(0).toUpperCase() + history.status.slice(1)}`,
+          title: `${history.status.charAt(0).toUpperCase() + history.status.slice(1)}`,
           description:
             history.notes || `Order status changed to ${history.status}`,
           timestamp: history.timestamp,
           icon: this.getStatusIcon(history.status),
+          changedBy: history.changedBy,
+          changedByRole: history.changedByRole,
         });
       });
 
+      // Optional: Add supply chain events that are NOT status changes
+      // (e.g., shipment scans, location updates, etc.)
+      // Commented out to avoid duplicates with statusHistory
+      /*
       order.supplyChainEvents.forEach((event) => {
-        timeline.push({
-          id: `supply-${event._id}`,
-          type: "supply_chain_event",
-          status: event.stage,
-          title: event.stage.replace(/_/g, " ").toUpperCase(),
-          description: event.description,
-          location: event.location,
-          timestamp: event.timestamp,
-          icon: this.getStageIcon(event.stage),
-        });
+        // Only add if it's not a status change event
+        if (!["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"].includes(event.stage)) {
+          timeline.push({
+            id: `supply-${event._id}`,
+            type: "supply_chain_event",
+            status: event.stage,
+            title: event.stage.replace(/_/g, " ").toUpperCase(),
+            description: event.description,
+            location: event.location,
+            timestamp: event.timestamp,
+            icon: this.getStageIcon(event.stage),
+          });
+        }
       });
+      */
 
       timeline.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 

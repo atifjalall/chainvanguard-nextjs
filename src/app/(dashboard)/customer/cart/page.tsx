@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   XMarkIcon,
@@ -8,62 +9,28 @@ import {
   MinusIcon,
   ShoppingBagIcon,
   ChevronRightIcon,
-  BookmarkIcon,
-  TrashIcon,
   CubeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
+import {
+  getCart,
+  updateCartItem,
+  removeCartItem,
+  applyCoupon,
+} from "@/lib/api/customer.cart.api";
+import { addToWishlist, getWishlist } from "@/lib/api/customer.wishlist.api";
+import { browseProducts } from "@/lib/api/customer.browse.api";
+import type { Cart, CartItem as CartItemType, Product } from "@/types";
 
-// Mock Cart Data
-const INITIAL_CART_ITEMS = [
-  {
-    id: 1,
-    name: "Premium Cotton T-Shirt",
-    category: "Men",
-    price: 29.99,
-    size: "M",
-    color: "Black",
-    quantity: 2,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500",
-    inStock: true,
-  },
-  {
-    id: 2,
-    name: "Classic Denim Jacket",
-    category: "Women",
-    price: 89.99,
-    size: "L",
-    color: "Blue",
-    quantity: 1,
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500",
-    inStock: true,
-  },
-  {
-    id: 3,
-    name: "Casual Sneakers",
-    category: "Unisex",
-    price: 79.99,
-    size: "42",
-    color: "White",
-    quantity: 1,
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500",
-    inStock: true,
-  },
-];
-
-// Product Card Component (EXACT same as browse page)
+// Product Card Component
 interface ProductCardProps {
   id: string | number;
   name: string;
   price: number;
   costPrice?: number;
   images: string[];
-  category?: string;
   quantity?: number;
   inStock?: boolean;
-  onAddToCart?: (id: string | number) => void;
-  onToggleWishlist?: (id: string | number) => void;
-  isInWishlist?: boolean;
   showActions?: boolean;
 }
 
@@ -73,12 +40,8 @@ function ProductCard({
   price,
   costPrice,
   images,
-  category,
   quantity = 0,
   inStock = true,
-  onAddToCart,
-  onToggleWishlist,
-  isInWishlist = false,
   showActions = true,
 }: ProductCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -115,7 +78,6 @@ function ProductCard({
       <div className="relative bg-gray-100 dark:bg-gray-900 w-full overflow-hidden">
         <a href={`/customer/products/${id}`} className="block">
           <div
-            // Increased height to make card slightly taller (3/4 aspect)
             className="relative w-full aspect-[3/4]"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
@@ -153,20 +115,6 @@ function ProductCard({
             )}
           </div>
         </a>
-
-        {showActions && !isOutOfStock && (
-          <button
-            // slightly smaller action button for compact card
-            className="absolute bottom-1.5 left-1.5 w-4 h-4 bg-white dark:bg-gray-950 flex items-center justify-center cursor-pointer z-10"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onAddToCart?.(id);
-            }}
-          >
-            <PlusIcon className="w-3 h-3 text-black dark:text-white" />
-          </button>
-        )}
       </div>
 
       <div className="pt-1 pb-1">
@@ -176,24 +124,6 @@ function ProductCard({
               {name}
             </h3>
           </a>
-          {showActions && (
-            <button
-              className="flex items-center justify-center"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggleWishlist?.(id);
-              }}
-            >
-              <BookmarkIcon
-                className={`w-3 h-3 transition-colors cursor-pointer ${
-                  isInWishlist
-                    ? "fill-black text-black dark:fill-white dark:text-white"
-                    : "text-gray-400 hover:text-black dark:hover:text-white"
-                }`}
-              />
-            </button>
-          )}
         </div>
 
         <div className="flex items-baseline gap-1">
@@ -211,119 +141,67 @@ function ProductCard({
   );
 }
 
-// Recommended Products
-const RECOMMENDED_PRODUCTS = [
-  {
-    id: 4,
-    name: "Summer Dress",
-    price: 59.99,
-    costPrice: 89.99,
-    images: [
-      "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=500",
-    ],
-    quantity: 1,
-    inStock: true,
-  },
-  {
-    id: 5,
-    name: "Leather Wallet",
-    price: 39.99,
-    costPrice: 59.99,
-    images: [
-      "https://images.unsplash.com/photo-1627123424574-724758594e93?w=500",
-    ],
-    quantity: 1,
-    inStock: true,
-  },
-  {
-    id: 6,
-    name: "Sport Watch",
-    price: 149.99,
-    costPrice: 199.99,
-    images: [
-      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500",
-    ],
-    quantity: 1,
-    inStock: true,
-  },
-  {
-    id: 7,
-    name: "Casual Backpack",
-    price: 69.99,
-    costPrice: 99.99,
-    images: ["https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500"],
-    quantity: 1,
-    inStock: true,
-  },
-  {
-    id: 8,
-    name: "Designer Sunglasses",
-    price: 129.99,
-    costPrice: 179.99,
-    images: [
-      "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=500",
-    ],
-    quantity: 1,
-    inStock: true,
-  },
-];
-
 interface CartItemProps {
-  item: {
-    id: number;
-    name: string;
-    category: string;
-    price: number;
-    size: string;
-    color: string;
-    quantity: number;
-    image: string;
-    inStock: boolean;
-  };
-  onUpdateQuantity: (id: number, newQuantity: number) => void;
-  onRemove: (id: number) => void;
-  onMoveToWishlist: (id: number) => void;
+  item: CartItemType;
+  onUpdateQuantity: (itemId: string, newQuantity: number) => void;
+  onRemove: (itemId: string) => void;
+  onMoveToWishlist: (itemId: string, productId: string) => void;
+  isInWishlist: boolean;
 }
 
-function CartItem({
+function CartItemComponent({
   item,
   onUpdateQuantity,
   onRemove,
   onMoveToWishlist,
+  isInWishlist,
 }: CartItemProps) {
   const router = useRouter();
 
+  const product = typeof item.productId === "object" ? item.productId : null;
+  const productId =
+    typeof item.productId === "string" ? item.productId : item.productId?._id;
+  const productName = item.productName || product?.name || "Product";
+  const productImage = item.productImage || product?.images?.[0]?.url || "";
+  const productCategory = product?.category || "";
+
   return (
     <div className="grid grid-cols-[120px_1fr] md:grid-cols-[140px_1fr] gap-6 py-8 border-b border-gray-200 dark:border-gray-800">
-      {/* Product Image */}
       <div
         className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4] overflow-hidden cursor-pointer"
-        onClick={() => router.push(`/customer/products/${item.id}`)}
+        onClick={() => router.push(`/customer/products/${productId}`)}
       >
-        <img
-          src={item.image}
-          alt={item.name}
-          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-        />
+        {productImage ? (
+          <img
+            src={productImage}
+            alt={productName}
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <CubeIcon className="h-12 w-12 text-gray-400" />
+          </div>
+        )}
       </div>
 
-      {/* Product Details */}
       <div className="flex flex-col justify-between">
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <button
-                onClick={() => router.push(`/customer/products/${item.id}`)}
+                onClick={() => router.push(`/customer/products/${productId}`)}
                 className="text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-left"
               >
-                {item.name}
+                {productName}
               </button>
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {item.category}
-              </p>
+              {productCategory && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {productCategory}
+                </p>
+              )}
             </div>
             <button
-              onClick={() => onRemove(item.id)}
+              onClick={() => onRemove(item._id)}
               className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               <XMarkIcon className="h-4 w-4" />
@@ -331,25 +209,29 @@ function CartItem({
           </div>
 
           <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400 dark:text-gray-600">Color:</span>
-              <span>{item.color}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400 dark:text-gray-600">Size:</span>
-              <span>{item.size}</span>
-            </div>
+            {item.selectedColor && (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400 dark:text-gray-600">Color:</span>
+                <span>{item.selectedColor}</span>
+              </div>
+            )}
+            {item.selectedSize && (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400 dark:text-gray-600">Size:</span>
+                <span>{item.selectedSize}</span>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex items-end justify-between mt-4">
-          {/* Quantity Control */}
           <div className="flex items-center gap-0 border border-gray-200 dark:border-gray-800">
             <button
               onClick={() =>
-                onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))
+                onUpdateQuantity(item._id, Math.max(1, item.quantity - 1))
               }
-              className="w-8 h-9 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+              className="w-8 h-9 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50"
+              disabled={item.quantity <= 1}
             >
               <MinusIcon className="h-3 w-3" />
             </button>
@@ -357,23 +239,24 @@ function CartItem({
               {item.quantity}
             </div>
             <button
-              onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+              onClick={() => onUpdateQuantity(item._id, item.quantity + 1)}
               className="w-8 h-9 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
             >
               <PlusIcon className="h-3 w-3" />
             </button>
           </div>
 
-          {/* Price & Actions */}
           <div className="flex items-end gap-4">
-            <button
-              onClick={() => onMoveToWishlist(item.id)}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              Save
-            </button>
+            {!isInWishlist && (
+              <button
+                onClick={() => onMoveToWishlist(item._id, productId)}
+                className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                Save
+              </button>
+            )}
             <span className="text-sm font-light text-gray-900 dark:text-white">
-              Rs {(item.price * item.quantity).toFixed(2)}
+              Rs {item.subtotal.toFixed(2)}
             </span>
           </div>
         </div>
@@ -384,49 +267,254 @@ function CartItem({
 
 export default function CartPage() {
   const router = useRouter();
-  const [cartItems, setCartItems] = useState(INITIAL_CART_ITEMS);
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [loading, setLoading] = useState(true);
   const [promoCode, setPromoCode] = useState("");
+  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
+  const [wishlistItems, setWishlistItems] = useState<any[]>([]);
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const shipping = subtotal > 50 ? 0 : 5.99;
-  const total = subtotal + shipping;
+  useEffect(() => {
+    loadCart();
+    loadWishlist();
+  }, []);
 
-  const handleUpdateQuantity = (id: number, newQuantity: number) => {
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
-    toast.success("Cart updated");
-  };
+  const loadCart = async () => {
+    try {
+      setLoading(true);
+      const response = await getCart();
+      if (response.success && response.data) {
+        setCart(response.data);
 
-  const handleRemove = (id: number) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
-    toast.success("Item removed from cart");
-  };
-
-  const handleMoveToWishlist = (id: number) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
-    toast.success("Moved to wishlist");
-  };
-
-  const handleApplyPromo = () => {
-    if (promoCode.trim()) {
-      toast.success("Promo code applied");
+        if (response.data.items && response.data.items.length > 0) {
+          loadRecommendations();
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cart:", error);
+      toast.error("Failed to load cart");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAddRecommended = (id: number) => {
-    toast.success("Added to cart");
+  const loadWishlist = async () => {
+    try {
+      const response = await getWishlist();
+      if (response.success && response.wishlist) {
+        setWishlistItems(response.wishlist.items);
+      }
+    } catch (error) {
+      console.error("Error loading wishlist:", error);
+    }
   };
+
+  const loadRecommendations = async () => {
+    try {
+      const response = await browseProducts({ isFeatured: true, limit: 5 });
+      if (response.success && response.products) {
+        setRecommendedProducts(response.products);
+      }
+    } catch (error) {
+      console.error("Error loading recommendations:", error);
+    }
+  };
+
+  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
+    if (!cart) return;
+
+    // Optimistic UI update
+    const updatedItems = cart.items.map((item) => {
+      if (item._id === itemId) {
+        const newSubtotal = item.price * newQuantity;
+        return { ...item, quantity: newQuantity, subtotal: newSubtotal };
+      }
+      return item;
+    });
+
+    const newSubtotal = updatedItems.reduce(
+      (sum, item) => sum + item.subtotal,
+      0
+    );
+
+    setCart({
+      ...cart,
+      items: updatedItems,
+      subtotal: newSubtotal,
+      totalAmount: newSubtotal,
+      totalQuantity: updatedItems.reduce((sum, item) => sum + item.quantity, 0),
+    });
+
+    try {
+      const response = await updateCartItem(itemId, { quantity: newQuantity });
+      if (response.success && response.data) {
+        setCart(response.data);
+        toast.success("Cart updated");
+      }
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      toast.error("Failed to update cart");
+      loadCart();
+    }
+  };
+
+  const handleRemove = async (itemId: string) => {
+    if (!cart) return;
+
+    const updatedItems = cart.items.filter((item) => item._id !== itemId);
+    setCart({
+      ...cart,
+      items: updatedItems,
+      totalItems: updatedItems.length,
+    });
+
+    try {
+      const response = await removeCartItem(itemId);
+      if (response.success && response.data) {
+        setCart(response.data);
+        toast.success("Item removed from cart");
+      }
+    } catch (error) {
+      console.error("Error removing item:", error);
+      toast.error("Failed to remove item");
+      loadCart();
+    }
+  };
+
+  const handleMoveToWishlist = async (itemId: string, productId: string) => {
+    if (!cart) return;
+
+    try {
+      await addToWishlist(productId);
+
+      const updatedItems = cart.items.filter((item) => item._id !== itemId);
+      setCart({
+        ...cart,
+        items: updatedItems,
+        totalItems: updatedItems.length,
+      });
+
+      const response = await removeCartItem(itemId);
+      if (response.success && response.data) {
+        setCart(response.data);
+      }
+
+      // Reload wishlist to update state
+      loadWishlist();
+
+      toast.success("Moved to wishlist");
+    } catch (error: any) {
+      console.error("Error moving to wishlist:", error);
+      if (error?.response?.data?.message?.includes("already in wishlist")) {
+        const response = await removeCartItem(itemId);
+        if (response.success && response.data) {
+          setCart(response.data);
+        }
+        toast.success("Item already in wishlist, removed from cart");
+      } else {
+        toast.error("Failed to move to wishlist");
+        loadCart();
+      }
+    }
+  };
+
+  const handleApplyPromo = async () => {
+    if (promoCode.trim()) {
+      try {
+        const response = await applyCoupon(promoCode);
+        if (response.success && response.data) {
+          setCart(response.data);
+          toast.success("Promo code applied");
+          setPromoCode("");
+        }
+      } catch (error) {
+        console.error("Error applying promo:", error);
+        toast.error("Invalid promo code");
+      }
+    }
+  };
+
+  const calculateShipping = (cartData: Cart) => {
+    if (!cartData || !cartData.items || cartData.items.length === 0) {
+      return 0;
+    }
+
+    // Free shipping for orders over Rs 5000
+    if (cartData.subtotal > 5000) {
+      return 0;
+    }
+
+    const shippingByVendor: { [vendorId: string]: number[] } = {};
+    let hasFreeShipping = false;
+
+    for (const item of cartData.items) {
+      const product =
+        typeof item.productId === "object" ? item.productId : null;
+
+      if (product?.freeShipping) {
+        hasFreeShipping = true;
+        continue;
+      }
+
+      if (product?.shippingCost) {
+        const vendorId = product.sellerId?.toString() || "unknown";
+        if (!shippingByVendor[vendorId]) {
+          shippingByVendor[vendorId] = [];
+        }
+        shippingByVendor[vendorId].push(product.shippingCost);
+      }
+    }
+
+    // If any product has free shipping, return 0
+    if (hasFreeShipping) {
+      return 0;
+    }
+
+    const vendorIds = Object.keys(shippingByVendor);
+
+    // No shipping costs found
+    if (vendorIds.length === 0) {
+      return 0;
+    }
+
+    // Single vendor: use the highest shipping cost
+    if (vendorIds.length === 1) {
+      const costs = shippingByVendor[vendorIds[0]];
+      return Math.max(...costs);
+    }
+
+    // Multiple vendors: calculate average of highest costs per vendor and round
+    const highestCostPerVendor = vendorIds.map((vendorId) =>
+      Math.max(...shippingByVendor[vendorId])
+    );
+    const averageShipping =
+      highestCostPerVendor.reduce((sum, cost) => sum + cost, 0) /
+      highestCostPerVendor.length;
+
+    return Math.round(averageShipping);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Loading cart...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const cartItems = cart?.items || [];
+  const subtotal = cart?.subtotal || 0;
+  const shipping = calculateShipping(cart!);
+  const discount = cart?.discount || 0;
+  const total = subtotal + shipping - discount;
 
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-950">
-        {/* Breadcrumb */}
         <div className="">
           <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
             <div className="flex items-center gap-2">
@@ -444,7 +532,6 @@ export default function CartPage() {
           </div>
         </div>
 
-        {/* Empty Cart */}
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-32">
           <div className="max-w-md mx-auto text-center space-y-8">
             <div className="flex justify-center">
@@ -474,7 +561,6 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      {/* Breadcrumb */}
       <div className="">
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
           <div className="flex items-center gap-2">
@@ -492,7 +578,6 @@ export default function CartPage() {
         </div>
       </div>
 
-      {/* Main Cart Section */}
       <section className="py-16">
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
           <div className="mb-12 space-y-4">
@@ -513,20 +598,28 @@ export default function CartPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-16">
-            {/* Cart Items */}
             <div>
-              {cartItems.map((item) => (
-                <CartItem
-                  key={item.id}
-                  item={item}
-                  onUpdateQuantity={handleUpdateQuantity}
-                  onRemove={handleRemove}
-                  onMoveToWishlist={handleMoveToWishlist}
-                />
-              ))}
+              {cartItems.map((item) => {
+                const productId =
+                  typeof item.productId === "string"
+                    ? item.productId
+                    : item.productId?._id;
+                const isInWishlist = wishlistItems.some(
+                  (w) => w.productId._id === productId
+                );
+                return (
+                  <CartItemComponent
+                    key={item._id}
+                    item={item}
+                    onUpdateQuantity={handleUpdateQuantity}
+                    onRemove={handleRemove}
+                    onMoveToWishlist={handleMoveToWishlist}
+                    isInWishlist={isInWishlist}
+                  />
+                );
+              })}
             </div>
 
-            {/* Order Summary */}
             <div className="lg:sticky lg:top-24 h-fit space-y-8">
               <div className="p-8 space-y-6">
                 <h2 className="text-lg font-light text-gray-900 dark:text-white uppercase tracking-wider">
@@ -542,6 +635,16 @@ export default function CartPage() {
                       Rs {subtotal.toFixed(2)}
                     </span>
                   </div>
+                  {discount > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Discount
+                      </span>
+                      <span className="text-green-600 dark:text-green-400">
+                        -Rs {discount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">
                       Shipping
@@ -550,9 +653,14 @@ export default function CartPage() {
                       {shipping === 0 ? "Free" : `Rs ${shipping.toFixed(2)}`}
                     </span>
                   </div>
+                  {shipping === 0 && subtotal <= 5000 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Free shipping applied
+                    </p>
+                  )}
                   {shipping > 0 && (
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Free shipping on orders over Rs 50
+                      Free shipping on orders over Rs 5000
                     </p>
                   )}
                 </div>
@@ -583,7 +691,6 @@ export default function CartPage() {
                 </div>
               </div>
 
-              {/* Promo Code */}
               <div className="p-8 space-y-4">
                 <h3 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wider">
                   Promo Code
@@ -594,6 +701,11 @@ export default function CartPage() {
                     placeholder="Enter code"
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        handleApplyPromo();
+                      }
+                    }}
                     className="flex-1 h-10 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
                   />
                   <button
@@ -609,39 +721,39 @@ export default function CartPage() {
         </div>
       </section>
 
-      {/* Recommended Products */}
-      <section className="py-32 border-t border-gray-200 dark:border-gray-800">
-        <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
-          <div className="mb-20 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="h-px w-16 bg-gray-300 dark:bg-gray-700" />
-              <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
-                Complete Your Look
-              </p>
+      {recommendedProducts.length > 0 && (
+        <section className="py-32 border-t border-gray-200 dark:border-gray-800">
+          <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
+            <div className="mb-20 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-px w-16 bg-gray-300 dark:bg-gray-700" />
+                <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
+                  Complete Your Look
+                </p>
+              </div>
+              <h2 className="text-5xl font-extralight text-gray-900 dark:text-white tracking-tight">
+                You May Also Like
+              </h2>
             </div>
-            <h2 className="text-5xl font-extralight text-gray-900 dark:text-white tracking-tight">
-              You May Also Like
-            </h2>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
-            {RECOMMENDED_PRODUCTS.map((product) => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                price={product.price}
-                costPrice={product.costPrice}
-                images={product.images}
-                quantity={product.quantity}
-                inStock={product.inStock}
-                onAddToCart={handleAddRecommended}
-                showActions={true}
-              />
-            ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
+              {recommendedProducts.map((product) => (
+                <ProductCard
+                  key={product._id}
+                  id={product._id}
+                  name={product.name}
+                  price={product.price}
+                  costPrice={product.originalPrice}
+                  images={product.images.map((img) => img.url)}
+                  quantity={product.quantity}
+                  inStock={product.inStock}
+                  showActions={true}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

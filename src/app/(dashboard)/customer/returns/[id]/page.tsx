@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   ChevronRightIcon,
@@ -10,114 +12,48 @@ import {
   DocumentDuplicateIcon,
   ArrowDownTrayIcon,
   ChatBubbleLeftRightIcon,
-  TruckIcon,
   CubeIcon,
-  CalendarIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
-
-// Mock return detail
-const MOCK_RETURN_DETAIL = {
-  id: "RET001",
-  orderId: "ORD12345",
-  product: {
-    name: "Classic Denim Jacket",
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500",
-    price: 89.99,
-    sku: "DENIM-001",
-    quantity: 1,
-  },
-  reason: "Size doesn't fit",
-  description:
-    "The jacket is too small for me. I ordered a medium but it fits more like a small. I would like to exchange it for a large size or get a refund. The product is in perfect condition with all tags still attached. I haven't worn it outside, only tried it on at home.",
-  images: [
-    "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500",
-    "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=500",
-    "https://images.unsplash.com/photo-1525450824786-227cbef70703?w=500",
-  ],
-  status: "approved",
-  submittedDate: "2024-01-15T10:30:00",
-  reviewedDate: "2024-01-16T14:20:00",
-  approvedDate: "2024-01-16T14:20:00",
-  completedDate: null,
-  rejectedDate: null,
-  rejectionReason: null,
-  trackingNumber: "TRK1234567890",
-  refundAmount: 89.99,
-  refundStatus: "processing",
-  refundMethod: "Wallet",
-  estimatedRefundDate: "2024-01-20T00:00:00",
-  returnShippingAddress: {
-    name: "Fashion Store Returns",
-    address: "456 Return Center Blvd",
-    city: "New York",
-    state: "NY",
-    zipCode: "10002",
-  },
-  timeline: [
-    {
-      status: "submitted",
-      label: "Return Request Submitted",
-      description: "Your return request has been received",
-      timestamp: "2024-01-15T10:30:00",
-      completed: true,
-    },
-    {
-      status: "review",
-      label: "Under Review",
-      description: "Our team is reviewing your return request",
-      timestamp: "2024-01-15T10:31:00",
-      completed: true,
-    },
-    {
-      status: "approved",
-      label: "Return Approved",
-      description: "Your return has been approved. Please ship the item back",
-      timestamp: "2024-01-16T14:20:00",
-      completed: true,
-    },
-    {
-      status: "shipped",
-      label: "Item Shipped Back",
-      description: "Waiting for the item to be shipped back",
-      timestamp: null,
-      completed: false,
-    },
-    {
-      status: "received",
-      label: "Item Received",
-      description: "Item will be inspected upon receipt",
-      timestamp: null,
-      completed: false,
-    },
-    {
-      status: "refunded",
-      label: "Refund Processed",
-      description: "Refund will be issued to your wallet",
-      timestamp: null,
-      completed: false,
-    },
-  ],
-  adminNotes: [
-    {
-      author: "Support Team",
-      message:
-        "Return approved. Product appears to be in original condition based on photos. Customer can return for full refund.",
-      timestamp: "2024-01-16T14:20:00",
-    },
-  ],
-};
+import { getReturnById, type ReturnRequest } from "@/lib/api/customer.returns.api";
 
 export default function ReturnDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const returnId = params?.id || "RET001";
+  const returnId = params?.id as string;
 
-  const [returnDetail] = useState(MOCK_RETURN_DETAIL);
+  const [loading, setLoading] = useState(true);
+  const [returnDetail, setReturnDetail] = useState<ReturnRequest | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showImageModal, setShowImageModal] = useState(false);
 
-  const formatDate = (dateString: string | null) => {
+  useEffect(() => {
+    if (returnId) {
+      loadReturnDetails();
+    }
+  }, [returnId]);
+
+  const loadReturnDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await getReturnById(returnId);
+
+      if (response.success && response.return) {
+        setReturnDetail(response.return);
+      } else {
+        toast.error("Failed to load return details");
+        router.push("/customer/returns");
+      }
+    } catch (error: any) {
+      console.error("Error loading return:", error);
+      toast.error(error.message || "Failed to load return details");
+      router.push("/customer/returns");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "Pending";
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -127,7 +63,7 @@ export default function ReturnDetailPage() {
     });
   };
 
-  const formatTime = (dateString: string | null) => {
+  const formatTime = (dateString: string | null | undefined) => {
     if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleTimeString("en-US", {
@@ -149,13 +85,13 @@ export default function ReturnDetailPage() {
     toast.success("Opening support chat...");
   };
 
-  const getStatusIcon = () => {
-    switch (returnDetail.status) {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
       case "approved":
         return (
           <CheckCircleIcon className="h-8 w-8 text-green-600 dark:text-green-400" />
         );
-      case "pending":
+      case "requested":
         return (
           <ClockIcon className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
         );
@@ -163,16 +99,23 @@ export default function ReturnDetailPage() {
         return (
           <XCircleIcon className="h-8 w-8 text-red-600 dark:text-red-400" />
         );
+      case "refunded":
+        return (
+          <CheckCircleIcon className="h-8 w-8 text-green-600 dark:text-green-400" />
+        );
       default:
-        return null;
+        return (
+          <ClockIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+        );
     }
   };
 
-  const getStatusColor = () => {
-    switch (returnDetail.status) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
       case "approved":
+      case "refunded":
         return "text-green-600 dark:text-green-400";
-      case "pending":
+      case "requested":
         return "text-yellow-600 dark:text-yellow-400";
       case "rejected":
         return "text-red-600 dark:text-red-400";
@@ -181,11 +124,12 @@ export default function ReturnDetailPage() {
     }
   };
 
-  const getStatusBgColor = () => {
-    switch (returnDetail.status) {
+  const getStatusBgColor = (status: string) => {
+    switch (status) {
       case "approved":
+      case "refunded":
         return "bg-green-50 dark:bg-green-900/20";
-      case "pending":
+      case "requested":
         return "bg-yellow-50 dark:bg-yellow-900/20";
       case "rejected":
         return "bg-red-50 dark:bg-red-900/20";
@@ -193,6 +137,38 @@ export default function ReturnDetailPage() {
         return "bg-gray-50 dark:bg-gray-900";
     }
   };
+
+  // Create timeline from status history
+  const getTimeline = () => {
+    if (!returnDetail?.statusHistory) return [];
+
+    return returnDetail.statusHistory.map((history, index) => ({
+      status: history.status,
+      label: history.status.charAt(0).toUpperCase() + history.status.slice(1).replace(/_/g, " "),
+      description: history.notes || `Return ${history.status.replace(/_/g, " ")}`,
+      timestamp: history.timestamp,
+      completed: true,
+    }));
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Loading return details...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!returnDetail) {
+    return null;
+  }
+
+  const timeline = getTimeline();
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -208,14 +184,14 @@ export default function ReturnDetailPage() {
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <button
-              onClick={() => router.push("/customer/return")}
+              onClick={() => router.push("/customer/returns")}
               className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               Returns
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <span className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white">
-              {returnDetail.id}
+              {returnDetail.returnNumber}
             </span>
           </div>
         </div>
@@ -234,15 +210,17 @@ export default function ReturnDetailPage() {
               </div>
 
               <div className="flex items-center gap-6">
-                {getStatusIcon()}
+                {getStatusIcon(returnDetail.status)}
                 <div>
                   <h1 className="text-4xl font-extralight text-gray-900 dark:text-white tracking-tight mb-2">
-                    {returnDetail.id}
+                    {returnDetail.returnNumber}
                   </h1>
                   <p
-                    className={`text-sm uppercase tracking-[0.2em] ${getStatusColor()}`}
+                    className={`text-sm uppercase tracking-[0.2em] ${getStatusColor(
+                      returnDetail.status
+                    )}`}
                   >
-                    {returnDetail.status}
+                    {returnDetail.status.replace(/_/g, " ")}
                   </p>
                 </div>
               </div>
@@ -274,60 +252,57 @@ export default function ReturnDetailPage() {
           <div className="grid lg:grid-cols-3 gap-16">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-12">
-              {/* Product Information */}
+              {/* Return Items */}
               <div>
                 <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
-                  Product Information
+                  Return Items
                 </h2>
 
-                <div className="border border-gray-200 dark:border-gray-800 p-8">
-                  <div className="flex items-start gap-8">
-                    <div className="h-32 w-32 bg-gray-100 dark:bg-gray-900 flex-shrink-0 overflow-hidden">
-                      <img
-                        src={returnDetail.product.image}
-                        alt={returnDetail.product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    <div className="flex-1 space-y-4">
-                      <div>
-                        <h3 className="text-lg font-normal text-gray-900 dark:text-white mb-2">
-                          {returnDetail.product.name}
-                        </h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          SKU: {returnDetail.product.sku}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-6 pt-4 border-t border-gray-200 dark:border-gray-800">
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-1">
-                            Price
-                          </p>
-                          <p className="text-sm text-gray-900 dark:text-white">
-                            ${returnDetail.product.price.toFixed(2)}
-                          </p>
+                <div className="border border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">
+                  {returnDetail.items.map((item, index) => (
+                    <div key={index} className="p-8">
+                      <div className="flex items-start gap-6">
+                        <div className="h-24 w-24 bg-gray-100 dark:bg-gray-900 flex-shrink-0 flex items-center justify-center">
+                          <CubeIcon className="h-8 w-8 text-gray-400" />
                         </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-1">
-                            Quantity
-                          </p>
-                          <p className="text-sm text-gray-900 dark:text-white">
-                            {returnDetail.product.quantity}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-1">
-                            Order ID
-                          </p>
-                          <p className="text-sm text-gray-900 dark:text-white font-mono">
-                            {returnDetail.orderId}
-                          </p>
+
+                        <div className="flex-1 space-y-4">
+                          <div>
+                            <h3 className="text-lg font-normal text-gray-900 dark:text-white mb-2">
+                              {item.productName || "Product"}
+                            </h3>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-6">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-1">
+                                Price
+                              </p>
+                              <p className="text-sm text-gray-900 dark:text-white">
+                                Rs {(item.price || 0).toFixed(2)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-1">
+                                Quantity
+                              </p>
+                              <p className="text-sm text-gray-900 dark:text-white">
+                                {item.quantity}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-1">
+                                Subtotal
+                              </p>
+                              <p className="text-sm text-gray-900 dark:text-white">
+                                Rs {(item.subtotal || 0).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
@@ -343,8 +318,8 @@ export default function ReturnDetailPage() {
                       <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-3">
                         Reason for Return
                       </p>
-                      <p className="text-sm text-gray-900 dark:text-white">
-                        {returnDetail.reason}
+                      <p className="text-sm text-gray-900 dark:text-white capitalize">
+                        {returnDetail.reason.replace(/_/g, " ")}
                       </p>
                     </div>
 
@@ -353,7 +328,7 @@ export default function ReturnDetailPage() {
                         Description
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                        {returnDetail.description}
+                        {returnDetail.reasonDetails}
                       </p>
                     </div>
                   </div>
@@ -361,140 +336,115 @@ export default function ReturnDetailPage() {
               </div>
 
               {/* Uploaded Images */}
-              <div>
-                <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
-                  Uploaded Images
-                </h2>
+              {returnDetail.images && returnDetail.images.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
+                    Uploaded Images
+                  </h2>
 
-                <div className="grid grid-cols-3 gap-4">
-                  {returnDetail.images.map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setSelectedImage(index);
-                        setShowImageModal(true);
-                      }}
-                      className="aspect-square border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white transition-colors overflow-hidden group"
-                    >
-                      <img
-                        src={image}
-                        alt={`Return image ${index + 1}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Timeline */}
-              <div>
-                <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
-                  Return Timeline
-                </h2>
-
-                <div className="border border-gray-200 dark:border-gray-800 p-8">
-                  <div className="space-y-8">
-                    {returnDetail.timeline.map((step, index) => (
-                      <div key={step.status} className="flex items-start gap-6">
-                        <div className="flex flex-col items-center">
-                          <div
-                            className={`h-10 w-10 flex items-center justify-center ${
-                              step.completed
-                                ? "bg-green-50 dark:bg-green-900/20"
-                                : "bg-gray-100 dark:bg-gray-900"
-                            }`}
-                          >
-                            {step.completed ? (
-                              <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-                            ) : (
-                              <div className="h-2 w-2 bg-gray-400 dark:bg-gray-600 rounded-full" />
-                            )}
-                          </div>
-                          {index !== returnDetail.timeline.length - 1 && (
-                            <div
-                              className={`w-px h-16 ${
-                                step.completed
-                                  ? "bg-green-600 dark:bg-green-400"
-                                  : "bg-gray-200 dark:bg-gray-800"
-                              }`}
-                            />
-                          )}
-                        </div>
-
-                        <div className="flex-1 pb-8">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                            {step.label}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                            {step.description}
-                          </p>
-                          {step.timestamp && (
-                            <p className="text-xs text-gray-400 dark:text-gray-600">
-                              {formatDate(step.timestamp)} at{" "}
-                              {formatTime(step.timestamp)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    {returnDetail.images.map((image, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setSelectedImage(index);
+                          setShowImageModal(true);
+                        }}
+                        className="aspect-square border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white transition-colors overflow-hidden group"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={image}
+                          alt={`Return image ${index + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </button>
                     ))}
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Admin Notes */}
-              {returnDetail.adminNotes &&
-                returnDetail.adminNotes.length > 0 && (
-                  <div>
-                    <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
-                      Support Notes
-                    </h2>
+              {/* Timeline */}
+              {timeline.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
+                    Return Timeline
+                  </h2>
 
-                    <div className="space-y-4">
-                      {returnDetail.adminNotes.map((note, index) => (
-                        <div
-                          key={index}
-                          className="border border-gray-200 dark:border-gray-800 p-6 bg-gray-50 dark:bg-gray-900"
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs font-medium text-gray-900 dark:text-white">
-                                {note.author}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatDate(note.timestamp)} at{" "}
-                                {formatTime(note.timestamp)}
-                              </p>
+                  <div className="border border-gray-200 dark:border-gray-800 p-8">
+                    <div className="space-y-8">
+                      {timeline.map((step, index) => (
+                        <div key={index} className="flex items-start gap-6">
+                          <div className="flex flex-col items-center">
+                            <div
+                              className={`h-10 w-10 flex items-center justify-center ${
+                                step.completed
+                                  ? "bg-green-50 dark:bg-green-900/20"
+                                  : "bg-gray-100 dark:bg-gray-900"
+                              }`}
+                            >
+                              {step.completed ? (
+                                <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                              ) : (
+                                <div className="h-2 w-2 bg-gray-400 dark:bg-gray-600 rounded-full" />
+                              )}
                             </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                              {note.message}
+                            {index !== timeline.length - 1 && (
+                              <div
+                                className={`w-px h-16 ${
+                                  step.completed
+                                    ? "bg-green-600 dark:bg-green-400"
+                                    : "bg-gray-200 dark:bg-gray-800"
+                                }`}
+                              />
+                            )}
+                          </div>
+
+                          <div className="flex-1 pb-8">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                              {step.label}
                             </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                              {step.description}
+                            </p>
+                            {step.timestamp && (
+                              <p className="text-xs text-gray-400 dark:text-gray-600">
+                                {formatDate(step.timestamp)} at{" "}
+                                {formatTime(step.timestamp)}
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                )}
+                </div>
+              )}
             </div>
 
             {/* Sidebar */}
             <div className="lg:col-span-1 space-y-8">
               {/* Status Card */}
               <div
-                className={`border border-gray-200 dark:border-gray-800 p-8 ${getStatusBgColor()}`}
+                className={`border border-gray-200 dark:border-gray-800 p-8 ${getStatusBgColor(
+                  returnDetail.status
+                )}`}
               >
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
                       Status
                     </p>
-                    {getStatusIcon()}
+                    {getStatusIcon(returnDetail.status)}
                   </div>
 
                   <div>
                     <p
-                      className={`text-lg font-medium uppercase tracking-[0.2em] ${getStatusColor()}`}
+                      className={`text-lg font-medium uppercase tracking-[0.2em] ${getStatusColor(
+                        returnDetail.status
+                      )}`}
                     >
-                      {returnDetail.status}
+                      {returnDetail.status.replace(/_/g, " ")}
                     </p>
                   </div>
 
@@ -503,121 +453,115 @@ export default function ReturnDetailPage() {
                       <p className="text-xs text-gray-900 dark:text-white">
                         Please ship the item back to proceed with the refund.
                       </p>
+                      {returnDetail.returnDeadline && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Deadline: {formatDate(returnDetail.returnDeadline)}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Refund Information */}
-              {returnDetail.status === "approved" && (
-                <div className="border border-gray-200 dark:border-gray-800 p-8">
-                  <div className="space-y-6">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
-                      Refund Information
-                    </p>
+              <div className="border border-gray-200 dark:border-gray-800 p-8">
+                <div className="space-y-6">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+                    Refund Information
+                  </p>
 
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Return Amount
+                      </span>
+                      <span className="text-sm text-gray-900 dark:text-white">
+                        Rs {returnDetail.returnAmount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {returnDetail.restockingFee > 0 && (
+                      <div className="flex justify-between items-start">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Restocking Fee
+                        </span>
+                        <span className="text-sm text-red-600 dark:text-red-400">
+                          -Rs {returnDetail.restockingFee.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+
+                    {returnDetail.shippingRefund > 0 && (
+                      <div className="flex justify-between items-start">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Shipping Refund
+                        </span>
+                        <span className="text-sm text-green-600 dark:text-green-400">
+                          +Rs {returnDetail.shippingRefund.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                      <div className="flex justify-between items-start">
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">
                           Refund Amount
-                        </p>
-                        <p className="text-2xl font-extralight text-gray-900 dark:text-white">
-                          ${returnDetail.refundAmount.toFixed(2)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                          Refund Method
-                        </p>
-                        <p className="text-sm text-gray-900 dark:text-white">
-                          {returnDetail.refundMethod}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                          Refund Status
-                        </p>
-                        <p className="text-sm text-gray-900 dark:text-white capitalize">
-                          {returnDetail.refundStatus}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                          Estimated Refund Date
-                        </p>
-                        <p className="text-sm text-gray-900 dark:text-white">
-                          {formatDate(returnDetail.estimatedRefundDate)}
-                        </p>
+                        </span>
+                        <span className="text-lg font-light text-gray-900 dark:text-white">
+                          Rs {returnDetail.refundAmount.toFixed(2)}
+                        </span>
                       </div>
                     </div>
+
+                    {returnDetail.status === "refunded" && returnDetail.refundedAt && (
+                      <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                          ✓ Refunded on {formatDate(returnDetail.refundedAt)}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Tracking Information */}
-              {returnDetail.status === "approved" &&
-                returnDetail.trackingNumber && (
-                  <div className="border border-gray-200 dark:border-gray-800 p-8">
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-3">
-                        <TruckIcon className="h-5 w-5 text-gray-900 dark:text-white opacity-70" />
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
-                          Tracking Information
+              {/* Order Reference */}
+              <div className="border border-gray-200 dark:border-gray-800 p-8">
+                <div className="space-y-6">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+                    Order Reference
+                  </p>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Order Number
+                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm text-gray-900 dark:text-white font-mono">
+                          {returnDetail.orderNumber}
                         </p>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                            Tracking Number
-                          </p>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm text-gray-900 dark:text-white font-mono">
-                              {returnDetail.trackingNumber}
-                            </p>
-                            <button
-                              onClick={() =>
-                                copyToClipboard(
-                                  returnDetail.trackingNumber!,
-                                  "Tracking number"
-                                )
-                              }
-                              className="flex-shrink-0"
-                            >
-                              <DocumentDuplicateIcon className="h-4 w-4 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
-                            </button>
-                          </div>
-                        </div>
+                        <button
+                          onClick={() =>
+                            copyToClipboard(
+                              returnDetail.orderNumber,
+                              "Order number"
+                            )
+                          }
+                          className="flex-shrink-0"
+                        >
+                          <DocumentDuplicateIcon className="h-4 w-4 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
+                        </button>
                       </div>
                     </div>
-                  </div>
-                )}
-
-              {/* Return Address */}
-              {returnDetail.status === "approved" && (
-                <div className="border border-gray-200 dark:border-gray-800 p-8">
-                  <div className="space-y-6">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
-                      Return Shipping Address
-                    </p>
-
-                    <div className="space-y-2 text-sm text-gray-900 dark:text-white">
-                      <p className="font-medium">
-                        {returnDetail.returnShippingAddress.name}
-                      </p>
-                      <p>{returnDetail.returnShippingAddress.address}</p>
-                      <p>
-                        {returnDetail.returnShippingAddress.city},{" "}
-                        {returnDetail.returnShippingAddress.state}{" "}
-                        {returnDetail.returnShippingAddress.zipCode}
-                      </p>
-                    </div>
+                    <button
+                      onClick={() => router.push(`/customer/orders/${returnDetail.orderId}`)}
+                      className="w-full border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors"
+                    >
+                      View Order
+                    </button>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Important Dates */}
               <div className="border border-gray-200 dark:border-gray-800 p-8">
@@ -632,39 +576,28 @@ export default function ReturnDetailPage() {
                         Submitted
                       </span>
                       <span className="text-xs text-gray-900 dark:text-white text-right">
-                        {formatDate(returnDetail.submittedDate)}
+                        {formatDate(returnDetail.createdAt)}
                       </span>
                     </div>
 
-                    {returnDetail.reviewedDate && (
+                    {returnDetail.reviewedAt && (
                       <div className="flex justify-between items-start">
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           Reviewed
                         </span>
                         <span className="text-xs text-gray-900 dark:text-white text-right">
-                          {formatDate(returnDetail.reviewedDate)}
+                          {formatDate(returnDetail.reviewedAt)}
                         </span>
                       </div>
                     )}
 
-                    {returnDetail.approvedDate && (
+                    {returnDetail.refundedAt && (
                       <div className="flex justify-between items-start">
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                          Approved
+                          Refunded
                         </span>
                         <span className="text-xs text-gray-900 dark:text-white text-right">
-                          {formatDate(returnDetail.approvedDate)}
-                        </span>
-                      </div>
-                    )}
-
-                    {returnDetail.rejectedDate && (
-                      <div className="flex justify-between items-start">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          Rejected
-                        </span>
-                        <span className="text-xs text-gray-900 dark:text-white text-right">
-                          {formatDate(returnDetail.rejectedDate)}
+                          {formatDate(returnDetail.refundedAt)}
                         </span>
                       </div>
                     )}
@@ -673,31 +606,30 @@ export default function ReturnDetailPage() {
               </div>
 
               {/* Rejection Reason */}
-              {returnDetail.status === "rejected" &&
-                returnDetail.rejectionReason && (
-                  <div className="border border-red-200 dark:border-red-800 p-8 bg-red-50 dark:bg-red-900/20">
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-900 dark:text-white mb-2">
-                            Rejection Reason
-                          </p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                            {returnDetail.rejectionReason}
-                          </p>
-                        </div>
+              {returnDetail.status === "rejected" && returnDetail.rejectionReason && (
+                <div className="border border-red-200 dark:border-red-800 p-8 bg-red-50 dark:bg-red-900/20">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-900 dark:text-white mb-2">
+                          Rejection Reason
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          {returnDetail.rejectionReason}
+                        </p>
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
       {/* Image Modal */}
-      {showImageModal && (
+      {showImageModal && returnDetail.images && returnDetail.images.length > 0 && (
         <>
           <div
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
@@ -719,6 +651,7 @@ export default function ReturnDetailPage() {
                 </div>
 
                 <div className="aspect-square bg-gray-100 dark:bg-gray-900 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={returnDetail.images[selectedImage]}
                     alt={`Return image ${selectedImage + 1}`}

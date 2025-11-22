@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+/* eslint-disable react-hooks/exhaustive-deps */
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronRightIcon,
@@ -10,161 +12,27 @@ import {
   CheckCircleIcon,
   TruckIcon,
   XCircleIcon,
+  CubeIcon,
 } from "@heroicons/react/24/outline";
+import { toast } from "sonner";
+import { getOrders } from "@/lib/api/customer.orders.api";
+import type { Order, OrderStatus } from "@/types";
 
-// Mock Orders Data
-const ORDERS_DATA = [
+const STATUS_CONFIG: Record<
+  string,
   {
-    id: "ORD-2024-001",
-    date: "2024-11-15",
-    status: "delivered",
-    items: 3,
-    total: 209.97,
-    transactionHash: "0x1a2b3c4d5e6f7g8h9i0j",
-    products: [
-      {
-        id: 1,
-        name: "Premium Cotton T-Shirt",
-        image:
-          "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200",
-        quantity: 2,
-        price: 29.99,
-      },
-      {
-        id: 2,
-        name: "Classic Denim Jacket",
-        image:
-          "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=200",
-        quantity: 1,
-        price: 89.99,
-      },
-    ],
+    label: string;
+    icon: any;
+    color: string;
+    bg: string;
+  }
+> = {
+  pending: {
+    label: "Pending",
+    icon: ClockIcon,
+    color: "text-gray-900 dark:text-white",
+    bg: "bg-gray-100 dark:bg-gray-900",
   },
-  {
-    id: "ORD-2024-002",
-    date: "2024-11-12",
-    status: "shipped",
-    items: 2,
-    total: 169.98,
-    transactionHash: "0x9i8h7g6f5e4d3c2b1a0j",
-    products: [
-      {
-        id: 3,
-        name: "Casual Sneakers",
-        image:
-          "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200",
-        quantity: 1,
-        price: 79.99,
-      },
-      {
-        id: 4,
-        name: "Sport Watch",
-        image:
-          "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200",
-        quantity: 1,
-        price: 149.99,
-      },
-    ],
-  },
-  {
-    id: "ORD-2024-003",
-    date: "2024-11-10",
-    status: "processing",
-    items: 1,
-    total: 59.99,
-    transactionHash: "0xabcdef1234567890abcd",
-    products: [
-      {
-        id: 5,
-        name: "Summer Dress",
-        image:
-          "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=200",
-        quantity: 1,
-        price: 59.99,
-      },
-    ],
-  },
-  {
-    id: "ORD-2024-004",
-    date: "2024-11-08",
-    status: "delivered",
-    items: 4,
-    total: 289.96,
-    transactionHash: "0x0987654321fedcba0987",
-    products: [
-      {
-        id: 6,
-        name: "Leather Wallet",
-        image:
-          "https://images.unsplash.com/photo-1627123424574-724758594e93?w=200",
-        quantity: 2,
-        price: 39.99,
-      },
-      {
-        id: 7,
-        name: "Casual Backpack",
-        image:
-          "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200",
-        quantity: 1,
-        price: 69.99,
-      },
-      {
-        id: 8,
-        name: "Designer Sunglasses",
-        image:
-          "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=200",
-        quantity: 1,
-        price: 129.99,
-      },
-    ],
-  },
-  {
-    id: "ORD-2024-005",
-    date: "2024-11-05",
-    status: "cancelled",
-    items: 1,
-    total: 189.99,
-    transactionHash: "0xfedcba9876543210fedc",
-    products: [
-      {
-        id: 9,
-        name: "Winter Coat",
-        image:
-          "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=200",
-        quantity: 1,
-        price: 189.99,
-      },
-    ],
-  },
-  {
-    id: "ORD-2024-006",
-    date: "2024-11-03",
-    status: "delivered",
-    items: 2,
-    total: 149.98,
-    transactionHash: "0x1122334455667788990a",
-    products: [
-      {
-        id: 10,
-        name: "Wool Sweater",
-        image:
-          "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=200",
-        quantity: 1,
-        price: 79.99,
-      },
-      {
-        id: 11,
-        name: "Casual Backpack",
-        image:
-          "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200",
-        quantity: 1,
-        price: 69.99,
-      },
-    ],
-  },
-];
-
-const STATUS_CONFIG = {
   processing: {
     label: "Processing",
     icon: ClockIcon,
@@ -189,10 +57,17 @@ const STATUS_CONFIG = {
     color: "text-gray-500 dark:text-gray-400",
     bg: "bg-gray-100 dark:bg-gray-900",
   },
+  confirmed: {
+    label: "Confirmed",
+    icon: CheckCircleIcon,
+    color: "text-gray-900 dark:text-white",
+    bg: "bg-gray-100 dark:bg-gray-900",
+  },
 };
 
 const FILTER_OPTIONS = [
   { label: "All Orders", value: "all" },
+  { label: "Pending", value: "pending" },
   { label: "Processing", value: "processing" },
   { label: "Shipped", value: "shipped" },
   { label: "Delivered", value: "delivered" },
@@ -209,31 +84,73 @@ const SORT_OPTIONS = [
 export default function OrdersPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [sortBy, setSortBy] = useState("newest");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 20,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
-  // Filter and sort orders
-  const filteredOrders = ORDERS_DATA.filter((order) => {
-    const matchesSearch =
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.transactionHash.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      selectedStatus === "all" || order.status === selectedStatus;
-    return matchesSearch && matchesStatus;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case "newest":
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      case "oldest":
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      case "amount-desc":
-        return b.total - a.total;
-      case "amount-asc":
-        return a.total - b.total;
-      default:
-        return 0;
+  // Load orders from API
+  useEffect(() => {
+    loadOrders();
+  }, [selectedStatus, sortBy]);
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+
+      const filters: any = {
+        page: 1,
+        limit: 20,
+        sortBy: "createdAt",
+        sortOrder: sortBy === "newest" ? "desc" : "asc",
+      };
+
+      // Add status filter if not "all"
+      if (selectedStatus !== "all") {
+        filters.status = selectedStatus as OrderStatus;
+      }
+
+      // Adjust sortBy based on selection
+      if (sortBy === "amount-desc" || sortBy === "amount-asc") {
+        filters.sortBy = "total";
+        filters.sortOrder = sortBy === "amount-desc" ? "desc" : "asc";
+      }
+
+      const response = await getOrders(filters);
+
+      if (response.success && response.data) {
+        setOrders(response.data.orders);
+        setPagination(response.data.pagination);
+      } else {
+        toast.error(response.message || "Failed to load orders");
+      }
+    } catch (error: any) {
+      console.error("Error loading orders:", error);
+      toast.error(error.message || "Failed to load orders");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Filter orders by search query (client-side)
+  const filteredOrders = orders.filter((order) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      order.orderNumber?.toLowerCase().includes(query) ||
+      order.transactionHash?.toLowerCase().includes(query) ||
+      order.blockchainTxHash?.toLowerCase().includes(query) ||
+      order._id?.toLowerCase().includes(query)
+    );
   });
 
   const formatDate = (dateString: string) => {
@@ -244,6 +161,29 @@ export default function OrdersPage() {
       day: "numeric",
     });
   };
+
+  // Get order ID for routing
+  const getOrderId = (order: Order) => {
+    return order._id || order.id || "";
+  };
+
+  // Get display items count
+  const getItemsCount = (order: Order) => {
+    return order.items?.length || 0;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Loading orders...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -280,8 +220,8 @@ export default function OrdersPage() {
                 My Orders
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {filteredOrders.length}{" "}
-                {filteredOrders.length === 1 ? "order" : "orders"}
+                {pagination.totalItems}{" "}
+                {pagination.totalItems === 1 ? "order" : "orders"}
               </p>
             </div>
           </div>
@@ -379,22 +319,25 @@ export default function OrdersPage() {
           {filteredOrders.length > 0 ? (
             <div className="space-y-6">
               {filteredOrders.map((order) => {
-                const statusConfig = STATUS_CONFIG[order.status];
+                const statusConfig =
+                  STATUS_CONFIG[order.status] || STATUS_CONFIG["pending"];
                 const StatusIcon = statusConfig.icon;
+                const itemsCount = getItemsCount(order);
+                const orderId = getOrderId(order);
 
                 return (
                   <div
-                    key={order.id}
-                    className="hover:border-black dark:hover:border-white transition-all group cursor-pointer"
-                    onClick={() => router.push(`/customer/orders/${order.id}`)}
+                    key={orderId}
+                    className="border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white transition-all group cursor-pointer"
+                    onClick={() => router.push(`/customer/orders/${orderId}`)}
                   >
                     <div className="p-8">
                       {/* Order Header */}
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
                         <div className="space-y-2">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 flex-wrap">
                             <h3 className="text-sm font-medium text-gray-900 dark:text-white uppercase tracking-wider">
-                              {order.id}
+                              {order.orderNumber}
                             </h3>
                             <div
                               className={`flex items-center gap-2 px-3 py-1 ${statusConfig.bg}`}
@@ -408,28 +351,44 @@ export default function OrdersPage() {
                                 {statusConfig.label}
                               </span>
                             </div>
+                            {order.paymentStatus === "refunded" && (
+                              <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30">
+                                <CheckCircleIcon className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                <span className="text-[10px] uppercase tracking-wider font-medium text-green-600 dark:text-green-400">
+                                  Refunded
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                            <span>{formatDate(order.date)}</span>
+                            <span>{formatDate(order.createdAt)}</span>
                             <span>•</span>
                             <span>
-                              {order.items}{" "}
-                              {order.items === 1 ? "item" : "items"}
+                              {itemsCount} {itemsCount === 1 ? "item" : "items"}
                             </span>
-                            <span>•</span>
-                            <span className="font-mono">
-                              {order.transactionHash.slice(0, 10)}...
-                            </span>
+                            {order.transactionHash && (
+                              <>
+                                <span>•</span>
+                                <span className="font-mono">
+                                  {order.transactionHash.slice(0, 10)}...
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                          <div className="text-right space-y-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Total
                             </p>
-                            <p className="text-xl font-light text-gray-900 dark:text-white">
+                            <p className={`text-xl font-light ${order.paymentStatus === "refunded" ? "text-green-600 dark:text-green-400" : "text-gray-900 dark:text-white"}`}>
                               Rs {order.total.toFixed(2)}
                             </p>
+                            {order.paymentStatus === "refunded" && (
+                              <p className="text-[10px] text-green-600 dark:text-green-400 uppercase tracking-wider">
+                                ✓ Refunded
+                              </p>
+                            )}
                           </div>
                           <ChevronRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-600 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
                         </div>
@@ -437,29 +396,50 @@ export default function OrdersPage() {
 
                       {/* Order Items */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {order.products.slice(0, 5).map((product) => (
-                          <div key={product.id} className="space-y-2">
-                            <div className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4]">
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="w-full h-full object-cover"
-                              />
-                              {product.quantity > 1 && (
-                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-medium">
-                                  {product.quantity}
-                                </div>
-                              )}
+                        {order.items.slice(0, 5).map((item, index) => {
+                          const product =
+                            typeof item.productId === "object"
+                              ? item.productId
+                              : null;
+                          // Check multiple image sources: populated product, productSnapshot, or direct field
+                          const productImage =
+                            product?.images?.[0]?.url ||
+                            item.productSnapshot?.images?.[0]?.url ||
+                            item.productImage ||
+                            "";
+                          const productName = product?.name || item.productName || "Product";
+
+                          return (
+                            <div key={index} className="space-y-2">
+                              <div className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4]">
+                                {productImage ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={productImage}
+                                    alt={productName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <CubeIcon className="h-8 w-8 text-gray-400" />
+                                  </div>
+                                )}
+                                {item.quantity > 1 && (
+                                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-medium">
+                                    {item.quantity}
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-gray-600 dark:text-gray-400 uppercase tracking-wide line-clamp-1">
+                                {productName}
+                              </p>
                             </div>
-                            <p className="text-[10px] text-gray-600 dark:text-gray-400 uppercase tracking-wide line-clamp-1">
-                              {product.name}
-                            </p>
-                          </div>
-                        ))}
-                        {order.products.length > 5 && (
+                          );
+                        })}
+                        {itemsCount > 5 && (
                           <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-900 aspect-[3/4]">
                             <span className="text-sm text-gray-500 dark:text-gray-400">
-                              +{order.products.length - 5} more
+                              +{itemsCount - 5} more
                             </span>
                           </div>
                         )}
@@ -473,7 +453,7 @@ export default function OrdersPage() {
             <div className="text-center py-32">
               <div className="space-y-4">
                 <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  No orders found
+                  {searchQuery ? "No orders match your search" : "No orders found"}
                 </p>
                 <button
                   onClick={() => {

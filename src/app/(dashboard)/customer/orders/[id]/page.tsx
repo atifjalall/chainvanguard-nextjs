@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
-import React from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import {
   ChevronRightIcon,
   ClockIcon,
@@ -12,88 +14,37 @@ import {
   CreditCardIcon,
   DocumentTextIcon,
   ArrowTopRightOnSquareIcon,
+  CubeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
+import {
+  getOrderById,
+  getOrderTimeline,
+  cancelOrder,
+} from "@/lib/api/customer.orders.api";
+import type { Order } from "@/types";
 
-// Mock Order Detail Data
-const ORDER_DATA = {
-  id: "ORD-2024-001",
-  date: "2024-11-15",
-  status: "delivered",
-  transactionHash: "0x1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
-  blockNumber: "18234567",
-  networkFee: 2.5,
-  shippingInfo: {
-    fullName: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+92 300 1234567",
-    address: "123 Main Street",
-    city: "Karachi",
-    state: "Sindh",
-    zipCode: "75500",
-    country: "Pakistan",
+const STATUS_CONFIG: Record<
+  string,
+  {
+    label: string;
+    icon: any;
+    color: string;
+    bg: string;
+  }
+> = {
+  pending: {
+    label: "Pending",
+    icon: ClockIcon,
+    color: "text-gray-900 dark:text-white",
+    bg: "bg-gray-100 dark:bg-gray-900",
   },
-  shippingMethod: {
-    name: "Standard Shipping",
-    cost: 5.99,
-    estimatedDays: "5-7 business days",
+  confirmed: {
+    label: "Confirmed",
+    icon: CheckCircleIcon,
+    color: "text-gray-900 dark:text-white",
+    bg: "bg-gray-100 dark:bg-gray-900",
   },
-  timeline: [
-    {
-      status: "Order Placed",
-      date: "2024-11-15 10:30 AM",
-      completed: true,
-    },
-    {
-      status: "Payment Confirmed",
-      date: "2024-11-15 10:32 AM",
-      completed: true,
-    },
-    {
-      status: "Processing",
-      date: "2024-11-15 02:15 PM",
-      completed: true,
-    },
-    {
-      status: "Shipped",
-      date: "2024-11-16 09:00 AM",
-      completed: true,
-    },
-    {
-      status: "Out for Delivery",
-      date: "2024-11-18 08:30 AM",
-      completed: true,
-    },
-    {
-      status: "Delivered",
-      date: "2024-11-18 03:45 PM",
-      completed: true,
-    },
-  ],
-  products: [
-    {
-      id: 1,
-      name: "Premium Cotton T-Shirt",
-      image:
-        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500",
-      quantity: 2,
-      price: 29.99,
-      size: "M",
-      color: "Black",
-    },
-    {
-      id: 2,
-      name: "Classic Denim Jacket",
-      image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500",
-      quantity: 1,
-      price: 89.99,
-      size: "L",
-      color: "Blue",
-    },
-  ],
-};
-
-const STATUS_CONFIG = {
   processing: {
     label: "Processing",
     icon: ClockIcon,
@@ -118,19 +69,64 @@ const STATUS_CONFIG = {
     color: "text-gray-500 dark:text-gray-400",
     bg: "bg-gray-100 dark:bg-gray-900",
   },
+  refunded: {
+    label: "Refunded",
+    icon: XCircleIcon,
+    color: "text-gray-500 dark:text-gray-400",
+    bg: "bg-gray-100 dark:bg-gray-900",
+  },
 };
 
 export default function OrderDetailPage() {
   const router = useRouter();
-  const order = ORDER_DATA;
-  const statusConfig = STATUS_CONFIG[order.status];
-  const StatusIcon = statusConfig.icon;
+  const params = useParams();
+  const orderId = params?.id as string;
 
-  const subtotal = order.products.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const total = subtotal + order.shippingMethod.cost + order.networkFee;
+  const [loading, setLoading] = useState(true);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  useEffect(() => {
+    if (orderId) {
+      loadOrderDetails();
+    }
+  }, [orderId]);
+
+  const loadOrderDetails = async () => {
+    try {
+      setLoading(true);
+
+      // Load order details
+      const orderResponse = await getOrderById(orderId);
+      if (orderResponse.success && orderResponse.data) {
+        setOrder(orderResponse.data.order);
+      } else {
+        toast.error(orderResponse.message || "Failed to load order");
+        router.push("/customer/orders");
+        return;
+      }
+
+      // Try to load timeline (optional)
+      try {
+        const timelineResponse = await getOrderTimeline(orderId);
+        if (timelineResponse.success && timelineResponse.data) {
+          setTimeline((timelineResponse.data as any).timeline || []);
+        }
+      } catch {
+        console.log("Timeline not available");
+        // Timeline is optional, continue without it
+      }
+    } catch (error: any) {
+      console.error("Error loading order:", error);
+      toast.error(error.message || "Failed to load order details");
+      router.push("/customer/orders");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -148,8 +144,78 @@ export default function OrderDetailPage() {
   };
 
   const handleReorder = () => {
-    toast.success("Items added to cart");
-    router.push("/customer/cart");
+    toast.success("Reorder feature coming soon");
+  };
+
+  const handleDownloadInvoice = async () => {
+    toast.success("Invoice download feature coming soon");
+  };
+
+  const handleCancelOrder = async () => {
+    if (!cancelReason.trim()) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
+
+    try {
+      setIsCancelling(true);
+
+      const response = await cancelOrder(orderId, { reason: cancelReason });
+
+      if (response.success) {
+        toast.success("Order cancelled successfully. Refund will be processed to your wallet.");
+        setShowCancelModal(false);
+        // Reload order details to show updated status
+        loadOrderDetails();
+      } else {
+        toast.error(response.message || "Failed to cancel order");
+      }
+    } catch (error: any) {
+      console.error("Error cancelling order:", error);
+      toast.error(error.message || "Failed to cancel order");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  // Check if order can be cancelled (pending or confirmed status)
+  const canCancelOrder = order && ["pending", "confirmed"].includes(order.status);
+
+  // Check if order can be returned (delivered status and not already returned)
+  const canRequestReturn = order && order.status === "delivered" && !order.returnRequested;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Loading order details...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Order not found
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG["pending"];
+  const StatusIcon = statusConfig.icon;
+
+  // Get product ID for routing
+  const getProductId = (productId: any) => {
+    if (typeof productId === "string") return productId;
+    return productId?._id || productId?.id || "";
   };
 
   return (
@@ -173,7 +239,7 @@ export default function OrderDetailPage() {
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <span className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white">
-              {order.id}
+              {order.orderNumber}
             </span>
           </div>
         </div>
@@ -192,7 +258,7 @@ export default function OrderDetailPage() {
               </div>
               <div className="flex items-center gap-4">
                 <h1 className="text-4xl font-extralight text-gray-900 dark:text-white tracking-tight">
-                  {order.id}
+                  {order.orderNumber}
                 </h1>
                 <div
                   className={`flex items-center gap-2 px-4 py-2 ${statusConfig.bg}`}
@@ -204,13 +270,37 @@ export default function OrderDetailPage() {
                     {statusConfig.label}
                   </span>
                 </div>
+                {order.paymentStatus === "refunded" && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30">
+                    <CheckCircleIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span className="text-[10px] uppercase tracking-wider font-medium text-green-600 dark:text-green-400">
+                      Refunded
+                    </span>
+                  </div>
+                )}
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Placed on {formatDate(order.date)}
+                Placed on {formatDate(order.createdAt)}
               </p>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
+              {canCancelOrder && (
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="border border-red-600 dark:border-red-500 text-red-600 dark:text-red-500 px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+                >
+                  Cancel Order
+                </button>
+              )}
+              {canRequestReturn && (
+                <button
+                  onClick={() => router.push(`/customer/returns?orderId=${order._id || order.id}`)}
+                  className="border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-500 px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
+                >
+                  Request Return
+                </button>
+              )}
               <button
                 onClick={handleReorder}
                 className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
@@ -218,7 +308,7 @@ export default function OrderDetailPage() {
                 Reorder
               </button>
               <button
-                onClick={() => toast.success("Invoice downloaded")}
+                onClick={handleDownloadInvoice}
                 className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors"
               >
                 Download Invoice
@@ -235,55 +325,85 @@ export default function OrderDetailPage() {
             {/* Left Column */}
             <div className="space-y-12">
               {/* Order Timeline */}
-              <div className="space-y-6">
-                <h2 className="text-lg font-light text-gray-900 dark:text-white uppercase tracking-wider">
-                  Order Timeline
-                </h2>
-                <div className="space-y-0">
-                  {order.timeline.map((event, index) => (
-                    <div key={index} className="flex gap-6">
-                      {/* Timeline Line */}
-                      <div className="flex flex-col items-center">
-                        <div
-                          className={`w-3 h-3 ${
-                            event.completed
-                              ? "bg-black dark:bg-white"
-                              : "border-2 border-gray-300 dark:border-gray-700"
-                          }`}
-                        />
-                        {index < order.timeline.length - 1 && (
-                          <div
-                            className={`w-px flex-1 ${
-                              event.completed
-                                ? "bg-black dark:bg-white"
-                                : "bg-gray-200 dark:bg-gray-800"
-                            }`}
-                            style={{ minHeight: "60px" }}
-                          />
-                        )}
-                      </div>
+              {timeline.length > 0 && (
+                <div className="space-y-6">
+                  <h2 className="text-lg font-light text-gray-900 dark:text-white uppercase tracking-wider">
+                    Order Timeline
+                  </h2>
+                  <div className="space-y-0">
+                    {timeline.map((event: any, index: number) => (
+                      <div key={index} className="flex gap-6">
+                        {/* Timeline Line */}
+                        <div className="flex flex-col items-center">
+                          <div className="w-3 h-3 bg-black dark:bg-white" />
+                          {index < timeline.length - 1 && (
+                            <div
+                              className="w-px flex-1 bg-black dark:bg-white"
+                              style={{ minHeight: "60px" }}
+                            />
+                          )}
+                        </div>
 
-                      {/* Timeline Content */}
-                      <div className="flex-1 pb-12">
-                        <h3
-                          className={`text-sm font-medium uppercase tracking-wider mb-1 ${
-                            event.completed
-                              ? "text-gray-900 dark:text-white"
-                              : "text-gray-400 dark:text-gray-600"
-                          }`}
-                        >
-                          {event.status}
-                        </h3>
-                        {event.date && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {event.date}
-                          </p>
-                        )}
+                        {/* Timeline Content */}
+                        <div className="flex-1 pb-12">
+                          <h3 className="text-sm font-medium uppercase tracking-wider mb-1 text-gray-900 dark:text-white">
+                            {event.status || event.title}
+                          </h3>
+                          {event.timestamp && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {formatDate(event.timestamp)}
+                            </p>
+                          )}
+                          {event.description && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {event.description}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Status History (fallback if no timeline) */}
+              {timeline.length === 0 && order.statusHistory && (
+                <div className="space-y-6">
+                  <h2 className="text-lg font-light text-gray-900 dark:text-white uppercase tracking-wider">
+                    Order History
+                  </h2>
+                  <div className="space-y-0">
+                    {order.statusHistory.map((event: any, index: number) => (
+                      <div key={index} className="flex gap-6">
+                        <div className="flex flex-col items-center">
+                          <div className="w-3 h-3 bg-black dark:bg-white" />
+                          {index < order.statusHistory!.length - 1 && (
+                            <div
+                              className="w-px flex-1 bg-black dark:bg-white"
+                              style={{ minHeight: "60px" }}
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1 pb-12">
+                          <h3 className="text-sm font-medium uppercase tracking-wider mb-1 text-gray-900 dark:text-white">
+                            {event.status}
+                          </h3>
+                          {event.timestamp && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {formatDate(event.timestamp)}
+                            </p>
+                          )}
+                          {event.notes && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {event.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Order Items */}
               <div className="space-y-6">
@@ -291,72 +411,101 @@ export default function OrderDetailPage() {
                   Order Items
                 </h2>
                 <div className="space-y-6">
-                  {order.products.map((product) => (
-                    <div
-                      key={product.id}
-                      className="grid grid-cols-[120px_1fr] gap-6 pb-6 last:border-0"
-                    >
+                  {order.items.map((item, index) => {
+                    const product =
+                      typeof item.productId === "object" ? item.productId : null;
+                    // Check multiple image sources: populated product, productSnapshot, or direct field
+                    const productImage =
+                      product?.images?.[0]?.url ||
+                      item.productSnapshot?.images?.[0]?.url ||
+                      item.productImage ||
+                      "";
+                    const productName = product?.name || item.productName || "Product";
+                    const productId = getProductId(item.productId);
+
+                    return (
                       <div
-                        className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4] cursor-pointer"
-                        onClick={() =>
-                          router.push(`/customer/products/${product.id}`)
-                        }
+                        key={index}
+                        className="grid grid-cols-[120px_1fr] gap-6 pb-6 border-b border-gray-200 dark:border-gray-800 last:border-0"
                       >
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                        />
-                        {product.quantity > 1 && (
-                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-medium">
-                            {product.quantity}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col justify-between">
-                        <div className="space-y-2">
-                          <button
-                            onClick={() =>
-                              router.push(`/customer/products/${product.id}`)
-                            }
-                            className="text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-left"
-                          >
-                            {product.name}
-                          </button>
-                          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-400 dark:text-gray-600">
-                                Color:
-                              </span>
-                              <span>{product.color}</span>
+                        <div
+                          className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4] cursor-pointer"
+                          onClick={() =>
+                            productId && router.push(`/customer/products/${productId}`)
+                          }
+                        >
+                          {productImage ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={productImage}
+                              alt={productName}
+                              className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <CubeIcon className="h-8 w-8 text-gray-400" />
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-400 dark:text-gray-600">
-                                Size:
-                              </span>
-                              <span>{product.size}</span>
+                          )}
+                          {item.quantity > 1 && (
+                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-medium">
+                              {item.quantity}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-400 dark:text-gray-600">
-                                Qty:
-                              </span>
-                              <span>{product.quantity}</span>
-                            </div>
-                          </div>
+                          )}
                         </div>
 
-                        <div className="flex items-end justify-between">
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            Rs {product.price.toFixed(2)} each
-                          </span>
-                          <span className="text-sm font-light text-gray-900 dark:text-white">
-                            Rs {(product.price * product.quantity).toFixed(2)}
-                          </span>
+                        <div className="flex flex-col justify-between">
+                          <div className="space-y-2">
+                            <button
+                              onClick={() =>
+                                productId &&
+                                router.push(`/customer/products/${productId}`)
+                              }
+                              className="text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-left"
+                            >
+                              {productName}
+                            </button>
+                            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                              {item.productSnapshot?.apparelDetails?.color && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-400 dark:text-gray-600">
+                                    Color:
+                                  </span>
+                                  <span>
+                                    {item.productSnapshot.apparelDetails.color}
+                                  </span>
+                                </div>
+                              )}
+                              {item.productSnapshot?.apparelDetails?.size && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-400 dark:text-gray-600">
+                                    Size:
+                                  </span>
+                                  <span>
+                                    {item.productSnapshot.apparelDetails.size}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-400 dark:text-gray-600">
+                                  Qty:
+                                </span>
+                                <span>{item.quantity}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-end justify-between">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              Rs {item.price.toFixed(2)} each
+                            </span>
+                            <span className="text-sm font-light text-gray-900 dark:text-white">
+                              Rs {item.subtotal.toFixed(2)}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -366,103 +515,129 @@ export default function OrderDetailPage() {
                   <MapPinIcon className="h-5 w-5" />
                   Shipping Information
                 </h2>
-                <div className="p-6 space-y-4">
+                <div className="border border-gray-200 dark:border-gray-800 p-6 space-y-4">
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {order.shippingInfo.fullName}
+                      {order.shippingAddress.name}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {order.shippingInfo.email}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {order.shippingInfo.phone}
+                      {order.shippingAddress.phone}
                     </p>
                   </div>
                   <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
                     <p className="text-sm text-gray-900 dark:text-white">
-                      {order.shippingInfo.address}
+                      {order.shippingAddress.addressLine1}
+                    </p>
+                    {order.shippingAddress.addressLine2 && (
+                      <p className="text-sm text-gray-900 dark:text-white">
+                        {order.shippingAddress.addressLine2}
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
+                      {order.shippingAddress.postalCode}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {order.shippingInfo.city}, {order.shippingInfo.state}{" "}
-                      {order.shippingInfo.zipCode}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {order.shippingInfo.country}
+                      {order.shippingAddress.country}
                     </p>
                   </div>
-                  <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                    <p className="text-xs text-gray-400 dark:text-gray-600 uppercase tracking-wider mb-2">
-                      Shipping Method
-                    </p>
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {order.shippingMethod.name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {order.shippingMethod.estimatedDays}
-                    </p>
-                  </div>
+                  {order.trackingNumber && (
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                      <p className="text-xs text-gray-400 dark:text-gray-600 uppercase tracking-wider mb-2">
+                        Tracking Number
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-mono text-gray-900 dark:text-white">
+                          {order.trackingNumber}
+                        </p>
+                        <button
+                          onClick={() =>
+                            order.trackingNumber &&
+                            copyToClipboard(order.trackingNumber)
+                          }
+                          className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                          <DocumentTextIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Blockchain Transaction */}
-              <div className="space-y-6">
-                <h2 className="text-lg font-light text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <CreditCardIcon className="h-5 w-5" />
-                  Blockchain Transaction
-                </h2>
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-800">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Transaction Hash
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-gray-900 dark:text-white">
-                        {order.transactionHash.slice(0, 10)}...
-                        {order.transactionHash.slice(-8)}
+              {(order.transactionHash || order.blockchainTxHash) && (
+                <div className="space-y-6">
+                  <h2 className="text-lg font-light text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <CreditCardIcon className="h-5 w-5" />
+                    Blockchain Transaction
+                  </h2>
+                  <div className="border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+                    <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-800">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Transaction Hash
                       </span>
-                      <button
-                        onClick={() => copyToClipboard(order.transactionHash)}
-                        aria-label="Copy transaction hash"
-                        className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                      >
-                        <DocumentTextIcon className="h-4 w-4" />
-                      </button>
-                      <a
-                        href={`https://etherscan.io/tx/${order.transactionHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="View transaction on Etherscan"
-                        className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                      >
-                        <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-gray-900 dark:text-white">
+                          {(order.transactionHash || order.blockchainTxHash)?.slice(
+                            0,
+                            10
+                          )}
+                          ...
+                          {(order.transactionHash || order.blockchainTxHash)?.slice(
+                            -8
+                          )}
+                        </span>
+                        <button
+                          onClick={() =>
+                            copyToClipboard(
+                              order.transactionHash || order.blockchainTxHash || ""
+                            )
+                          }
+                          aria-label="Copy transaction hash"
+                          className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                          <DocumentTextIcon className="h-4 w-4" />
+                        </button>
+                        <a
+                          href={`https://explorer.example.com/tx/${order.transactionHash || order.blockchainTxHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="View transaction"
+                          className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                          <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                        </a>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Block Number
-                    </span>
-                    <span className="text-sm font-mono text-gray-900 dark:text-white">
-                      {order.blockNumber}
-                    </span>
-                  </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Payment Method
+                      </span>
+                      <span className="text-sm text-gray-900 dark:text-white capitalize">
+                        {order.paymentMethod}
+                      </span>
+                    </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Network Fee
-                    </span>
-                    <span className="text-sm font-mono text-gray-900 dark:text-white">
-                      Rs {order.networkFee.toFixed(2)}
-                    </span>
+                    {order.paymentStatus && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Payment Status
+                        </span>
+                        <span className="text-sm text-gray-900 dark:text-white capitalize">
+                          {order.paymentStatus}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Right Column - Order Summary */}
             <div className="lg:sticky lg:top-24 h-fit">
-              <div className="p-8 space-y-6">
+              <div className="border border-gray-200 dark:border-gray-800 p-8 space-y-6">
                 <h2 className="text-lg font-light text-gray-900 dark:text-white uppercase tracking-wider">
                   Order Summary
                 </h2>
@@ -473,25 +648,37 @@ export default function OrderDetailPage() {
                       Subtotal
                     </span>
                     <span className="text-gray-900 dark:text-white">
-                      Rs {subtotal.toFixed(2)}
+                      Rs {order.subtotal.toFixed(2)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Shipping
-                    </span>
-                    <span className="text-gray-900 dark:text-white">
-                      Rs {order.shippingMethod.cost.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Network Fee
-                    </span>
-                    <span className="text-gray-900 dark:text-white">
-                      Rs {order.networkFee.toFixed(2)}
-                    </span>
-                  </div>
+                  {order.shippingCost !== undefined && order.shippingCost > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Shipping
+                      </span>
+                      <span className="text-gray-900 dark:text-white">
+                        Rs {order.shippingCost.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {order.tax !== undefined && order.tax > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Tax</span>
+                      <span className="text-gray-900 dark:text-white">
+                        Rs {order.tax.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {order.discount !== undefined && order.discount > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Discount
+                      </span>
+                      <span className="text-green-600 dark:text-green-400">
+                        -Rs {order.discount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -499,31 +686,56 @@ export default function OrderDetailPage() {
                     Total Paid
                   </span>
                   <span className="text-2xl font-light text-gray-900 dark:text-white">
-                    Rs {total.toFixed(2)}
+                    Rs {order.total.toFixed(2)}
                   </span>
                 </div>
+
+                {/* Refund Information */}
+                {order.paymentStatus === "refunded" && (
+                  <div className="pt-6 border-t border-gray-200 dark:border-gray-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircleIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">
+                          Refunded
+                        </span>
+                      </div>
+                      <span className="text-lg font-light text-green-600 dark:text-green-400">
+                        Rs {(order.refundAmount || order.total).toFixed(2)}
+                      </span>
+                    </div>
+                    {order.refundedAt && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Refunded on {formatDate(order.refundedAt)}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      The amount has been returned to your wallet
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Need Help */}
-              <div className="mt-6 p-6 space-y-4">
+              <div className="mt-6 border border-gray-200 dark:border-gray-800 p-6 space-y-4">
                 <h3 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wider">
                   Need Help?
                 </h3>
                 <div className="space-y-2">
                   <button
-                    onClick={() => toast.success("Support contacted")}
+                    onClick={() => toast.success("Support feature coming soon")}
                     className="w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     Contact Support
                   </button>
                   <button
-                    onClick={() => router.push("/customer/returns")}
+                    onClick={() => toast.success("Return feature coming soon")}
                     className="w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     Return or Exchange
                   </button>
                   <button
-                    onClick={() => toast.success("Tracking info sent")}
+                    onClick={() => toast.success("Tracking feature coming soon")}
                     className="w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     Track Shipment
@@ -534,6 +746,65 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </section>
+
+      {/* Cancel Order Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 dark:bg-black/70"
+            onClick={() => setShowCancelModal(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 max-w-md w-full p-8 space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-light text-gray-900 dark:text-white">
+                Cancel Order
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Please provide a reason for cancelling this order. Your payment will be
+                refunded to your wallet.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                Cancellation Reason *
+              </label>
+              <div className="border-b border-gray-900 dark:border-white pb-px">
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="e.g., Changed my mind, found a better option, etc."
+                  rows={4}
+                  className="w-full px-0 py-2 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelReason("");
+                }}
+                disabled={isCancelling}
+                className="flex-1 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                disabled={isCancelling || !cancelReason.trim()}
+                className="flex-1 bg-red-600 dark:bg-red-500 text-white h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCancelling ? "Cancelling..." : "Cancel Order"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
