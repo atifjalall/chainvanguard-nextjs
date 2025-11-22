@@ -1,20 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   CubeIcon,
   BookmarkIcon,
   PlusIcon,
   FunnelIcon,
-  XMarkIcon,
   ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { browseProducts } from "@/lib/api/customer.browse.api";
+import {
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist,
+} from "@/lib/api/customer.wishlist.api";
+import { addToCart } from "@/lib/api/customer.cart.api";
+import type { Product } from "@/types";
 
-// Product Card Component (EXACT same as landing page)
+// Product Card Component
 interface ProductCardProps {
   id: string | number;
   name: string;
@@ -48,17 +54,8 @@ function ProductCard({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageError, setImageError] = useState(false);
 
-  const isOutOfStock = !inStock || quantity === 0;
-
-  const handleMouseEnter = () => {
-    if (images && images.length > 1) {
-      setCurrentImageIndex(1);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    setCurrentImageIndex(0);
-  };
+  // Use inStock prop directly - backend already calculated this
+  const isOutOfStock = !inStock;
 
   const getImageSrc = () => {
     if (!images || images.length === 0 || imageError) {
@@ -77,12 +74,7 @@ function ProductCard({
     <div className="group relative w-full">
       <div className="relative bg-gray-100 dark:bg-gray-900 w-full overflow-hidden">
         <a href={`/customer/products/${id}`} className="block">
-          <div
-            // Increased height to make card slightly taller (3/4 aspect)
-            className="relative w-full aspect-[3/4]"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
+          <div className="relative w-full aspect-[3/4]">
             {!imageError && images && images.length > 0 ? (
               <img
                 src={getImageSrc()}
@@ -119,7 +111,6 @@ function ProductCard({
 
         {showActions && !isOutOfStock && (
           <button
-            // slightly smaller action button for compact card
             className="absolute bottom-1.5 left-1.5 w-4 h-4 bg-white dark:bg-gray-950 flex items-center justify-center cursor-pointer z-10"
             onClick={(e) => {
               e.preventDefault();
@@ -174,7 +165,7 @@ function ProductCard({
   );
 }
 
-// Category Structure - TEXTILE/CLOTHING ONLY
+// Category Structure
 const APPAREL_CATEGORIES = {
   Men: {
     label: "Men",
@@ -262,212 +253,8 @@ const APPAREL_CATEGORIES = {
   },
 };
 
-// Mock Products Data
-const ALL_PRODUCTS = [
-  {
-    id: 1,
-    name: "Premium Cotton T-Shirt",
-    category: "Men",
-    subcategory: "T-Shirts",
-    price: 29.99,
-    costPrice: 49.99,
-    images: [
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500",
-    ],
-    quantity: 50,
-    inStock: true,
-  },
-  {
-    id: 2,
-    name: "Classic Denim Jacket",
-    category: "Women",
-    subcategory: "Jackets",
-    price: 89.99,
-    costPrice: 129.99,
-    images: ["https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500"],
-    quantity: 30,
-    inStock: true,
-  },
-  {
-    id: 3,
-    name: "Casual Sneakers",
-    category: "Men",
-    subcategory: "Activewear",
-    price: 79.99,
-    costPrice: 119.99,
-    images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500"],
-    quantity: 45,
-    inStock: true,
-  },
-  {
-    id: 4,
-    name: "Summer Dress",
-    category: "Women",
-    subcategory: "Dresses",
-    price: 59.99,
-    costPrice: 89.99,
-    images: [
-      "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=500",
-    ],
-    quantity: 25,
-    inStock: true,
-  },
-  {
-    id: 5,
-    name: "Casual Hoodie",
-    category: "Unisex",
-    subcategory: "Hoodies",
-    price: 39.99,
-    costPrice: 59.99,
-    images: [
-      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500",
-    ],
-    quantity: 60,
-    inStock: true,
-  },
-  {
-    id: 6,
-    name: "Formal Suit",
-    category: "Men",
-    subcategory: "Suits",
-    price: 149.99,
-    costPrice: 199.99,
-    images: [
-      "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500",
-    ],
-    quantity: 15,
-    inStock: true,
-  },
-  {
-    id: 7,
-    name: "Sports Jersey",
-    category: "Unisex",
-    subcategory: "Activewear",
-    price: 69.99,
-    costPrice: 99.99,
-    images: ["https://images.unsplash.com/photo-1614251056198-ff101ebaba5e?w=500"],
-    quantity: 40,
-    inStock: true,
-  },
-  {
-    id: 8,
-    name: "Printed Kurta",
-    category: "Women",
-    subcategory: "Kurta",
-    price: 129.99,
-    costPrice: 179.99,
-    images: [
-      "https://images.unsplash.com/photo-1583391733956-6c78276477e5?w=500",
-    ],
-    quantity: 20,
-    inStock: true,
-  },
-  {
-    id: 9,
-    name: "Winter Coat",
-    category: "Men",
-    subcategory: "Coats",
-    price: 189.99,
-    costPrice: 229.99,
-    images: [
-      "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400",
-    ],
-    quantity: 35,
-    inStock: true,
-  },
-  {
-    id: 10,
-    name: "Wool Sweater",
-    category: "Women",
-    subcategory: "Sweaters",
-    price: 79.99,
-    costPrice: 99.99,
-    images: [
-      "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400",
-    ],
-    quantity: 50,
-    inStock: true,
-  },
-  {
-    id: 11,
-    name: "Formal Trousers",
-    category: "Men",
-    subcategory: "Trousers",
-    price: 139.99,
-    costPrice: 179.99,
-    images: [
-      "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400",
-    ],
-    quantity: 28,
-    inStock: true,
-  },
-  {
-    id: 12,
-    name: "Embroidered Shalwar Kameez",
-    category: "Women",
-    subcategory: "Shalwar Kameez",
-    price: 119.99,
-    costPrice: 149.99,
-    images: [
-      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400",
-    ],
-    quantity: 100,
-    inStock: true,
-  },
-  {
-    id: 13,
-    name: "Kids Jacket",
-    category: "Kids",
-    subcategory: "Jackets",
-    price: 45.99,
-    costPrice: 65.99,
-    images: [
-      "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400",
-    ],
-    quantity: 55,
-    inStock: true,
-  },
-  {
-    id: 14,
-    name: "Kids T-Shirt",
-    category: "Kids",
-    subcategory: "T-Shirts",
-    price: 24.99,
-    costPrice: 34.99,
-    images: [
-      "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400",
-    ],
-    quantity: 42,
-    inStock: true,
-  },
-  {
-    id: 15,
-    name: "Lawn Suit",
-    category: "Women",
-    subcategory: "Lawn Suits",
-    price: 84.99,
-    costPrice: 109.99,
-    images: [
-      "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=400",
-    ],
-    quantity: 70,
-    inStock: true,
-  },
-  {
-    id: 16,
-    name: "Sleepwear Set",
-    category: "Unisex",
-    subcategory: "Sleepwear",
-    price: 49.99,
-    costPrice: 69.99,
-    images: ["https://images.unsplash.com/photo-1584032186561-de987f7bd4b0?w=400"],
-    quantity: 33,
-    inStock: true,
-  },
-];
-
 const SORT_OPTIONS = [
-  { label: "Latest", value: "latest" },
+  { label: "Latest", value: "createdAt-desc" },
   { label: "Price: Low to High", value: "price-asc" },
   { label: "Price: High to Low", value: "price-desc" },
   { label: "Name: A-Z", value: "name-asc" },
@@ -475,29 +262,41 @@ const SORT_OPTIONS = [
 
 export default function BrowsePage() {
   const router = useRouter();
-  const [wishlist, setWishlist] = useState<(number | string)[]>([]);
   const searchParams = useSearchParams();
+
+  // State
+  const [wishlist, setWishlist] = useState<(number | string)[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(
     null
   );
-  const [sortBy, setSortBy] = useState("latest");
+  const [sortBy, setSortBy] = useState("createdAt-desc");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
 
+  // Data state
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 20,
+    pages: 1,
+  });
+
+  // Set filters from URL on mount
   useEffect(() => {
     const categoryFromUrl = searchParams?.get("category");
     const subcategoryFromUrl = searchParams?.get("subcategory");
 
     if (categoryFromUrl) {
-      // Capitalize first letter to match state format
       const formattedCategory =
         categoryFromUrl.charAt(0).toUpperCase() + categoryFromUrl.slice(1);
       setSelectedCategory(formattedCategory);
     }
 
     if (subcategoryFromUrl) {
-      // Capitalize first letter and handle hyphens
       const formattedSubcategory = subcategoryFromUrl
         .split("-")
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -506,21 +305,118 @@ export default function BrowsePage() {
     }
   }, [searchParams]);
 
-  const toggleWishlist = (productId: number | string) => {
+  // Load wishlist on mount
+  useEffect(() => {
+    const loadWishlist = async () => {
+      try {
+        const response = await getWishlist();
+        if (response.success && response.wishlist) {
+          setWishlist(
+            response.wishlist.items.map((item) => item.productId._id)
+          );
+        }
+      } catch (error) {
+        console.error("Error loading wishlist:", error);
+      }
+    };
+    loadWishlist();
+  }, []);
+
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [sortField, sortOrder] = sortBy.split("-") as [
+          string,
+          "asc" | "desc",
+        ];
+
+        const response = await browseProducts({
+          category: selectedCategory !== "All" ? selectedCategory : undefined,
+          subcategory: selectedSubcategory || undefined,
+          sortBy: sortField,
+          sortOrder: sortOrder,
+          page: pagination.page,
+          limit: pagination.limit,
+        });
+
+        if (response.success && response.products) {
+          setProducts(response.products);
+          if (response.pagination) {
+            setPagination(response.pagination);
+          }
+        } else {
+          setError("Failed to load products");
+          setProducts([]);
+        }
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setError("Failed to load products. Please try again.");
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [
+    selectedCategory,
+    selectedSubcategory,
+    sortBy,
+    pagination.page,
+    pagination.limit,
+  ]);
+
+  const toggleWishlist = async (productId: number | string) => {
+    const isCurrentlyInWishlist = wishlist.includes(productId);
+    // Optimistic update
     setWishlist((prev) =>
-      prev.includes(productId)
+      isCurrentlyInWishlist
         ? prev.filter((id) => id !== productId)
         : [...prev, productId]
     );
     toast.success(
-      wishlist.includes(productId)
-        ? "Removed from wishlist"
-        : "Added to wishlist"
+      isCurrentlyInWishlist ? "Removed from wishlist" : "Added to wishlist"
     );
+
+    // API call in background
+    try {
+      if (isCurrentlyInWishlist) {
+        await removeFromWishlist(productId.toString());
+      } else {
+        await addToWishlist(productId.toString());
+      }
+    } catch (error) {
+      // Revert on failure
+      setWishlist((prev) =>
+        isCurrentlyInWishlist
+          ? [...prev, productId]
+          : prev.filter((id) => id !== productId)
+      );
+      toast.error("Failed to update wishlist");
+      console.error("Error toggling wishlist:", error);
+    }
   };
 
-  const handleAddToCart = (productId: number | string) => {
-    toast.success("Added to cart");
+  const handleAddToCart = async (productId: number | string) => {
+    try {
+      const response = await addToCart({
+        productId: productId.toString(),
+        quantity: 1, // Default to 1; adjust if you want user input
+        // Add selectedSize, selectedColor, etc., if available from UI
+      });
+      if (response.success) {
+        toast.success("Added to cart");
+      } else {
+        toast.error("Failed to add to cart");
+      }
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      toast.error("Failed to add to cart");
+    }
   };
 
   // Get categories list
@@ -534,25 +430,24 @@ export default function BrowsePage() {
           .subcategories
       : [];
 
-  // Filter and sort products
-  const filteredProducts = ALL_PRODUCTS.filter((product) => {
-    const categoryMatch =
-      selectedCategory === "All" || product.category === selectedCategory;
-    const subcategoryMatch =
-      !selectedSubcategory || product.subcategory === selectedSubcategory;
-    return categoryMatch && subcategoryMatch;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case "price-asc":
-        return a.price - b.price;
-      case "price-desc":
-        return b.price - a.price;
-      case "name-asc":
-        return a.name.localeCompare(b.name);
-      default:
-        return 0;
-    }
-  });
+  // Convert Product to ProductCard format
+  const convertToCardFormat = (product: Product) => {
+    return {
+      id: product._id || product.id,
+      name: product.name,
+      price: product.price,
+      costPrice: product.costPrice || product.originalPrice,
+      images:
+        product.images?.map((img) =>
+          typeof img === "string" ? img : img.url
+        ) || [],
+      category: product.category,
+      quantity: product.quantity,
+      // Use backend's inStock value directly
+      inStock:
+        product.inStock !== undefined ? product.inStock : product.quantity > 0,
+    };
+  };
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -586,7 +481,7 @@ export default function BrowsePage() {
               All Products
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 font-light">
-              {filteredProducts.length} items
+              {loading ? "Loading..." : `${pagination.total} items`}
             </p>
           </div>
         </div>
@@ -604,6 +499,7 @@ export default function BrowsePage() {
                   onClick={() => {
                     setSelectedCategory(category);
                     setSelectedSubcategory(null);
+                    setPagination((prev) => ({ ...prev, page: 1 }));
                     if (category === "All") {
                       router.push("/customer/browse");
                     } else {
@@ -647,6 +543,7 @@ export default function BrowsePage() {
                             onClick={() => {
                               setSelectedSubcategory(null);
                               setSubcategoryOpen(false);
+                              setPagination((prev) => ({ ...prev, page: 1 }));
                               router.push(
                                 `/customer/browse?category=${selectedCategory.toLowerCase()}`
                               );
@@ -665,6 +562,7 @@ export default function BrowsePage() {
                               onClick={() => {
                                 setSelectedSubcategory(sub);
                                 setSubcategoryOpen(false);
+                                setPagination((prev) => ({ ...prev, page: 1 }));
                                 router.push(
                                   `/customer/browse?category=${selectedCategory.toLowerCase()}&subcategory=${sub.toLowerCase()}`
                                 );
@@ -709,6 +607,7 @@ export default function BrowsePage() {
                             onClick={() => {
                               setSortBy(option.value);
                               setFiltersOpen(false);
+                              setPagination((prev) => ({ ...prev, page: 1 }));
                             }}
                             className={`block w-full text-left px-4 py-3 text-xs transition-colors ${
                               sortBy === option.value
@@ -729,29 +628,41 @@ export default function BrowsePage() {
         </div>
       </div>
 
-      {/* Products Grid - EXACT SAME AS LANDING PAGE */}
+      {/* Products Grid */}
       <section className="py-16">
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
-          {filteredProducts.length > 0 ? (
-            // Use 5 columns at large screens, uniform gap-8 for spacing
+          {loading ? (
+            <div className="text-center py-32">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
+              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                Loading products...
+              </p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-32">
+              <p className="text-sm text-red-500 mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  price={product.price}
-                  costPrice={product.costPrice}
-                  images={product.images}
-                  category={product.category}
-                  quantity={product.quantity}
-                  inStock={product.inStock}
-                  onAddToCart={handleAddToCart}
-                  onToggleWishlist={toggleWishlist}
-                  isInWishlist={wishlist.includes(product.id)}
-                  showActions={true}
-                />
-              ))}
+              {products.map((product) => {
+                const cardData = convertToCardFormat(product);
+                return (
+                  <ProductCard
+                    key={cardData.id}
+                    {...cardData}
+                    onAddToCart={handleAddToCart}
+                    onToggleWishlist={toggleWishlist}
+                    isInWishlist={wishlist.includes(cardData.id)}
+                    showActions={true}
+                  />
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-32">
@@ -763,7 +674,8 @@ export default function BrowsePage() {
                   onClick={() => {
                     setSelectedCategory("All");
                     setSelectedSubcategory(null);
-                    setSortBy("latest");
+                    setSortBy("createdAt-desc");
+                    setPagination((prev) => ({ ...prev, page: 1 }));
                     router.push("/customer/browse");
                   }}
                   className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline"
@@ -777,31 +689,73 @@ export default function BrowsePage() {
       </section>
 
       {/* Pagination */}
-      {filteredProducts.length > 0 && (
+      {!loading && !error && products.length > 0 && pagination.pages > 1 && (
         <section className="border-t border-gray-200 dark:border-gray-800">
           <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-16">
             <div className="flex items-center justify-center gap-2">
-              <button className="h-11 px-8 border border-gray-200 dark:border-gray-800 text-[10px] text-gray-900 dark:text-white hover:border-black dark:hover:border-white transition-colors uppercase tracking-[0.2em] font-medium">
+              <button
+                onClick={() =>
+                  setPagination((prev) => ({
+                    ...prev,
+                    page: Math.max(1, prev.page - 1),
+                  }))
+                }
+                disabled={pagination.page === 1}
+                className="h-11 px-8 border border-gray-200 dark:border-gray-800 text-[10px] text-gray-900 dark:text-white hover:border-black dark:hover:border-white transition-colors uppercase tracking-[0.2em] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Previous
               </button>
 
               <div className="flex items-center gap-1 mx-4">
-                <button className="h-11 w-11 bg-black dark:bg-white text-white dark:text-black text-xs font-medium flex items-center justify-center">
-                  1
-                </button>
-                <button className="h-11 w-11 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-medium flex items-center justify-center transition-colors">
-                  2
-                </button>
-                <button className="h-11 w-11 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-medium flex items-center justify-center transition-colors">
-                  3
-                </button>
-                <span className="px-2 text-gray-400">...</span>
-                <button className="h-11 w-11 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-medium flex items-center justify-center transition-colors">
-                  12
-                </button>
+                {Array.from(
+                  { length: Math.min(5, pagination.pages) },
+                  (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() =>
+                          setPagination((prev) => ({ ...prev, page: pageNum }))
+                        }
+                        className={`h-11 w-11 text-xs font-medium flex items-center justify-center transition-colors ${
+                          pagination.page === pageNum
+                            ? "bg-black dark:bg-white text-white dark:text-black"
+                            : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  }
+                )}
+                {pagination.pages > 5 && (
+                  <>
+                    <span className="px-2 text-gray-400">...</span>
+                    <button
+                      onClick={() =>
+                        setPagination((prev) => ({
+                          ...prev,
+                          page: pagination.pages,
+                        }))
+                      }
+                      className="h-11 w-11 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-medium flex items-center justify-center transition-colors"
+                    >
+                      {pagination.pages}
+                    </button>
+                  </>
+                )}
               </div>
 
-              <button className="h-11 px-8 border border-gray-200 dark:border-gray-800 text-[10px] text-gray-900 dark:text-white hover:border-black dark:hover:border-white transition-colors uppercase tracking-[0.2em] font-medium">
+              <button
+                onClick={() =>
+                  setPagination((prev) => ({
+                    ...prev,
+                    page: Math.min(pagination.pages, prev.page + 1),
+                  }))
+                }
+                disabled={pagination.page === pagination.pages}
+                className="h-11 px-8 border border-gray-200 dark:border-gray-800 text-[10px] text-gray-900 dark:text-white hover:border-black dark:hover:border-white transition-colors uppercase tracking-[0.2em] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Next
               </button>
             </div>

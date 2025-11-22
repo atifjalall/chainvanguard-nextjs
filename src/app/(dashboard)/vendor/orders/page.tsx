@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -48,12 +49,14 @@ import {
   ChartBarIcon,
   ArrowPathIcon as LoaderIcon,
   ChevronRightIcon,
+  ShieldCheckIcon,
+  ShoppingBagIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Order, OrderStatus } from "@/types";
 import { toast } from "sonner";
-import { orderApi, OrderFilters } from "@/lib/api/order.api";
-import { colors } from "@/lib/colorConstants";
+import { orderApi, OrderFilters } from "@/lib/api/vendor.order.api";
+import { colors, badgeColors } from "@/lib/colorConstants";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -62,6 +65,15 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const statusOptions: Array<OrderStatus | "All Status"> = [
   "All Status",
@@ -84,6 +96,7 @@ const sortOptions = [
 
 export default function VendorOrdersPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -129,7 +142,7 @@ export default function VendorOrdersPage() {
       const filters: OrderFilters = {
         status: selectedStatus,
         page: currentPage,
-        limit: 20,
+        limit: 10,
         sortBy: sortField,
         sortOrder: sortOrder as "asc" | "desc",
       };
@@ -219,57 +232,49 @@ export default function VendorOrdersPage() {
     switch (status) {
       case "pending":
         return {
-          color:
-            "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-900/30",
+          color: `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text} border backdrop-blur-sm rounded-none`,
           icon: ClockIcon,
           label: "Pending",
         };
       case "confirmed":
         return {
-          color:
-            "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30",
+          color: `${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} border backdrop-blur-sm rounded-none`,
           icon: CheckCircleIcon,
           label: "Confirmed",
         };
       case "processing":
         return {
-          color:
-            "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-200/50 dark:border-indigo-900/30",
+          color: `${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} border backdrop-blur-sm rounded-none`,
           icon: ChartBarIcon,
           label: "Processing",
         };
       case "shipped":
         return {
-          color:
-            "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400 border-green-200/50 dark:border-green-900/30",
+          color: `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} border backdrop-blur-sm rounded-none`,
           icon: TruckIcon,
           label: "Shipped",
         };
       case "delivered":
         return {
-          color:
-            "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-900/30",
+          color: `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} border backdrop-blur-sm rounded-none`,
           icon: CheckCircleIcon,
           label: "Delivered",
         };
       case "cancelled":
         return {
-          color:
-            "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 border-red-200/50 dark:border-red-900/30",
+          color: `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} border backdrop-blur-sm rounded-none`,
           icon: XCircleIcon,
           label: "Cancelled",
         };
       case "refunded":
         return {
-          color:
-            "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400 border-orange-200/50 dark:border-orange-900/30",
+          color: `${badgeColors.amber.bg} ${badgeColors.amber.border} ${badgeColors.amber.text} border backdrop-blur-sm rounded-none`,
           icon: CurrencyDollarIcon,
           label: "Refunded",
         };
       default:
         return {
-          color:
-            "bg-gray-100 text-gray-700 dark:bg-gray-800/60 dark:text-gray-300 border-gray-200/50 dark:border-gray-700/50",
+          color: `${badgeColors.grey.bg} ${badgeColors.grey.border} ${badgeColors.grey.text} border backdrop-blur-sm rounded-none`,
           icon: CubeIcon,
           label: "Unknown",
         };
@@ -383,8 +388,8 @@ export default function VendorOrdersPage() {
     const orderId = order._id?.toString() || order.id?.toString() || "";
 
     return (
-      <Card className="group border border-white/20 dark:border-gray-700/30 transition-all duration-300 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden hover:scale-[1.01] rounded-none">
-        <CardContent className="p-6">
+      <Card className="group bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden rounded-none !shadow-none transition-colors duration-200">
+        <CardContent className="">
           {/* Order Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
@@ -392,7 +397,7 @@ export default function VendorOrdersPage() {
                 <StatusIcon className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
                   {order.orderNumber || order.id || order._id}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
@@ -412,13 +417,13 @@ export default function VendorOrdersPage() {
           </div>
 
           {/* Customer Info */}
-          <div className="flex items-center justify-between mb-4 p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-none">
+          <div className="flex items-center justify-between mb-4 p-4 bg-gray-100 backdrop-blur-sm ${colors.borders.primary} rounded-none">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 flex items-center justify-center">
-                <UserIcon className="h-5 w-5 text-white" />
+                <UserIcon className="h-5 w-5 text-gray-600" />
               </div>
               <div>
-                <span className="font-medium text-gray-900 dark:text-gray-100 block">
+                <span className="text-sm font-medium ${colors.texts.secondary} block">
                   {order.customerName}
                 </span>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -427,7 +432,7 @@ export default function VendorOrdersPage() {
               </div>
             </div>
             <div className="text-right">
-              <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <span className="text-base font-bold text-gray-900 dark:text-gray-100">
                 Rs {order.totalAmount?.toFixed(2) || "0.00"}
               </span>
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -448,16 +453,16 @@ export default function VendorOrdersPage() {
                   {progress}%
                 </span>
               </div>
-              <Progress value={progress} className="h-2" />
+              <Progress value={progress} className="h-2 rounded-none" />
             </div>
           )}
 
           {/* Order Details - Expanded */}
           {isExpanded && (
-            <div className="space-y-4 mb-4 border-t border-gray-200/50 dark:border-gray-700/50 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="space-y-4 mb-4 ${colors.borders.primary} pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
               {/* Products */}
               <div className="space-y-3">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <h4 className="font-medium ${colors.texts.secondary} flex items-center gap-2">
                   <CubeIcon className="h-4 w-4" />
                   Products
                 </h4>
@@ -472,11 +477,11 @@ export default function VendorOrdersPage() {
                     return (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-3 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 transition-shadow rounded-none"
+                        className="flex items-center justify-between p-3 bg-gray-100 backdrop-blur-sm ${colors.borders.primary} transition-shadow rounded-none"
                       >
                         <div className="flex items-center gap-3">
                           {productImage ? (
-                            <div className="w-12 h-12 bg-gray-200/80 dark:bg-gray-700/60 backdrop-blur-sm">
+                            <div className="w-12 h-16 bg-gray-200/80 dark:bg-gray-700/60 backdrop-blur-sm">
                               <img
                                 src={productImage}
                                 alt={item.productName}
@@ -484,12 +489,12 @@ export default function VendorOrdersPage() {
                               />
                             </div>
                           ) : (
-                            <div className="w-12 h-12 flex items-center justify-center">
+                            <div className="w-12 h-16 flex items-center justify-center">
                               <CubeIcon className="h-6 w-6 text-white" />
                             </div>
                           )}
                           <div>
-                            <span className="font-medium text-gray-900 dark:text-gray-100 block">
+                            <span className="font-medium ${colors.texts.secondary} block">
                               {item.productName}
                             </span>
                             <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -521,11 +526,11 @@ export default function VendorOrdersPage() {
               {/* Shipping Address */}
               {order.shippingAddress && (
                 <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <h4 className="font-medium ${colors.texts.secondary} flex items-center gap-2">
                     <HomeIcon className="h-4 w-4" />
                     Shipping Address
                   </h4>
-                  <div className="p-3 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-none">
+                  <div className="p-3 bg-gray-100 backdrop-blur-sm ${colors.borders.primary} rounded-none">
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {formatAddress(order.shippingAddress)}
                     </p>
@@ -536,11 +541,11 @@ export default function VendorOrdersPage() {
               {/* Tracking Info */}
               {order.trackingId && (
                 <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <h4 className="font-medium ${colors.texts.secondary} flex items-center gap-2">
                     <MapPinIcon className="h-4 w-4" />
                     Tracking Information
                   </h4>
-                  <div className="p-3 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-none">
+                  <div className="p-3 bg-gray-100 backdrop-blur-sm ${colors.borders.primary} rounded-none">
                     <p className="font-mono text-sm text-gray-900 dark:text-gray-100">
                       {order.trackingId}
                     </p>
@@ -551,11 +556,11 @@ export default function VendorOrdersPage() {
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+          <div className="flex items-center justify-between pt-4 ${colors.borders.primary}">
             <Button
               onClick={() => toggleOrderExpansion(orderId)}
               variant="outline"
-              className="hidden lg:flex items-center gap-2 rounded-none"
+              className="hidden lg:flex items-center gap-2 h-9 rounded-none hover:border-black cursor-pointer"
             >
               {isExpanded ? "Show Less" : "View Details"}
               <ChevronRightIcon
@@ -567,13 +572,13 @@ export default function VendorOrdersPage() {
               <Button
                 onClick={() => {
                   if (orderId) {
-                    window.open(`/vendor/orders/${orderId}`, "_blank");
+                    router.push(`/vendor/orders/${orderId}`);
                   } else {
                     toast.error("Invalid order ID");
                   }
                 }}
                 variant="outline"
-                className="hidden lg:flex items-center gap-2 rounded-none"
+                className="hidden lg:flex items-center gap-2 h-9 rounded-none hover:border-black cursor-pointer"
               >
                 <EyeIcon className="h-4 w-4" />
                 View Order
@@ -582,18 +587,19 @@ export default function VendorOrdersPage() {
               {order.status !== "delivered" &&
                 order.status !== "cancelled" &&
                 order.status !== "refunded" && (
-                  <button
+                  <Button
                     onClick={() => {
                       if (orderId) {
-                        window.open(`/vendor/orders/${orderId}/edit`, "_blank");
+                        router.push(`/vendor/orders/${orderId}/edit`);
                       } else {
                         toast.error("Invalid order ID");
                       }
                     }}
-                    className="flex items-center gap-2 px-4 h-9 bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer rounded-none"
+                    variant="default"
+                    className="flex items-center gap-2 h-9 rounded-none hover:border-black cursor-pointer"
                   >
                     Edit Order
-                  </button>
+                  </Button>
                 )}
             </div>
           </div>
@@ -643,6 +649,24 @@ export default function VendorOrdersPage() {
               <p className={`text-base ${colors.texts.secondary}`}>
                 Manage customer orders and track fulfillment
               </p>
+              <div className={`flex items-center gap-3 mt-2`}>
+                <Badge
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                >
+                  <ShoppingBagIcon
+                    className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
+                  />
+                  Order Management
+                </Badge>
+                <Badge
+                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                >
+                  <ShieldCheckIcon
+                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                  />
+                  Blockchain Verified
+                </Badge>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Button
@@ -906,50 +930,50 @@ export default function VendorOrdersPage() {
               ))}
 
               {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-6">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className={`${colors.buttons.outline} rounded-none`}
-                  >
-                    Previous
-                  </Button>
-                  <div className="flex items-center gap-1">
+              {totalOrdersCount > 10 && (
+                <Pagination className="mt-8 rounded-none">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() =>
+                          setCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        className={
+                          currentPage === 1
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       const page = i + 1;
                       return (
-                        <Button
-                          key={page}
-                          variant={currentPage === page ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(page)}
-                          className={
-                            currentPage === page
-                              ? `${colors.buttons.primary} text-white`
-                              : `${colors.buttons.outline} rounded-none`
-                          }
-                        >
-                          {page}
-                        </Button>
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            onClick={() => setCurrentPage(page)}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
                       );
                     })}
-                    {totalPages > 5 && <span className="px-2">...</span>}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                    className={`${colors.buttons.outline} rounded-none`}
-                  >
-                    Next
-                  </Button>
-                </div>
+                    {totalPages > 5 && <PaginationEllipsis />}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() =>
+                          setCurrentPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        className={
+                          currentPage === totalPages
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               )}
             </div>
           ) : (

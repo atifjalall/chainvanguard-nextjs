@@ -3,61 +3,60 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Badge } from "@/components/_ui/badge";
-import { Separator } from "@/components/_ui/separator";
-import { Progress } from "@/components/_ui/progress";
-import {
-  Package,
-  Truck,
-  MapPin,
-  User,
-  Mail,
-  Phone,
-  Home,
-  DollarSign,
-  Calendar,
-  CheckCircle,
-  AlertCircle,
-  Clock,
-  Edit,
-  Download,
-  Printer,
-  Copy,
-  ExternalLink,
-  Shield,
-  Activity,
-  CreditCard,
-  FileText,
-  XCircle,
-  Loader2,
-} from "lucide-react";
-import { toast } from "sonner";
-import { orderApi } from "@/lib/api/order.api";
+  CubeIcon,
+  TruckIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  XCircleIcon,
+  UserIcon,
+  CurrencyDollarIcon,
+  HomeIcon,
+  MapPinIcon,
+  PencilIcon,
+  DocumentTextIcon,
+  ShieldCheckIcon,
+  ChartBarIcon,
+} from "@heroicons/react/24/outline";
+import { orderApi } from "@/lib/api/vendor.order.api";
 import { Order, OrderStatus } from "@/types";
+import { toast } from "sonner";
+import { colors, badgeColors } from "@/lib/colorConstants";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
-export default function OrderDetailsPage() {
+export default function VendorOrderViewPage() {
   const params = useParams();
   const router = useRouter();
-  const orderId = params.id as string;
+  const orderId = params?.id as string;
 
-  const [isLoading, setIsLoading] = useState(true);
   const [order, setOrder] = useState<Order | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
     loadOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   const loadOrder = async () => {
+    if (!orderId || orderId === "undefined") {
+      toast.error("Invalid order ID");
+      router.push("/vendor/orders");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await orderApi.getOrderById(orderId);
@@ -81,885 +80,686 @@ export default function OrderDetailsPage() {
     switch (status) {
       case "pending":
         return {
-          color:
-            "bg-yellow-100/80 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-900/30",
-          icon: Clock,
+          color: `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text} border backdrop-blur-sm rounded-none`,
+          icon: ClockIcon,
           label: "Pending",
-          description: "Order is awaiting confirmation",
         };
       case "confirmed":
         return {
-          color:
-            "bg-blue-100/80 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30",
-          icon: CheckCircle,
+          color: `${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} border backdrop-blur-sm rounded-none`,
+          icon: CheckCircleIcon,
           label: "Confirmed",
-          description: "Order has been confirmed",
         };
       case "processing":
         return {
-          color:
-            "bg-indigo-100/80 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-200/50 dark:border-indigo-900/30",
-          icon: Package,
+          color: `${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} border backdrop-blur-sm rounded-none`,
+          icon: ChartBarIcon,
           label: "Processing",
-          description: "Order is being prepared",
         };
       case "shipped":
         return {
-          color:
-            "bg-green-100/80 text-green-700 dark:bg-green-950/30 dark:text-green-400 border-green-200/50 dark:border-green-900/30",
-          icon: Truck,
+          color: `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} border backdrop-blur-sm rounded-none`,
+          icon: TruckIcon,
           label: "Shipped",
-          description: "Order is in transit",
         };
       case "delivered":
         return {
-          color:
-            "bg-emerald-100/80 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-900/30",
-          icon: CheckCircle,
+          color: `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} border backdrop-blur-sm rounded-none`,
+          icon: CheckCircleIcon,
           label: "Delivered",
-          description: "Order has been delivered",
         };
       case "cancelled":
         return {
-          color:
-            "bg-red-100/80 text-red-700 dark:bg-red-950/30 dark:text-red-400 border-red-200/50 dark:border-red-900/30",
-          icon: XCircle,
+          color: `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} border backdrop-blur-sm rounded-none`,
+          icon: XCircleIcon,
           label: "Cancelled",
-          description: "Order has been cancelled",
         };
       case "refunded":
         return {
-          color:
-            "bg-orange-100/80 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400 border-orange-200/50 dark:border-orange-900/30",
-          icon: DollarSign,
+          color: `${badgeColors.amber.bg} ${badgeColors.amber.border} ${badgeColors.amber.text} border backdrop-blur-sm rounded-none`,
+          icon: CurrencyDollarIcon,
           label: "Refunded",
-          description: "Order has been refunded",
         };
       default:
         return {
-          color:
-            "bg-gray-100/80 text-gray-700 dark:bg-gray-800/60 dark:text-gray-300 border-gray-200/50 dark:border-gray-700/50",
-          icon: Package,
+          color: `${badgeColors.grey.bg} ${badgeColors.grey.border} ${badgeColors.grey.text} border backdrop-blur-sm rounded-none`,
+          icon: CubeIcon,
           label: "Unknown",
-          description: "Status unknown",
         };
     }
   };
 
-  const getOrderProgress = (status: OrderStatus) => {
-    switch (status) {
-      case "pending":
-        return 10;
-      case "confirmed":
-        return 30;
-      case "processing":
-        return 50;
-      case "shipped":
-        return 75;
-      case "delivered":
-        return 100;
-      case "cancelled":
-      case "refunded":
-        return 0;
-      default:
-        return 0;
-    }
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-PK", {
+      style: "currency",
+      currency: "PKR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
   const formatAddress = (address: Order["shippingAddress"]) => {
-    if (!address) return "No address provided";
-    return `${address.addressLine1 || ""}, ${address.city}, ${address.state} ${address.postalCode}, ${address.country}`;
-  };
-
-  const handleCopyOrderId = () => {
-    if (order) {
-      navigator.clipboard.writeText(
-        order.orderNumber || order.id || order._id || ""
-      );
-      toast.success("Order ID copied to clipboard");
-    }
-  };
-
-  const handleCopyTrackingId = () => {
-    if (order?.trackingId) {
-      navigator.clipboard.writeText(order.trackingId);
-      toast.success("Tracking ID copied to clipboard");
-    }
-  };
-
-  const handlePrintOrder = () => {
-    window.print();
-    toast.success("Print dialog opened");
-  };
-
-  const handleDownloadInvoice = async () => {
-    try {
-      toast.info("Generating invoice...");
-      setTimeout(() => toast.success("Invoice generated successfully"), 1000);
-    } catch (error) {
-      toast.error("Failed to generate invoice");
-    }
+    if (!address) return "N/A";
+    return `${address.addressLine1 || ""}${address.addressLine2 ? ", " + address.addressLine2 : ""}, ${address.city}, ${address.state} ${address.postalCode}, ${address.country}`;
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
-          <p className="text-muted-foreground">Loading order details...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-xs text-gray-600">Loading order details...</p>
         </div>
       </div>
     );
   }
 
   if (!order) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <XCircleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-base font-medium text-gray-900 mb-2">
+            Order Not Found
+          </h3>
+          <p className="text-xs text-gray-600 mb-4">
+            The order you&apos;re looking for doesn&apos;t exist or you
+            don&apos;t have access to it.
+          </p>
+          <Button
+            onClick={() => router.push("/vendor/orders")}
+            className="text-xs"
+          >
+            Back to Orders
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const statusConfig = getStatusConfig(order.status);
   const StatusIcon = statusConfig.icon;
-  const progress = getOrderProgress(order.status);
-  const history = order.statusHistory ?? [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-950 dark:via-blue-950 dark:to-cyan-950">
-      {/* Animated Background Effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl animate-pulse"></div>
-        <div
-          className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-400/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "2s" }}
-        ></div>
-      </div>
+    <div className={`min-h-screen ${colors.backgrounds.secondary}`}>
+      <div className="relative z-10 p-6 space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/vendor" className="text-xs">
+                Dashboard
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/vendor/orders" className="text-xs">
+                Orders
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-xs">
+                {order.orderNumber}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
-      <div className="relative z-10 p-6 space-y-4">
         {/* Header */}
         <div
-          className={`transform transition-all duration-700 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+          className={`transform transition-all duration-700 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+          }`}
         >
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
-                Order Details
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="space-y-2">
+              <h1 className={`text-base font-bold ${colors.texts.primary}`}>
+                Order {order.orderNumber}
               </h1>
-              <div className="flex items-center gap-2 mt-2">
-                <p className="text-gray-600 dark:text-gray-400 text-lg font-mono">
-                  {order.orderNumber || order.id || order._id}
-                </p>
-                <button
-                  onClick={handleCopyOrderId}
-                  className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <Copy className="h-3 w-3 text-gray-500" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge
-                className={`${statusConfig.color} flex items-center gap-2 px-4 py-2 border shadow-sm backdrop-blur-sm`}
-                variant="outline"
-              >
-                <StatusIcon className="h-4 w-4" />
+              <p className={`text-xs ${colors.texts.secondary}`}>
+                Placed on {formatDate(order.createdAt)}
+              </p>
+              <Badge className={statusConfig.color} variant="outline">
+                <StatusIcon className="h-3 w-3 mr-1" />
                 {statusConfig.label}
               </Badge>
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => router.push(`/vendor/orders/${orderId}/edit`)}
-              className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer shadow-lg hover:shadow-xl"
-            >
-              <Edit className="h-4 w-4" />
-              Edit Order
-            </button>
-
-            <Button
-              onClick={handleDownloadInvoice}
-              variant="outline"
-              className="hidden lg:flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Invoice
-            </Button>
-
-            {order.trackingId && (
-              <button
-                onClick={handleCopyTrackingId}
-                className="flex items-center gap-2 px-4 py-2 rounded-md bg-white/60 dark:bg-gray-900/60 hover:bg-white/80 dark:hover:bg-gray-900/80 text-sm text-gray-700 dark:text-gray-300 font-medium transition-all cursor-pointer shadow-lg hover:shadow-xl border border-white/20 dark:border-gray-700/30 backdrop-blur-xl"
-              >
-                <Truck className="h-4 w-4" />
-                Copy Tracking
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {order.status !== "delivered" &&
+                order.status !== "cancelled" &&
+                order.status !== "refunded" && (
+                  <Button
+                    onClick={() =>
+                      router.push(`/vendor/orders/${orderId}/edit`)
+                    }
+                    className={`${colors.buttons.primary} rounded-none text-xs`}
+                  >
+                    <PencilIcon className="h-4 w-4 mr-2" />
+                    Edit Order
+                  </Button>
+                )}
+            </div>
           </div>
         </div>
 
-        {/* Order Status Timeline */}
-        {order.status !== "cancelled" && order.status !== "refunded" && (
-          <Card
-            className={`border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden transform transition-all duration-700 delay-100 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-          >
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Order Progress
-                  </h3>
-                  <span className="text-2xl font-bold text-blue-600">
-                    {progress}%
-                  </span>
-                </div>
-                <Progress value={progress} className="h-2" />
-                <div className="flex justify-between text-sm">
-                  {[
-                    { label: "Pending", value: 10 },
-                    { label: "Confirmed", value: 30 },
-                    { label: "Processing", value: 50 },
-                    { label: "Shipped", value: 75 },
-                    { label: "Delivered", value: 100 },
-                  ].map((step) => (
-                    <span
-                      key={step.label}
-                      className={
-                        progress >= step.value
-                          ? "text-gray-900 dark:text-gray-100 font-medium"
-                          : "text-gray-500 dark:text-gray-400"
-                      }
-                    >
-                      {step.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
+          {/* Left Column - Order Details */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Order Items */}
-            <Card
-              className={`border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden transform transition-all duration-700 delay-200 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-            >
+            {/* Customer Information */}
+            <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                    <Package className="h-4 w-4 text-purple-600" />
-                  </div>
-                  Order Items
+                <CardTitle className="flex items-center gap-2 text-xs">
+                  <UserIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                  Customer Information
                 </CardTitle>
-                <CardDescription>
-                  {order.products?.length || 0} item
-                  {order.products?.length !== 1 ? "s" : ""} in this order
-                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {order.products && order.products.length > 0 ? (
-                    order.products.map((item: any, index: number) => {
-                      const productImage =
-                        item.productSnapshot?.images?.[0]?.url ||
-                        item.productSnapshot?.images?.[0]?.cloudinaryUrl ||
-                        item.image ||
-                        null;
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                      Name
+                    </p>
+                    <p
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      {order.customerName}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                      Email
+                    </p>
+                    <p
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      {order.customerEmail || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                      Phone
+                    </p>
+                    <p
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      {order.customerPhone ||
+                        order.shippingAddress?.phone ||
+                        "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                      Wallet Address
+                    </p>
+                    <p
+                      className={`font-mono text-xs ${colors.texts.primary} truncate`}
+                    >
+                      {order.customerWalletAddress || "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Order Items */}
+            <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xs">
+                  <CubeIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                  Order Items (
+                  {order.products?.length || order.items?.length || 0})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {(order.products || order.items || []).map(
+                  (item: any, index: number) => {
+                    const productImage =
+                      item.productSnapshot?.images?.[0]?.url ||
+                      item.productSnapshot?.images?.[0]?.cloudinaryUrl ||
+                      item.productImage ||
+                      item.image ||
+                      null;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`flex items-center justify-between p-4 ${colors.backgrounds.tertiary} ${colors.borders.primary} rounded-none`}
+                      >
+                        <div className="flex items-center gap-4">
+                          {productImage ? (
+                            <div className="w-16 h-20 bg-gray-200/80 dark:bg-gray-700/60 backdrop-blur-sm overflow-hidden">
+                              <img
+                                src={productImage}
+                                alt={item.productName}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              className={`w-16 h-20 flex items-center justify-center ${colors.backgrounds.accent}`}
+                            >
+                              <CubeIcon className="h-8 w-8 text-gray-400" />
+                            </div>
+                          )}
+                          <div>
+                            <h4
+                              className={`text-xs font-medium ${colors.texts.primary} mb-1`}
+                            >
+                              {item.productName}
+                            </h4>
+                            <p className={`text-xs ${colors.texts.secondary}`}>
+                              Quantity: {item.quantity} @{" "}
+                              {formatCurrency(item.price || 0)}
+                            </p>
+                            {item.sku && (
+                              <p
+                                className={`text-xs ${colors.texts.secondary} mt-1`}
+                              >
+                                SKU: {item.sku}
+                              </p>
+                            )}
+                            {item.productSnapshot?.apparelDetails && (
+                              <div
+                                className={`text-xs ${colors.texts.secondary} mt-1 flex gap-2`}
+                              >
+                                {item.productSnapshot.apparelDetails.size && (
+                                  <span>
+                                    Size:{" "}
+                                    {item.productSnapshot.apparelDetails.size}
+                                  </span>
+                                )}
+                                {item.productSnapshot.apparelDetails.color && (
+                                  <span>
+                                    Color:{" "}
+                                    {item.productSnapshot.apparelDetails.color}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p
+                            className={`text-xs font-bold ${colors.texts.primary}`}
+                          >
+                            {formatCurrency(
+                              item.subtotal || item.quantity * (item.price || 0)
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Shipping Address */}
+            {order.shippingAddress && (
+              <Card
+                className={`${colors.cards.base} rounded-none !shadow-none`}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xs">
+                    <HomeIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                    Shipping Address
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    className={`p-4 ${colors.backgrounds.tertiary} rounded-none`}
+                  >
+                    <p
+                      className={`text-xs font-medium ${colors.texts.primary} mb-2`}
+                    >
+                      {order.shippingAddress.name}
+                    </p>
+                    <p className={`text-xs ${colors.texts.secondary}`}>
+                      {formatAddress(order.shippingAddress)}
+                    </p>
+                    {order.shippingAddress.phone && (
+                      <p className={`text-xs ${colors.texts.secondary} mt-2`}>
+                        Phone: {order.shippingAddress.phone}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Status History */}
+            {order.statusHistory && order.statusHistory.length > 0 && (
+              <Card
+                className={`${colors.cards.base} rounded-none !shadow-none`}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xs">
+                    <DocumentTextIcon
+                      className={`h-4 w-4 ${colors.icons.primary}`}
+                    />
+                    Status History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {order.statusHistory.map((history: any, index: number) => {
+                      const historyStatusConfig = getStatusConfig(
+                        history.status
+                      );
+                      const HistoryIcon = historyStatusConfig.icon;
 
                       return (
                         <div
                           key={index}
-                          className="flex items-center gap-4 p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition-shadow"
+                          className={`flex items-start gap-3 p-3 ${colors.backgrounds.tertiary} rounded-none`}
                         >
-                          <div className="flex-shrink-0">
-                            {productImage ? (
-                              <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-200/80 dark:bg-gray-700/60 backdrop-blur-sm shadow-md">
-                                <img
-                                  src={productImage}
-                                  alt={item.productName}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            ) : (
-                              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-md">
-                                <Package className="h-10 w-10 text-white" />
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                              {item.productName}
-                            </h4>
-                            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
-                              <span>Qty: {item.quantity}</span>
-                              <span>•</span>
-                              <span>
-                                ${item.price?.toFixed(2) || "0.00"} each
-                              </span>
-                              {item.sku && (
-                                <>
-                                  <span>•</span>
-                                  <span>SKU: {item.sku}</span>
-                                </>
-                              )}
-                            </div>
-                            {item.productSnapshot?.category && (
-                              <Badge
-                                variant="outline"
-                                className="mt-2 text-xs bg-white/50 dark:bg-gray-900/50"
+                          <HistoryIcon className="h-5 w-5 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <p
+                                className={`text-xs font-medium ${colors.texts.primary}`}
                               >
-                                {item.productSnapshot.category}
-                              </Badge>
-                            )}
-                          </div>
-
-                          <div className="flex-shrink-0 text-right">
-                            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                              $
-                              {item.subtotal?.toFixed(2) ||
-                                (item.quantity * (item.price || 0)).toFixed(2)}
+                                {historyStatusConfig.label}
+                              </p>
+                              <p
+                                className={`text-xs ${colors.texts.secondary}`}
+                              >
+                                {formatDate(history.timestamp)}
+                              </p>
                             </div>
+                            {history.notes && (
+                              <p
+                                className={`text-xs ${colors.texts.secondary} mt-1`}
+                              >
+                                {history.notes}
+                              </p>
+                            )}
+                            {history.changedByRole && (
+                              <p
+                                className={`text-xs ${colors.texts.secondary} mt-1`}
+                              >
+                                Updated by: {history.changedByRole}
+                              </p>
+                            )}
                           </div>
                         </div>
                       );
-                    })
-                  ) : (
-                    <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                      <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>No products in this order</p>
-                    </div>
-                  )}
-                </div>
-
-                <Separator className="my-6" />
-
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Subtotal
-                    </span>
-                    <span className="text-gray-900 dark:text-gray-100">
-                      ${order.totalAmount?.toFixed(2) || "0.00"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Shipping
-                    </span>
-                    <span className="text-gray-900 dark:text-gray-100">
-                      {order.shippingCost
-                        ? `$${order.shippingCost.toFixed(2)}`
-                        : "Free"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Tax
-                    </span>
-                    <span className="text-gray-900 dark:text-gray-100">
-                      ${order.tax?.toFixed(2) || "0.00"}
-                    </span>
-                  </div>
-                  {order.discount && order.discount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
-                      <span>Discount</span>
-                      <span>-${order.discount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex justify-between items-center pt-2">
-                    <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Total
-                    </span>
-                    <span className="text-2xl font-bold text-blue-600">
-                      ${order.totalAmount?.toFixed(2) || "0.00"}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Shipping Information */}
-            <Card
-              className={`border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden transform transition-all duration-700 delay-300 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <MapPin className="h-4 w-4 text-green-600" />
-                  </div>
-                  Shipping Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                      <Home className="h-4 w-4" />
-                      Shipping Address
-                    </h4>
-                    <div className="p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 min-h-[140px]">
-                      <p className="text-gray-700 dark:text-gray-300">
-                        {formatAddress(order.shippingAddress)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                      <Truck className="h-4 w-4" />
-                      Tracking Information
-                    </h4>
-                    {order.trackingId ? (
-                      <div className="p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 min-h-[140px]">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
-                            Tracking ID
-                          </span>
-                          <Button
-                            onClick={handleCopyTrackingId}
-                            className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            <Copy className="h-3 w-3 text-gray-500" />
-                          </Button>
-                        </div>
-                        <p className="font-mono text-sm text-gray-900 dark:text-gray-100 break-all">
-                          {order.trackingId}
-                        </p>
-                        {order.carrier && (
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                            Carrier: {order.carrier}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="p-4 bg-gray-50/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 text-center min-h-[140px]">
-                        <AlertCircle className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          No tracking information available
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Order Information - Moved here to fill space */}
-            <Card
-              className={`border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden transform transition-all duration-700 delay-100 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                    <FileText className="h-4 w-4 text-orange-600" />
-                  </div>
-                  Order Info
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Order Number
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-mono text-gray-900 dark:text-gray-100">
-                      {order.orderNumber || order.id || order._id}
-                    </p>
-                    <button
-                      onClick={handleCopyOrderId}
-                      className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      <Copy className="h-3 w-3 text-gray-500" />
-                    </button>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Status
-                  </p>
-                  <Badge
-                    className={`${statusConfig.color} flex items-center gap-1 w-fit border shadow-sm backdrop-blur-sm`}
-                    variant="outline"
-                  >
-                    <StatusIcon className="h-3 w-3" />
-                    {statusConfig.label}
-                  </Badge>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {statusConfig.description}
-                  </p>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Created
-                  </p>
-                  <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                    <Calendar className="h-3 w-3 text-gray-600 dark:text-gray-400" />
-                    {new Date(order.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
                     })}
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {new Date(order.createdAt).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Last Updated
-                  </p>
-                  <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                    <Activity className="h-3 w-3 text-gray-600 dark:text-gray-400" />
-                    {new Date(order.updatedAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {new Date(order.updatedAt).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Payment Method
-                  </p>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CreditCard className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                    <span className="text-gray-700 dark:text-gray-300 capitalize">
-                      {order.paymentMethod || "Crypto"}
-                    </span>
-                  </div>
-                </div>
-
-                {order.paymentStatus && (
-                  <div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      Payment Status
-                    </p>
-                    <Badge
-                      variant="outline"
-                      className={
-                        order.paymentStatus === "paid"
-                          ? "bg-green-100/80 text-green-700 dark:bg-green-950/30 dark:text-green-400 border-green-200/50 dark:border-green-900/30"
-                          : "bg-yellow-100/80 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-900/30"
-                      }
-                    >
-                      {order.paymentStatus}
-                    </Badge>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* Sidebar - Now only Blockchain and Quick Actions */}
+          {/* Right Column - Summary & Details */}
           <div className="space-y-6">
-            {/* Customer Information - Moved to sidebar */}
-            <Card
-              className={`border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden transform transition-all duration-700 delay-300 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-            >
+            {/* Order Summary */}
+            <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <User className="h-4 w-4 text-blue-600" />
-                  </div>
-                  Customer
-                </CardTitle>
+                <CardTitle className="text-xs">Order Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    Name
-                  </p>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {order.customerName}
-                  </p>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className={colors.texts.secondary}>Subtotal</span>
+                  <span className={colors.texts.primary}>
+                    {formatCurrency(order.subtotal || 0)}
+                  </span>
                 </div>
-
-                <Separator />
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-sm">
-                    <Mail className="h-4 w-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-                    <span className="text-gray-700 dark:text-gray-300 break-all">
-                      {order.customerEmail || "No email"}
+                {order.shippingCost ? (
+                  <div className="flex justify-between text-xs">
+                    <span className={colors.texts.secondary}>Shipping</span>
+                    <span className={colors.texts.primary}>
+                      {formatCurrency(order.shippingCost)}
                     </span>
                   </div>
-
-                  {order.customerPhone && (
-                    <div className="flex items-center gap-3 text-sm">
-                      <Phone className="h-4 w-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-                      <span className="text-gray-700 dark:text-gray-300">
-                        {order.customerPhone}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
+                ) : null}
+                {order.tax ? (
+                  <div className="flex justify-between text-xs">
+                    <span className={colors.texts.secondary}>Tax</span>
+                    <span className={colors.texts.primary}>
+                      {formatCurrency(order.tax)}
+                    </span>
+                  </div>
+                ) : null}
+                {order.discount ? (
+                  <div className="flex justify-between text-xs text-green-600">
+                    <span>Discount</span>
+                    <span>-{formatCurrency(order.discount)}</span>
+                  </div>
+                ) : null}
                 <Separator />
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => {
-                      window.location.href = `mailto:${order.customerEmail}`;
-                    }}
-                    variant="outline"
-                    className="hidden lg:flex flex-1 flex items-center justify-center gap-1.5 px-3 py-2"
-                  >
-                    <Mail className="h-3 w-3" />
-                    Email
-                  </Button>
-                  {order.customerPhone && (
-                    <Button
-                      onClick={() => {
-                        window.location.href = `tel:${order.customerPhone}`;
-                      }}
-                      variant="outline"
-                      className="hidden lg:flex flex-1 flex items-center justify-center gap-1.5 px-3 py-2"
-                    >
-                      <Phone className="h-3 w-3" />
-                      Call
-                    </Button>
-                  )}
+                <div className="flex justify-between text-xs font-bold">
+                  <span className={colors.texts.primary}>Total</span>
+                  <span className={colors.texts.primary}>
+                    {formatCurrency(order.total || order.totalAmount || 0)}
+                  </span>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <Card
-              className={`border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden transform transition-all duration-700 delay-400 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-            >
-              <CardHeader>
-                <CardTitle className="text-lg">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button
-                  onClick={() => router.push(`/vendor/orders/${orderId}/edit`)}
-                  variant="outline"
-                  className="hidden lg:flex flex-1 w-full flex items-center justify-start gap-2 px-3 py-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  Edit Order
-                </Button>
-
-                <Button
-                  onClick={handleDownloadInvoice}
-                  variant="outline"
-                  className="hidden lg:flex flex-1 w-full flex items-center justify-start gap-2 px-3 py-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Download Invoice
-                </Button>
-
-                {order.customerEmail && (
-                  <Button
-                    onClick={() => {
-                      window.location.href = `mailto:${order.customerEmail}?subject=Order ${order.orderNumber || order.id}`;
-                    }}
-                    variant="outline"
-                    className="hidden lg:flex flex-1 w-full flex items-center justify-start gap-2 px-3 py-2"
-                  >
-                    <Mail className="h-4 w-4" />
-                    Email Customer
-                  </Button>
-                )}
-
-                <Separator className="my-3" />
-
-                {order.status !== "cancelled" &&
-                  order.status !== "delivered" &&
-                  order.status !== "refunded" && (
+            {/* Shipping Details */}
+            {(order.trackingNumber ||
+              order.trackingId ||
+              order.courierName ||
+              order.estimatedDeliveryDate) && (
+              <Card
+                className={`${colors.cards.base} rounded-none !shadow-none`}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xs">
+                    <MapPinIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                    Shipping Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {order.trackingNumber || order.trackingId ? (
+                    <div>
+                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                        Tracking Number
+                      </p>
+                      <p
+                        className={`font-mono text-xs ${colors.texts.primary}`}
+                      >
+                        {order.trackingNumber || order.trackingId}
+                      </p>
+                    </div>
+                  ) : null}
+                  {order.courierName || order.carrier ? (
+                    <div>
+                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                        Courier
+                      </p>
+                      <p
+                        className={`text-xs font-medium ${colors.texts.primary}`}
+                      >
+                        {order.courierName || order.carrier}
+                      </p>
+                    </div>
+                  ) : null}
+                  {order.estimatedDeliveryDate && (
+                    <div>
+                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                        Estimated Delivery
+                      </p>
+                      <p
+                        className={`text-xs font-medium ${colors.texts.primary}`}
+                      >
+                        {formatDate(order.estimatedDeliveryDate)}
+                      </p>
+                    </div>
+                  )}
+                  {order.trackingUrl && (
                     <Button
-                      onClick={() => {
-                        if (
-                          confirm(
-                            "Are you sure you want to cancel this order? This action cannot be undone."
-                          )
-                        ) {
-                          router.push(`/vendor/orders/${orderId}/edit`);
-                          toast.info("Navigate to edit page to cancel order");
-                        }
-                      }}
-                      variant="danger"
-                      className="hidden lg:flex flex-1 w-full flex items-center justify-start gap-2 px-3 py-2"
+                      variant="outline"
+                      className="w-full rounded-none text-xs"
+                      onClick={() => window.open(order.trackingUrl, "_blank")}
                     >
-                      <XCircle className="h-4 w-4" />
-                      Cancel Order
+                      <TruckIcon className="h-4 w-4 mr-2" />
+                      Track Shipment
                     </Button>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Payment Information */}
+            <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xs">
+                  <CurrencyDollarIcon
+                    className={`h-4 w-4 ${colors.icons.primary}`}
+                  />
+                  Payment Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                    Payment Method
+                  </p>
+                  <p className={`text-xs font-medium ${colors.texts.primary}`}>
+                    {order.paymentMethod
+                      ? order.paymentMethod
+                          .split("_")
+                          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(" ")
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                    Payment Status
+                  </p>
+                  <Badge
+                    className={`${
+                      order.paymentStatus === "paid"
+                        ? badgeColors.green.bg + " " + badgeColors.green.text
+                        : order.paymentStatus === "failed"
+                          ? badgeColors.red.bg + " " + badgeColors.red.text
+                          : badgeColors.yellow.bg +
+                            " " +
+                            badgeColors.yellow.text
+                    } rounded-none text-xs`}
+                    variant="outline"
+                  >
+                    {order.paymentStatus || "pending"}
+                  </Badge>
+                </div>
+                {order.transactionHash && (
+                  <div>
+                    <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                      Transaction Hash
+                    </p>
+                    <p
+                      className={`font-mono text-xs ${colors.texts.primary} break-all`}
+                    >
+                      {order.transactionHash}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Blockchain Information */}
-            <Card
-              className={`border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden transform transition-all duration-700 delay-500 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                    <Shield className="h-4 w-4 text-purple-600" />
-                  </div>
-                  Blockchain
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="p-3 bg-purple-50/80 dark:bg-purple-950/30 backdrop-blur-sm rounded-lg border border-purple-200/50 dark:border-purple-800/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Verified on Hyperledger
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    This order is securely recorded on the blockchain
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  {order.blockchainTxId && (
+            {(order.blockchainOrderId ||
+              order.blockchainTxId ||
+              order.blockchainTxHash) && (
+              <Card
+                className={`${colors.cards.base} rounded-none !shadow-none`}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xs">
+                    <ShieldCheckIcon
+                      className={`h-4 w-4 ${colors.icons.primary}`}
+                    />
+                    Blockchain Verification
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {order.blockchainOrderId && (
                     <div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        Transaction ID
+                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                        Blockchain Order ID
                       </p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs font-mono text-gray-700 dark:text-gray-300 truncate flex-1">
-                          {order.blockchainTxId}
-                        </p>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(
-                              order.blockchainTxId || ""
-                            );
-                            toast.success("Transaction ID copied");
-                          }}
-                          className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
-                        >
-                          <Copy className="h-3 w-3 text-gray-500" />
-                        </button>
-                      </div>
+                      <p
+                        className={`font-mono text-xs ${colors.texts.primary} break-all`}
+                      >
+                        {order.blockchainOrderId}
+                      </p>
                     </div>
                   )}
-
-                  <Button
-                    onClick={() => {
-                      toast.info("Blockchain explorer coming soon");
-                    }}
-                    variant="outline"
-                    className="hidden lg:flex flex-1 w-full flex items-center justify-start gap-2 px-3 py-2"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    View on Explorer
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Order Timeline/History */}
-        {history.length > 0 && (
-          <Card
-            className={`border border-white/20 dark:border-gray-700/30 shadow-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl overflow-hidden transform transition-all duration-700 delay-600 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                  <Activity className="h-4 w-4 text-indigo-600" />
-                </div>
-                Order History
-              </CardTitle>
-              <CardDescription>
-                Timeline of order status changes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {history.map((event: any, index: number) => (
-                  <div key={index} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shadow-md">
-                        <CheckCircle className="h-4 w-4 text-blue-600" />
-                      </div>
-                      {index < history.length - 1 && (
-                        <div className="w-0.5 h-full bg-gray-200 dark:bg-gray-700 my-2"></div>
-                      )}
+                  {(order.blockchainTxId || order.blockchainTxHash) && (
+                    <div>
+                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                        Transaction ID
+                      </p>
+                      <p
+                        className={`font-mono text-xs ${colors.texts.primary} break-all`}
+                      >
+                        {order.blockchainTxId || order.blockchainTxHash}
+                      </p>
                     </div>
-                    <div className="flex-1 pb-8">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-medium text-gray-900 dark:text-gray-100 capitalize">
-                          {event.status?.replace("_", " ")}
-                        </h4>
-                        <span className="text-xs text-gray-600 dark:text-gray-400">
-                          {new Date(event.timestamp).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
-                        </span>
-                      </div>
-                      {event.notes && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {event.notes}
-                        </p>
-                      )}
-                      {event.changedBy && (
-                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                          Updated by: {event.changedByRole}
-                        </p>
-                      )}
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Additional Notes */}
+            {(order.customerNotes ||
+              order.specialInstructions ||
+              order.isGift) && (
+              <Card
+                className={`${colors.cards.base} rounded-none !shadow-none`}
+              >
+                <CardHeader>
+                  <CardTitle className="text-xs">Notes</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {order.customerNotes && (
+                    <div>
+                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                        Customer Notes
+                      </p>
+                      <p className={`text-xs ${colors.texts.primary}`}>
+                        {order.customerNotes}
+                      </p>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Bottom Navigation */}
-        <div
-          className={`flex items-center justify-between transform transition-all duration-700 delay-700 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-        >
-          <div className="flex gap-3">
-            <Button
-              onClick={loadOrder}
-              variant="outline"
-              className="hidden lg:flex items-center gap-2"
-            >
-              <Activity className="h-4 w-4" />
-              Refresh
-            </Button>
-
-            <button
-              onClick={() => router.push(`/vendor/orders/${orderId}/edit`)}
-              className="flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium transition-colors cursor-pointer shadow-lg hover:shadow-xl"
-            >
-              <Edit className="h-4 w-4" />
-              Edit Order
-            </button>
+                  )}
+                  {order.specialInstructions && (
+                    <div>
+                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                        Special Instructions
+                      </p>
+                      <p className={`text-xs ${colors.texts.primary}`}>
+                        {order.specialInstructions}
+                      </p>
+                    </div>
+                  )}
+                  {order.isGift && (
+                    <div>
+                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                        Gift Message
+                      </p>
+                      <p className={`text-xs ${colors.texts.primary}`}>
+                        {order.giftMessage || "This is a gift order"}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

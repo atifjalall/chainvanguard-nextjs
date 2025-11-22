@@ -250,6 +250,9 @@ export interface ProductReview {
 }
 
 export interface Product {
+  rating: number;
+  size: string;
+  shipping: any;
   // MongoDB ID
   id: string;
   _id: string;
@@ -316,6 +319,7 @@ export interface Product {
   minStockLevel: number;
   sku: string;
   slug: string;
+  inStock?: boolean; // From API browse response
 
   // Images
   images: ProductImage[];
@@ -338,6 +342,12 @@ export interface Product {
   // Legacy compatibility
   supplierId?: string;
   supplierName?: string;
+
+  // Add vendor property for API responses
+  vendor?: {
+    id?: string;
+    name: string;
+  };
 
   // Status
   status:
@@ -452,6 +462,36 @@ export interface ProductStatsResponse {
     totalValue: number;
     averagePrice: number;
   };
+}
+// ========================================
+// WISHLIST TYPES
+// ========================================
+
+export interface WishlistItem {
+  _id: string;
+  productId: Product;
+  notes?: string;
+  addedAt: string;
+  priceWhenAdded: number;
+  notifyOnPriceDrop?: boolean;
+  notifyOnBackInStock?: boolean;
+}
+
+export interface Wishlist {
+  _id: string;
+  userId: string;
+  items: WishlistItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WishlistStats {
+  totalItems: number;
+  totalValue: number;
+  inStockItems: number;
+  outOfStockItems: number;
+  averagePriceWhenAdded: number;
+  priceDifferenceTotal: number;
 }
 
 // ========================================
@@ -724,7 +764,7 @@ export interface Order {
   trackingNumber?: string;
   trackingId?: string; // Alias for trackingNumber
   trackingUrl?: string;
-  courierName?: "FedEx" | "UPS" | "DHL" | "USPS" | "Local" | "Other" | "";
+  courierName?: "FedEx" | "UPS" | "DHL" | "USPS" | "Local" | "Other" | "TCS" | "Leopard" | "";
   carrier?: string; // Alias for courierName
 
   // Payment
@@ -757,12 +797,18 @@ export interface Order {
   cancellationReason?: string;
   refundAmount?: number;
   refundReason?: string;
+
+  // Return fields
+  returnRequested?: boolean;
+  returnStatus?: string;
+  returnReason?: string;
 }
 
 export interface OrderItem {
   _id?: string;
-  productId: string;
+  productId: string | Product; // Can be populated with Product object
   productName: string;
+  productImage?: string; // Direct image URL
   sku?: string;
   quantity: number;
   price: number;
@@ -816,29 +862,51 @@ export interface Address {
   country: string;
 }
 
-export type PaymentMethod = "crypto" | "card" | "bank-transfer" | "wallet";
+export type PaymentMethod = "wallet" | "card" | "cod" | "bank_transfer" | "credit_card" | "debit_card" | "crypto";
 
 // ========================================
 // CART TYPES
 // ========================================
 
 export interface CartItem {
-  productId: string;
-  product: Product;
+  _id: string;
+  productId: string | Product;
   quantity: number;
-  addedAt: string;
+  price: number;
+  subtotal: number;
+  productName?: string;
+  productImage?: string;
   selectedSize?: string;
   selectedColor?: string;
   selectedFit?: string;
-  price: number;
-  subtotal: number;
+  sellerId?: string;
+  sellerName?: string;
+  addedAt?: string;
 }
 
 export interface Cart {
+  _id: string;
+  userId?: string;
+  sessionId?: string;
   items: CartItem[];
+  totalAmount: number;
   totalItems: number;
-  totalPrice: number;
-  updatedAt: string;
+  totalQuantity: number;
+  subtotal: number;
+  discount?: number;
+  tax?: number;
+  shipping?: number;
+  updatedAt?: string;
+}
+
+export interface CartSummary {
+  totalItems: number;
+  totalQuantity: number;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  shipping: number;
+  totalAmount: number;
 }
 
 // ========================================
@@ -1067,7 +1135,7 @@ export interface SupplierAnalyticsResponse {
       completedOrders: number;
       cancelledOrders: number;
     }>;
-    topProducts: any[]; 
+    topProducts: any[];
   };
 }
 

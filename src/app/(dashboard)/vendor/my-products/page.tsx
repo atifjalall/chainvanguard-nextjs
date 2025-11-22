@@ -58,6 +58,15 @@ import {
   FunnelIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 // Custom Rs Icon component
 const RsIcon = () => (
@@ -158,6 +167,8 @@ export default function VendorMyProductsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20; // 20 products per page
 
   useEffect(() => {
     setIsVisible(true);
@@ -183,7 +194,9 @@ export default function VendorMyProductsPage() {
       }
 
       const timestamp = Date.now();
+      // Add a high limit to fetch all products (adjust if backend has a max limit)
       const response = await productAPI.getVendorProducts({
+        limit: 100,
         _t: timestamp,
       } as any);
 
@@ -274,6 +287,19 @@ export default function VendorMyProductsPage() {
 
     return sorted;
   }, [products, searchTerm, selectedCategory, selectedStatus, sortBy]);
+
+  // Paginate the filtered products
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredAndSortedProducts.slice(startIndex, startIndex + pageSize);
+  }, [filteredAndSortedProducts, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredAndSortedProducts.length / pageSize);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedStatus, sortBy]);
 
   const handleDelete = (product: Product) => {
     setDeletingProduct(product);
@@ -458,7 +484,7 @@ export default function VendorMyProductsPage() {
         </div>
 
         {/* Content Below Image */}
-        <div className="pt-2 pb-4 px-4 border border-gray-200 dark:border-gray-700">
+        <div className="pt-2 pb-4 px-4 ${colors.borders.primary}">
           {/* Product Name & Status */}
           <div className="flex items-start justify-between mb-1 gap-2">
             <h3 className="text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide flex-1">
@@ -516,7 +542,7 @@ export default function VendorMyProductsPage() {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-3 py-3 border-t border-gray-200 dark:border-gray-800">
+          <div className="grid grid-cols-3 gap-3 py-3 ${colors.borders.primary} ${colors.borders.primary}">
             <div className="text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
                 Stock
@@ -533,7 +559,7 @@ export default function VendorMyProductsPage() {
                 {product.quantity}
               </p>
             </div>
-            <div className="text-center border-x border-gray-200 dark:border-gray-800">
+            <div className="text-center ${colors.borders.primary}">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
                 Sold
               </p>
@@ -555,7 +581,7 @@ export default function VendorMyProductsPage() {
           <div className="grid grid-cols-2 gap-2 pt-3">
             <button
               onClick={() => handleViewProduct(product._id)}
-              className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-gray-900 dark:text-white bg-transparent border rounded-none transition-colors cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-gray-900 dark:text-white bg-transparent ${colors.borders.primary} rounded-none transition-colors cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <EyeIcon className="h-3 w-3" />
               View
@@ -592,7 +618,7 @@ export default function VendorMyProductsPage() {
     const showPlaceholder = !imageSrc || imageError;
 
     return (
-      <div className="group relative w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div className="group relative w-full ${colors.borders.primary} bg-white dark:bg-gray-900">
         <div className="p-6">
           <div className="flex items-start gap-6">
             {/* Image */}
@@ -695,7 +721,7 @@ export default function VendorMyProductsPage() {
                 {product.blockchainVerified && (
                   <Badge
                     variant="outline"
-                    className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-[10px] h-5 px-2 rounded-none`}
+                    className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} text-[10px] h-5 px-2 rounded-none`}
                   >
                     <ShieldCheckIcon className="h-2.5 w-2.5 mr-1" />
                     Verified
@@ -705,7 +731,7 @@ export default function VendorMyProductsPage() {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-5 gap-6 pt-4 border-t border-gray-200 dark:border-gray-800">
+              <div className="grid grid-cols-5 gap-6 pt-4 ${colors.borders.primary} ${colors.borders.primary}">
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Price
@@ -855,10 +881,10 @@ export default function VendorMyProductsPage() {
               </p>
               <div className={`flex items-center ${HEADER_GAP} mt-2`}>
                 <Badge
-                  className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
                 >
                   <CubeIcon
-                    className={`h-3 w-3 mr-1 ${badgeColors.blue.icon}`}
+                    className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
                   />
                   Product Management
                 </Badge>
@@ -1178,7 +1204,8 @@ export default function VendorMyProductsPage() {
                       </Badge>
                     )}
                     <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
-                      {filteredAndSortedProducts.length} products found
+                      {paginatedProducts.length} of{" "}
+                      {filteredAndSortedProducts.length} products
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -1218,21 +1245,67 @@ export default function VendorMyProductsPage() {
           }`}
         >
           {filteredAndSortedProducts.length > 0 ? (
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                  : "space-y-6"
-              }
-            >
-              {filteredAndSortedProducts.map((product) =>
-                viewMode === "grid" ? (
-                  <ProductCard key={product._id} product={product} />
-                ) : (
-                  <ProductListItem key={product._id} product={product} />
-                )
+            <>
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                    : "space-y-6"
+                }
+              >
+                {paginatedProducts.map((product) =>
+                  viewMode === "grid" ? (
+                    <ProductCard key={product._id} product={product} />
+                  ) : (
+                    <ProductListItem key={product._id} product={product} />
+                  )
+                )}
+              </div>
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <Pagination className="mt-8 rounded-none">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() =>
+                          setCurrentPage(Math.max(1, currentPage - 1))
+                        }
+                        className={
+                          currentPage === 1
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            onClick={() => setCurrentPage(page)}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() =>
+                          setCurrentPage(Math.min(totalPages, currentPage + 1))
+                        }
+                        className={
+                          currentPage === totalPages
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               )}
-            </div>
+            </>
           ) : (
             <Card
               className={`text-center py-16 ${colors.cards.base} rounded-none`}

@@ -854,19 +854,26 @@ router.patch("/:id/status", authenticate, async (req, res) => {
       });
     }
 
-    // If shipping, add tracking info
-    if (status === "shipped" && trackingNumber) {
+    // Update tracking info if provided (regardless of status)
+    if (trackingNumber || carrier || estimatedDelivery) {
       const order = await Order.findById(req.params.id);
       if (order) {
-        order.trackingNumber = trackingNumber;
-        order.courierName = carrier || "Standard";
+        if (trackingNumber) {
+          order.trackingNumber = trackingNumber;
+        }
+        if (carrier) {
+          order.courierName = carrier;
+          // Generate tracking URL if both trackingNumber and carrier are available
+          if (order.trackingNumber) {
+            order.trackingUrl = orderService.generateTrackingUrl(
+              carrier,
+              order.trackingNumber
+            );
+          }
+        }
         if (estimatedDelivery) {
           order.estimatedDeliveryDate = new Date(estimatedDelivery);
         }
-        order.trackingUrl = orderService.generateTrackingUrl(
-          order.courierName,
-          trackingNumber
-        );
         await order.save();
       }
     }

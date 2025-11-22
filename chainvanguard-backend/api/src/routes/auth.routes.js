@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import authService from "../services/auth.service.js";
 import sessionService from "../services/session.service.js";
 import WalletService from "../services/wallet.service.js";
+import emailService from "../services/email.service.js";
 import {
   authenticate,
   verifyToken,
@@ -149,6 +150,176 @@ router.get("/check-email", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Failed to check email availability",
+    });
+  }
+});
+
+/**
+ * POST /api/auth/send-otp
+ * Send OTP to email for verification (public - no auth required)
+ */
+router.post("/send-otp", async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: "Email is required",
+      });
+    }
+
+    // Rate limiting
+    const clientIp = req.ip || req.connection.remoteAddress;
+    const rateLimit = await sessionService.checkRateLimit(
+      `otp:${clientIp}`,
+      5,
+      300000 // 5 attempts per 5 minutes
+    );
+
+    if (!rateLimit.allowed) {
+      return res.status(429).json({
+        success: false,
+        error: `Too many OTP requests. Please try again in ${Math.ceil(rateLimit.resetIn / 60)} seconds.`,
+      });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store OTP in session (expires in 10 minutes)
+    await sessionService.storeVerificationCode(email, otp);
+
+    // Send OTP email
+    await emailService.sendOTP(email, otp, name || "User");
+
+    console.log(`✅ OTP sent to: ${email}`);
+
+    res.json({
+      success: true,
+      message: "Verification code sent to your email",
+      expiresIn: 600, // seconds
+    });
+  } catch (error) {
+    console.error("❌ Send OTP error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to send verification code. Please try again.",
+    });
+  }
+});
+
+/**
+ * POST /api/auth/verify-otp
+ * Verify OTP code (public - no auth required)
+ */
+router.post("/verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        error: "Email and verification code are required",
+      });
+    }
+
+    // Verify OTP
+    const verification = await sessionService.verifyCode(email, otp);
+
+    if (!verification.valid) {
+      return res.status(400).json({
+        success: false,
+        error: verification.message || "Invalid or expired verification code",
+      });
+    }
+
+    // Update user's isVerified status in database
+    const user = await User.findOneAndUpdate(
+      { email: email.toLowerCase().trim() },
+      {
+        isVerified: true,
+        emailVerifiedAt: new Date(),
+      },
+      { new: true }
+    );
+
+    if (user) {
+      console.log(`✅ OTP verified and user marked as verified: ${email}`);
+    } else {
+      console.log(`⚠️ OTP verified but user not found in database: ${email}`);
+    }
+
+    res.json({
+      success: true,
+      message: "Email verified successfully",
+    });
+  } catch (error) {
+    console.error("❌ Verify OTP error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to verify code. Please try again.",
+    });
+  }
+});
+
+/**
+ * POST /api/auth/send-welcome-email
+ * Send welcome email with wallet details (public - no auth required)
+ * This should be called after OTP verification is successful
+ */
+router.post("/send-welcome-email", async (req, res) => {
+  try {
+    const {
+      email,
+      name,
+      walletAddress,
+      walletName,
+      mnemonic,
+      role,
+      city,
+      state,
+      country,
+    } = req.body;
+
+    if (!email || !name || !walletAddress || !walletName || !mnemonic) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields for welcome email",
+      });
+    }
+
+    // Prepare user data
+    const userData = {
+      name,
+      email,
+      role: role || "customer",
+      walletAddress,
+      city: city || "N/A",
+      state: state || "N/A",
+      country: country || "Pakistan",
+    };
+
+    // Prepare wallet data
+    const walletData = {
+      walletName,
+      mnemonic,
+    };
+
+    // Send welcome email
+    await emailService.sendWelcomeEmail(userData, walletData);
+
+    console.log(`✅ Welcome email sent to: ${email}`);
+
+    res.json({
+      success: true,
+      message: "Welcome email sent successfully",
+    });
+  } catch (error) {
+    console.error("❌ Send welcome email error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to send welcome email. Please check your inbox later.",
     });
   }
 });

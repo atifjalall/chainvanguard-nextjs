@@ -32,7 +32,7 @@ class CartService {
         {
           path: "items.productId",
           select:
-            "name price images status quantity reservedQuantity apparelDetails",
+            "name price images status quantity reservedQuantity apparelDetails shippingCost freeShipping estimatedDeliveryDays sellerId",
         },
         {
           path: "items.sellerId",

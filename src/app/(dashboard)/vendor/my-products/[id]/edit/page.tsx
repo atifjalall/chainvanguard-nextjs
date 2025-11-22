@@ -837,7 +837,11 @@ export default function EditProductPage() {
         newErrors.productType = "Product type is required";
     } else if (step === 2) {
       // Only validate size for items that need it
-      if (formData.subcategory && needsSize(formData.subcategory) && !formData.apparelDetails.size) {
+      if (
+        formData.subcategory &&
+        needsSize(formData.subcategory) &&
+        !formData.apparelDetails.size
+      ) {
         newErrors.size = "Size is required";
       }
       // Only validate fit for items that need size
@@ -855,11 +859,19 @@ export default function EditProductPage() {
       if (!formData.apparelDetails.pattern)
         newErrors.pattern = "Pattern is required";
       // Only validate neckline for items that have necklines
-      if (formData.subcategory && hasNeckline(formData.subcategory) && !formData.apparelDetails.neckline) {
+      if (
+        formData.subcategory &&
+        hasNeckline(formData.subcategory) &&
+        !formData.apparelDetails.neckline
+      ) {
         newErrors.neckline = "Neckline is required";
       }
       // Only validate sleeve length for items that have sleeves
-      if (formData.subcategory && hasSleeves(formData.subcategory) && !formData.apparelDetails.sleeveLength) {
+      if (
+        formData.subcategory &&
+        hasSleeves(formData.subcategory) &&
+        !formData.apparelDetails.sleeveLength
+      ) {
         newErrors.sleeveLength = "Sleeve length is required";
       }
     } else if (step === 3) {
@@ -1156,8 +1168,8 @@ export default function EditProductPage() {
                     !formData.category
                       ? "Select category first"
                       : !formData.subcategory
-                      ? "Select subcategory first"
-                      : "Select size"
+                        ? "Select subcategory first"
+                        : "Select size"
                   }
                 />
               </SelectTrigger>
@@ -1190,48 +1202,48 @@ export default function EditProductPage() {
         )}
 
         {formData.subcategory && needsSize(formData.subcategory) && (
-            <div>
-              <Label
-                htmlFor="fit"
-                className={`${LABEL_MARGIN} block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300`}
+          <div>
+            <Label
+              htmlFor="fit"
+              className={`${LABEL_MARGIN} block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300`}
+            >
+              Fit Type <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={formData.apparelDetails.fit}
+              onValueChange={(value) => {
+                updateFormData("apparelDetails.fit", value);
+                if (fitError) setFitError("");
+              }}
+            >
+              <SelectTrigger
+                className={`text-sm h-9 md:h-10 w-full rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all bg-white/50 dark:bg-gray-900/50 ${
+                  fitError ? "border-red-500" : ""
+                }`}
               >
-                Fit Type <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.apparelDetails.fit}
-                onValueChange={(value) => {
-                  updateFormData("apparelDetails.fit", value);
-                  if (fitError) setFitError("");
-                }}
-              >
-                <SelectTrigger
-                  className={`text-sm h-9 md:h-10 w-full rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all bg-white/50 dark:bg-gray-900/50 ${
-                    fitError ? "border-red-500" : ""
-                  }`}
-                >
-                  <SelectValue placeholder="Select fit type" />
-                </SelectTrigger>
-                <SelectContent className="w-full">
-                  {formData.category &&
-                    FIT_TYPES[
-                      formData.category as keyof typeof FIT_TYPES
-                    ]?.map((fit: string) => (
+                <SelectValue placeholder="Select fit type" />
+              </SelectTrigger>
+              <SelectContent className="w-full">
+                {formData.category &&
+                  FIT_TYPES[formData.category as keyof typeof FIT_TYPES]?.map(
+                    (fit: string) => (
                       <SelectItem key={fit} value={fit} className="text-sm">
                         {fit}
                       </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <div className={`min-h-4 ${ERROR_MARGIN}`}>
-                {fitError && (
-                  <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                    <ExclamationTriangleIcon className="h-3 w-3" />
-                    {fitError}
-                  </p>
-                )}
-              </div>
+                    )
+                  )}
+              </SelectContent>
+            </Select>
+            <div className={`min-h-4 ${ERROR_MARGIN}`}>
+              {fitError && (
+                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <ExclamationTriangleIcon className="h-3 w-3" />
+                  {fitError}
+                </p>
+              )}
             </div>
-          )}
+          </div>
+        )}
       </div>
 
       <div>
@@ -1316,11 +1328,17 @@ export default function EditProductPage() {
             </SelectTrigger>
             <SelectContent className="w-full">
               {formData.category &&
-                PATTERNS[formData.category as keyof typeof PATTERNS]?.map((pattern: string) => (
-                  <SelectItem key={pattern} value={pattern} className="text-sm">
-                    {pattern}
-                  </SelectItem>
-                ))}
+                PATTERNS[formData.category as keyof typeof PATTERNS]?.map(
+                  (pattern: string) => (
+                    <SelectItem
+                      key={pattern}
+                      value={pattern}
+                      className="text-sm"
+                    >
+                      {pattern}
+                    </SelectItem>
+                  )
+                )}
             </SelectContent>
           </Select>
           <div className={`min-h-4 ${ERROR_MARGIN}`}>
@@ -1359,7 +1377,11 @@ export default function EditProductPage() {
               </SelectTrigger>
               <SelectContent className="w-full">
                 {NECKLINES.map((neckline) => (
-                  <SelectItem key={neckline} value={neckline} className="text-sm">
+                  <SelectItem
+                    key={neckline}
+                    value={neckline}
+                    className="text-sm"
+                  >
                     {neckline}
                   </SelectItem>
                 ))}
@@ -2400,7 +2422,7 @@ export default function EditProductPage() {
             <Card
               className={`${SECTION_MARGIN} border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none`}
             >
-              <CardContent className="p-4 md:p-6">
+              <CardContent className="px-4 md:px-6 py-0">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
                     Step {currentStep} of {totalSteps}

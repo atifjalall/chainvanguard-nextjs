@@ -29,18 +29,21 @@ router.get("/", optionalAuth, async (req, res) => {
           userId: cart.userId,
           items: cart.items.map((item) => ({
             _id: item._id.toString(), // 🆕 ENSURE STRING
-            productId: item.productId._id || item.productId,
+            productId: item.productId, // Return full product object
             quantity: item.quantity,
             price: item.price,
             subtotal: item.subtotal,
             productName: item.productName,
             productImage: item.productImage,
-            // ... other fields
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
+            selectedFit: item.selectedFit,
           })),
           totalAmount: cart.totalAmount,
           totalItems: cart.totalItems,
           totalQuantity: cart.totalQuantity,
           subtotal: cart.subtotal,
+          discount: cart.discount || 0,
         },
       });
     } else if (sessionId) {
@@ -53,18 +56,21 @@ router.get("/", optionalAuth, async (req, res) => {
           sessionId: cart.sessionId,
           items: cart.items.map((item) => ({
             _id: item._id.toString(), // 🆕 ENSURE STRING
-            productId: item.productId._id || item.productId,
+            productId: item.productId, // Return full product object
             quantity: item.quantity,
             price: item.price,
             subtotal: item.subtotal,
             productName: item.productName,
             productImage: item.productImage,
-            // ... other fields
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
+            selectedFit: item.selectedFit,
           })),
           totalAmount: cart.totalAmount,
           totalItems: cart.totalItems,
           totalQuantity: cart.totalQuantity,
           subtotal: cart.subtotal,
+          discount: cart.discount || 0,
         },
       });
     } else {

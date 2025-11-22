@@ -17,6 +17,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function CustomerProfilePage() {
   const router = useRouter();
@@ -251,6 +252,16 @@ export default function CustomerProfilePage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* My Orders Link */}
+              <div className="p-8">
+                <Link
+                  href="/customer/orders"
+                  className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  My Orders
+                </Link>
               </div>
             </div>
 

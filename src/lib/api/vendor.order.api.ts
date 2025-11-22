@@ -50,6 +50,9 @@ export interface OrderStatsResponse {
 export interface UpdateOrderStatusData {
   status: OrderStatus;
   notes?: string;
+  trackingId?: string;
+  carrier?: string;
+  estimatedDelivery?: string;
 }
 
 export interface UpdateShippingData {
@@ -98,8 +101,7 @@ export interface CreateOrderData {
  * Transform and validate order data from backend to frontend format
  */
 function transformOrder(order: any): Order | null {
-  if (!order || typeof order !== "object") {
-    console.error("[ORDER API] Invalid order data:", order);
+  if (!order || typeof order !== "object" || Object.keys(order).length === 0) {
     return null;
   }
 
@@ -419,8 +421,9 @@ class OrderAPI {
 
       console.log("[ORDER API] Raw order response:", response);
 
-      // Backend returns { success: true, order: {...} }
-      const orderData = response.order || response.data || response;
+      // 🆕 FIXED: Correctly access the nested order object from response.data.order
+      // Backend returns { success: true, data: { order: { ... } } }
+      const orderData = response.data?.order || response.order || response;
 
       if (!orderData) {
         throw new Error("Order data not found in response");
@@ -429,7 +432,11 @@ class OrderAPI {
       const transformedOrder = transformOrder(orderData);
 
       if (!transformedOrder) {
-        throw new Error("Failed to transform order data");
+        console.error(
+          "[ORDER API] Failed to transform order data for ID:",
+          orderId
+        );
+        return { success: false, order: null as any };
       }
 
       return {
@@ -456,10 +463,23 @@ class OrderAPI {
     try {
       console.log("[ORDER API] Updating order status:", orderId, updateData);
 
-      const response: any = await apiClient.patch(`/orders/${orderId}/status`, {
+      const payload: any = {
         status: updateData.status,
         notes: updateData.notes,
-      });
+      };
+
+      // Include tracking info if provided
+      if (updateData.trackingId) {
+        payload.trackingNumber = updateData.trackingId;
+      }
+      if (updateData.carrier) {
+        payload.carrier = updateData.carrier;
+      }
+      if (updateData.estimatedDelivery) {
+        payload.estimatedDelivery = updateData.estimatedDelivery;
+      }
+
+      const response: any = await apiClient.patch(`/orders/${orderId}/status`, payload);
 
       console.log("[ORDER API] Update status response:", response);
 

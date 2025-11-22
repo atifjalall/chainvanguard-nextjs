@@ -63,13 +63,9 @@ const productSchema = new Schema(
         "Belts",
         "Hats",
         "Bags",
-        "Watches",
-        "Wallets",
         "Ties",
         "Handbags",
         "Clutches",
-        "Jewelry",
-        "Sunglasses",
         // Footwear
         "Shoes",
         "Sneakers",

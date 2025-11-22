@@ -525,7 +525,7 @@ export default function CustomerDashboard() {
               {
                 icon: TruckIcon,
                 title: "Complimentary Shipping",
-                desc: "On all orders over Rs 50",
+                desc: "On all orders over Rs 3000",
               },
               {
                 icon: ShieldCheckIcon,

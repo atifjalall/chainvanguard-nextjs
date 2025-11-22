@@ -603,6 +603,44 @@ router.get("/recommendations", authenticate, async (req, res) => {
 });
 
 /**
+ * GET /api/customer/browse/recommendations/similar
+ * Get similar products based on category
+ * Query params: category (required), limit (default: 10)
+ */
+router.get("/recommendations/similar", async (req, res) => {
+  try {
+    const { category } = req.query;
+    const limit = parseInt(req.query.limit) || 10;
+
+    if (!category || category === "undefined" || category.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Valid category parameter is required",
+      });
+    }
+
+    const result = await customerBrowseService.getSimilarProducts(
+      category,
+      limit
+    );
+
+    res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    logger.error(
+      "❌ GET /api/customer/browse/recommendations/similar error:",
+      error
+    );
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to get similar products",
+    });
+  }
+});
+
+/**
  * GET /api/customer/browse/search/suggestions
  * Get search suggestions/autocomplete
  * Query params: q (search query), limit (default: 10)

@@ -219,6 +219,8 @@
 .toaster,
 .toaster * {
   border-radius: 0 !important;
+  background-color: var(--background) !important;
+  opacity: 1 !important;
 }
 
 @keyframes shake {

@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronRightIcon,
@@ -8,42 +9,25 @@ import {
   WalletIcon,
   ShieldCheckIcon,
   InformationCircleIcon,
+  CubeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
-
-// Mock Cart Data
-const CART_ITEMS = [
-  {
-    id: 1,
-    name: "Premium Cotton T-Shirt",
-    price: 29.99,
-    size: "M",
-    color: "Black",
-    quantity: 2,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200",
-  },
-  {
-    id: 2,
-    name: "Classic Denim Jacket",
-    price: 89.99,
-    size: "L",
-    color: "Blue",
-    quantity: 1,
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=200",
-  },
-];
-
-// Mock Wallet Info
-const WALLET_INFO = {
-  address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb2",
-  balance: 500.75,
-  network: "Ethereum",
-};
+import { getCart } from "@/lib/api/customer.cart.api";
+import { authAPI } from "@/lib/api/auth.api";
+import { createOrder } from "@/lib/api/customer.checkout.api";
+import { getWalletBalance } from "@/lib/api/wallet.api";
+import type { Cart, User } from "@/types";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Data States
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
 
   // Form States
   const [shippingInfo, setShippingInfo] = useState({
@@ -57,16 +41,142 @@ export default function CheckoutPage() {
     country: "Pakistan",
   });
 
-  const [shippingMethod, setShippingMethod] = useState("standard");
+  const [shippingMethod] = useState<"standard" | "express">("standard");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  // Load cart and user data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+
+        // Load cart
+        const cartResponse = await getCart();
+        if (cartResponse.success && cartResponse.data) {
+          setCart(cartResponse.data);
+
+          // Redirect if cart is empty
+          if (
+            !cartResponse.data.items ||
+            cartResponse.data.items.length === 0
+          ) {
+            toast.error("Your cart is empty");
+            router.push("/customer/cart");
+            return;
+          }
+        }
+
+        // Load user profile
+        const userResponse = await authAPI.getProfile();
+        if (userResponse.success && userResponse.data) {
+          const userData = userResponse.data;
+          setUser(userData);
+
+          // Pre-populate shipping info from user profile
+          setShippingInfo({
+            fullName: userData.name || "",
+            email: userData.email || "",
+            phone: userData.phone || "",
+            address: userData.address || "",
+            city: userData.city || "",
+            state: userData.state || "",
+            zipCode: userData.postalCode || "",
+            country: userData.country || "Pakistan",
+          });
+        }
+
+        // Load wallet balance
+        try {
+          const balanceResponse = await getWalletBalance();
+          if (balanceResponse.success && balanceResponse.data) {
+            setWalletBalance(balanceResponse.data.balance);
+          }
+        } catch (error) {
+          console.error("Error loading wallet balance:", error);
+          // Don't show error toast, just keep balance at 0
+        }
+      } catch (error) {
+        console.error("Error loading checkout data:", error);
+        toast.error("Failed to load checkout data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [router]);
+
+  // Calculate shipping based on cart items
+  const calculateShipping = () => {
+    if (!cart || !cart.items || cart.items.length === 0) {
+      return 0;
+    }
+
+    // Free shipping for orders over Rs 5000
+    if (cart.subtotal > 5000) {
+      return 0;
+    }
+
+    const shippingByVendor: { [vendorId: string]: number[] } = {};
+    let hasFreeShipping = false;
+
+    for (const item of cart.items) {
+      const product =
+        typeof item.productId === "object" ? item.productId : null;
+
+      if (product?.freeShipping) {
+        hasFreeShipping = true;
+        continue;
+      }
+
+      if (product?.shippingCost) {
+        const vendorId = product.sellerId?.toString() || "unknown";
+        if (!shippingByVendor[vendorId]) {
+          shippingByVendor[vendorId] = [];
+        }
+        shippingByVendor[vendorId].push(product.shippingCost);
+      }
+    }
+
+    if (hasFreeShipping) {
+      return 0;
+    }
+
+    const vendorIds = Object.keys(shippingByVendor);
+
+    if (vendorIds.length === 0) {
+      return 0;
+    }
+
+    // Single vendor: use highest shipping cost
+    if (vendorIds.length === 1) {
+      const costs = shippingByVendor[vendorIds[0]];
+      return Math.max(...costs);
+    }
+
+    // Multiple vendors: average of highest costs per vendor
+    const highestCostPerVendor = vendorIds.map((vendorId) =>
+      Math.max(...shippingByVendor[vendorId])
+    );
+    const averageShipping =
+      highestCostPerVendor.reduce((sum, cost) => sum + cost, 0) /
+      highestCostPerVendor.length;
+
+    return Math.round(averageShipping);
+  };
+
   // Calculate totals
-  const subtotal = CART_ITEMS.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const shippingCost = shippingMethod === "express" ? 15.99 : 5.99;
-  const total = subtotal + shippingCost;
+  const subtotal = cart?.subtotal || 0;
+  const shippingCost = calculateShipping();
+  const discount = cart?.discount || 0;
+  const total = subtotal + shippingCost - discount;
+
+  // Wallet info (from user and wallet API)
+  const walletInfo = {
+    address: user?.walletAddress || "",
+    balance: walletBalance,
+    network: "Hyperledger Fabric",
+  };
 
   const handleShippingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,20 +200,78 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (WALLET_INFO.balance < total) {
+    if (walletInfo.balance < total) {
       toast.error("Insufficient wallet balance");
+      return;
+    }
+
+    if (!cart || !user) {
+      toast.error("Missing checkout data");
       return;
     }
 
     setIsProcessing(true);
 
-    // Simulate blockchain transaction
-    setTimeout(() => {
+    try {
+      // Prepare order data
+      const orderData = {
+        shippingAddress: {
+          name: shippingInfo.fullName,
+          phone: shippingInfo.phone,
+          addressLine1: shippingInfo.address,
+          city: shippingInfo.city,
+          state: shippingInfo.state,
+          country: shippingInfo.country,
+          postalCode: shippingInfo.zipCode,
+        },
+        paymentMethod: "wallet" as const,
+        walletAddress: walletInfo.address,
+        items: cart.items.map((item) => ({
+          productId:
+            typeof item.productId === "string"
+              ? item.productId
+              : item.productId._id,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        subtotal,
+        shippingCost,
+        tax: 0, // No tax in this system
+        discount,
+        total,
+        shippingMethod,
+      };
+
+      const response = await createOrder(orderData);
+
+      if (response.success) {
+        toast.success("Order placed successfully!");
+        router.push("/customer/orders");
+      } else {
+        toast.error(response.message || "Failed to place order");
+      }
+    } catch (error: any) {
+      console.error("Error placing order:", error);
+      toast.error(error.message || "Failed to place order");
+    } finally {
       setIsProcessing(false);
-      toast.success("Payment successful! Order placed.");
-      router.push("/customer/orders");
-    }, 3000);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Loading checkout...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const cartItems = cart?.items || [];
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -352,61 +520,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    {/* Shipping Method */}
-                    <div className="space-y-4 pt-4">
-                      <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
-                        Shipping Method
-                      </label>
-                      <div className="space-y-3">
-                        <button
-                          type="button"
-                          onClick={() => setShippingMethod("standard")}
-                          className={`w-full p-4 border text-left transition-colors ${
-                            shippingMethod === "standard"
-                              ? "border-black dark:border-white bg-gray-50 dark:bg-gray-900"
-                              : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                Standard Shipping
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                5-7 business days
-                              </p>
-                            </div>
-                            <span className="text-sm text-gray-900 dark:text-white">
-                              Rs 5.99
-                            </span>
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setShippingMethod("express")}
-                          className={`w-full p-4 border text-left transition-colors ${
-                            shippingMethod === "express"
-                              ? "border-black dark:border-white bg-gray-50 dark:bg-gray-900"
-                              : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                Express Shipping
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                2-3 business days
-                              </p>
-                            </div>
-                            <span className="text-sm text-gray-900 dark:text-white">
-                              Rs 15.99
-                            </span>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
+                    {/* Shipping Method - Removed for now as we calculate from products */}
 
                     <button
                       type="submit"
@@ -448,7 +562,7 @@ export default function CheckoutPage() {
                           Network
                         </span>
                         <span className="text-sm text-gray-900 dark:text-white">
-                          {WALLET_INFO.network}
+                          {walletInfo.network}
                         </span>
                       </div>
 
@@ -457,8 +571,8 @@ export default function CheckoutPage() {
                           Wallet Address
                         </span>
                         <span className="text-xs font-mono text-gray-900 dark:text-white">
-                          {WALLET_INFO.address.slice(0, 6)}...
-                          {WALLET_INFO.address.slice(-4)}
+                          {walletInfo.address.slice(0, 6)}...
+                          {walletInfo.address.slice(-4)}
                         </span>
                       </div>
 
@@ -467,13 +581,13 @@ export default function CheckoutPage() {
                           Available Balance
                         </span>
                         <span className="text-lg font-light text-gray-900 dark:text-white">
-                          Rs {WALLET_INFO.balance.toFixed(2)}
+                          Rs {walletInfo.balance.toFixed(2)}
                         </span>
                       </div>
                     </div>
 
                     {/* Insufficient Balance Warning */}
-                    {WALLET_INFO.balance < total && (
+                    {walletInfo.balance < total && (
                       <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
                         <InformationCircleIcon className="h-5 w-5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
                         <div className="space-y-1">
@@ -482,7 +596,7 @@ export default function CheckoutPage() {
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400">
                             You need Rs{" "}
-                            {(total - WALLET_INFO.balance).toFixed(2)} more to
+                            {(total - walletInfo.balance).toFixed(2)} more to
                             complete this purchase.
                           </p>
                         </div>
@@ -500,7 +614,7 @@ export default function CheckoutPage() {
                       <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                         Your payment will be processed securely through the
                         blockchain. Transaction details will be recorded on the{" "}
-                        {WALLET_INFO.network} network.
+                        {walletInfo.network} network.
                       </p>
                     </div>
                   </div>
@@ -544,7 +658,7 @@ export default function CheckoutPage() {
                     </button>
                     <button
                       onClick={handlePayment}
-                      disabled={isProcessing || WALLET_INFO.balance < total}
+                      disabled={isProcessing || walletInfo.balance < total}
                       className="flex-1 bg-black dark:bg-white text-white dark:text-black h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isProcessing ? "Processing..." : "Place Order"}
@@ -563,33 +677,58 @@ export default function CheckoutPage() {
 
                 {/* Cart Items */}
                 <div className="space-y-4">
-                  {CART_ITEMS.map((item) => (
-                    <div key={item.id} className="flex gap-4">
-                      <div className="relative w-20 aspect-[3/4] bg-gray-100 dark:bg-gray-900 flex-shrink-0">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-medium">
-                          {item.quantity}
+                  {cartItems.map((item) => {
+                    const product =
+                      typeof item.productId === "object"
+                        ? item.productId
+                        : null;
+                    const productImage =
+                      item.productImage ||
+                      (product && product.images?.[0]?.url) ||
+                      "";
+                    const productName = item.productName || product?.name || "";
+                    const selectedColor =
+                      item.selectedColor ||
+                      product?.apparelDetails?.color ||
+                      "";
+                    const selectedSize =
+                      item.selectedSize || product?.apparelDetails?.size || "";
+
+                    return (
+                      <div key={item._id} className="flex gap-4">
+                        <div className="relative w-20 aspect-[3/4] bg-gray-100 dark:bg-gray-900 flex-shrink-0">
+                          {productImage ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={productImage}
+                              alt={productName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <CubeIcon className="h-8 w-8 text-gray-400" />
+                            </div>
+                          )}
+                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-medium">
+                            {item.quantity}
+                          </div>
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <p className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide">
+                            {productName}
+                          </p>
+                          <div className="flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
+                            {selectedColor && <span>{selectedColor}</span>}
+                            {selectedColor && selectedSize && <span>•</span>}
+                            {selectedSize && <span>{selectedSize}</span>}
+                          </div>
+                          <p className="text-sm text-gray-900 dark:text-white">
+                            Rs {item.subtotal.toFixed(2)}
+                          </p>
                         </div>
                       </div>
-                      <div className="flex-1 space-y-1">
-                        <p className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide">
-                          {item.name}
-                        </p>
-                        <div className="flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
-                          <span>{item.color}</span>
-                          <span>•</span>
-                          <span>{item.size}</span>
-                        </div>
-                        <p className="text-sm text-gray-900 dark:text-white">
-                          Rs {(item.price * item.quantity).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Totals */}
@@ -602,14 +741,36 @@ export default function CheckoutPage() {
                       Rs {subtotal.toFixed(2)}
                     </span>
                   </div>
+                  {discount > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Discount
+                      </span>
+                      <span className="text-green-600 dark:text-green-400">
+                        -Rs {discount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">
                       Shipping
                     </span>
                     <span className="text-gray-900 dark:text-white">
-                      Rs {shippingCost.toFixed(2)}
+                      {shippingCost === 0
+                        ? "Free"
+                        : `Rs ${shippingCost.toFixed(2)}`}
                     </span>
                   </div>
+                  {shippingCost === 0 && subtotal <= 5000 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Free shipping applied
+                    </p>
+                  )}
+                  {shippingCost > 0 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Free shipping on orders over Rs 5000
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-800">
