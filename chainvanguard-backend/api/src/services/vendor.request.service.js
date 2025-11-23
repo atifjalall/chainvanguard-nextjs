@@ -13,6 +13,11 @@ class VendorRequestService {
    */
   async createRequest(vendorId, { supplierId, items, vendorNotes }) {
     try {
+      // 1. Check blockchain health FIRST
+      console.log("🔍 Checking blockchain network health...");
+      await fabricService.ensureBlockchainConnected();
+      console.log("✅ Blockchain network is active");
+
       // Validate that vendor exists
       const vendor = await User.findById(vendorId);
       if (!vendor || vendor.role !== "vendor") {
@@ -102,51 +107,47 @@ class VendorRequestService {
 
       await request.save();
 
-      // ✅ ADD: Record to blockchain
-      try {
-        const blockchainData = {
-          requestId: request._id.toString(),
-          requestNumber: request.requestNumber,
-          vendorId: vendorId.toString(),
-          vendorName: vendor.name || vendor.email || vendor.companyName || "",
-          supplierId: supplierId.toString(),
-          supplierName:
-            supplier.name || supplier.email || supplier.companyName || "",
-          items: request.items.map((item) => ({
-            inventoryId: item.inventoryId.toString(),
-            inventoryName: "",
-            quantity: item.quantity,
-            pricePerUnit: item.pricePerUnit,
-            inventoryId: item.inventoryId,
-            subtotal: item.subtotal,
-          })),
-          subtotal: request.subtotal,
-          tax: request.tax,
-          total: request.total,
-          status: request.status,
-          vendorNotes: request.vendorNotes || "",
-          supplierNotes: request.supplierNotes || "",
-          autoApproved: request.autoApproved || false,
-          timestamp: new Date().toISOString(),
-        };
+      // ✅ Record to blockchain (REQUIRED - synchronous)
+      console.log("📝 Recording vendor request on blockchain...");
+      const blockchainData = {
+        requestId: request._id.toString(),
+        requestNumber: request.requestNumber,
+        vendorId: vendorId.toString(),
+        vendorName: vendor.name || vendor.email || vendor.companyName || "",
+        supplierId: supplierId.toString(),
+        supplierName:
+          supplier.name || supplier.email || supplier.companyName || "",
+        items: request.items.map((item) => ({
+          inventoryId: item.inventoryId.toString(),
+          inventoryName: "",
+          quantity: item.quantity,
+          pricePerUnit: item.pricePerUnit,
+          inventoryId: item.inventoryId,
+          subtotal: item.subtotal,
+        })),
+        subtotal: request.subtotal,
+        tax: request.tax,
+        total: request.total,
+        status: request.status,
+        vendorNotes: request.vendorNotes || "",
+        supplierNotes: request.supplierNotes || "",
+        autoApproved: request.autoApproved || false,
+        timestamp: new Date().toISOString(),
+      };
 
-        const blockchainResult =
-          await fabricService.createVendorRequest(blockchainData);
+      const blockchainResult =
+        await fabricService.createVendorRequest(blockchainData);
 
-        // Update MongoDB with blockchain confirmation
-        request.blockchainVerified = true;
-        request.blockchainTxId =
-          blockchainResult.txId || blockchainResult.requestId || "";
-        await request.save();
+      // Update MongoDB with blockchain confirmation
+      request.blockchainVerified = true;
+      request.blockchainTxId =
+        blockchainResult.txId || blockchainResult.requestId || "";
+      await request.save();
 
-        console.log(
-          "✅ Vendor request recorded on blockchain:",
-          blockchainResult
-        );
-      } catch (blockchainError) {
-        console.error("⚠️ Blockchain recording failed:", blockchainError);
-        // Continue - don't fail the request if blockchain fails
-      }
+      console.log(
+        "✅ Vendor request recorded on blockchain:",
+        blockchainResult
+      );
 
       // ✅ ADD: Notify vendor about request creation
       await notificationService.createNotification({
@@ -176,7 +177,7 @@ class VendorRequestService {
         type: "vendor_request_created",
         category: "vendor_requests",
         title: "New Vendor Request",
-        message: `New inventory request #${request.requestNumber} received from ${vendor.name || vendor.companyName}. Total: Rs ${request.total.toFixed(2)}`,
+        message: `New inventory request #${request.requestNumber} received from ${vendor.name || vendor.companyName}. Total: CVT ${request.total.toFixed(2)}`,
         priority: "high",
         isUrgent: true,
         actionType: "view_order",
@@ -1217,7 +1218,7 @@ class VendorRequestService {
         originalAmount: vendorRequest.total,
         discountAmount: 0,
         discountPercentage: 0,
-        currency: "PKR",
+        currency: "CVT",
 
         // ========================================
         // PAYMENT INFO
@@ -1327,9 +1328,22 @@ class VendorRequestService {
 
       logger.info("📊 Inventory reserved for order");
 
-      // 9. Link order to vendor request
+      // 9. Link order to vendor request and save shipping address
       vendorRequest.orderId = order._id;
       vendorRequest.paidAt = new Date();
+      vendorRequest.shippingAddress = {
+        name: shippingAddress.name,
+        phone: shippingAddress.phone,
+        addressLine1: shippingAddress.addressLine1,
+        addressLine2: shippingAddress.addressLine2 || "",
+        city: shippingAddress.city,
+        state: shippingAddress.state,
+        country: shippingAddress.country,
+        postalCode: shippingAddress.postalCode,
+        latitude: shippingAddress.latitude || null,
+        longitude: shippingAddress.longitude || null,
+        addressType: shippingAddress.addressType || "office",
+      };
       await vendorRequest.save({ session });
 
       // 10. Update wallet transaction with orderId
@@ -1367,7 +1381,7 @@ class VendorRequestService {
         type: "vendor_request_payment_received",
         category: "vendor_requests",
         title: "Payment Successful",
-        message: `Payment of $${order.total} processed successfully. Order ${order.orderNumber} created and will be processed by supplier.`,
+        message: `Payment of CVT ${order.total} processed successfully. Order ${order.orderNumber} created and will be processed by supplier.`,
         priority: "high",
         relatedEntity: {
           entityType: "order",
@@ -1462,7 +1476,7 @@ class VendorRequestService {
             cost: {
               perUnit: item.price,
               totalCost: item.subtotal,
-              currency: order.currency || "PKR",
+              currency: order.currency || "CVT",
             },
             dates: {
               purchased: vendorRequest.createdAt,

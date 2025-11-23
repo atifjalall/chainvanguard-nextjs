@@ -1,9 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import { useAuth } from "@/components/providers/auth-provider";
-import { useWallet } from "@/components/providers/wallet-provider";
-import { toast } from "sonner";
+import React, { useState, useEffect } from "react";
 import {
   WalletIcon,
   ArrowUpIcon,
@@ -15,16 +12,25 @@ import {
   PlusIcon,
   ArrowPathIcon,
   UserIcon,
+  CreditCardIcon,
+  ShieldCheckIcon,
+  UsersIcon,
+  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
-import { useRouter } from "next/navigation";
+import { loadStripe } from "@stripe/stripe-js";
+import { createPaymentIntent, confirmPayment } from "@/lib/api/wallet.api";
+import { toast } from "sonner";
+import { useWallet } from "@/components/providers/wallet-provider";
+import { useAuth } from "@/components/providers/auth-provider";
 import {
-  getTransactionHistory,
-  addFunds,
-  BackendTransaction,
-} from "@/lib/api/wallet.api";
+  formatCurrency,
+  formatCurrencyAbbreviated,
+  formatUSD,
+  formatCVT,
+} from "@/utils/currency";
 
-// Rs Icon Component
+// CVT Icon Component
 const RsIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -43,7 +49,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -55,85 +61,505 @@ const RsIcon = () => (
   </svg>
 );
 
-type Currency = "USD" | "PKR";
+type Currency = "USD" | "CVT";
 
+// Payment Modal Component
+interface PaymentModalProps {
+  isOpen: boolean;
+  addAmount: string;
+  onClose: () => void;
+  onSubmit: (
+    amount: string,
+    cardDetails: {
+      cardNumber: string;
+      expiryDate: string;
+      cvv: string;
+      cardholderName: string;
+    }
+  ) => void;
+  isLoading: boolean;
+}
+
+function PaymentModal({
+  isOpen,
+  addAmount,
+  onClose,
+  onSubmit,
+  isLoading,
+}: PaymentModalProps) {
+  const CONVERSION_RATE = 278;
+  const [activeTab, setActiveTab] = useState<"card" | "review">("card");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [cardholderName, setCardholderName] = useState("");
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab("card");
+      setCardNumber("");
+      setExpiryDate("");
+      setCvv("");
+      setCardholderName("");
+    }
+  }, [isOpen]);
+
+  const formatCardNumber = (value: string) => {
+    const cleaned = value.replace(/\D/g, "");
+    const limited = cleaned.slice(0, 16);
+    const formatted = limited.match(/.{1,4}/g)?.join(" ") || limited;
+    return formatted;
+  };
+
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCardNumber(e.target.value);
+    setCardNumber(formatted);
+  };
+
+  const formatExpiryDate = (value: string) => {
+    const cleaned = value.replace(/\D/g, "");
+    let limited = cleaned.slice(0, 4);
+
+    if (limited.length >= 2) {
+      const month = parseInt(limited.slice(0, 2), 10);
+      if (month > 12) {
+        limited = limited.slice(0, 1);
+      }
+    }
+
+    if (limited.length >= 3) {
+      return `${limited.slice(0, 2)}/${limited.slice(2)}`;
+    }
+    return limited;
+  };
+
+  const handleExpiryDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatExpiryDate(e.target.value);
+    setExpiryDate(formatted);
+  };
+
+  const validateExpiryDate = (value: string): boolean => {
+    if (value.length !== 5) return false;
+
+    const [month, year] = value.split("/");
+    const monthNum = parseInt(month, 10);
+    const yearNum = parseInt(year, 10);
+
+    if (monthNum < 1 || monthNum > 12) return false;
+
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear() % 100;
+    const currentMonth = currentDate.getMonth() + 1;
+
+    if (yearNum < currentYear) return false;
+    if (yearNum === currentYear && monthNum < currentMonth) return false;
+
+    return true;
+  };
+
+  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleaned = e.target.value.replace(/\D/g, "");
+    const limited = cleaned.slice(0, 3);
+    setCvv(limited);
+  };
+
+  const getCardNumberError = (): string => {
+    if (!cardNumber) return "";
+    const digitsOnly = cardNumber.replace(/\s/g, "");
+    if (digitsOnly.length > 0 && digitsOnly.length < 16) {
+      return "Card number must be 16 digits";
+    }
+    return "";
+  };
+
+  const getExpiryDateError = (): string => {
+    if (!expiryDate) return "";
+    if (expiryDate.length > 0 && expiryDate.length < 5) {
+      return "Enter valid expiry date (MM/YY)";
+    }
+    if (expiryDate.length === 5 && !validateExpiryDate(expiryDate)) {
+      return "Invalid or past date";
+    }
+    return "";
+  };
+
+  const getCvvError = (): string => {
+    if (!cvv) return "";
+    if (cvv.length > 0 && cvv.length < 3) {
+      return "CVV must be 3 digits";
+    }
+    return "";
+  };
+
+  const getCardholderNameError = (): string => {
+    if (!cardholderName) return "";
+    if (cardholderName.trim().length < 3) {
+      return "Name must be at least 3 characters";
+    }
+    return "";
+  };
+
+  const isCardValid =
+    cardNumber.replace(/\s/g, "").length === 16 &&
+    expiryDate.length === 5 &&
+    validateExpiryDate(expiryDate) &&
+    cvv.length === 3 &&
+    cardholderName.trim().length >= 3;
+
+  const resetForm = () => {
+    setActiveTab("card");
+    setCardNumber("");
+    setExpiryDate("");
+    setCvv("");
+    setCardholderName("");
+  };
+
+  const handleClose = () => {
+    if (!isLoading) {
+      resetForm();
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 bg-black/10 z-[10000]"
+        onClick={handleClose}
+      />
+      <div className="fixed inset-0 flex items-center justify-center z-[10001] p-4 overflow-hidden">
+        <div className="bg-white w-full max-w-3xl flex flex-col max-h-[85vh]">
+          {/* Header */}
+          <div className="border-b border-gray-100 p-6">
+            <h3 className="text-xl font-light text-gray-900 tracking-tight mb-1">
+              Add Funds to Wallet
+            </h3>
+            <p className="text-xs text-gray-500">
+              Securely add funds to your wallet using Stripe
+            </p>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-gray-100">
+            <button
+              onClick={() => setActiveTab("card")}
+              className={`flex-1 py-3 px-6 text-xs uppercase tracking-[0.2em] font-medium transition-colors ${
+                activeTab === "card"
+                  ? "text-gray-900 border-b-2 border-black"
+                  : "text-gray-400 hover:text-gray-900"
+              }`}
+            >
+              Card Information
+            </button>
+            <button
+              onClick={() => setActiveTab("review")}
+              disabled={!isCardValid}
+              className={`flex-1 py-3 px-6 text-xs uppercase tracking-[0.2em] font-medium transition-colors ${
+                activeTab === "review"
+                  ? "text-gray-900 border-b-2 border-black"
+                  : "text-gray-400 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              }`}
+            >
+              Review
+            </button>
+          </div>
+
+          {/* Tab Content - Scrollable */}
+          <div className="overflow-y-auto flex-1 p-6">
+            {/* Card Information Tab */}
+            {activeTab === "card" && (
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 pb-5 border-b border-gray-100">
+                  <CreditCardIcon className="h-5 w-5 text-gray-900" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      Credit / Debit Card
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Powered by Stripe • Instant processing
+                    </p>
+                  </div>
+                </div>
+
+                {/* Card Number */}
+                <div>
+                  <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 font-medium block mb-2">
+                    Card Number *
+                  </label>
+                  <div className="border-b border-gray-300 pb-px">
+                    <input
+                      type="text"
+                      placeholder="1234 5678 9012 3456"
+                      value={cardNumber}
+                      onChange={handleCardNumberChange}
+                      className="w-full h-10 bg-transparent text-sm text-gray-900 placeholder-gray-300 focus:outline-none"
+                    />
+                  </div>
+                  <div className="h-4 mt-1">
+                    {getCardNumberError() && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <ExclamationCircleIcon className="h-3 w-3" />
+                        {getCardNumberError()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Expiry and CVV */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 font-medium block mb-2">
+                      Expiry Date *
+                    </label>
+                    <div className="border-b border-gray-300 pb-px">
+                      <input
+                        type="text"
+                        placeholder="MM/YY"
+                        value={expiryDate}
+                        onChange={handleExpiryDateChange}
+                        className="w-full h-10 bg-transparent text-sm text-gray-900 placeholder-gray-300 focus:outline-none"
+                      />
+                    </div>
+                    <div className="h-4 mt-1">
+                      {getExpiryDateError() && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                          <ExclamationCircleIcon className="h-3 w-3" />
+                          {getExpiryDateError()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 font-medium block mb-2">
+                      CVV *
+                    </label>
+                    <div className="border-b border-gray-300 pb-px">
+                      <input
+                        type="text"
+                        placeholder="123"
+                        value={cvv}
+                        onChange={handleCvvChange}
+                        className="w-full h-10 bg-transparent text-sm text-gray-900 placeholder-gray-300 focus:outline-none"
+                      />
+                    </div>
+                    <div className="h-4 mt-1">
+                      {getCvvError() && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                          <ExclamationCircleIcon className="h-3 w-3" />
+                          {getCvvError()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cardholder Name */}
+                <div>
+                  <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 font-medium block mb-2">
+                    Cardholder Name *
+                  </label>
+                  <div className="border-b border-gray-300 pb-px">
+                    <input
+                      type="text"
+                      placeholder="John Doe"
+                      value={cardholderName}
+                      onChange={(e) => setCardholderName(e.target.value)}
+                      className="w-full h-10 bg-transparent text-sm text-gray-900 placeholder-gray-300 focus:outline-none"
+                    />
+                  </div>
+                  <div className="h-4 mt-1">
+                    {getCardholderNameError() && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <ExclamationCircleIcon className="h-3 w-3" />
+                        {getCardholderNameError()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stripe Badge */}
+                <div className="flex items-center gap-2 pt-3 border-t border-gray-100 mt-5">
+                  <ShieldCheckIcon className="h-4 w-4 text-green-600" />
+                  <p className="text-xs text-gray-500">
+                    Secured by Stripe • Your payment information is encrypted
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Review Tab */}
+            {activeTab === "review" && (
+              <div className="space-y-4">
+                <div className="border border-gray-100 p-5 bg-gray-50">
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                    <p className="text-sm font-medium text-gray-900 uppercase tracking-[0.2em]">
+                      Payment Summary
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-green-600">
+                      <CheckCircleIcon className="h-4 w-4" />
+                      Ready
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Amount (USD):</span>
+                      <span className="font-medium text-gray-900">
+                        ${parseFloat(addAmount).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">You will receive:</span>
+                      <span className="font-medium text-gray-900">
+                        {formatCVT(parseFloat(addAmount) * CONVERSION_RATE)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Exchange Rate:</span>
+                      <span className="font-medium text-gray-900">
+                        $1 = CVT {CONVERSION_RATE.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Processing Fee:</span>
+                      <span className="font-medium text-gray-900">$0.00</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Payment Method:</span>
+                      <span className="font-medium text-gray-900 flex items-center gap-2">
+                        <CreditCardIcon className="h-4 w-4" />
+                        •••• {cardNumber.slice(-4)}
+                      </span>
+                    </div>
+                    <div className="pt-3 border-t border-gray-100 mt-3">
+                      <div className="flex justify-between">
+                        <span className="text-base font-medium text-gray-900 uppercase tracking-[0.1em]">
+                          Total:
+                        </span>
+                        <span className="text-lg font-semibold text-gray-900">
+                          ${parseFloat(addAmount).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2 p-4 bg-green-50 border border-green-200 rounded">
+                  <ShieldCheckIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-900 mb-1">
+                      Secure Payment
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Your payment is processed securely through Stripe. Funds
+                      will be added instantly.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-gray-100 p-6 flex justify-between items-center bg-gray-50">
+            <p className="text-xs text-gray-400">
+              Need help? support@chainvanguard.com
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleClose}
+                disabled={isLoading}
+                className="border border-gray-300 text-gray-900 px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              {activeTab === "card" ? (
+                <button
+                  onClick={() => setActiveTab("review")}
+                  disabled={!isCardValid}
+                  className="bg-black text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Review
+                </button>
+              ) : (
+                <button
+                  onClick={() =>
+                    onSubmit(addAmount, {
+                      cardNumber,
+                      expiryDate,
+                      cvv,
+                      cardholderName,
+                    })
+                  }
+                  disabled={isLoading}
+                  className="bg-black text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                      Processing
+                    </>
+                  ) : (
+                    "Confirm & Pay"
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Main Wallet Component
 export default function CustomerWalletPage() {
-  const router = useRouter();
-  const { user } = useAuth();
-  const { currentWallet, balance } = useWallet(); // balance is in PKR from DB
+  const CONVERSION_RATE = 278;
 
-  // Static conversion rate (will be dynamic later with API)
-  const CONVERSION_RATE = 278; // 1 USD = 278 PKR
-
-  const [currency, setCurrency] = useState<Currency>("PKR"); // Default to PKR since DB is in PKR
+  const [currency, setCurrency] = useState<Currency>("CVT");
   const [showQRCode, setShowQRCode] = useState(false);
   const [addFundsAmount, setAddFundsAmount] = useState("");
   const [isAddingFunds, setIsAddingFunds] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<string | null>(
     null
   );
-  const [transactions, setTransactions] = useState<BackendTransaction[]>([]);
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
-  const [transactionError, setTransactionError] = useState<string | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  // Currency conversion helper - amounts from DB are in PKR
-  const convertAmount = (amountInPKR: number): number => {
-    return currency === "USD" ? amountInPKR / CONVERSION_RATE : amountInPKR;
+  // Use real wallet data from provider
+  const { user } = useAuth();
+  const {
+    currentWallet: walletData,
+    balance: walletBalance,
+    transactions: walletTransactions,
+    refreshBalance,
+    refreshTransactions,
+  } = useWallet();
+
+  const balance = walletBalance || 0;
+  const currentWallet = {
+    name: walletData?.name || "My Wallet",
+    address:
+      walletData?.address || "0x1234567890abcdef1234567890abcdef12345678",
   };
 
-  // Format USD with proper commas
-  const formatUSD = (amount: number): string => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
+  // Map wallet transactions to component format
+  const transactions = (walletTransactions || []).map((tx) => ({
+    _id: tx.id,
+    description: tx.description,
+    amount: tx.amount,
+    type: tx.type,
+    status: tx.status,
+    timestamp: tx.timestamp,
+    txHash: tx.txHash,
+    metadata: { blockchainTxId: tx.txHash },
+  }));
 
-  // Format PKR with abbreviations for large amounts
-  const formatPKR = (amount: number): string => {
-    if (amount >= 1e9) {
-      return `Rs ${(amount / 1e9).toFixed(2)} B`;
-    } else if (amount >= 1e6) {
-      return `Rs ${(amount / 1e6).toFixed(2)} M`;
-    } else {
-      return `Rs ${amount.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
-    }
-  };
-
-  // Format currency display based on selected currency - amount comes in PKR from DB
-  const formatCurrency = (amountInPKR: number): string => {
-    if (currency === "USD") {
-      const usdAmount = amountInPKR / CONVERSION_RATE;
-      return formatUSD(usdAmount);
-    } else {
-      return formatPKR(amountInPKR);
-    }
-  };
-
-  // Format currency abbreviated (for PKR)
-  const formatCurrencyAbbreviated = (amountInPKR: number) => {
-    if (currency === "USD") {
-      const usdAmount = amountInPKR / CONVERSION_RATE;
-      return formatUSD(usdAmount);
-    } else {
-      if (amountInPKR >= 1e9) {
-        return `Rs ${(amountInPKR / 1e9).toFixed(2)} B`;
-      } else if (amountInPKR >= 1e6) {
-        return `Rs ${(amountInPKR / 1e6).toFixed(2)} M`;
-      } else {
-        return formatPKR(amountInPKR);
-      }
-    }
-  };
-
-  // Get currency symbol
-  const getCurrencySymbol = () => {
-    return currency === "PKR" ? "Rs" : "$";
+  const convertAmount = (amountInCVT: number): number => {
+    return currency === "USD" ? amountInCVT / CONVERSION_RATE : amountInCVT;
   };
 
   const formatAddress = (address: string) => {
@@ -145,97 +571,161 @@ export default function CustomerWalletPage() {
     toast.success("Copied to clipboard");
   };
 
+  // Refresh wallet data on mount (empty deps to avoid infinite loop)
+  useEffect(() => {
+    if (refreshBalance) refreshBalance();
+    if (refreshTransactions) refreshTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once on mount
+
   const handleAddFunds = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addFundsAmount || parseFloat(addFundsAmount) <= 0) {
-      toast.error("Please enter a valid amount");
+      alert("Please enter a valid amount");
       return;
     }
 
-    setIsAddingFunds(true);
-    try {
-      // Convert to PKR if in USD before sending to API (API expects PKR)
-      const amountInPKR =
-        currency === "USD"
-          ? parseFloat(addFundsAmount) * CONVERSION_RATE
-          : parseFloat(addFundsAmount);
+    setIsPaymentModalOpen(true);
+  };
 
-      const response = await addFunds({
-        amount: amountInPKR,
-        paymentMethod: "card",
-      });
-      if (response.success) {
-        toast.success(`Added ${formatCurrency(amountInPKR)} to your wallet`);
-        setAddFundsAmount("");
-      } else {
-        toast.error(response.message || "Failed to add funds");
+  const handlePaymentSubmit = async (
+    amount: string,
+    cardDetails: {
+      cardNumber: string;
+      expiryDate: string;
+      cvv: string;
+      cardholderName: string;
+    }
+  ) => {
+    setIsAddingFunds(true);
+
+    try {
+      // Validate card details (basic validation)
+      const cleanCardNumber = cardDetails.cardNumber.replace(/\s/g, "");
+      if (cleanCardNumber.length !== 16) {
+        throw new Error("Invalid card number");
       }
-    } catch (error) {
-      toast.error("Failed to add funds");
+
+      // Step 1: Create payment intent
+      const paymentIntentResponse = await createPaymentIntent(
+        parseFloat(amount)
+      );
+
+      if (!paymentIntentResponse.success) {
+        throw new Error("Failed to create payment intent");
+      }
+
+      // Response structure: { success, message, data: { clientSecret, paymentIntentId, amount } }
+      const { clientSecret, paymentIntentId } = paymentIntentResponse.data;
+
+      // Step 2: Initialize Stripe
+      const stripePublishableKey =
+        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+      if (!stripePublishableKey) {
+        throw new Error("Stripe publishable key not found");
+      }
+
+      const stripe = await loadStripe(stripePublishableKey);
+
+      if (!stripe) {
+        throw new Error("Failed to load Stripe");
+      }
+
+      // Step 3: For test mode, use test payment method
+      // In production, you'd use Stripe Elements instead
+      const testPaymentMethod = "pm_card_visa"; // Stripe test payment method
+
+      // Confirm payment using test payment method
+      const { error: stripeError, paymentIntent } =
+        await stripe.confirmCardPayment(clientSecret, {
+          payment_method: testPaymentMethod,
+        });
+
+      if (stripeError) {
+        throw new Error(stripeError.message || "Payment failed");
+      }
+
+      if (paymentIntent?.status !== "succeeded") {
+        throw new Error("Payment was not successful");
+      }
+
+      // Step 4: Confirm payment on our backend (mints CVT tokens)
+      const confirmResponse = await confirmPayment(
+        paymentIntentId,
+        parseFloat(amount)
+      );
+
+      if (!confirmResponse.success) {
+        throw new Error("Failed to add funds to wallet");
+      }
+
+      // Success!
+      toast.success(
+        `Successfully added $${amount} (${formatCVT(parseFloat(amount) * CONVERSION_RATE)} CVT) to your wallet!`
+      );
+
+      setIsPaymentModalOpen(false);
+      setAddFundsAmount("");
+
+      // Refresh wallet data
+      if (refreshBalance) await refreshBalance();
+      if (refreshTransactions) await refreshTransactions();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error("❌ Payment failed:", error);
+      toast.error(`Payment failed: ${errorMessage}`);
     } finally {
       setIsAddingFunds(false);
     }
   };
 
-  // Fetch transactions on mount
-  React.useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const response = await getTransactionHistory(1, 20);
-        if (response.success) {
-          setTransactions(response.data?.transactions || []);
-        } else {
-          setTransactionError("Failed to load transactions");
-        }
-      } catch (error) {
-        setTransactionError("Error fetching transactions");
-      } finally {
-        setIsLoadingTransactions(false);
-      }
-    };
-    fetchTransactions();
-  }, []);
-
-  // Calculate dynamic stats - amounts from DB are in PKR
   const totalSpent = transactions
-    ? transactions
-        .filter((t) =>
-          ["withdrawal", "payment", "transfer_out"].includes(t.type)
-        )
-        .reduce((sum, t) => sum + t.amount, 0)
-    : 0;
-  const totalAdded = transactions
-    ? transactions
-        .filter((t) => ["deposit", "transfer_in"].includes(t.type))
-        .reduce((sum, t) => sum + t.amount, 0)
-    : 0;
+    .filter((t) => ["withdrawal", "payment", "transfer_out"].includes(t.type))
+    .reduce((sum, t) => sum + t.amount, 0);
 
-  // Quick amounts based on currency
-  const quickAmounts =
-    currency === "PKR" ? [5000, 10000, 25000, 50000] : [50, 100, 200, 500];
+  const totalAdded = transactions
+    .filter((t) =>
+      ["deposit", "transfer_in", "refund", "sale"].includes(t.type)
+    )
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Backdrop overlay state for white balance effect
+  const [showBackdrop, setShowBackdrop] = useState(false);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
+      {/* White Balance Backdrop when payment modal is open */}
+      {isPaymentModalOpen && (
+        <div
+          className="fixed inset-0 bg-white/85 dark:bg-black/85 z-[9999]"
+          onClick={() => {
+            if (!isAddingFunds) {
+              setIsPaymentModalOpen(false);
+            }
+          }}
+          style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+      )}
+
       {/* Breadcrumb */}
-      <div className="">
-        <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              Home
-            </button>
-            <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
-            <span className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white">
-              Wallet
-            </span>
-          </div>
+      <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
+        <div className="flex items-center gap-2">
+          <button className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+            Home
+          </button>
+          <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
+          <span className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white">
+            Wallet
+          </span>
         </div>
       </div>
 
       {/* Header */}
-      <section className="py-16 border-b border-gray-200 dark:border-gray-800">
+      <section
+        className={`py-16 border-b border-gray-200 dark:border-gray-800 transition-all duration-300 ${isPaymentModalOpen ? "opacity-50 pointer-events-none" : ""}`}
+      >
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
           <div className="flex items-end justify-between">
             <div className="space-y-4">
@@ -249,7 +739,6 @@ export default function CustomerWalletPage() {
                 <h1 className="text-5xl font-extralight text-gray-900 dark:text-white tracking-tight">
                   My Wallet
                 </h1>
-                {/* User and Wallet Info */}
                 <div className="flex items-center gap-4 pt-2">
                   <div className="flex items-center gap-2">
                     <UserIcon className="h-4 w-4 text-gray-400" />
@@ -282,19 +771,17 @@ export default function CustomerWalletPage() {
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                   }`}
                 >
-                  <span>$</span>
                   USD
                 </button>
                 <button
-                  onClick={() => setCurrency("PKR")}
+                  onClick={() => setCurrency("CVT")}
                   className={`px-6 h-10 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors flex items-center gap-2 border-l border-gray-200 dark:border-gray-800 ${
-                    currency === "PKR"
+                    currency === "CVT"
                       ? "bg-black dark:bg-white text-white dark:text-black"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                   }`}
                 >
-                  <RsIcon />
-                  PKR
+                  CVT
                 </button>
               </div>
             </div>
@@ -318,11 +805,11 @@ export default function CustomerWalletPage() {
                       </p>
                       <div className="flex items-baseline gap-3">
                         <p className="text-5xl font-extralight text-gray-900 dark:text-white tracking-tight">
-                          {formatCurrency(balance)}
+                          {formatCurrency(balance, currency)}
                         </p>
                         {currency === "USD" && (
                           <span className="text-sm text-gray-400 dark:text-gray-600">
-                            ≈ {formatPKR(balance)}
+                            ≈ {formatCVT(balance)}
                           </span>
                         )}
                       </div>
@@ -360,23 +847,27 @@ export default function CustomerWalletPage() {
                     Add Funds
                   </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Top up your wallet balance in {currency}
+                    Top up your wallet balance in USD
                   </p>
                 </div>
 
                 <form onSubmit={handleAddFunds} className="space-y-8">
                   {/* Quick Amount Buttons */}
                   <div className="grid grid-cols-4 gap-4">
-                    {quickAmounts.map((amount) => (
+                    {[50, 100, 200, 500].map((amount) => (
                       <button
                         key={amount}
                         type="button"
-                        onClick={() => setAddFundsAmount(amount.toString())}
-                        className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-4 h-12 text-sm font-medium hover:border-black dark:hover:border-white transition-colors"
+                        onClick={() => {
+                          setAddFundsAmount(amount.toString());
+                        }}
+                        className={`border px-4 h-12 text-sm font-medium transition-colors ${
+                          addFundsAmount === amount.toString()
+                            ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black"
+                            : "border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
+                        }`}
                       >
-                        {currency === "PKR"
-                          ? `Rs ${amount.toLocaleString("en-US")}`
-                          : `$${amount}`}
+                        ${amount}
                       </button>
                     ))}
                   </div>
@@ -384,17 +875,13 @@ export default function CustomerWalletPage() {
                   {/* Custom Amount */}
                   <div className="space-y-3">
                     <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
-                      Custom Amount ({currency})
+                      Custom Amount (USD)
                     </label>
                     <div className="border-b border-gray-900 dark:border-white pb-px">
                       <div className="flex items-center">
-                        {currency === "PKR" ? (
-                          <RsIcon />
-                        ) : (
-                          <span className="text-sm text-gray-900 dark:text-white">
-                            $
-                          </span>
-                        )}
+                        <span className="text-sm text-gray-900 dark:text-white">
+                          $
+                        </span>
                         <input
                           type="number"
                           step="0.01"
@@ -406,10 +893,10 @@ export default function CustomerWalletPage() {
                         />
                       </div>
                     </div>
-                    {currency === "USD" && addFundsAmount && (
+                    {addFundsAmount && (
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         ≈{" "}
-                        {formatPKR(
+                        {formatCVT(
                           parseFloat(addFundsAmount) * CONVERSION_RATE
                         )}
                       </p>
@@ -418,20 +905,13 @@ export default function CustomerWalletPage() {
 
                   <button
                     type="submit"
-                    disabled={isAddingFunds}
-                    className="bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    disabled={
+                      !addFundsAmount || parseFloat(addFundsAmount) <= 0
+                    }
+                    className="bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full"
                   >
-                    {isAddingFunds ? (
-                      <>
-                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <PlusIcon className="h-4 w-4" />
-                        Add Funds
-                      </>
-                    )}
+                    <PlusIcon className="h-4 w-4" />
+                    Add Funds
                   </button>
                 </form>
               </div>
@@ -447,20 +927,19 @@ export default function CustomerWalletPage() {
                   </p>
                 </div>
 
-                {isLoadingTransactions ? (
+                {transactions.length === 0 ? (
                   <div className="p-6 text-center text-gray-500">
-                    Loading transactions...
-                  </div>
-                ) : transactionError ? (
-                  <div className="p-6 text-center text-red-500">
-                    {transactionError}
+                    No transactions yet
                   </div>
                 ) : (
                   <div className="space-y-0 border border-gray-200 dark:border-gray-800">
                     {transactions.map((transaction, index) => {
-                      const isCredit = ["deposit", "transfer_in"].includes(
-                        transaction.type
-                      );
+                      const isCredit = [
+                        "deposit",
+                        "transfer_in",
+                        "refund",
+                        "sale",
+                      ].includes(transaction.type);
                       return (
                         <div
                           key={transaction._id}
@@ -521,16 +1000,19 @@ export default function CustomerWalletPage() {
                                 }`}
                               >
                                 {isCredit ? "+" : "-"}
-                                {formatCurrencyAbbreviated(transaction.amount)}
+                                {formatCurrencyAbbreviated(
+                                  transaction.amount,
+                                  currency
+                                )}
                               </p>
                               {currency === "USD" && (
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  {formatPKR(transaction.amount)}
+                                  {formatCVT(transaction.amount)}
                                 </p>
                               )}
                               <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
-                                {transaction.metadata?.txHash
-                                  ? `${transaction.metadata.txHash.slice(0, 8)}...`
+                                {transaction.metadata?.blockchainTxId
+                                  ? `${transaction.metadata.blockchainTxId.slice(0, 8)}...`
                                   : "N/A"}
                               </p>
                             </div>
@@ -557,7 +1039,7 @@ export default function CustomerWalletPage() {
                     </p>
                     <span className="text-gray-400">=</span>
                     <p className="text-2xl font-extralight text-gray-900 dark:text-white">
-                      Rs {CONVERSION_RATE.toLocaleString("en-US")}
+                      CVT {CONVERSION_RATE.toLocaleString("en-US")}
                     </p>
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -620,7 +1102,7 @@ export default function CustomerWalletPage() {
                         Total Spent
                       </span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {formatCurrencyAbbreviated(totalSpent)}
+                        {formatCurrencyAbbreviated(totalSpent, currency)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -628,7 +1110,7 @@ export default function CustomerWalletPage() {
                         Total Added
                       </span>
                       <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                        {formatCurrencyAbbreviated(totalAdded)}
+                        {formatCurrencyAbbreviated(totalAdded, currency)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -710,6 +1192,15 @@ export default function CustomerWalletPage() {
           </div>
         </>
       )}
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        addAmount={addFundsAmount}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onSubmit={handlePaymentSubmit}
+        isLoading={isAddingFunds}
+      />
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import express from "express";
 import returnService from "../services/return.service.js";
 import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
+import Return from "../models/Return.js";
+import Product from "../models/Product.js";
+import notificationService from "../services/notification.service.js";
 
 const router = express.Router();
 
@@ -101,6 +104,7 @@ router.get(
  * - limit: Items per page
  * - sortBy: Sort field
  * - sortOrder: Sort order (asc/desc)
+ * - search: Search by return number, customer name, order number
  * - startDate: Filter from date
  * - endDate: Filter to date
  */
@@ -116,6 +120,7 @@ router.get(
         limit: req.query.limit,
         sortBy: req.query.sortBy,
         sortOrder: req.query.sortOrder,
+        search: req.query.search,
         startDate: req.query.startDate,
         endDate: req.query.endDate,
       };
@@ -137,25 +142,68 @@ router.get(
 );
 
 /**
- * POST /api/returns/:id/approve
+ * GET /api/returns/vendor/stats
+ * Get return statistics for vendor
+ * Access: Vendor only
+ *
+ * Query Params:
+ * - timeframe: 'week', 'month', 'year', 'all' (default: 'all')
+ */
+router.get(
+  "/vendor/stats",
+  authenticate,
+  authorizeRoles("vendor"),
+  async (req, res) => {
+    try {
+      const timeframe = req.query.timeframe || "all";
+
+      const stats = await returnService.getReturnStatistics(
+        req.userId,
+        timeframe
+      );
+
+      res.json({
+        success: true,
+        stats,
+      });
+    } catch (error) {
+      console.error("❌ Get return stats error:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to retrieve return statistics",
+      });
+    }
+  }
+);
+
+/**
+ * PATCH /api/returns/:id/approve
  * Approve return request
  * Access: Vendor only
  *
  * Body:
- * - notes: Optional approval notes
+ * - reviewNotes: Optional approval notes
+ * - refundAmount: Optional custom refund amount
+ * - restockingFee: Optional restocking fee
+ * - shippingRefund: Optional shipping refund
  */
-router.post(
+router.patch(
   "/:id/approve",
   authenticate,
   authorizeRoles("vendor"),
   async (req, res) => {
     try {
-      const { notes } = req.body;
+      const { reviewNotes, refundAmount, restockingFee, shippingRefund } =
+        req.body;
 
+      // Call service with individual parameters, not object
       const result = await returnService.approveReturn(
         req.params.id,
         req.userId,
-        notes
+        reviewNotes,
+        refundAmount,
+        restockingFee,
+        shippingRefund
       );
 
       res.json(result);
@@ -170,14 +218,14 @@ router.post(
 );
 
 /**
- * POST /api/returns/:id/reject
+ * PATCH /api/returns/:id/reject
  * Reject return request
  * Access: Vendor only
  *
  * Body:
  * - rejectionReason: Reason for rejection (required)
  */
-router.post(
+router.patch(
   "/:id/reject",
   authenticate,
   authorizeRoles("vendor"),
@@ -210,64 +258,335 @@ router.post(
 );
 
 /**
- * GET /api/returns/vendor/stats
- * Get return statistics for vendor
+ * PATCH /api/returns/:id/item-received
+ * Mark return as item received
  * Access: Vendor only
  *
- * Query Params:
- * - timeframe: 'week', 'month', 'year', 'all' (default: 'month')
+ * Body:
+ * - notes: Optional notes
  */
-router.get(
-  "/vendor/stats",
+router.patch(
+  "/:id/item-received",
   authenticate,
   authorizeRoles("vendor"),
   async (req, res) => {
     try {
-      const timeframe = req.query.timeframe || "month";
+      const { notes } = req.body;
 
-      const stats = await returnService.getReturnStatistics(
-        req.userId,
-        timeframe
-      );
+      const returnRequest = await Return.findById(req.params.id);
+
+      if (!returnRequest) {
+        return res.status(404).json({
+          success: false,
+          message: "Return request not found",
+        });
+      }
+
+      // Verify vendor ownership
+      if (returnRequest.vendorId.toString() !== req.userId) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized to access this return",
+        });
+      }
+
+      // Check status
+      if (returnRequest.status !== "approved") {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot mark as received. Current status: ${returnRequest.status}`,
+        });
+      }
+
+      // Update status
+      returnRequest.status = "item_received";
+      returnRequest.statusHistory.push({
+        status: "item_received",
+        timestamp: new Date(),
+        updatedBy: req.userId,
+        notes: notes || "Item received by vendor",
+      });
+
+      await returnRequest.save();
+
+      // Send notification directly
+      await notificationService.createNotification({
+        userId: returnRequest.vendorId,
+        userRole: "vendor",
+        type: "return_item_received",
+        category: "return",
+        title: "Return Item Marked as Received",
+        message: `Return ${returnRequest.returnNumber} has been marked as received. Please inspect the item and process accordingly.`,
+        priority: "normal",
+        actionType: "view_return",
+        actionUrl: `/vendor/returns/${returnRequest._id}`,
+        relatedEntity: {
+          entityType: "return",
+          entityId: returnRequest._id,
+          entityData: {
+            returnNumber: returnRequest.returnNumber,
+            customerName: returnRequest.customerName,
+          },
+        },
+      });
 
       res.json({
         success: true,
-        stats,
+        message: "Marked as item received",
+        return: returnRequest,
       });
     } catch (error) {
-      console.error("❌ Get return stats error:", error);
+      console.error("❌ Mark item received error:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "Failed to retrieve return statistics",
+        message: error.message || "Failed to mark item as received",
       });
     }
   }
 );
 
-// ========================================
-// EXPERT/ADMIN ENDPOINTS
-// ========================================
-
 /**
- * POST /api/returns/:id/refund
- * Process refund (after inspection)
- * Access: Expert only
+ * ========================================
+ * RESTOCK INVENTORY AFTER INSPECTION
+ * ========================================
+ * PATCH /api/returns/:id/restock
+ * Access: Vendor only
+ *
+ * Handles inventory restocking based on item condition:
+ * - 'good': Adds quantity back to available stock
+ * - 'damaged': Adds to damaged inventory tracking
+ * - 'unsellable': Records as write-off (no stock change)
  *
  * Body:
- * - inspectionNotes: Notes from inspection
+ * - condition: 'good' | 'damaged' | 'unsellable' (required)
+ * - notes: Inspection notes (optional)
  */
-router.post(
-  "/:id/refund",
+router.patch(
+  "/:id/restock",
   authenticate,
-  authorizeRoles("expert"),
+  authorizeRoles("vendor"),
   async (req, res) => {
     try {
-      const { inspectionNotes } = req.body;
+      const { id } = req.params;
+      const { condition, notes } = req.body;
+      const userId = req.userId;
+
+      // Validate condition
+      if (!["good", "damaged", "unsellable"].includes(condition)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid condition. Must be: good, damaged, or unsellable",
+        });
+      }
+
+      // Get return details
+      const returnRequest = await Return.findById(id)
+        .populate("customerId", "name email")
+        .populate("vendorId", "name email companyName");
+
+      if (!returnRequest) {
+        return res.status(404).json({
+          success: false,
+          message: "Return request not found",
+        });
+      }
+
+      // Verify user is the vendor
+      if (returnRequest.vendorId._id.toString() !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized to process this return",
+        });
+      }
+
+      // Check if return is in correct status
+      if (returnRequest.status !== "item_received") {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot restock. Return must be in 'item_received' status. Current status: ${returnRequest.status}`,
+        });
+      }
+
+      // Process each item based on condition
+      const restockResults = [];
+
+      for (const item of returnRequest.items) {
+        const product = await Product.findById(item.productId);
+
+        if (!product) {
+          console.error(`❌ Product ${item.productId} not found`);
+          restockResults.push({
+            productId: item.productId,
+            productName: item.productName,
+            status: "error",
+            message: "Product not found",
+          });
+          continue;
+        }
+
+        const oldQuantity = product.quantity;
+        const oldDamagedQty = product.damagedQuantity || 0;
+
+        if (condition === "good") {
+          // Add back to available stock
+          product.quantity += item.quantity;
+          product.returnedQuantity =
+            (product.returnedQuantity || 0) + item.quantity;
+
+          // Update status if was out of stock
+          if (product.status === "out_of_stock" && product.quantity > 0) {
+            product.status = "active";
+          }
+
+          console.log(
+            `✅ Restocked ${item.quantity} units of "${product.name}" (${oldQuantity} → ${product.quantity})`
+          );
+
+          restockResults.push({
+            productId: item.productId,
+            productName: item.productName,
+            status: "success",
+            action: "restocked",
+            oldQuantity,
+            newQuantity: product.quantity,
+            quantityAdded: item.quantity,
+          });
+        } else if (condition === "damaged") {
+          // Add to damaged inventory
+          product.damagedQuantity = oldDamagedQty + item.quantity;
+          product.returnedQuantity =
+            (product.returnedQuantity || 0) + item.quantity;
+
+          console.log(
+            `⚠️ Added ${item.quantity} damaged units of "${product.name}" (Damaged: ${oldDamagedQty} → ${product.damagedQuantity})`
+          );
+
+          restockResults.push({
+            productId: item.productId,
+            productName: item.productName,
+            status: "success",
+            action: "marked_damaged",
+            oldDamagedQuantity: oldDamagedQty,
+            newDamagedQuantity: product.damagedQuantity,
+            quantityAdded: item.quantity,
+          });
+        } else if (condition === "unsellable") {
+          // Just log it, no stock changes
+          product.returnedQuantity =
+            (product.returnedQuantity || 0) + item.quantity;
+
+          console.log(
+            `❌ Marked ${item.quantity} units of "${product.name}" as unsellable write-off`
+          );
+
+          restockResults.push({
+            productId: item.productId,
+            productName: item.productName,
+            status: "success",
+            action: "written_off",
+            quantityWrittenOff: item.quantity,
+          });
+        }
+
+        await product.save();
+      }
+
+      // Update return status to inspected
+      returnRequest.status = "inspected";
+      returnRequest.inspection = {
+        inspectedBy: userId,
+        inspectedAt: new Date(),
+        condition: condition,
+        notes: notes || "",
+        approved: condition === "good",
+      };
+
+      // Add to status history
+      returnRequest.statusHistory.push({
+        status: "inspected",
+        timestamp: new Date(),
+        updatedBy: userId,
+        notes: `Inspected as ${condition}. ${notes || ""}`,
+      });
+
+      await returnRequest.save();
+
+      // Populate return for response
+      const populatedReturn = await Return.findById(id)
+        .populate("customerId", "name email")
+        .populate("vendorId", "name email companyName")
+        .populate("reviewedBy", "name");
+
+      // Send notification directly
+      const conditionMessages = {
+        good: "Your item has been inspected and is in good condition. Refund will be processed shortly.",
+        damaged:
+          "Your item has been inspected and shows damage. The refund amount may be adjusted.",
+        unsellable:
+          "Unfortunately, your item is unsellable and cannot be restocked. Refund processing may be affected.",
+      };
+
+      const message =
+        conditionMessages[condition] ||
+        "Your returned item has been inspected.";
+
+      await notificationService.createNotification({
+        userId: populatedReturn.customerId._id,
+        userRole: "customer",
+        type: "return_inspected",
+        category: "return",
+        title: "Return Item Inspected",
+        message: `${message} (Return: ${populatedReturn.returnNumber})`,
+        priority: "normal",
+        actionType: "view_return",
+        actionUrl: `/customer/returns/${populatedReturn._id}`,
+        relatedEntity: {
+          entityType: "return",
+          entityId: populatedReturn._id,
+          entityData: {
+            returnNumber: populatedReturn.returnNumber,
+            condition: condition,
+            refundAmount: populatedReturn.refundAmount,
+          },
+        },
+      });
+
+      res.json({
+        success: true,
+        message: `Return inspected and inventory updated (${condition})`,
+        return: populatedReturn,
+        restockResults,
+      });
+    } catch (error) {
+      console.error("❌ Restock inventory error:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to restock inventory",
+      });
+    }
+  }
+);
+
+/**
+ * PATCH /api/returns/:id/refund
+ * Process refund (after inspection)
+ * Access: Vendor or Expert
+ *
+ * Body:
+ * - notes: Optional refund notes
+ */
+router.patch(
+  "/:id/refund",
+  authenticate,
+  authorizeRoles("vendor", "expert"),
+  async (req, res) => {
+    try {
+      const { notes } = req.body;
 
       const result = await returnService.processRefund(
         req.params.id,
         req.userId,
-        inspectionNotes
+        notes
       );
 
       res.json(result);
@@ -327,39 +646,126 @@ router.get("/:id", authenticate, async (req, res) => {
 });
 
 /**
- * PATCH /api/returns/:id/status
- * Update return status
- * Access: Vendor, Expert
+ * PATCH /api/returns/:id/cancel
+ * Cancel a return request
+ * Access: Customer (own returns), Vendor (own returns)
  *
  * Body:
- * - status: New status
- * - notes: Optional notes
+ * - reason: Cancellation reason
  */
 router.patch(
-  "/:id/status",
+  "/:id/cancel",
   authenticate,
-  authorizeRoles("vendor", "expert"),
+  authorizeRoles("customer", "vendor"),
   async (req, res) => {
     try {
-      const { status, notes } = req.body;
+      const { reason } = req.body;
 
-      if (!status) {
+      if (!reason) {
         return res.status(400).json({
           success: false,
-          message: "Status is required",
+          message: "Cancellation reason is required",
         });
       }
 
-      // Implement status update logic here
+      const returnRequest = await Return.findById(req.params.id);
+
+      if (!returnRequest) {
+        return res.status(404).json({
+          success: false,
+          message: "Return request not found",
+        });
+      }
+
+      // Verify ownership
+      const isCustomer = returnRequest.customerId.toString() === req.userId;
+      const isVendor = returnRequest.vendorId.toString() === req.userId;
+
+      if (!isCustomer && !isVendor) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized to cancel this return",
+        });
+      }
+
+      // Check if can be cancelled
+      if (!["requested", "approved"].includes(returnRequest.status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot cancel return in ${returnRequest.status} status`,
+        });
+      }
+
+      returnRequest.status = "cancelled";
+      returnRequest.cancellationReason = reason;
+      returnRequest.statusHistory.push({
+        status: "cancelled",
+        timestamp: new Date(),
+        updatedBy: req.userId,
+        notes: reason,
+      });
+
+      await returnRequest.save();
+
+      // Send notification directly
+      const isCustomerCancelling =
+        req.userId === returnRequest.customerId.toString();
+
+      if (isCustomerCancelling) {
+        // Notify vendor
+        await notificationService.createNotification({
+          userId: returnRequest.vendorId,
+          userRole: "vendor",
+          type: "return_cancelled_by_customer",
+          category: "return",
+          title: "Return Request Cancelled",
+          message: `${returnRequest.customerName} has cancelled return request ${returnRequest.returnNumber}.`,
+          priority: "low",
+          actionType: "view_return",
+          actionUrl: `/vendor/returns/${returnRequest._id}`,
+          relatedEntity: {
+            entityType: "return",
+            entityId: returnRequest._id,
+            entityData: {
+              returnNumber: returnRequest.returnNumber,
+              customerName: returnRequest.customerName,
+              cancellationReason: returnRequest.cancellationReason,
+            },
+          },
+        });
+      } else {
+        // Notify customer
+        await notificationService.createNotification({
+          userId: returnRequest.customerId,
+          userRole: "customer",
+          type: "return_cancelled",
+          category: "return",
+          title: "Return Request Cancelled",
+          message: `Your return request ${returnRequest.returnNumber} has been cancelled by ${returnRequest.vendorName}.`,
+          priority: "normal",
+          actionType: "view_return",
+          actionUrl: `/customer/returns/${returnRequest._id}`,
+          relatedEntity: {
+            entityType: "return",
+            entityId: returnRequest._id,
+            entityData: {
+              returnNumber: returnRequest.returnNumber,
+              cancellationReason: returnRequest.cancellationReason,
+            },
+          },
+        });
+      }
+
       res.json({
         success: true,
-        message: "Status updated successfully",
+        message: "Return request cancelled",
+        return: returnRequest,
       });
     } catch (error) {
-      console.error("❌ Update return status error:", error);
+      console.error("❌ Cancel return error:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "Failed to update status",
+        message: error.message || "Failed to cancel return",
       });
     }
   }

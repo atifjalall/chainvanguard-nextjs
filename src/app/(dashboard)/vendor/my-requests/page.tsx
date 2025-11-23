@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -61,6 +61,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 // Import API functions and types
+
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   getMyRequests,
   getRequestStats,
@@ -72,10 +74,12 @@ import {
   ShippingAddress,
   PaymentResponse,
 } from "@/lib/api/vendor.request.api";
+import { authAPI } from "@/lib/api/auth.api";
 
 const HEADER_GAP = "gap-3";
 
 export default function MyRequestsPage() {
+  usePageTitle("My Requests");
   const [allRequests, setAllRequests] = useState<VendorRequest[]>([]);
   const [stats, setStats] = useState<RequestStatsResponse["stats"] | null>(
     null
@@ -111,6 +115,7 @@ export default function MyRequestsPage() {
     postalCode: "",
     country: "Pakistan",
   });
+  const [loadingUserData, setLoadingUserData] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -152,6 +157,39 @@ export default function MyRequestsPage() {
     }
   };
 
+  // Fetch and pre-populate user data when payment dialog opens
+  const loadUserDataIntoForm = useCallback(async () => {
+    try {
+      setLoadingUserData(true);
+      const profileResponse = await authAPI.getProfile();
+      const user = profileResponse.data;
+
+      // Pre-populate shipping address with user data
+      setShippingAddress({
+        name: user.name || "",
+        phone: user.phone || "",
+        addressLine1: user.address || "",
+        addressLine2: "",
+        city: user.city || "",
+        state: user.state || "",
+        postalCode: user.postalCode || "",
+        country: user.country || "Pakistan",
+      });
+    } catch (err: any) {
+      console.error("Failed to load user data:", err);
+      // Don't show error to user, just leave form empty
+    } finally {
+      setLoadingUserData(false);
+    }
+  }, []);
+
+  // Load user data when payment dialog opens
+  useEffect(() => {
+    if (isPaymentDialogOpen) {
+      loadUserDataIntoForm();
+    }
+  }, [isPaymentDialogOpen, loadUserDataIntoForm]);
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "approved":
@@ -185,7 +223,7 @@ export default function MyRequestsPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `Rs ${amount.toLocaleString("en-PK")}`;
+    return `CVT ${amount.toLocaleString("en-PK")}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -440,6 +478,14 @@ export default function MyRequestsPage() {
               </p>
               <div className={`flex items-center ${HEADER_GAP} mt-2`}>
                 <Badge
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} flex items-center gap-1 text-xs rounded-none`}
+                >
+                  <InboxStackIcon
+                    className={`h-3 w-3 ${badgeColors.green.icon}`}
+                  />
+                  Request Management
+                </Badge>
+                <Badge
                   className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
                 >
                   <ShieldCheckIcon
@@ -536,7 +582,7 @@ export default function MyRequestsPage() {
                   placeholder="Search requests by request number"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
+                  className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200 hover:border-black`}
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -545,7 +591,7 @@ export default function MyRequestsPage() {
                   onValueChange={setSelectedStatus}
                 >
                   <SelectTrigger
-                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200 hover:border-black`}
                   >
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
@@ -563,7 +609,7 @@ export default function MyRequestsPage() {
                 </Select>
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger
-                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200 hover:border-black`}
                   >
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
@@ -755,13 +801,26 @@ export default function MyRequestsPage() {
                         setSelectedRequest(request);
                         setIsDetailsOpen(true);
                       }}
-                      className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
+                      className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all hover:border-black dark:hover:border-white`}
                     >
                       <EyeIcon
                         className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
                       />
                       View Details
                     </Button>
+                    {request.status === "approved" && !request.orderId && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedRequest(request);
+                          setIsPaymentDialogOpen(true);
+                        }}
+                        className={`flex-1 h-8 px-3 ${colors.buttons.primary} cursor-pointer rounded-none`}
+                      >
+                        <CreditCardIcon className="h-4 w-4 mr-2 text-white" />
+                        Pay Now
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -788,7 +847,8 @@ export default function MyRequestsPage() {
       {/* Request Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent
-          className={`w-full max-w-[700px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} rounded-none`}
+          style={{ width: "100%", maxWidth: "900px" }}
+          className={`w-full max-w-[900px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} rounded-none`}
         >
           <DialogHeader>
             <DialogTitle className={`${colors.texts.primary}`}>
@@ -994,6 +1054,104 @@ export default function MyRequestsPage() {
                 </CardContent>
               </Card>
 
+              {/* Shipping Address Section - Only show if paid */}
+              {selectedRequest.shippingAddress &&
+                selectedRequest.shippingAddress.name && (
+                  <Card
+                    className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                  >
+                    <CardHeader className="pb-3">
+                      <CardTitle
+                        className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                      >
+                        <CreditCardIcon
+                          className={`h-5 w-5 ${colors.icons.primary}`}
+                        />
+                        Shipping Address
+                      </CardTitle>
+                      <CardDescription
+                        className={`text-xs ${colors.texts.secondary}`}
+                      >
+                        Your items will be delivered to this address
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>Name</p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {selectedRequest.shippingAddress.name}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>Phone</p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {selectedRequest.shippingAddress.phone}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Address
+                        </p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {selectedRequest.shippingAddress.addressLine1}
+                          {selectedRequest.shippingAddress.addressLine2 &&
+                            `, ${selectedRequest.shippingAddress.addressLine2}`}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className={`text-xs ${colors.texts.muted}`}>
+                            City
+                          </p>
+                          <p
+                            className={`font-medium ${colors.texts.primary} text-sm`}
+                          >
+                            {selectedRequest.shippingAddress.city}
+                          </p>
+                        </div>
+                        <div>
+                          <p className={`text-xs ${colors.texts.muted}`}>
+                            State/Province
+                          </p>
+                          <p
+                            className={`font-medium ${colors.texts.primary} text-sm`}
+                          >
+                            {selectedRequest.shippingAddress.state}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className={`text-xs ${colors.texts.muted}`}>
+                            Postal Code
+                          </p>
+                          <p
+                            className={`font-medium ${colors.texts.primary} text-sm`}
+                          >
+                            {selectedRequest.shippingAddress.postalCode}
+                          </p>
+                        </div>
+                        <div>
+                          <p className={`text-xs ${colors.texts.muted}`}>
+                            Country
+                          </p>
+                          <p
+                            className={`font-medium ${colors.texts.primary} text-sm`}
+                          >
+                            {selectedRequest.shippingAddress.country}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
               {/* Vendor Notes */}
               {selectedRequest.vendorNotes && (
                 <Card
@@ -1065,11 +1223,11 @@ export default function MyRequestsPage() {
           <DialogFooter className="flex gap-2">
             {selectedRequest?.status === "pending" && (
               <Button
-                variant="destructive"
+                variant="outline"
                 onClick={() => {
                   setIsCancelDialogOpen(true);
                 }}
-                className="rounded-none"
+                className="text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400"
               >
                 <XCircleIcon className="h-4 w-4 mr-2" />
                 Cancel Request
@@ -1079,11 +1237,11 @@ export default function MyRequestsPage() {
               !selectedRequest?.orderId && (
                 <>
                   <Button
-                    variant="destructive"
+                    variant="outline"
                     onClick={() => {
                       setIsCancelApprovedDialogOpen(true);
                     }}
-                    className="rounded-none"
+                    className="text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400"
                   >
                     <XCircleIcon className="h-4 w-4 mr-2" />
                     Cancel
@@ -1092,9 +1250,9 @@ export default function MyRequestsPage() {
                     onClick={() => {
                       setIsPaymentDialogOpen(true);
                     }}
-                    className="rounded-none bg-green-600 hover:bg-green-700"
+                    className={`${colors.buttons.primary} rounded-none cursor-pointer`}
                   >
-                    <CreditCardIcon className="h-4 w-4 mr-2" />
+                    <CreditCardIcon className="h-4 w-4 mr-2 text-white" />
                     Pay Now
                   </Button>
                 </>
@@ -1102,7 +1260,7 @@ export default function MyRequestsPage() {
             <Button
               variant="outline"
               onClick={() => setIsDetailsOpen(false)}
-              className={`${colors.buttons.outline} rounded-none`}
+              className={`${colors.buttons.outline} rounded-none cursor-pointer transition-all hover:border-black dark:hover:border-white`}
             >
               Close
             </Button>
@@ -1113,7 +1271,8 @@ export default function MyRequestsPage() {
       {/* Cancel Pending Request Dialog */}
       <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
         <DialogContent
-          className={`w-full max-w-[500px] ${colors.backgrounds.modal} rounded-none`}
+          style={{ width: "100%", maxWidth: "672px" }}
+          className={`w-full max-w-[672px] ${colors.backgrounds.modal} rounded-none`}
         >
           <DialogHeader>
             <DialogTitle className={`${colors.texts.primary}`}>
@@ -1143,15 +1302,15 @@ export default function MyRequestsPage() {
               variant="outline"
               onClick={() => setIsCancelDialogOpen(false)}
               disabled={isProcessing}
-              className="rounded-none"
+              className="rounded-none cursor-pointer transition-all hover:border-black dark:hover:border-white"
             >
               No, Keep It
             </Button>
             <Button
-              variant="destructive"
+              variant="outline"
               onClick={handleCancelPendingRequest}
               disabled={isProcessing}
-              className="rounded-none"
+              className="text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400"
             >
               {isProcessing ? "Cancelling..." : "Yes, Cancel Request"}
             </Button>
@@ -1165,7 +1324,8 @@ export default function MyRequestsPage() {
         onOpenChange={setIsCancelApprovedDialogOpen}
       >
         <DialogContent
-          className={`w-full max-w-[500px] ${colors.backgrounds.modal} rounded-none`}
+          style={{ width: "100%", maxWidth: "672px" }}
+          className={`w-full max-w-[672px] ${colors.backgrounds.modal} rounded-none`}
         >
           <DialogHeader>
             <DialogTitle className={`${colors.texts.primary}`}>
@@ -1197,7 +1357,7 @@ export default function MyRequestsPage() {
                   value={cancellationReason}
                   onChange={(e) => setCancellationReason(e.target.value)}
                   rows={4}
-                  className="rounded-none"
+                  className="rounded-none hover:border-black"
                 />
               </div>
             </div>
@@ -1210,15 +1370,15 @@ export default function MyRequestsPage() {
                 setCancellationReason("");
               }}
               disabled={isProcessing}
-              className="rounded-none"
+              className="rounded-none cursor-pointer transition-all hover:border-black dark:hover:border-white"
             >
               Back
             </Button>
             <Button
-              variant="destructive"
+              variant="outline"
               onClick={handleCancelApprovedRequest}
               disabled={isProcessing || !cancellationReason.trim()}
-              className="rounded-none"
+              className="text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400"
             >
               {isProcessing ? "Cancelling..." : "Cancel Request"}
             </Button>
@@ -1229,7 +1389,8 @@ export default function MyRequestsPage() {
       {/* Payment Dialog */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
         <DialogContent
-          className={`w-full max-w-[600px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} rounded-none`}
+          style={{ width: "100%", maxWidth: "900px" }}
+          className={`w-full max-w-[900px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} rounded-none`}
         >
           <DialogHeader>
             <DialogTitle
@@ -1296,6 +1457,11 @@ export default function MyRequestsPage() {
                 >
                   Shipping Address
                 </h3>
+                {loadingUserData && (
+                  <p className={`text-sm ${colors.texts.secondary}`}>
+                    Loading your details...
+                  </p>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name *</Label>
@@ -1309,7 +1475,8 @@ export default function MyRequestsPage() {
                           name: e.target.value,
                         })
                       }
-                      className="rounded-none"
+                      disabled={loadingUserData}
+                      className="rounded-none hover:border-black"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1324,7 +1491,8 @@ export default function MyRequestsPage() {
                           phone: e.target.value,
                         })
                       }
-                      className="rounded-none"
+                      disabled={loadingUserData}
+                      className="rounded-none hover:border-black"
                     />
                   </div>
                 </div>
@@ -1340,7 +1508,8 @@ export default function MyRequestsPage() {
                         addressLine1: e.target.value,
                       })
                     }
-                    className="rounded-none"
+                    disabled={loadingUserData}
+                    className="rounded-none hover:border-black"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1355,7 +1524,8 @@ export default function MyRequestsPage() {
                         addressLine2: e.target.value,
                       })
                     }
-                    className="rounded-none"
+                    disabled={loadingUserData}
+                    className="rounded-none hover:border-black"
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1371,7 +1541,8 @@ export default function MyRequestsPage() {
                           city: e.target.value,
                         })
                       }
-                      className="rounded-none"
+                      disabled={loadingUserData}
+                      className="rounded-none hover:border-black"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1386,7 +1557,8 @@ export default function MyRequestsPage() {
                           state: e.target.value,
                         })
                       }
-                      className="rounded-none"
+                      disabled={loadingUserData}
+                      className="rounded-none hover:border-black"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1401,7 +1573,8 @@ export default function MyRequestsPage() {
                           postalCode: e.target.value,
                         })
                       }
-                      className="rounded-none"
+                      disabled={loadingUserData}
+                      className="rounded-none hover:border-black"
                     />
                   </div>
                 </div>
@@ -1417,7 +1590,8 @@ export default function MyRequestsPage() {
                         country: e.target.value,
                       })
                     }
-                    className="rounded-none"
+                    disabled={loadingUserData}
+                    className="rounded-none hover:border-black"
                   />
                 </div>
               </div>
@@ -1428,14 +1602,14 @@ export default function MyRequestsPage() {
               variant="outline"
               onClick={() => setIsPaymentDialogOpen(false)}
               disabled={isProcessing}
-              className="rounded-none"
+              className="rounded-none cursor-pointer transition-all hover:border-black dark:hover:border-white"
             >
               Cancel
             </Button>
             <Button
               onClick={handlePayment}
               disabled={isProcessing}
-              className="rounded-none bg-green-600 hover:bg-green-700"
+              className={`${colors.buttons.primary} rounded-none cursor-pointer`}
             >
               {isProcessing ? "Processing..." : "Complete Payment"}
             </Button>

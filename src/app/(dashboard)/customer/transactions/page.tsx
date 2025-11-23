@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+import { usePageTitle } from "@/hooks/use-page-title";
   ChevronRightIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -124,6 +125,7 @@ type FilterType =
   | "failed";
 
 export default function TransactionsPage() {
+  usePageTitle("Transactions");
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");

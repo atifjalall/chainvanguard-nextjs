@@ -17,9 +17,13 @@ import { authAPI } from "@/lib/api/auth.api";
 import { createOrder } from "@/lib/api/customer.checkout.api";
 import { getWalletBalance } from "@/lib/api/wallet.api";
 import type { Cart, User } from "@/types";
+import { usePageTitle } from "@/hooks/use-page-title";
+import { useCart } from "@/components/providers/cart-provider";
 
 export default function CheckoutPage() {
+  usePageTitle("Checkout");
   const router = useRouter();
+  const { setCartCount, refreshCartCount } = useCart();
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -112,7 +116,7 @@ export default function CheckoutPage() {
       return 0;
     }
 
-    // Free shipping for orders over Rs 5000
+    // Free shipping for orders over CVT 5000
     if (cart.subtotal > 5000) {
       return 0;
     }
@@ -246,6 +250,10 @@ export default function CheckoutPage() {
 
       if (response.success) {
         toast.success("Order placed successfully!");
+        // Immediately reset cart count to 0 since cart is cleared after order
+        setCartCount(0);
+        // Refresh in background for accuracy
+        refreshCartCount();
         router.push("/customer/orders");
       } else {
         toast.error(response.message || "Failed to place order");
@@ -581,7 +589,7 @@ export default function CheckoutPage() {
                           Available Balance
                         </span>
                         <span className="text-lg font-light text-gray-900 dark:text-white">
-                          Rs {walletInfo.balance.toFixed(2)}
+                          CVT {walletInfo.balance.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -595,7 +603,7 @@ export default function CheckoutPage() {
                             Insufficient Balance
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400">
-                            You need Rs{" "}
+                            You need CVT{" "}
                             {(total - walletInfo.balance).toFixed(2)} more to
                             complete this purchase.
                           </p>
@@ -723,7 +731,7 @@ export default function CheckoutPage() {
                             {selectedSize && <span>{selectedSize}</span>}
                           </div>
                           <p className="text-sm text-gray-900 dark:text-white">
-                            Rs {item.subtotal.toFixed(2)}
+                            CVT {item.subtotal.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -738,7 +746,7 @@ export default function CheckoutPage() {
                       Subtotal
                     </span>
                     <span className="text-gray-900 dark:text-white">
-                      Rs {subtotal.toFixed(2)}
+                      CVT {subtotal.toFixed(2)}
                     </span>
                   </div>
                   {discount > 0 && (
@@ -747,7 +755,7 @@ export default function CheckoutPage() {
                         Discount
                       </span>
                       <span className="text-green-600 dark:text-green-400">
-                        -Rs {discount.toFixed(2)}
+                        -CVT {discount.toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -758,7 +766,7 @@ export default function CheckoutPage() {
                     <span className="text-gray-900 dark:text-white">
                       {shippingCost === 0
                         ? "Free"
-                        : `Rs ${shippingCost.toFixed(2)}`}
+                        : `CVT ${shippingCost.toFixed(2)}`}
                     </span>
                   </div>
                   {shippingCost === 0 && subtotal <= 5000 && (
@@ -768,7 +776,7 @@ export default function CheckoutPage() {
                   )}
                   {shippingCost > 0 && (
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Free shipping on orders over Rs 5000
+                      Free shipping on orders over CVT 5000
                     </p>
                   )}
                 </div>
@@ -778,7 +786,7 @@ export default function CheckoutPage() {
                     Total
                   </span>
                   <span className="text-2xl font-light text-gray-900 dark:text-white">
-                    Rs {total.toFixed(2)}
+                    CVT {total.toFixed(2)}
                   </span>
                 </div>
               </div>

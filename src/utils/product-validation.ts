@@ -462,7 +462,7 @@ export const validatePricingInventory = (data: {
 export const formatPrice = (price: number): string => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "PKR",
+    currency: "CVT",
   }).format(price);
 };
 

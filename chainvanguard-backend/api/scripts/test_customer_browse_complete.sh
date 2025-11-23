@@ -166,7 +166,7 @@ if [ "$HTTP_CODE" -eq 200 ]; then
         FIRST_PRODUCT_NAME=$(echo "$RESPONSE" | jq -r '.products[0].name // empty')
         FIRST_PRODUCT_PRICE=$(echo "$RESPONSE" | jq -r '.products[0].price // 0')
         if [ ! -z "$FIRST_PRODUCT_NAME" ]; then
-            print_info "Sample Product: $FIRST_PRODUCT_NAME (PKR $FIRST_PRODUCT_PRICE)"
+            print_info "Sample Product: $FIRST_PRODUCT_NAME (CVT $FIRST_PRODUCT_PRICE)"
             print_info "Product ID: $FIRST_PRODUCT_ID"
         fi
     else
@@ -272,7 +272,7 @@ fi
 sleep 1
 
 # Test 2.2: Filter by price range
-print_section "Test 2.2: Filter by Price Range (500-2000 PKR)"
+print_section "Test 2.2: Filter by Price Range (500-2000 CVT)"
 FILTER_PRICE=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/customer/browse/products?minPrice=500&maxPrice=2000&limit=10" \
   -H "Content-Type: application/json")
 
@@ -286,7 +286,7 @@ if [ "$HTTP_CODE" -eq 200 ]; then
     if [ "$PRICE_COUNT" -gt 0 ]; then
         MIN_FOUND=$(echo "$RESPONSE" | jq -r '[.products[]?.price // 0] | min')
         MAX_FOUND=$(echo "$RESPONSE" | jq -r '[.products[]?.price // 0] | max')
-        print_info "Price range in results: PKR $MIN_FOUND - PKR $MAX_FOUND"
+        print_info "Price range in results: CVT $MIN_FOUND - CVT $MAX_FOUND"
     fi
 else
     print_result 1 "Price range filter failed" "HTTP $HTTP_CODE"
@@ -384,7 +384,7 @@ if [ ! -z "$PRODUCT_ID_1" ]; then
         
         print_result 0 "Product details retrieved successfully"
         print_info "Product: $PRODUCT_NAME"
-        print_info "Price: PKR $PRODUCT_PRICE"
+        print_info "Price: CVT $PRODUCT_PRICE"
         print_info "Stock: $PRODUCT_STOCK units"
         print_info "Rating: $PRODUCT_RATING/5"
         if [ ! -z "$PRODUCT_VENDOR" ]; then
@@ -464,7 +464,7 @@ if [ ! -z "$PRODUCT_ID_1" ]; then
         print_result 0 "Related products retrieved" "$RELATED_COUNT products"
         
         if [ "$RELATED_COUNT" -gt 0 ]; then
-            echo "$RESPONSE" | jq -r '.relatedProducts[0:3]? | .[]? | "\(.name // "Unknown") - PKR \(.price // 0)"' 2>/dev/null | while read line; do
+            echo "$RESPONSE" | jq -r '.relatedProducts[0:3]? | .[]? | "\(.name // "Unknown") - CVT \(.price // 0)"' 2>/dev/null | while read line; do
                 if [ ! -z "$line" ]; then
                     print_info "• $line"
                 fi
@@ -494,7 +494,7 @@ if [ ! -z "$PRODUCT_ID_2" ]; then
         PRODUCT_CATEGORY=$(echo "$RESPONSE" | jq -r '.product.category // empty')
         print_result 0 "Second product details retrieved"
         print_info "Product: $PRODUCT_NAME"
-        print_info "Category: $PRODUCT_CATEGORY, Price: PKR $PRODUCT_PRICE"
+        print_info "Category: $PRODUCT_CATEGORY, Price: CVT $PRODUCT_PRICE"
     else
         print_result 1 "Failed to get second product details" "HTTP $HTTP_CODE"
     fi
@@ -529,7 +529,7 @@ if [ ! -z "$PRODUCT_ID_1" ] && [ ! -z "$CUSTOMER_TOKEN" ]; then
         
         if [ "$SUCCESS" = "true" ]; then
             print_result 0 "Product added to cart successfully"
-            print_info "Cart has $CART_ITEMS items, Total: PKR $CART_TOTAL"
+            print_info "Cart has $CART_ITEMS items, Total: CVT $CART_TOTAL"
             if [ ! -z "$MESSAGE" ]; then
                 print_info "Message: $MESSAGE"
             fi
@@ -724,7 +724,7 @@ if [ "$HTTP_CODE" -eq 200 ]; then
     print_result 0 "Vendor products retrieved" "$VENDOR_PROD_COUNT products"
     
     if [ "$VENDOR_PROD_COUNT" -gt 0 ]; then
-        echo "$RESPONSE" | jq -r '.products[0:3]? | .[]? | "\(.name // "Unknown") - PKR \(.price // 0)"' 2>/dev/null | while read line; do
+        echo "$RESPONSE" | jq -r '.products[0:3]? | .[]? | "\(.name // "Unknown") - CVT \(.price // 0)"' 2>/dev/null | while read line; do
             print_info "• $line"
         done
     fi

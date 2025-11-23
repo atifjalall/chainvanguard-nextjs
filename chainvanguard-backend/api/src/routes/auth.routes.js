@@ -579,6 +579,66 @@ const getProfileHandler = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/auth/profile/stats
+ * Get user profile statistics (must be before /profile route)
+ */
+router.get("/profile/stats", authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("createdAt role _id");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found",
+      });
+    }
+
+    // Import models dynamically
+    const Order = (await import("../models/Order.js")).default;
+    const Wishlist = (await import("../models/Wishlist.js")).default;
+
+    // Get stats based on user role
+    let stats = {
+      memberSince: user.createdAt,
+      totalOrders: 0,
+      savedItems: 0,
+    };
+
+    // Count orders based on role
+    if (user.role === "customer") {
+      stats.totalOrders = await Order.countDocuments({ customerId: req.userId });
+    } else if (user.role === "vendor") {
+      stats.totalOrders = await Order.countDocuments({ sellerId: req.userId });
+    } else if (user.role === "supplier") {
+      // For suppliers, count vendor requests or related orders
+      const VendorRequest = (
+        await import("../models/VendorRequest.js")
+      ).default;
+      stats.totalOrders = await VendorRequest.countDocuments({
+        supplierId: req.userId,
+      });
+    }
+
+    // Count saved/wishlist items (if applicable for customer/vendor)
+    if (["customer", "vendor"].includes(user.role)) {
+      const wishlist = await Wishlist.findOne({ userId: req.userId });
+      stats.savedItems = wishlist?.items?.length || 0;
+    }
+
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error("Get profile stats error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to get profile statistics",
+    });
+  }
+});
+
 router.get("/me", authenticate, getProfileHandler);
 router.get("/profile", authenticate, getProfileHandler);
 
@@ -589,9 +649,13 @@ router.get("/profile", authenticate, getProfileHandler);
 router.put("/profile", authenticate, async (req, res) => {
   try {
     const {
+      name,
+      email,
       phone,
       companyName,
       businessAddress,
+      businessType,
+      registrationNumber,
       address,
       city,
       state,
@@ -608,10 +672,32 @@ router.put("/profile", authenticate, async (req, res) => {
       });
     }
 
+    // Check if email is being changed and already exists
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({
+        email: email.toLowerCase().trim(),
+        _id: { $ne: user._id },
+      });
+
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          error: "Email already in use by another account",
+        });
+      }
+
+      user.email = email.toLowerCase().trim();
+      user.isVerified = false; // Require re-verification for new email
+    }
+
     // Update fields
+    if (name) user.name = name;
     if (phone) user.phone = phone;
-    if (companyName) user.companyName = companyName;
-    if (businessAddress) user.businessAddress = businessAddress;
+    if (companyName !== undefined) user.companyName = companyName;
+    if (businessAddress !== undefined) user.businessAddress = businessAddress;
+    if (businessType !== undefined) user.businessType = businessType;
+    if (registrationNumber !== undefined)
+      user.registrationNumber = registrationNumber;
     if (address) user.address = address;
     if (city) user.city = city;
     if (state) user.state = state;

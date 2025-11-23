@@ -65,41 +65,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Inbox } from "lucide-react";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const HEADER_GAP = "gap-3";
 
-const RsIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    className="h-5 w-5"
-  >
-    <text
-      x="12"
-      y="15"
-      textAnchor="middle"
-      fontSize="8"
-      fontWeight="600"
-      fill="currentColor"
-      stroke="currentColor"
-      strokeWidth="0.2"
-      fontFamily="Arial, sans-serif"
-    >
-      Rs
-    </text>
-    <path
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-    />
-  </svg>
-);
-
 export default function VendorRequestsPage() {
+  usePageTitle("Vendor Requests");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [allRequests, setAllRequests] = useState<VendorRequest[]>([]);
@@ -368,7 +339,7 @@ export default function VendorRequestsPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -1079,7 +1050,7 @@ export default function VendorRequestsPage() {
                 setIsApproveDialogOpen(false);
                 setSupplierNotes("");
               }}
-              className={`${colors.buttons.outline} rounded-none transition-all hover:border-black dark:hover:border-white cursor-pointer`}
+              className={`${colors.buttons.outline} rounded-none transition-all hover:border-black cursor-pointer`}
             >
               Cancel
             </Button>
@@ -1136,7 +1107,7 @@ export default function VendorRequestsPage() {
                 setRejectionReason("");
               }}
               className={`${colors.buttons.outline} 
-                rounded-none transition-all hover:border-black dark:hover:border-white cursor-pointer`}
+                rounded-none transition-all hover:border-black cursor-pointer`}
             >
               Cancel
             </Button>
@@ -1366,6 +1337,108 @@ export default function VendorRequestsPage() {
                   </CardContent>
                 </Card>
 
+                {/* Shipping Address Section - Only show if paid */}
+                {selectedRequest.shippingAddress &&
+                  selectedRequest.shippingAddress.name && (
+                    <Card
+                      className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                    >
+                      <CardHeader className="pb-3">
+                        <CardTitle
+                          className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                        >
+                          <TruckIcon
+                            className={`h-5 w-5 ${colors.icons.primary}`}
+                          />
+                          Shipping Address
+                        </CardTitle>
+                        <CardDescription
+                          className={`text-xs ${colors.texts.secondary}`}
+                        >
+                          Ship the items to this address
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div>
+                          <p className={`text-xs ${colors.texts.muted}`}>
+                            Name
+                          </p>
+                          <p
+                            className={`font-medium ${colors.texts.primary} text-sm`}
+                          >
+                            {selectedRequest.shippingAddress.name}
+                          </p>
+                        </div>
+                        <div>
+                          <p className={`text-xs ${colors.texts.muted}`}>
+                            Phone
+                          </p>
+                          <p
+                            className={`font-medium ${colors.texts.primary} text-sm`}
+                          >
+                            {selectedRequest.shippingAddress.phone}
+                          </p>
+                        </div>
+                        <div>
+                          <p className={`text-xs ${colors.texts.muted}`}>
+                            Address
+                          </p>
+                          <p
+                            className={`font-medium ${colors.texts.primary} text-sm`}
+                          >
+                            {selectedRequest.shippingAddress.addressLine1}
+                            {selectedRequest.shippingAddress.addressLine2 &&
+                              `, ${selectedRequest.shippingAddress.addressLine2}`}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className={`text-xs ${colors.texts.muted}`}>
+                              City
+                            </p>
+                            <p
+                              className={`font-medium ${colors.texts.primary} text-sm`}
+                            >
+                              {selectedRequest.shippingAddress.city}
+                            </p>
+                          </div>
+                          <div>
+                            <p className={`text-xs ${colors.texts.muted}`}>
+                              State/Province
+                            </p>
+                            <p
+                              className={`font-medium ${colors.texts.primary} text-sm`}
+                            >
+                              {selectedRequest.shippingAddress.state}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className={`text-xs ${colors.texts.muted}`}>
+                              Postal Code
+                            </p>
+                            <p
+                              className={`font-medium ${colors.texts.primary} text-sm`}
+                            >
+                              {selectedRequest.shippingAddress.postalCode}
+                            </p>
+                          </div>
+                          <div>
+                            <p className={`text-xs ${colors.texts.muted}`}>
+                              Country
+                            </p>
+                            <p
+                              className={`font-medium ${colors.texts.primary} text-sm`}
+                            >
+                              {selectedRequest.shippingAddress.country}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                 {selectedRequest.vendorNotes && (
                   <Card
                     className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
@@ -1416,7 +1489,7 @@ export default function VendorRequestsPage() {
             <Button
               variant="outline"
               onClick={() => setIsDetailsOpen(false)}
-              className={`shadow-none cursor-pointer ${colors.buttons.outline} rounded-none transition-all hover:border-black dark:hover:border-white w-24`}
+              className={`shadow-none cursor-pointer ${colors.buttons.outline} rounded-none transition-all hover:border-black w-24`}
             >
               Close
             </Button>

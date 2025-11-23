@@ -26,6 +26,7 @@ import { orderApi } from "@/lib/api/vendor.order.api";
 import { Order, OrderStatus } from "@/types";
 import { toast } from "sonner";
 import { colors, badgeColors } from "@/lib/colorConstants";
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/breadcrumb";
 
 export default function VendorOrderViewPage() {
+  usePageTitle("Order Details");
   const params = useParams();
   const router = useRouter();
   const orderId = params?.id as string;
@@ -143,7 +145,7 @@ export default function VendorOrderViewPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -633,7 +635,10 @@ export default function VendorOrderViewPage() {
                     {order.paymentMethod
                       ? order.paymentMethod
                           .split("_")
-                          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                          .map(
+                            (word) =>
+                              word.charAt(0).toUpperCase() + word.slice(1)
+                          )
                           .join(" ")
                       : "N/A"}
                   </p>

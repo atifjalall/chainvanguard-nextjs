@@ -73,6 +73,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const RsIcon = () => (
   <svg
@@ -92,7 +93,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -272,7 +273,7 @@ const statuses = [
   "quarantined",
 ];
 
-const currencies = ["PKR"];
+const currencies = ["CVT"];
 
 const warehouseLocations = [
   "Karachi Main Warehouse",
@@ -637,7 +638,7 @@ const PreviewCard = ({
         <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-gray-900 dark:text-white">
-              Rs {parseFloat(formData.pricePerUnit || "0").toFixed(2)}
+              CVT {parseFloat(formData.pricePerUnit || "0").toFixed(2)}
             </span>
             <span className="text-xs text-gray-500">per {formData.unit}</span>
           </div>
@@ -681,6 +682,7 @@ const PreviewCard = ({
 };
 
 export default function EditInventoryPage() {
+  usePageTitle("Edit Inventory");
   const router = useRouter();
   const params = useParams();
   const inventoryId = params?.id as string;
@@ -774,7 +776,7 @@ export default function EditInventoryPage() {
     recycledContent: "",
     autoReorderEnabled: false,
     isBatchTracked: true,
-    currency: "PKR",
+    currency: "CVT",
     imageFiles: [],
     warehouseLocation: "",
     storageLocations: [],
@@ -825,7 +827,7 @@ export default function EditInventoryPage() {
             costPrice: inventory.costPrice?.toString() || "",
             originalPrice: "",
             discount: "",
-            currency: inventory.currency || "PKR",
+            currency: inventory.currency || "CVT",
 
             quantity: inventory.quantity?.toString() || "",
             reservedQuantity: inventory.reservedQuantity?.toString() || "",
@@ -1347,7 +1349,7 @@ export default function EditInventoryPage() {
         costPrice: formData.costPrice
           ? parseFloat(formData.costPrice)
           : undefined,
-        currency: formData.currency || "PKR",
+        currency: formData.currency || "CVT",
 
         quantity: parseInt(formData.quantity),
         unit: formData.unit,

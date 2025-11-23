@@ -409,7 +409,7 @@ class WishlistService {
               await notificationService.createNotification({
                 recipientId: wishlist.userId,
                 title: "🔥 Price Drop Alert!",
-                message: `${item.productId.name} is now ${discountPercent}% cheaper! Was PKR ${originalPrice}, now PKR ${currentPrice}`,
+                message: `${item.productId.name} is now ${discountPercent}% cheaper! Was CVT ${originalPrice}, now CVT ${currentPrice}`,
                 category: "wishlist",
                 priority: "medium",
                 action: {

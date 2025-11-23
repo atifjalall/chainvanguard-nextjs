@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { getOrders } from "@/lib/api/customer.orders.api";
 import type { Order, OrderStatus } from "@/types";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const STATUS_CONFIG: Record<
   string,
@@ -82,6 +83,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function OrdersPage() {
+  usePageTitle("My Orders");
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -381,8 +383,10 @@ export default function OrdersPage() {
                             <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Total
                             </p>
-                            <p className={`text-xl font-light ${order.paymentStatus === "refunded" ? "text-green-600 dark:text-green-400" : "text-gray-900 dark:text-white"}`}>
-                              Rs {order.total.toFixed(2)}
+                            <p
+                              className={`text-xl font-light ${order.paymentStatus === "refunded" ? "text-green-600 dark:text-green-400" : "text-gray-900 dark:text-white"}`}
+                            >
+                              CVT {order.total.toFixed(2)}
                             </p>
                             {order.paymentStatus === "refunded" && (
                               <p className="text-[10px] text-green-600 dark:text-green-400 uppercase tracking-wider">
@@ -407,7 +411,8 @@ export default function OrdersPage() {
                             item.productSnapshot?.images?.[0]?.url ||
                             item.productImage ||
                             "";
-                          const productName = product?.name || item.productName || "Product";
+                          const productName =
+                            product?.name || item.productName || "Product";
 
                           return (
                             <div key={index} className="space-y-2">
@@ -453,7 +458,9 @@ export default function OrdersPage() {
             <div className="text-center py-32">
               <div className="space-y-4">
                 <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  {searchQuery ? "No orders match your search" : "No orders found"}
+                  {searchQuery
+                    ? "No orders match your search"
+                    : "No orders found"}
                 </p>
                 <button
                   onClick={() => {

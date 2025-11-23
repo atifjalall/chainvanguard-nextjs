@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -62,216 +62,15 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
 import { badgeColors, colors } from "@/lib/colorConstants";
-
-// Analytics data interfaces
-interface SalesData {
-  date: string;
-  revenue: number;
-  orders: number;
-  customers: number;
-  avgOrderValue: number;
-}
-
-interface ProductPerformance {
-  id: string;
-  name: string;
-  category: string;
-  revenue: number;
-  orders: number;
-  views: number;
-  conversionRate: number;
-  stock: number;
-}
-
-interface CategoryData {
-  name: string;
-  value: number;
-  percentage: number;
-  color: string;
-}
-
-interface CustomerMetrics {
-  newCustomers: number;
-  returningCustomers: number;
-  customerRetention: number;
-  averageLifetimeValue: number;
-}
-
-// Mock analytics data
-const mockSalesData: SalesData[] = [
-  {
-    date: "2025-08-01",
-    revenue: 1250,
-    orders: 8,
-    customers: 6,
-    avgOrderValue: 156.25,
-  },
-  {
-    date: "2025-08-02",
-    revenue: 980,
-    orders: 6,
-    customers: 5,
-    avgOrderValue: 163.33,
-  },
-  {
-    date: "2025-08-03",
-    revenue: 1680,
-    orders: 12,
-    customers: 9,
-    avgOrderValue: 140.0,
-  },
-  {
-    date: "2025-08-04",
-    revenue: 890,
-    orders: 5,
-    customers: 4,
-    avgOrderValue: 178.0,
-  },
-  {
-    date: "2025-08-05",
-    revenue: 2150,
-    orders: 15,
-    customers: 12,
-    avgOrderValue: 143.33,
-  },
-  {
-    date: "2025-08-06",
-    revenue: 1450,
-    orders: 9,
-    customers: 7,
-    avgOrderValue: 161.11,
-  },
-  {
-    date: "2025-08-07",
-    revenue: 1890,
-    orders: 11,
-    customers: 8,
-    avgOrderValue: 171.82,
-  },
-  {
-    date: "2025-08-08",
-    revenue: 2340,
-    orders: 16,
-    customers: 13,
-    avgOrderValue: 146.25,
-  },
-  {
-    date: "2025-08-09",
-    revenue: 1120,
-    orders: 7,
-    customers: 6,
-    avgOrderValue: 160.0,
-  },
-  {
-    date: "2025-08-10",
-    revenue: 1780,
-    orders: 10,
-    customers: 8,
-    avgOrderValue: 178.0,
-  },
-  {
-    date: "2025-08-11",
-    revenue: 2560,
-    orders: 18,
-    customers: 14,
-    avgOrderValue: 142.22,
-  },
-  {
-    date: "2025-08-12",
-    revenue: 1340,
-    orders: 8,
-    customers: 7,
-    avgOrderValue: 167.5,
-  },
-  {
-    date: "2025-08-13",
-    revenue: 1950,
-    orders: 13,
-    customers: 10,
-    avgOrderValue: 150.0,
-  },
-  {
-    date: "2025-08-14",
-    revenue: 2780,
-    orders: 19,
-    customers: 15,
-    avgOrderValue: 146.32,
-  },
-  {
-    date: "2025-08-15",
-    revenue: 2100,
-    orders: 14,
-    customers: 11,
-    avgOrderValue: 150.0,
-  },
-  {
-    date: "2025-08-16",
-    revenue: 1680,
-    orders: 9,
-    customers: 7,
-    avgOrderValue: 186.67,
-  },
-];
-
-const mockProductPerformance: ProductPerformance[] = [
-  {
-    id: "1",
-    name: "Wireless Gaming Mouse",
-    category: "Electronics",
-    revenue: 3599.6,
-    orders: 40,
-    views: 1250,
-    conversionRate: 3.2,
-    stock: 25,
-  },
-  {
-    id: "2",
-    name: "Bluetooth Headphones",
-    category: "Electronics",
-    revenue: 2999.75,
-    orders: 15,
-    views: 890,
-    conversionRate: 1.7,
-    stock: 12,
-  },
-  {
-    id: "3",
-    name: "Smart Watch Pro",
-    category: "Electronics",
-    revenue: 5999.85,
-    orders: 20,
-    views: 1580,
-    conversionRate: 1.3,
-    stock: 8,
-  },
-  {
-    id: "4",
-    name: "USB-C Hub",
-    category: "Electronics",
-    revenue: 1499.7,
-    orders: 30,
-    views: 750,
-    conversionRate: 4.0,
-    stock: 45,
-  },
-  {
-    id: "5",
-    name: "Laptop Stand",
-    category: "Accessories",
-    revenue: 1599.2,
-    orders: 20,
-    views: 520,
-    conversionRate: 3.8,
-    stock: 18,
-  },
-];
-
-const mockCategoryData: CategoryData[] = [
-  { name: "Electronics", value: 14099, percentage: 65.2, color: "#3B82F6" },
-  { name: "Accessories", value: 3499, percentage: 16.2, color: "#10B981" },
-  { name: "Gaming", value: 2899, percentage: 13.4, color: "#8B5CF6" },
-  { name: "Office", value: 1099, percentage: 5.2, color: "#F59E0B" },
-];
+import { usePageTitle } from "@/hooks/use-page-title";
+import vendorAnalyticsApi, {
+  SalesData,
+  ProductPerformance,
+  CustomerData,
+  CategoryData,
+  AnalyticsMetrics,
+  VendorAnalyticsResponse,
+} from "@/lib/api/vendor.analytics.api";
 
 const timeRangeOptions = [
   { value: "7d", label: "Last 7 Days" },
@@ -281,15 +80,32 @@ const timeRangeOptions = [
 ];
 
 export default function VendorAnalyticsPage() {
+  usePageTitle("Business Insights");
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [timeRange, setTimeRange] = useState("30d");
+  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">("30d");
   const [selectedMetric, setSelectedMetric] = useState<
     "revenue" | "orders" | "customers"
   >("revenue");
   const [isVisible, setIsVisible] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedTab, setSelectedTab] = useState("sales");
+
+  // State for real data
+  const [analyticsData, setAnalyticsData] =
+    useState<VendorAnalyticsResponse | null>(null);
+  const [salesData, setSalesData] = useState<SalesData[]>([]);
+  const [productPerformance, setProductPerformance] = useState<
+    ProductPerformance[]
+  >([]);
+  const [customerData, setCustomerData] = useState<CustomerData[]>([]);
+  const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
+  const [metrics, setMetrics] = useState<AnalyticsMetrics>({
+    revenue: { value: 0, growth: 0 },
+    orders: { value: 0, growth: 0 },
+    customers: { value: 0, growth: 0 },
+    avgOrderValue: { value: 0, growth: 0 },
+  });
 
   // Check for dark mode
   useEffect(() => {
@@ -389,45 +205,51 @@ export default function VendorAnalyticsPage() {
   const loadAnalytics = async () => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      // In real app: const analytics = await fetchVendorAnalytics(user.id, timeRange);
-    } catch (error) {
-      toast.error("Failed to load analytics");
+      console.log("🔄 Loading vendor analytics...");
+
+      // Fetch main analytics data
+      const data = await vendorAnalyticsApi.getAnalytics(timeRange);
+      setAnalyticsData(data);
+
+      // Transform data for charts
+      const transformedSalesData =
+        vendorAnalyticsApi.transformToSalesData(data);
+      setSalesData(transformedSalesData);
+
+      // Transform customer data
+      const transformedCustomerData =
+        vendorAnalyticsApi.transformCustomerData(data);
+      setCustomerData(transformedCustomerData);
+
+      // Transform category data
+      const transformedCategoryData =
+        vendorAnalyticsApi.transformCategoryData(data);
+      setCategoryData(transformedCategoryData);
+
+      // Transform product performance data
+      const transformedProductPerformance =
+        vendorAnalyticsApi.transformProductPerformance(data);
+      setProductPerformance(transformedProductPerformance);
+
+      // Calculate metrics with growth
+      const calculatedMetrics = await vendorAnalyticsApi.calculateMetrics(
+        data,
+        timeRange
+      );
+      setMetrics(calculatedMetrics);
+
+      console.log("✅ Analytics loaded successfully");
+      toast.success("Analytics loaded successfully");
+    } catch (error: any) {
+      console.error("❌ Failed to load vendor analytics:", error);
+      toast.error(error.message || "Failed to load analytics");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Calculate metrics
-  const currentPeriodData = useMemo(() => {
-    const totalRevenue = mockSalesData.reduce(
-      (sum, day) => sum + day.revenue,
-      0
-    );
-    const totalOrders = mockSalesData.reduce((sum, day) => sum + day.orders, 0);
-    const totalCustomers = mockSalesData.reduce(
-      (sum, day) => sum + day.customers,
-      0
-    );
-    const avgOrderValue = totalRevenue / totalOrders;
-
-    // Calculate growth (mock comparison with previous period)
-    const revenueGrowth = 12.5;
-    const ordersGrowth = 8.3;
-    const customersGrowth = 15.2;
-    const aovGrowth = 3.8;
-
-    return {
-      revenue: { value: totalRevenue, growth: revenueGrowth },
-      orders: { value: totalOrders, growth: ordersGrowth },
-      customers: { value: totalCustomers, growth: customersGrowth },
-      avgOrderValue: { value: avgOrderValue, growth: aovGrowth },
-    };
-  }, [timeRange]);
-
   const formatCurrency = (value: number) => {
-    return `Rs ${value.toLocaleString("en-US")}`;
+    return `CVT ${value.toLocaleString("en-US")}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -603,7 +425,10 @@ export default function VendorAnalyticsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Select value={timeRange} onValueChange={setTimeRange}>
+            <Select
+              value={timeRange}
+              onValueChange={(value: any) => setTimeRange(value)}
+            >
               <SelectTrigger
                 className={`w-40 h-10 ${colors.borders.primary} ${colors.backgrounds.primary} text-xs rounded-none`}
               >
@@ -647,27 +472,27 @@ export default function VendorAnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
             title="Total Revenue"
-            value={currentPeriodData.revenue.value}
-            growth={currentPeriodData.revenue.growth}
+            value={metrics.revenue.value}
+            growth={metrics.revenue.growth}
             icon={CurrencyDollarIcon}
             formatter={formatCurrency}
           />
           <MetricCard
             title="Total Orders"
-            value={currentPeriodData.orders.value}
-            growth={currentPeriodData.orders.growth}
+            value={metrics.orders.value}
+            growth={metrics.orders.growth}
             icon={ShoppingCartIcon}
           />
           <MetricCard
             title="Unique Customers"
-            value={currentPeriodData.customers.value}
-            growth={currentPeriodData.customers.growth}
+            value={metrics.customers.value}
+            growth={metrics.customers.growth}
             icon={UsersIcon}
           />
           <MetricCard
             title="Avg Order Value"
-            value={currentPeriodData.avgOrderValue.value}
-            growth={currentPeriodData.avgOrderValue.growth}
+            value={metrics.avgOrderValue.value}
+            growth={metrics.avgOrderValue.growth}
             icon={TagIcon}
             formatter={formatCurrency}
           />
@@ -766,7 +591,7 @@ export default function VendorAnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={mockSalesData}>
+                    <AreaChart data={salesData}>
                       <defs>
                         <linearGradient
                           id="colorRevenue"
@@ -829,7 +654,7 @@ export default function VendorAnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={mockSalesData}>
+                    <LineChart data={salesData}>
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke={getGridColor()}
@@ -892,7 +717,7 @@ export default function VendorAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={mockSalesData}>
+                  <BarChart data={salesData}>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       stroke={getGridColor()}
@@ -930,9 +755,9 @@ export default function VendorAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockProductPerformance.map((product, index) => (
+                  {productPerformance.map((product, index) => (
                     <div
-                      key={product.id}
+                      key={product._id}
                       className="group flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-none bg-white/50 dark:bg-gray-900/50 backdrop-blur hover:bg-white/70 dark:hover:bg-gray-900/70 transition-all duration-300"
                     >
                       <div className="flex items-center gap-4">
@@ -959,7 +784,7 @@ export default function VendorAnalyticsPage() {
                         </div>
                         <div>
                           <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                            {product.orders}
+                            {product.orderCount}
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400">
                             Orders
@@ -999,7 +824,7 @@ export default function VendorAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={mockProductPerformance} layout="horizontal">
+                  <BarChart data={productPerformance} layout="horizontal">
                     <CartesianGrid
                       strokeDasharray="3 3"
                       stroke={getGridColor()}
@@ -1053,7 +878,7 @@ export default function VendorAnalyticsPage() {
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={mockCategoryData}
+                        data={categoryData}
                         cx="50%"
                         cy="50%"
                         innerRadius={60}
@@ -1061,7 +886,7 @@ export default function VendorAnalyticsPage() {
                         paddingAngle={5}
                         dataKey="value"
                       >
-                        {mockCategoryData.map((entry, index) => (
+                        {categoryData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -1094,7 +919,7 @@ export default function VendorAnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {mockCategoryData.map((category, index) => (
+                    {categoryData.map((category, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -1153,8 +978,8 @@ export default function VendorAnalyticsPage() {
                       </h4>
                       <p className="text-xs text-green-700 dark:text-green-400">
                         Your revenue increased by{" "}
-                        {currentPeriodData.revenue.growth.toFixed(1)}% this
-                        period. Keep up the great work!
+                        {metrics.revenue.growth.toFixed(1)}% this period. Keep
+                        up the great work!
                       </p>
                     </div>
                   </div>
@@ -1219,7 +1044,7 @@ export default function VendorAnalyticsPage() {
                         Monthly Revenue Goal
                       </span>
                       <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {formatCurrency(currentPeriodData.revenue.value)} /{" "}
+                        {formatCurrency(metrics.revenue.value)} /{" "}
                         {formatCurrency(30000)}
                       </span>
                     </div>
@@ -1228,18 +1053,15 @@ export default function VendorAnalyticsPage() {
                         className="bg-blue-500 h-2 rounded-none transition-all duration-300"
                         style={{
                           width: `${Math.min(
-                            (currentPeriodData.revenue.value / 30000) * 100,
+                            (metrics.revenue.value / 30000) * 100,
                             100
                           )}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      {(
-                        (currentPeriodData.revenue.value / 30000) *
-                        100
-                      ).toFixed(1)}
-                      % completed
+                      {((metrics.revenue.value / 30000) * 100).toFixed(1)}%
+                      completed
                     </p>
                   </div>
 
@@ -1249,7 +1071,7 @@ export default function VendorAnalyticsPage() {
                         Customer Acquisition
                       </span>
                       <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {currentPeriodData.customers.value} / 200
+                        {metrics.customers.value} / 200
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-none h-2">
@@ -1257,18 +1079,15 @@ export default function VendorAnalyticsPage() {
                         className="bg-green-500 h-2 rounded-none transition-all duration-300"
                         style={{
                           width: `${Math.min(
-                            (currentPeriodData.customers.value / 200) * 100,
+                            (metrics.customers.value / 200) * 100,
                             100
                           )}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      {(
-                        (currentPeriodData.customers.value / 200) *
-                        100
-                      ).toFixed(1)}
-                      % completed
+                      {((metrics.customers.value / 200) * 100).toFixed(1)}%
+                      completed
                     </p>
                   </div>
 
@@ -1278,7 +1097,7 @@ export default function VendorAnalyticsPage() {
                         Order Volume
                       </span>
                       <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {currentPeriodData.orders.value} / 300
+                        {metrics.orders.value} / 300
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-none h-2">
@@ -1286,17 +1105,15 @@ export default function VendorAnalyticsPage() {
                         className="bg-yellow-500 h-2 rounded-none transition-all duration-300"
                         style={{
                           width: `${Math.min(
-                            (currentPeriodData.orders.value / 300) * 100,
+                            (metrics.orders.value / 300) * 100,
                             100
                           )}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      {((currentPeriodData.orders.value / 300) * 100).toFixed(
-                        1
-                      )}
-                      % completed
+                      {((metrics.orders.value / 300) * 100).toFixed(1)}%
+                      completed
                     </p>
                   </div>
                 </div>

@@ -59,6 +59,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { aiApi } from "@/lib/api/ai.api";
+
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   CATEGORIES,
   PRODUCT_TYPES,
@@ -94,7 +96,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -306,11 +308,11 @@ function ProductCard({
         {/* Price */}
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-normal text-gray-900 dark:text-white">
-            Rs {price.toFixed(2)}
+            CVT {price.toFixed(2)}
           </span>
           {costPrice && costPrice > price && (
             <span className="text-xs text-gray-400 line-through">
-              Rs {costPrice.toFixed(2)}
+              CVT {costPrice.toFixed(2)}
             </span>
           )}
         </div>
@@ -320,6 +322,7 @@ function ProductCard({
 }
 
 export default function AddProductPage() {
+  usePageTitle("Add Product");
   const { user } = useAuth();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -327,6 +330,7 @@ export default function AddProductPage() {
   const [isVisible, setIsVisible] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [shippingCost, setShippingCost] = useState("0");
 
   useEffect(() => {
     setIsVisible(true);
@@ -799,9 +803,10 @@ export default function AddProductPage() {
       }
 
       formDataToSend.append("freeShipping", String(formData.freeShipping));
-      if (!formData.freeShipping && formData.shippingCost) {
-        formDataToSend.append("shippingCost", formData.shippingCost);
-      }
+      formDataToSend.append(
+        "shippingCost",
+        parseFloat(shippingCost || "0").toString()
+      );
 
       formData.images.forEach((image) => {
         formDataToSend.append("images", image);
@@ -1844,8 +1849,8 @@ export default function AddProductPage() {
               type="number"
               step="0.01"
               min="0"
-              value={formData.shippingCost}
-              onChange={(e) => updateFormData("shippingCost", e.target.value)}
+              value={shippingCost}
+              onChange={(e) => setShippingCost(e.target.value)}
               placeholder="0.00"
               className="!h-12 border rounded-none border-gray-200 dark:border-gray-700 hover:border-black focus:border-black transition-all bg-white/50 dark:bg-gray-800/50 text-sm"
             />
@@ -2304,6 +2309,12 @@ export default function AddProductPage() {
       : ["/placeholder-product.png"];
   }, [formData.imagePreviews]);
 
+  useEffect(() => {
+    if (formData.freeShipping) {
+      setShippingCost("0");
+    }
+  }, [formData.freeShipping]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-sm">
       {/* Breadcrumb - match add-inventory */}
@@ -2363,7 +2374,7 @@ export default function AddProductPage() {
                   variant="outline"
                   onClick={resetForm}
                   size="sm"
-                  className={`items-center gap-2 rounded-none ${colors.buttons.outline} text-xs cursor-pointer h-8`}
+                  className={`items-center gap-2 rounded-none ${colors.buttons.outline} text-xs cursor-pointer h-8 hover:border-black`}
                 >
                   Reset
                 </Button>
@@ -2441,7 +2452,7 @@ export default function AddProductPage() {
                           // Otherwise, clicking does nothing (disabled state)
                         }}
                         disabled={isDisabled}
-                        className={`flex items-center justify-center gap-1 md:gap-2 p-2 rounded-none text-xs md:text-sm font-medium transition-all cursor-pointer
+                        className={`flex items-center justify-center gap-1 md:gap-2 p-2 rounded-none text-xs md:text-sm font-medium transition-all
           ${
             isSelected
               ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
@@ -2512,7 +2523,7 @@ export default function AddProductPage() {
                 onClick={handlePrevious}
                 disabled={currentStep === 1 || isLoading}
                 size="sm"
-                className={`flex items-center gap-2 px-6 py-3 rounded-none ${colors.buttons.secondary} text-xs md:text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8`}
+                className={`flex items-center gap-2 px-6 py-3 rounded-none ${colors.buttons.secondary} text-xs md:text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8 hover:border-black`}
               >
                 <ArrowLeftIcon className="h-4 w-4" />
                 Previous

@@ -64,6 +64,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(userData);
           setIsAuthenticated(true);
 
+          // Set role cookie for middleware
+          if (userData.role) {
+            document.cookie = `user_role=${userData.role}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+          }
+
           try {
             const profileResponse = await authAPI.getProfile();
             const backendUser = profileResponse.data;
@@ -171,6 +176,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       document.cookie =
         "chainvanguard_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+      document.cookie =
+        "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+      document.cookie =
+        "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
 
       setUser(null);
       setIsAuthenticated(false);
@@ -212,6 +221,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (updates.role) {
           updateRoleMap(updatedUser.walletAddress, updates.role);
+          // Update role cookie for middleware
+          document.cookie = `user_role=${updates.role}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
         }
 
         setUser(updatedUser);

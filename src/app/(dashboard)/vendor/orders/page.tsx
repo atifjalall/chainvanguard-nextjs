@@ -65,6 +65,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   Pagination,
   PaginationContent,
@@ -95,6 +97,7 @@ const sortOptions = [
 ];
 
 export default function VendorOrdersPage() {
+  usePageTitle("Orders");
   const { user } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -364,7 +367,7 @@ export default function VendorOrdersPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -372,9 +375,9 @@ export default function VendorOrdersPage() {
 
   const formatCurrencyAbbreviated = (amount: number) => {
     if (amount >= 1e9) {
-      return `Rs ${(amount / 1e9).toFixed(2)} B`;
+      return `CVT ${(amount / 1e9).toFixed(2)} B`;
     } else if (amount >= 1e6) {
-      return `Rs ${(amount / 1e6).toFixed(2)} M`;
+      return `CVT ${(amount / 1e6).toFixed(2)} M`;
     } else {
       return formatCurrency(amount);
     }
@@ -433,7 +436,7 @@ export default function VendorOrdersPage() {
             </div>
             <div className="text-right">
               <span className="text-base font-bold text-gray-900 dark:text-gray-100">
-                Rs {order.totalAmount?.toFixed(2) || "0.00"}
+                CVT {order.totalAmount?.toFixed(2) || "0.00"}
               </span>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {order.products?.length || 0} item
@@ -498,7 +501,7 @@ export default function VendorOrdersPage() {
                               {item.productName}
                             </span>
                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                              Qty: {item.quantity} @ Rs
+                              Qty: {item.quantity} @ CVT
                               {item.price?.toFixed(2) || "0.00"}
                             </p>
                             {item.sku && (
@@ -509,7 +512,7 @@ export default function VendorOrdersPage() {
                           </div>
                         </div>
                         <span className="font-bold text-gray-900 dark:text-gray-100">
-                          Rs
+                          CVT
                           {item.subtotal?.toFixed(2) ||
                             (item.quantity * (item.price || 0)).toFixed(2)}
                         </span>
@@ -1077,7 +1080,7 @@ export default function VendorOrdersPage() {
                       Order Total:
                     </span>
                     <span className={`font-medium ${colors.texts.primary}`}>
-                      Rs {updatingOrder.totalAmount?.toFixed(2) || "0.00"}
+                      CVT {updatingOrder.totalAmount?.toFixed(2) || "0.00"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">

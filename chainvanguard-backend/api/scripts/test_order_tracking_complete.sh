@@ -358,7 +358,7 @@ RESPONSE=$(echo "$PRICE_FILTER" | sed '$d')
 if [ "$HTTP_CODE" -eq 200 ]; then
     COUNT=$(echo "$RESPONSE" | jq -r '.orders | length // 0')
     print_result 0 "Price filter works"
-    print_info "Orders: $COUNT (PKR 100-10,000)"
+    print_info "Orders: $COUNT (CVT 100-10,000)"
 else
     print_result 1 "Price filter failed" "HTTP $HTTP_CODE"
 fi
@@ -389,8 +389,8 @@ if [ "$HTTP_CODE" -eq 200 ]; then
     
     print_result 0 "Customer statistics retrieved"
     print_info "Total Orders: $TOTAL_ORDERS"
-    print_info "Total Spent: PKR $TOTAL_SPENT"
-    print_info "Avg Order: PKR $AVG_VALUE"
+    print_info "Total Spent: CVT $TOTAL_SPENT"
+    print_info "Avg Order: CVT $AVG_VALUE"
     print_info "Cancel Rate: ${CANCELLED_RATE}%"
     print_info "Status: $PENDING pending, $DELIVERED delivered"
 else

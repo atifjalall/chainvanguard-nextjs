@@ -25,6 +25,7 @@ import {
   type ReturnReason,
 } from "@/lib/api/customer.returns.api";
 import type { Order } from "@/types";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const RETURN_REASONS: Array<{ value: ReturnReason; label: string }> = [
   { value: "defective", label: "Product is Defective" },
@@ -40,6 +41,7 @@ const RETURN_REASONS: Array<{ value: ReturnReason; label: string }> = [
 type TabType = "submit" | "requested" | "approved" | "rejected" | "refunded";
 
 export default function ReturnsPage() {
+  usePageTitle("My Returns");
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedOrderId = searchParams?.get("orderId");
@@ -191,7 +193,7 @@ export default function ReturnsPage() {
         })),
         reason: selectedReason as ReturnReason,
         reasonDetails: description,
-        images: imageUrls,
+        images: imageUrls.map((img) => img.url),
       };
 
       const response = await createReturn(returnData);
@@ -222,7 +224,9 @@ export default function ReturnsPage() {
         return (
           <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
             <ClockIcon className="h-4 w-4" />
-            <span className="text-xs uppercase tracking-[0.2em]">Requested</span>
+            <span className="text-xs uppercase tracking-[0.2em]">
+              Requested
+            </span>
           </div>
         );
       case "approved":
@@ -344,7 +348,7 @@ export default function ReturnsPage() {
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              Requested ({counts.requested})
+              Requested
             </button>
             <button
               onClick={() => setActiveTab("approved")}
@@ -354,7 +358,7 @@ export default function ReturnsPage() {
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              Approved ({counts.approved})
+              Approved
             </button>
             <button
               onClick={() => setActiveTab("rejected")}
@@ -364,7 +368,7 @@ export default function ReturnsPage() {
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              Rejected ({counts.rejected})
+              Rejected
             </button>
             <button
               onClick={() => setActiveTab("refunded")}
@@ -374,7 +378,7 @@ export default function ReturnsPage() {
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              Refunded ({counts.refunded})
+              Refunded
             </button>
           </div>
         </div>
@@ -399,7 +403,8 @@ export default function ReturnsPage() {
                         No Eligible Orders
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        You don't have any delivered orders that can be returned
+                        You don&apos;t have any delivered orders that can be
+                        returned
                       </p>
                     </div>
                   </div>
@@ -446,7 +451,7 @@ export default function ReturnsPage() {
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                                 {order.items.length} item
-                                {order.items.length !== 1 ? "s" : ""} • Rs{" "}
+                                {order.items.length !== 1 ? "s" : ""} • CVT{" "}
                                 {order.total.toFixed(2)}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -506,8 +511,8 @@ export default function ReturnsPage() {
                       </div>
                       <div className="flex justify-between items-center">
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Provide detailed information about why you're returning
-                          this item
+                          Provide detailed information about why you&apos;re
+                          returning this item
                         </p>
                         <p
                           className={`text-xs ${
@@ -592,9 +597,7 @@ export default function ReturnsPage() {
                       {isSubmitting || uploading ? (
                         <>
                           <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                          {uploading
-                            ? "Uploading Images..."
-                            : "Submitting..."}
+                          {uploading ? "Uploading Images..." : "Submitting..."}
                         </>
                       ) : (
                         "Submit Return Request"
@@ -657,12 +660,13 @@ export default function ReturnsPage() {
                             Order: {returnItem.orderNumber}
                           </p>
                           <p className="text-xs text-gray-900 dark:text-white">
-                            Return Amount: Rs {returnItem.returnAmount.toFixed(2)}
+                            Return Amount: CVT{" "}
+                            {returnItem.returnAmount.toFixed(2)}
                           </p>
                           {returnItem.refundAmount !==
                             returnItem.returnAmount && (
                             <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                              Refund: Rs {returnItem.refundAmount.toFixed(2)}
+                              Refund: CVT {returnItem.refundAmount.toFixed(2)}
                             </p>
                           )}
                         </div>
@@ -737,12 +741,13 @@ export default function ReturnsPage() {
                                 Refund Processed
                               </p>
                               <p className="text-xs text-gray-600 dark:text-gray-400">
-                                Rs {returnItem.refundAmount.toFixed(2)} has been
-                                refunded to your wallet
+                                CVT {returnItem.refundAmount.toFixed(2)} has
+                                been refunded to your wallet
                               </p>
                               {returnItem.refundedAt && (
                                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                                  Refunded on {formatDate(returnItem.refundedAt)}
+                                  Refunded on{" "}
+                                  {formatDate(returnItem.refundedAt)}
                                 </p>
                               )}
                             </div>
@@ -765,7 +770,7 @@ export default function ReturnsPage() {
                         No {activeTab} Returns
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        You don't have any {activeTab} return requests
+                        You don&apos;t have any {activeTab} return requests
                       </p>
                     </div>
                   </div>

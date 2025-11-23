@@ -261,7 +261,7 @@ if [ "$HTTP_CODE" -eq 200 ]; then
     
     print_result 0 "Product details retrieved"
     print_info "Product: $PRODUCT_NAME"
-    print_money "Price: PKR $PRODUCT_PRICE"
+    print_money "Price: CVT $PRODUCT_PRICE"
     if [ ! -z "$VENDOR_NAME" ]; then
         print_info "Vendor: $VENDOR_NAME"
     fi
@@ -380,7 +380,7 @@ if [ "$HTTP_CODE" -eq 200 ]; then
     
     print_result 0 "Product 1 added to cart"
     print_info "Cart has $CART_ITEMS items"
-    print_money "Cart Total: PKR $CART_TOTAL"
+    print_money "Cart Total: CVT $CART_TOTAL"
 else
     print_result 1 "Failed to add to cart" "HTTP $HTTP_CODE"
     echo "$RESPONSE" | jq '.'
@@ -404,7 +404,7 @@ if [ "$HTTP_CODE" -eq 200 ]; then
     
     print_result 0 "Second product added to cart"
     print_info "Cart now has $CART_ITEMS items"
-    print_money "New Total: PKR $CART_TOTAL"
+    print_money "New Total: CVT $CART_TOTAL"
 else
     print_result 1 "Failed to add second product" "HTTP $HTTP_CODE"
 fi
@@ -427,7 +427,7 @@ if [ "$HTTP_CODE" -eq 200 ]; then
     print_result 0 "Cart retrieved successfully"
     print_info "Cart ID: $CART_ID"
     print_info "Items: $CART_ITEMS"
-    print_money "Subtotal: PKR $SUBTOTAL"
+    print_money "Subtotal: CVT $SUBTOTAL"
     
     # Verify cart is not empty
     if [ "$CART_ITEMS" -eq 0 ]; then
@@ -477,7 +477,7 @@ if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
         print_result 0 "Order 1 created successfully"
         print_info "Order ID: $ORDER_ID_1"
         print_info "Order Number: $ORDER_NUMBER"
-        print_money "Total: PKR $ORDER_TOTAL"
+        print_money "Total: CVT $ORDER_TOTAL"
         
         # Save order ID for later use
         echo "ORDER_ID_1=$ORDER_ID_1" >> "$ENV_PATH"
@@ -770,7 +770,7 @@ if [ ! -z "$ORDER_ID_1" ] && [ "$ORDER_ID_1" != "null" ]; then
             print_result 0 "Return request created"
             print_info "Return ID: $RETURN_ID"
             print_info "Return Number: $RETURN_NUMBER"
-            print_money "Expected Refund: PKR $REFUND_AMOUNT"
+            print_money "Expected Refund: CVT $REFUND_AMOUNT"
         else
             print_result 1 "Return created but ID not returned"
         fi

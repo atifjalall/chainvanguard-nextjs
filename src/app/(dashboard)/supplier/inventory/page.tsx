@@ -73,6 +73,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   Dialog,
   DialogContent,
@@ -99,7 +100,7 @@ const sortOptions = [
   { value: "value-desc", label: "Value: High to Low" },
 ];
 
-// Custom Rs Icon component
+// Custom CVT Icon component
 const RsIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -118,7 +119,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -131,6 +132,7 @@ const RsIcon = () => (
 );
 
 export default function SupplierInventoryPage() {
+  usePageTitle("Inventory Management");
   const { user } = useAuth();
   const router = useRouter();
   const [inventory, setInventory] = useState<Inventory[]>([]);
@@ -240,8 +242,8 @@ export default function SupplierInventoryPage() {
           );
         case "value-desc":
           return (
-            (b.stockValue || b.pricePerUnit * b.quantity) -
-            (a.stockValue || a.pricePerUnit * a.quantity)
+            (b.stockValue || a.pricePerUnit * a.quantity) -
+            (a.stockValue || a.pricePerUnit * b.quantity)
           );
         default:
           return 0;
@@ -254,7 +256,7 @@ export default function SupplierInventoryPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
     }).format(amount);
   };
 

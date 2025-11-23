@@ -22,8 +22,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { ChartBar } from "lucide-react";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 export default function LandingPage() {
+  usePageTitle("Home");
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Header */}

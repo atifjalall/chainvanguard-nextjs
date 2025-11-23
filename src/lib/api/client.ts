@@ -33,10 +33,21 @@ class ApiClient {
       (response) => response,
       (error: AxiosError) => {
         if (error.response?.status === 401) {
-          // Token expired or invalid
-          this.clearToken();
-          if (typeof window !== "undefined") {
-            window.location.href = "/auth/login";
+          // Check if this is a login/register request - don't redirect
+          const isAuthRequest = error.config?.url?.includes('/auth/login') ||
+                                error.config?.url?.includes('/auth/register');
+
+          // Check if we're already on login/register page
+          const isOnAuthPage = typeof window !== "undefined" &&
+                              (window.location.pathname === '/login' ||
+                               window.location.pathname === '/register');
+
+          if (!isAuthRequest && !isOnAuthPage) {
+            // Token expired on a protected page - redirect to login
+            this.clearToken();
+            if (typeof window !== "undefined") {
+              window.location.href = "/login";
+            }
           }
         }
         return Promise.reject(this.handleError(error));
@@ -58,6 +69,8 @@ class ApiClient {
     // Store in both keys for compatibility
     localStorage.setItem("token", token);
     localStorage.setItem("chainvanguard_auth_token", token);
+    // Also set as cookie for middleware access
+    document.cookie = `auth_token=${token}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
   }
 
   private clearToken(): void {
@@ -66,6 +79,9 @@ class ApiClient {
     localStorage.removeItem("chainvanguard_auth_token");
     localStorage.removeItem("chainvanguard_auth_user");
     localStorage.removeItem("chainvanguard_user");
+    // Clear cookies
+    document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+    document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
   }
 
   private handleError(error: AxiosError): Error {
@@ -73,8 +89,30 @@ class ApiClient {
       // Server responded with error
       const data = error.response.data as any;
       const message = data?.message || data?.error || "An error occurred";
+
+      // Detect blockchain-related errors
+      const isBlockchainError =
+        message.includes("Blockchain network") ||
+        message.includes("Hyperledger Fabric") ||
+        message.includes("blockchain is not running") ||
+        message.includes("blockchain is not connected") ||
+        message.includes("ensure blockchain is active");
+
       const apiError = new Error(message);
       (apiError as any).response = error.response;
+      (apiError as any).isBlockchainError = isBlockchainError;
+
+      // Show toast notification for blockchain errors
+      if (isBlockchainError && typeof window !== "undefined") {
+        // Import toast dynamically to avoid SSR issues
+        import("sonner").then(({ toast }) => {
+          toast.error("Blockchain Network Error", {
+            description: message,
+            duration: 6000,
+          });
+        });
+      }
+
       return apiError;
     } else if (error.request) {
       // Request made but no response
@@ -130,6 +168,10 @@ class ApiClient {
     if (typeof window !== "undefined") {
       localStorage.setItem("chainvanguard_auth_user", JSON.stringify(user));
       localStorage.setItem("chainvanguard_user", JSON.stringify(user));
+      // Save user role in cookie for middleware access
+      if (user.role) {
+        document.cookie = `user_role=${user.role}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+      }
     }
   }
 

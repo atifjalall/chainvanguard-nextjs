@@ -73,6 +73,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   getMyRequests,
   getRequestStats,
@@ -97,7 +99,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -137,6 +139,7 @@ function getBadgeColor(type: string) {
 }
 
 export default function VendorTransactionsPage() {
+  usePageTitle("Transactions");
   const { user } = useAuth();
   const router = useRouter();
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -286,7 +289,7 @@ export default function VendorTransactionsPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
     }).format(Math.abs(amount));
   };
 

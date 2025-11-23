@@ -65,6 +65,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+
+import { usePageTitle } from "@/hooks/use-page-title";
 import supplierAnalyticsApi, {
   SupplyData,
   ProductSupplyPerformance,
@@ -92,7 +94,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -112,6 +114,7 @@ const timeRangeOptions = [
 ];
 
 export default function SupplierAnalyticsPage() {
+  usePageTitle("Business Insights");
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">(
@@ -295,7 +298,7 @@ export default function SupplierAnalyticsPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
     }).format(amount);
   };
 
@@ -729,7 +732,7 @@ export default function SupplierAnalyticsPage() {
                         dataKey="inventoryValue"
                         stroke="#3B82F6"
                         strokeWidth={3}
-                        name="Inventory Value (Rs)"
+                        name="Inventory Value (CVT)"
                         dot={{ fill: "#3B82F6", strokeWidth: 2, r: 4 }}
                       />
                     </LineChart>

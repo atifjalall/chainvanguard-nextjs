@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Button } from "@/components/_ui/button";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ShoppingBagIcon,
@@ -15,6 +15,7 @@ import {
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 // Mock data for featured products
 const FEATURED_PRODUCTS = [
@@ -80,9 +81,7 @@ const FEATURED_PRODUCTS = [
     category: "Unisex",
     price: 39.99,
     costPrice: 59.99,
-    images: [
-      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500",
-    ],
+    images: ["https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500"],
 
     rating: 4.7,
     reviews: 142,
@@ -110,7 +109,9 @@ const FEATURED_PRODUCTS = [
     category: "Unisex",
     price: 69.99,
     costPrice: 99.99,
-    images: ["https://images.unsplash.com/photo-1614251056198-ff101ebaba5e?w=500"],
+    images: [
+      "https://images.unsplash.com/photo-1614251056198-ff101ebaba5e?w=500",
+    ],
     badge: "Popular",
     rating: 4.5,
     reviews: 198,
@@ -362,11 +363,11 @@ function ProductCard({
         {/* Price */}
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-normal text-gray-900 dark:text-white">
-            Rs {price.toFixed(2)}
+            CVT {price.toFixed(2)}
           </span>
           {costPrice && costPrice > price && (
             <span className="text-[10px] text-gray-400 line-through">
-              Rs {costPrice.toFixed(2)}
+              CVT {costPrice.toFixed(2)}
             </span>
           )}
         </div>
@@ -376,6 +377,7 @@ function ProductCard({
 }
 
 export default function CustomerDashboard() {
+  usePageTitle("Customer");
   const router = useRouter();
   const [wishlist, setWishlist] = useState<(number | string)[]>([]);
   const [email, setEmail] = useState("");
@@ -525,7 +527,7 @@ export default function CustomerDashboard() {
               {
                 icon: TruckIcon,
                 title: "Complimentary Shipping",
-                desc: "On all orders over Rs 3000",
+                desc: "On all orders over CVT 3000",
               },
               {
                 icon: ShieldCheckIcon,

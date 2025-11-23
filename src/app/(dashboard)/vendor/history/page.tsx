@@ -7,18 +7,18 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Input } from "@/components/_ui/input";
-import { Badge } from "@/components/_ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/_ui/avatar";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/_ui/select";
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -27,14 +27,9 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "@/components/_ui/dialog";
-import { Label } from "@/components/_ui/label";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/_ui/tabs";
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search,
   Calendar,
@@ -73,6 +68,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 // Order interface
 interface Order {
@@ -346,6 +342,7 @@ const timeRangeOptions = [
 ];
 
 export default function VendorSalesHistoryPage() {
+  usePageTitle("Order History");
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>(mockSalesHistory);
   const [isLoading, setIsLoading] = useState(false);
@@ -480,7 +477,7 @@ export default function VendorSalesHistoryPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
     }).format(amount);
   };
 

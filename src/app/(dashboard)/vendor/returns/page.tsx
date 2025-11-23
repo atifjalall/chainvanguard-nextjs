@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -21,13 +20,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  UsersIcon,
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
   EyeIcon,
-  CubeIcon,
-  DocumentDuplicateIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
   Squares2X2Icon,
@@ -35,6 +31,11 @@ import {
   InboxStackIcon,
   InboxArrowDownIcon,
   ShieldCheckIcon,
+  CurrencyDollarIcon,
+  PhotoIcon,
+  DocumentTextIcon,
+  TruckIcon,
+  ArchiveBoxIcon,
 } from "@heroicons/react/24/outline";
 import { colors, badgeColors } from "@/lib/colorConstants";
 import {
@@ -46,6 +47,9 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -54,48 +58,31 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-
-// Mock data for returns (replace with API call later)
-type ReturnRequest = {
-  _id: string;
-  returnNumber: string;
-  status: "new" | "approved" | "rejected";
-  total: number;
-  items: any[];
-  createdAt: string;
-  customerName: string;
-  reason?: string;
-  notes?: string;
-};
+import {
+  getVendorReturns,
+  getReturnById,
+  getVendorReturnStats,
+  approveReturn,
+  rejectReturn,
+  markItemReceived,
+  markInspected,
+  processRefund,
+  restockInventory,
+  type ReturnRequest,
+  type ReturnStatus,
+  type VendorReturnStats,
+  type ItemCondition,
+} from "@/lib/api/vendor.return.api";
 
 const HEADER_GAP = "gap-3";
 
-const mockReturns: ReturnRequest[] = [
-  {
-    _id: "1",
-    returnNumber: "RET-001",
-    status: "new",
-    total: 15000,
-    items: [],
-    createdAt: "2023-10-01",
-    customerName: "John Doe",
-    reason: "Defective product",
-  },
-  {
-    _id: "2",
-    returnNumber: "RET-002",
-    status: "approved",
-    total: 25000,
-    items: [],
-    createdAt: "2023-09-15",
-    customerName: "Jane Smith",
-    reason: "Wrong item",
-  },
-  // Add more mock data as needed
-];
+type TabType = "all" | "requested" | "approved" | "rejected" | "refunded";
 
-export default function ReturnsPage() {
-  const [allReturns, setAllReturns] = useState<ReturnRequest[]>(mockReturns);
+export default function VendorReturnsPage() {
+  usePageTitle("Returns Management");
+
+  const [returns, setReturns] = useState<ReturnRequest[]>([]);
+  const [stats, setStats] = useState<VendorReturnStats | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedReturn, setSelectedReturn] = useState<ReturnRequest | null>(
@@ -105,32 +92,190 @@ export default function ReturnsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [sortBy, setSortBy] = useState("recent");
-  const [selectedTab, setSelectedTab] = useState("all");
+  const [selectedTab, setSelectedTab] = useState<TabType>("all");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Action modal states
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [actionType, setActionType] = useState<
+    "approve" | "reject" | "received" | "inspected" | "refund" | null
+  >(null);
+  const [actionNotes, setActionNotes] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [refundAmount, setRefundAmount] = useState("");
+  const [restockingFee, setRestockingFee] = useState("");
+  const [shippingRefund, setShippingRefund] = useState("");
+  const [itemCondition, setItemCondition] = useState<ItemCondition>("good");
 
   useEffect(() => {
     setIsVisible(true);
-    // Simulate data fetch
-    setTimeout(() => setLoading(false), 1000);
-  }, []);
+    loadReturns();
+    loadStats();
+  }, [selectedTab]);
+
+  const loadReturns = async () => {
+    try {
+      setLoading(true);
+      const statusMap: Record<TabType, ReturnStatus | undefined> = {
+        all: undefined,
+        requested: "requested",
+        approved: "approved",
+        rejected: "rejected",
+        refunded: "refunded",
+      };
+
+      const response = await getVendorReturns({
+        status: statusMap[selectedTab],
+        page: 1,
+        limit: 100,
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      });
+
+      if (response.success && response.returns) {
+        setReturns(response.returns);
+      }
+    } catch (error: any) {
+      console.error("Error loading returns:", error);
+      toast.error(error.message || "Failed to load returns");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const response = await getVendorReturnStats();
+      if (response.success && response.stats) {
+        setStats(response.stats);
+      }
+    } catch (error) {
+      console.error("Error loading stats:", error);
+    }
+  };
+
+  const openDetailsModal = async (returnItem: ReturnRequest) => {
+    try {
+      const response = await getReturnById(returnItem._id);
+      if (response.success && response.return) {
+        setSelectedReturn(response.return);
+        setIsDetailsOpen(true);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load return details");
+    }
+  };
+
+  const openActionModal = (
+    type: "approve" | "reject" | "received" | "inspected" | "refund",
+    returnItem: ReturnRequest
+  ) => {
+    setSelectedReturn(returnItem);
+    setActionType(type);
+    setActionNotes("");
+    setRejectionReason("");
+    setRefundAmount(
+      returnItem.refundAmount?.toString() || returnItem.returnAmount.toString()
+    );
+    setRestockingFee(returnItem.restockingFee?.toString() || "0");
+    setShippingRefund(returnItem.shippingRefund?.toString() || "0");
+    setItemCondition("good");
+    setIsActionModalOpen(true);
+  };
+
+  const handleAction = async () => {
+    if (!selectedReturn || !actionType) return;
+
+    setActionLoading(true);
+    try {
+      let response;
+
+      switch (actionType) {
+        case "approve":
+          response = await approveReturn(selectedReturn._id, {
+            reviewNotes: actionNotes,
+            refundAmount: parseFloat(refundAmount),
+            restockingFee: parseFloat(restockingFee),
+            shippingRefund: parseFloat(shippingRefund),
+          });
+          toast.success("Return approved successfully");
+          break;
+
+        case "reject":
+          if (!rejectionReason.trim()) {
+            toast.error("Please provide a rejection reason");
+            return;
+          }
+          response = await rejectReturn(selectedReturn._id, {
+            rejectionReason,
+          });
+          toast.success("Return rejected");
+          break;
+
+        case "received":
+          response = await markItemReceived(selectedReturn._id, {
+            notes: actionNotes,
+          });
+          toast.success("Marked as item received");
+          break;
+
+        case "inspected":
+          response = await restockInventory(selectedReturn._id, {
+            condition: itemCondition,
+            notes: actionNotes,
+          });
+          const stockMessage =
+            itemCondition === "good"
+              ? "Stock restored to inventory"
+              : itemCondition === "damaged"
+                ? "Marked as damaged inventory"
+                : "Recorded as unsellable";
+          toast.success(`Marked as inspected - ${stockMessage}`);
+          break;
+
+        case "refund":
+          response = await processRefund(selectedReturn._id, {
+            notes: actionNotes,
+          });
+          toast.success("Refund processed successfully");
+          break;
+      }
+
+      setIsActionModalOpen(false);
+      loadReturns();
+      loadStats();
+    } catch (error: any) {
+      console.error("Action error:", error);
+      toast.error(error.message || "Failed to process action");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "approved":
         return <CheckCircleIcon className="h-4 w-4" />;
-      case "new":
+      case "requested":
         return <InboxIcon className="h-4 w-4" />;
       case "rejected":
         return <XCircleIcon className="h-4 w-4" />;
+      case "refunded":
+        return <CheckCircleIcon className="h-4 w-4" />;
+      case "item_received":
+        return <TruckIcon className="h-4 w-4" />;
+      case "inspected":
+        return <ArchiveBoxIcon className="h-4 w-4" />;
       default:
         return <ClockIcon className="h-4 w-4" />;
     }
   };
 
   const getStatusBadgeClass = (status: string) => {
-    if (status === "new") {
+    if (status === "requested") {
       return "bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400";
     }
-    if (status === "approved") {
+    if (status === "approved" || status === "refunded") {
       return "bg-green-100/10 dark:bg-green-900/10 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400";
     }
     if (status === "rejected") {
@@ -139,12 +284,8 @@ export default function ReturnsPage() {
     return "bg-gray-100/10 dark:bg-gray-900/10 border border-gray-200 dark:border-gray-900 text-gray-700 dark:text-gray-300";
   };
 
-  const getDisplayStatus = (status: string) => {
-    return status;
-  };
-
   const formatCurrency = (amount: number) => {
-    return `Rs ${amount.toLocaleString("en-PK")}`;
+    return `CVT ${amount.toLocaleString("en-PK", { minimumFractionDigits: 2 })}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -155,7 +296,13 @@ export default function ReturnsPage() {
     });
   };
 
-  const statusOptions = ["All Status", "New", "Approved", "Rejected"];
+  const statusOptions = [
+    "All Status",
+    "Requested",
+    "Approved",
+    "Rejected",
+    "Refunded",
+  ];
 
   const sortOptions = [
     { value: "recent", label: "Most Recent" },
@@ -164,32 +311,21 @@ export default function ReturnsPage() {
     { value: "value-asc", label: "Lowest Value" },
   ];
 
-  // Filter returns based on selected tab
-  const filteredByTab = useMemo(() => {
-    if (selectedTab === "all") return allReturns;
-    if (selectedTab === "new")
-      return allReturns.filter((r) => r.status === "new");
-    if (selectedTab === "approved")
-      return allReturns.filter((r) => r.status === "approved");
-    if (selectedTab === "rejected")
-      return allReturns.filter((r) => r.status === "rejected");
-    return allReturns;
-  }, [allReturns, selectedTab]);
-
-  // Apply search and filters
   const filteredAndSortedReturns = useMemo(() => {
-    const filtered = filteredByTab.filter((returnRequest) => {
+    const filtered = returns.filter((returnRequest) => {
       const matchesSearch =
         returnRequest.returnNumber
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
         returnRequest.customerName
           .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        returnRequest.orderNumber
+          .toLowerCase()
           .includes(searchTerm.toLowerCase());
-      const displayStatus = getDisplayStatus(returnRequest.status);
       const matchesStatus =
         selectedStatus === "All Status" ||
-        displayStatus === selectedStatus.toLowerCase();
+        returnRequest.status.toLowerCase() === selectedStatus.toLowerCase();
       return matchesSearch && matchesStatus;
     });
 
@@ -204,26 +340,16 @@ export default function ReturnsPage() {
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
         case "value-desc":
-          return b.total - a.total;
+          return b.returnAmount - a.returnAmount;
         case "value-asc":
-          return a.total - b.total;
+          return a.returnAmount - b.returnAmount;
         default:
           return 0;
       }
     });
 
     return filtered;
-  }, [filteredByTab, searchTerm, selectedStatus, sortBy]);
-
-  // Calculate statistics
-  const totalReturns = allReturns.length;
-  const newReturns = allReturns.filter((r) => r.status === "new").length;
-  const approvedReturns = allReturns.filter(
-    (r) => r.status === "approved"
-  ).length;
-  const rejectedReturns = allReturns.filter(
-    (r) => r.status === "rejected"
-  ).length;
+  }, [returns, searchTerm, selectedStatus, sortBy]);
 
   if (loading) {
     return (
@@ -259,7 +385,7 @@ export default function ReturnsPage() {
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
               <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
-                Returns
+                Returns Management
               </h1>
               <p className={`text-base ${colors.texts.secondary}`}>
                 View and manage customer return requests
@@ -282,27 +408,33 @@ export default function ReturnsPage() {
         <div
           className={`transform transition-all duration-700 delay-200 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
               {
                 title: "Total Returns",
-                value: totalReturns.toString(),
+                value: stats?.total || 0,
                 icon: InboxStackIcon,
               },
               {
-                title: "New",
-                value: newReturns.toString(),
+                title: "Pending",
+                value: stats?.requested || 0,
                 icon: InboxArrowDownIcon,
               },
               {
                 title: "Approved",
-                value: approvedReturns.toString(),
+                value: stats?.approved || 0,
                 icon: CheckCircleIcon,
               },
               {
                 title: "Rejected",
-                value: rejectedReturns.toString(),
+                value: stats?.rejected || 0,
                 icon: XCircleIcon,
+              },
+              {
+                title: "Total Refunded",
+                value: formatCurrency(stats?.totalRefunded || 0),
+                subtitle: `${stats?.refunded || 0} returns`,
+                icon: CurrencyDollarIcon,
               },
             ].map((stat, index) => (
               <Card
@@ -323,7 +455,9 @@ export default function ReturnsPage() {
                   >
                     {stat.value}
                   </div>
-                  <p className={`text-xs ${colors.texts.secondary}`}>Returns</p>
+                  <p className={`text-xs ${colors.texts.secondary}`}>
+                    {stat.subtitle || "Returns"}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -352,10 +486,10 @@ export default function ReturnsPage() {
                   className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
                 />
                 <Input
-                  placeholder="Search returns by return number or customer name"
+                  placeholder="Search by return number, customer, or order..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
+                  className={`${colors.inputs.base} pl-9 h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -364,11 +498,11 @@ export default function ReturnsPage() {
                   onValueChange={setSelectedStatus}
                 >
                   <SelectTrigger
-                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                    className={`text-sm h-9 w-full ${colors.inputs.base} cursor-pointer ${colors.inputs.focus}`}
                   >
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent>
                     {statusOptions.map((status) => (
                       <SelectItem
                         key={status}
@@ -382,11 +516,11 @@ export default function ReturnsPage() {
                 </Select>
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger
-                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                    className={`text-sm h-9 w-full ${colors.inputs.base} cursor-pointer ${colors.inputs.focus}`}
                   >
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent>
                     {sortOptions.map((option) => (
                       <SelectItem
                         key={option.value}
@@ -399,7 +533,7 @@ export default function ReturnsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex flex-wrap gap-2 items-center mt-2">
+              <div className="flex flex-wrap gap-2 items-center">
                 {searchTerm && (
                   <Badge
                     variant="outline"
@@ -414,23 +548,7 @@ export default function ReturnsPage() {
                     </button>
                   </Badge>
                 )}
-                {selectedStatus !== "All Status" && (
-                  <Badge
-                    variant="outline"
-                    className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
-                  >
-                    {selectedStatus}
-                    <button
-                      onClick={() => setSelectedStatus("All Status")}
-                      className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                )}
-                <span
-                  className={`text-xs ${colors.texts.secondary} ml-2 whitespace-nowrap`}
-                >
+                <span className={`text-xs ${colors.texts.secondary} ml-2`}>
                   {filteredAndSortedReturns.length} returns found
                 </span>
               </div>
@@ -442,52 +560,61 @@ export default function ReturnsPage() {
         <div
           className={`flex justify-center mt-6 transition-all duration-700 delay-350 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
         >
-          <div className="w-full flex justify-center">
-            <Tabs
-              value={selectedTab}
-              onValueChange={setSelectedTab}
-              className="w-full flex justify-center"
+          <Tabs
+            value={selectedTab}
+            onValueChange={(v) => setSelectedTab(v as TabType)}
+            className="w-full flex justify-center"
+          >
+            <TabsList
+              className={`flex w-full max-w-3xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
             >
-              <TabsList
-                className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
+              <TabsTrigger
+                value="all"
+                className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "all" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`}`}
               >
-                <TabsTrigger
-                  value="all"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "all" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
-                >
-                  <Squares2X2Icon
-                    className={`h-4 w-4 ${colors.icons.primary}`}
-                  />
-                  All Request
-                </TabsTrigger>
-                <TabsTrigger
-                  value="new"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "new" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
-                >
-                  <InboxArrowDownIcon
-                    className={`h-4 w-4 ${colors.icons.primary}`}
-                  />
-                  New
-                </TabsTrigger>
-                <TabsTrigger
-                  value="approved"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "approved" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
-                >
-                  <CheckCircleIcon
-                    className={`h-4 w-4 ${colors.icons.primary}`}
-                  />
-                  Approved
-                </TabsTrigger>
-                <TabsTrigger
-                  value="rejected"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "rejected" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
-                >
-                  <XCircleIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-                  Rejected
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+                <Squares2X2Icon
+                  className={`h-4 w-4 mr-1 ${colors.icons.primary}`}
+                />
+                All
+              </TabsTrigger>
+              <TabsTrigger
+                value="requested"
+                className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "requested" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`}`}
+              >
+                <InboxArrowDownIcon
+                  className={`h-4 w-4 mr-1 ${colors.icons.primary}`}
+                />
+                New
+              </TabsTrigger>
+              <TabsTrigger
+                value="approved"
+                className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "approved" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`}`}
+              >
+                <CheckCircleIcon
+                  className={`h-4 w-4 mr-1 ${colors.icons.primary}`}
+                />
+                Approved
+              </TabsTrigger>
+              <TabsTrigger
+                value="rejected"
+                className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "rejected" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`}`}
+              >
+                <XCircleIcon
+                  className={`h-4 w-4 mr-1 ${colors.icons.primary}`}
+                />
+                Rejected
+              </TabsTrigger>
+              <TabsTrigger
+                value="refunded"
+                className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "refunded" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`}`}
+              >
+                <CurrencyDollarIcon
+                  className={`h-4 w-4 mr-1 ${colors.icons.primary}`}
+                />
+                Refunded
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Return Cards */}
@@ -501,94 +628,151 @@ export default function ReturnsPage() {
                 className={`${colors.cards.base} hover:${colors.cards.hover} overflow-hidden group rounded-none !shadow-none hover:!shadow-none`}
               >
                 <CardContent className="p-6">
-                  <div className="flex items-start gap-4 mb-4">
-                    <Avatar
-                      className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
-                    >
-                      <AvatarFallback
-                        className={`${colors.texts.primary} font-bold rounded-none`}
-                      >
-                        {returnRequest.returnNumber
-                          .substring(0, 2)
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3
-                          className={`font-semibold ${colors.texts.primary} truncate`}
-                        >
-                          {returnRequest.returnNumber}
-                        </h3>
-                        {getStatusIcon(returnRequest.status)}
-                      </div>
-                      <div className="flex items-center gap-1 mt-1">
+                  <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(returnRequest.status)}
+                          <h3
+                            className={`font-semibold ${colors.texts.primary} text-sm`}
+                          >
+                            {returnRequest.returnNumber}
+                          </h3>
+                        </div>
                         <Badge
-                          className={`flex items-center gap-1 text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(returnRequest.status)}`}
+                          className={`text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(returnRequest.status)}`}
                           variant="secondary"
                         >
-                          {getDisplayStatus(returnRequest.status)}
+                          {returnRequest.status.replace("_", " ")}
                         </Badge>
                       </div>
                     </div>
-                  </div>
-                  <div className="space-y-3 mb-4">
-                    <div
-                      className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
-                    >
-                      <UsersIcon className={`h-4 w-4 ${colors.icons.muted}`} />
-                      <span className={`${colors.texts.primary}`}>
-                        Customer: {returnRequest.customerName}
-                      </span>
+
+                    {/* Customer Info */}
+                    <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-800">
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        Customer
+                      </p>
+                      <p
+                        className={`text-sm font-medium ${colors.texts.primary}`}
+                      >
+                        {returnRequest.customerName}
+                      </p>
+                      <p className={`text-xs ${colors.texts.secondary}`}>
+                        Order: {returnRequest.orderNumber}
+                      </p>
                     </div>
+
+                    {/* Amount */}
                     <div
-                      className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
-                    >
-                      <CubeIcon className={`h-4 w-4 ${colors.icons.muted}`} />
-                      <span className={`${colors.texts.primary}`}>
-                        Items: {returnRequest.items.length}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mb-4">
-                    <div
-                      className={`text-center p-3 ${colors.backgrounds.accent} rounded-none`}
+                      className={`p-3 ${colors.backgrounds.accent} rounded-none`}
                     >
                       <p
-                        className={`text-xl font-bold ${colors.texts.success}`}
+                        className={`text-lg font-bold ${colors.texts.success}`}
                       >
-                        {formatCurrency(returnRequest.total)}
+                        {formatCurrency(returnRequest.returnAmount)}
                       </p>
                       <p className={`text-xs ${colors.texts.muted}`}>
-                        Return Value
+                        Return Amount
                       </p>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`text-xs ${colors.texts.muted}`}>
-                      Requested: {formatDate(returnRequest.createdAt)}
+
+                    {/* Items Count */}
+                    <div className="flex items-center justify-between">
+                      <p className={`text-xs ${colors.texts.secondary}`}>
+                        {returnRequest.items.length} item
+                        {returnRequest.items.length !== 1 ? "s" : ""}
+                      </p>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        {formatDate(returnRequest.createdAt)}
+                      </p>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedReturn(returnRequest);
-                        setIsDetailsOpen(true);
-                      }}
-                      className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
-                    >
-                      <EyeIcon
-                        className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
-                      />
-                      View Details
-                    </Button>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openDetailsModal(returnRequest)}
+                        className="flex-1 h-8 px-3 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white rounded-none transition-all cursor-pointer"
+                      >
+                        <EyeIcon className="h-3 w-3 mr-1" />
+                        Details
+                      </Button>
+
+                      {returnRequest.status === "requested" && (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              openActionModal("approve", returnRequest)
+                            }
+                            className={`${colors.buttons.primary} rounded-none cursor-pointer`}
+                          >
+                            <CheckCircleIcon className="h-3 w-3 mr-1" />
+                            Approve
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="reject"
+                            onClick={() =>
+                              openActionModal("reject", returnRequest)
+                            }
+                            className="flex-1 h-8 px-3 rounded-none"
+                          >
+                            <XCircleIcon className="h-3 w-3 mr-1" />
+                            Reject
+                          </Button>
+                        </>
+                      )}
+
+                      {returnRequest.status === "approved" && (
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            openActionModal("received", returnRequest)
+                          }
+                          className={`${colors.buttons.primary} rounded-none cursor-pointer`}
+                        >
+                          <TruckIcon className="h-3 w-3 mr-1" />
+                          Mark Received
+                        </Button>
+                      )}
+
+                      {returnRequest.status === "item_received" && (
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            openActionModal("inspected", returnRequest)
+                          }
+                          className={`${colors.buttons.primary} rounded-none cursor-pointer`}
+                        >
+                          <ArchiveBoxIcon className="h-3 w-3 mr-1" />
+                          Mark Inspected
+                        </Button>
+                      )}
+
+                      {returnRequest.status === "inspected" && (
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            openActionModal("refund", returnRequest)
+                          }
+                          className={`${colors.buttons.primary} rounded-none cursor-pointer`}
+                        >
+                          <CurrencyDollarIcon className="h-3 w-3 mr-1" />
+                          Process Refund
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
+
           {filteredAndSortedReturns.length === 0 && (
             <div className="text-center py-12">
               <InboxIcon
@@ -607,154 +791,430 @@ export default function ReturnsPage() {
         </div>
       </div>
 
-      {/* Return Details Dialog */}
+      {/* Details Modal */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent
-          className={`w-full max-w-[600px] ${colors.backgrounds.modal} rounded-none`}
+          style={{ width: "100%", maxWidth: "900px" }}
+          className={`w-full max-w-[900px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none p-0 !shadow-none hover:!shadow-none`}
         >
-          <DialogHeader>
-            <DialogTitle className={`${colors.texts.primary}`}>
-              Return Details
-            </DialogTitle>
-            <DialogDescription className={`${colors.texts.secondary}`}>
-              Detailed information about the return request
-            </DialogDescription>
-          </DialogHeader>
-          {selectedReturn && (
-            <div className="space-y-6 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card
-                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
-                >
-                  <CardHeader className="pb-3">
-                    <CardTitle
-                      className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+          <div className="p-6">
+            <DialogHeader>
+              <DialogTitle className={`${colors.texts.primary}`}>
+                Return Details
+              </DialogTitle>
+              <DialogDescription className={`${colors.texts.secondary}`}>
+                Complete information about the return request
+              </DialogDescription>
+            </DialogHeader>
+            {selectedReturn && (
+              <div className="space-y-6 mt-6">
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className={`text-xs ${colors.texts.muted} mb-1`}>
+                      Return Number
+                    </p>
+                    <p
+                      className={`text-sm font-medium ${colors.texts.primary}`}
                     >
-                      <CubeIcon className={`h-5 w-5 ${colors.icons.primary}`} />
-                      Return Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className={`text-xs ${colors.texts.muted}`}>
-                        Return Number
-                      </p>
-                      <p
-                        className={`font-medium ${colors.texts.primary} text-sm`}
-                      >
-                        {selectedReturn.returnNumber}
-                      </p>
-                    </div>
-                    <div>
-                      <p className={`text-xs ${colors.texts.muted}`}>
-                        Customer
-                      </p>
-                      <p
-                        className={`font-medium ${colors.texts.primary} text-sm`}
-                      >
-                        {selectedReturn.customerName}
-                      </p>
-                    </div>
-                    <div>
-                      <p className={`text-xs ${colors.texts.muted}`}>
-                        Total Items
-                      </p>
-                      <p
-                        className={`font-medium ${colors.texts.primary} text-sm`}
-                      >
-                        {selectedReturn.items.length}
-                      </p>
-                    </div>
-                    <div>
-                      <p className={`text-xs ${colors.texts.muted}`}>
-                        Return Value
-                      </p>
-                      <p
-                        className={`font-bold ${colors.texts.success} text-sm`}
-                      >
-                        {formatCurrency(selectedReturn.total)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card
-                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
-                >
-                  <CardHeader className="pb-3">
-                    <CardTitle
-                      className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                      {selectedReturn.returnNumber}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${colors.texts.muted} mb-1`}>
+                      Status
+                    </p>
+                    <Badge
+                      className={`text-xs rounded-none ${getStatusBadgeClass(selectedReturn.status)}`}
                     >
-                      <UsersIcon
-                        className={`h-5 w-5 ${colors.icons.primary}`}
-                      />
-                      Status Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className={`text-xs ${colors.texts.muted}`}>Status</p>
-                      <Badge
-                        className={`text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(selectedReturn.status)}`}
-                        variant="secondary"
+                      {selectedReturn.status.replace("_", " ")}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${colors.texts.muted} mb-1`}>
+                      Customer
+                    </p>
+                    <p
+                      className={`text-sm font-medium ${colors.texts.primary}`}
+                    >
+                      {selectedReturn.customerName}
+                    </p>
+                    <p className={`text-xs ${colors.texts.secondary}`}>
+                      {selectedReturn.customerEmail}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${colors.texts.muted} mb-1`}>
+                      Order Number
+                    </p>
+                    <p
+                      className={`text-sm font-medium ${colors.texts.primary}`}
+                    >
+                      {selectedReturn.orderNumber}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${colors.texts.muted} mb-1`}>
+                      Return Amount
+                    </p>
+                    <p className={`text-sm font-bold ${colors.texts.success}`}>
+                      {formatCurrency(selectedReturn.returnAmount)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${colors.texts.muted} mb-1`}>
+                      Refund Amount
+                    </p>
+                    <p className={`text-sm font-bold ${colors.texts.success}`}>
+                      {formatCurrency(selectedReturn.refundAmount)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Reason */}
+                <div>
+                  <p className={`text-xs ${colors.texts.muted} mb-2`}>Reason</p>
+                  <p
+                    className={`text-sm ${colors.texts.primary} mb-2 capitalize`}
+                  >
+                    {selectedReturn.reason.replace(/_/g, " ")}
+                  </p>
+                  <p
+                    className={`text-sm ${colors.texts.secondary} bg-gray-50 dark:bg-gray-900 p-3 rounded-none`}
+                  >
+                    {selectedReturn.reasonDetails}
+                  </p>
+                </div>
+
+                {/* Items */}
+                <div>
+                  <p className={`text-xs ${colors.texts.muted} mb-3`}>
+                    Items ({selectedReturn.items.length})
+                  </p>
+                  <div className="space-y-2">
+                    {selectedReturn.items.map((item, index) => (
+                      <div
+                        key={index}
+                        className={`flex justify-between items-center p-3 ${colors.backgrounds.tertiary} rounded-none`}
                       >
-                        {getDisplayStatus(selectedReturn.status)}
-                      </Badge>
-                    </div>
-                    <div>
-                      <p className={`text-xs ${colors.texts.muted}`}>
-                        Request Date
-                      </p>
-                      <p
-                        className={`font-medium ${colors.texts.primary} text-sm`}
-                      >
-                        {formatDate(selectedReturn.createdAt)}
-                      </p>
-                    </div>
-                    {selectedReturn.reason && (
-                      <div>
-                        <p className={`text-xs ${colors.texts.muted}`}>
-                          Reason
-                        </p>
+                        <div>
+                          <p
+                            className={`text-sm font-medium ${colors.texts.primary}`}
+                          >
+                            {item.productName}
+                          </p>
+                          <p className={`text-xs ${colors.texts.secondary}`}>
+                            Qty: {item.quantity} × {formatCurrency(item.price)}
+                          </p>
+                        </div>
                         <p
-                          className={`font-medium ${colors.texts.primary} text-sm`}
+                          className={`text-sm font-medium ${colors.texts.primary}`}
                         >
-                          {selectedReturn.reason}
+                          {formatCurrency(item.subtotal)}
                         </p>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-              {selectedReturn.notes && (
-                <Card
-                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
-                >
-                  <CardHeader className="pb-3">
-                    <CardTitle
-                      className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
-                    >
-                      <DocumentDuplicateIcon
-                        className={`h-5 w-5 ${colors.icons.primary}`}
-                      />
-                      Notes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className={`text-sm ${colors.texts.accent}`}>
-                      {selectedReturn.notes}
+                    ))}
+                  </div>
+                </div>
+
+                {/* Images */}
+                {selectedReturn.images && selectedReturn.images.length > 0 && (
+                  <div>
+                    <p className={`text-xs ${colors.texts.muted} mb-3`}>
+                      Images ({selectedReturn.images.length})
                     </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-          <DialogFooter>
+                    <div className="grid grid-cols-4 gap-2">
+                      {selectedReturn.images.map((imageUrl, index) => (
+                        <a
+                          key={index}
+                          href={imageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="aspect-square border border-gray-200 dark:border-gray-800 overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imageUrl}
+                            alt={`Return ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Review Notes */}
+                {selectedReturn.reviewNotes && (
+                  <div>
+                    <p className={`text-xs ${colors.texts.muted} mb-2`}>
+                      Review Notes
+                    </p>
+                    <p
+                      className={`text-sm ${colors.texts.secondary} bg-green-50 dark:bg-green-950 p-3 rounded`}
+                    >
+                      {selectedReturn.reviewNotes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Rejection Reason */}
+                {selectedReturn.rejectionReason && (
+                  <div>
+                    <p className={`text-xs ${colors.texts.muted} mb-2`}>
+                      Rejection Reason
+                    </p>
+                    <p
+                      className={`text-sm ${colors.texts.secondary} bg-red-50 dark:bg-red-950 p-3 rounded`}
+                    >
+                      {selectedReturn.rejectionReason}
+                    </p>
+                  </div>
+                )}
+
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className={colors.texts.muted}>Requested:</span>{" "}
+                    <span className={colors.texts.primary}>
+                      {formatDate(selectedReturn.createdAt)}
+                    </span>
+                  </div>
+                  {selectedReturn.reviewedAt && (
+                    <div>
+                      <span className={colors.texts.muted}>Reviewed:</span>{" "}
+                      <span className={colors.texts.primary}>
+                        {formatDate(selectedReturn.reviewedAt)}
+                      </span>
+                    </div>
+                  )}
+                  {selectedReturn.refundedAt && (
+                    <div>
+                      <span className={colors.texts.muted}>Refunded:</span>{" "}
+                      <span className={colors.texts.primary}>
+                        {formatDate(selectedReturn.refundedAt)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-3 px-6 pb-6 pt-2">
             <Button
               variant="outline"
               onClick={() => setIsDetailsOpen(false)}
-              className={`${colors.buttons.outline} rounded-none`}
+              className="h-8 px-4 pb-2 pr-2 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white rounded-none transition-all cursor-pointer"
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Modal */}
+      <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
+        <DialogContent
+          className={`max-w-2xl ${colors.backgrounds.modal} rounded-none`}
+        >
+          <DialogHeader>
+            <DialogTitle className={colors.texts.primary}>
+              {actionType === "approve" && "Approve Return"}
+              {actionType === "reject" && "Reject Return"}
+              {actionType === "received" && "Mark Item Received"}
+              {actionType === "inspected" && "Mark as Inspected"}
+              {actionType === "refund" && "Process Refund"}
+            </DialogTitle>
+            <DialogDescription className={colors.texts.secondary}>
+              {actionType === "approve" &&
+                "Set refund amount and provide review notes"}
+              {actionType === "reject" &&
+                "Provide a reason for rejecting this return"}
+              {actionType === "received" &&
+                "Confirm that you have received the returned item"}
+              {actionType === "inspected" &&
+                "Confirm that the item has been inspected"}
+              {actionType === "refund" &&
+                "Process the refund to customer's wallet"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {actionType === "approve" && (
+              <>
+                <div>
+                  <label
+                    className={`text-sm font-medium ${colors.texts.primary} mb-2 block`}
+                  >
+                    Refund Amount (CVT)
+                  </label>
+                  <Input
+                    type="number"
+                    value={refundAmount}
+                    onChange={(e) => setRefundAmount(e.target.value)}
+                    placeholder="Enter refund amount"
+                    className={`${colors.inputs.base} ${colors.inputs.focus}`}
+                  />
+                </div>
+                <div>
+                  <label
+                    className={`text-sm font-medium ${colors.texts.primary} mb-2 block`}
+                  >
+                    Restocking Fee (CVT)
+                  </label>
+                  <Input
+                    type="number"
+                    value={restockingFee}
+                    onChange={(e) => setRestockingFee(e.target.value)}
+                    placeholder="Enter restocking fee"
+                    className={`${colors.inputs.base} ${colors.inputs.focus}`}
+                  />
+                </div>
+                <div>
+                  <label
+                    className={`text-sm font-medium ${colors.texts.primary} mb-2 block`}
+                  >
+                    Shipping Refund (CVT)
+                  </label>
+                  <Input
+                    type="number"
+                    value={shippingRefund}
+                    onChange={(e) => setShippingRefund(e.target.value)}
+                    placeholder="Enter shipping refund"
+                    className={`${colors.inputs.base} ${colors.inputs.focus}`}
+                  />
+                </div>
+                <div>
+                  <label
+                    className={`text-sm font-medium ${colors.texts.primary} mb-2 block`}
+                  >
+                    Review Notes (Optional)
+                  </label>
+                  <Textarea
+                    value={actionNotes}
+                    onChange={(e) => setActionNotes(e.target.value)}
+                    placeholder="Add any notes about this approval..."
+                    className={`${colors.inputs.base} ${colors.inputs.focus}`}
+                    rows={3}
+                  />
+                </div>
+              </>
+            )}
+
+            {actionType === "reject" && (
+              <div>
+                <label
+                  className={`text-sm font-medium ${colors.texts.primary} mb-2 block`}
+                >
+                  Rejection Reason *
+                </label>
+                <Textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Explain why this return is being rejected..."
+                  className={`${colors.inputs.base} ${colors.inputs.focus}`}
+                  rows={4}
+                />
+              </div>
+            )}
+
+            {actionType === "inspected" && (
+              <>
+                <div>
+                  <label
+                    className={`text-sm font-medium ${colors.texts.primary} mb-2 block`}
+                  >
+                    Item Condition *
+                  </label>
+                  <Select
+                    value={itemCondition}
+                    onValueChange={(v) => setItemCondition(v as ItemCondition)}
+                  >
+                    <SelectTrigger
+                      className={`${colors.inputs.base} ${colors.inputs.focus}`}
+                    >
+                      <SelectValue placeholder="Select item condition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="good">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">Good Condition</span>
+                          <span className="text-xs text-gray-500">
+                            Item will be restocked and made available for sale
+                          </span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="damaged">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">Damaged</span>
+                          <span className="text-xs text-gray-500">
+                            Item will be marked as damaged inventory
+                          </span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="unsellable">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">Unsellable</span>
+                          <span className="text-xs text-gray-500">
+                            Item will be written off (no stock added)
+                          </span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label
+                    className={`text-sm font-medium ${colors.texts.primary} mb-2 block`}
+                  >
+                    Inspection Notes
+                  </label>
+                  <Textarea
+                    value={actionNotes}
+                    onChange={(e) => setActionNotes(e.target.value)}
+                    placeholder="Add detailed inspection findings..."
+                    className={`${colors.inputs.base} ${colors.inputs.focus}`}
+                    rows={3}
+                  />
+                </div>
+              </>
+            )}
+
+            {(actionType === "received" || actionType === "refund") && (
+              <div>
+                <label
+                  className={`text-sm font-medium ${colors.texts.primary} mb-2 block`}
+                >
+                  Notes (Optional)
+                </label>
+                <Textarea
+                  value={actionNotes}
+                  onChange={(e) => setActionNotes(e.target.value)}
+                  placeholder="Add any relevant notes..."
+                  className={`${colors.inputs.base} ${colors.inputs.focus}`}
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsActionModalOpen(false)}
+              disabled={actionLoading}
+              className="h-8 px-4 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white rounded-none transition-all cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAction}
+              disabled={actionLoading}
+              className={`h-8 px-4 rounded-none transition-all ${
+                actionType === "reject"
+                  ? "border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:border-red-600 dark:hover:border-red-400"
+                  : `${colors.buttons.primary} cursor-pointer`
+              }`}
+            >
+              {actionLoading ? "Processing..." : "Confirm"}
             </Button>
           </DialogFooter>
         </DialogContent>

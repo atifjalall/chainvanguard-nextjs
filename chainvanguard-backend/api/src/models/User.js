@@ -78,7 +78,7 @@ const userSchema = new Schema(
         default: false,
       },
 
-      // Minimum order value for auto-approval (in PKR)
+      // Minimum order value for auto-approval (in CVT)
       minOrderValue: {
         type: Number,
         default: 0,
@@ -91,7 +91,7 @@ const userSchema = new Schema(
         default: true,
       },
 
-      // How many reward points per 100 PKR spent
+      // How many reward points per 100 CVT spent
       rewardPointsRate: {
         type: Number,
         default: 1,

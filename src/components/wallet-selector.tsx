@@ -7,10 +7,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Badge } from "@/components/_ui/badge";
-import { Avatar, AvatarFallback } from "@/components/_ui/avatar";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Wallet, Clock, Shield, ChevronRight, Trash2 } from "lucide-react";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { toast } from "sonner";

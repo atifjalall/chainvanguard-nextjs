@@ -434,6 +434,21 @@ router.post(
         });
       }
 
+      // Parse arrays
+      if (req.body["tags[]"]) {
+        req.body.tags = Array.isArray(req.body["tags[]"])
+          ? req.body["tags[]"]
+          : [req.body["tags[]"]];
+        delete req.body["tags[]"];
+      }
+
+      if (req.body["certifications[]"]) {
+        req.body.certifications = Array.isArray(req.body["certifications[]"])
+          ? req.body["certifications[]"]
+          : [req.body["certifications[]"]];
+        delete req.body["certifications[]"];
+      }
+
       // Create product
       const result = await productService.createProduct(
         req.body,

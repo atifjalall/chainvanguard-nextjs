@@ -60,6 +60,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import { productAPI } from "@/lib/api/product.api";
 import { aiApi } from "@/lib/api/ai.api";
+
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   CATEGORIES,
   PRODUCT_TYPES,
@@ -95,7 +97,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -107,7 +109,7 @@ const RsIcon = () => (
   </svg>
 );
 
-const MAX_DESCRIPTION_LENGTH = 1000;
+const MAX_DESCRIPTION_LENGTH = 5000;
 
 // Add this constant for consistent spacing
 const FORM_SPACING = "space-y-4 md:space-y-2";
@@ -307,11 +309,11 @@ function ProductCard({
         {/* Price */}
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-normal text-gray-900 dark:text-white">
-            Rs {price.toFixed(2)}
+            CVT {price.toFixed(2)}
           </span>
           {costPrice && costPrice > price && (
             <span className="text-xs text-gray-400 line-through">
-              Rs {costPrice.toFixed(2)}
+              CVT {costPrice.toFixed(2)}
             </span>
           )}
         </div>
@@ -321,6 +323,7 @@ function ProductCard({
 }
 
 export default function EditProductPage() {
+  usePageTitle("Edit Product");
   const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
@@ -2293,7 +2296,7 @@ export default function EditProductPage() {
             dimensions: product.dimensions || "",
             season: product.season || "All Season",
             countryOfOrigin: product.countryOfOrigin || "Pakistan",
-            manufacturer: product.manufacturer || "",
+            manufacturer: product.manufacturer || user?.name || "",
             tags: product.tags || [],
             isFeatured: product.isFeatured || false,
             isNewArrival: product.isNewArrival || false,
@@ -2596,7 +2599,7 @@ export default function EditProductPage() {
             <div className="fixed top-8 right-1 w-[280px]">
               <div className="">
                 <div className="mb-3">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     <EyeIcon className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                     Live Preview
                   </h3>

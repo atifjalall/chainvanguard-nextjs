@@ -188,7 +188,7 @@ export const analyticsApi = {
           id: `order-${recentDay._id}`,
           type: "order_received",
           title: "New Orders Received",
-          description: `${recentDay.orders} orders received with revenue of Rs ${recentDay.revenue.toFixed(2)}`,
+          description: `${recentDay.orders} orders received with revenue of CVT ${recentDay.revenue.toFixed(2)}`,
           timestamp: new Date(recentDay._id).toISOString(),
           status: "success",
           amount: recentDay.revenue,

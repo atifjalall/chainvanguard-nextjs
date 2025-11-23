@@ -1,12 +1,16 @@
+// chainvanguard-backend/api/src/services/wallet.balance.service.js
 import Wallet from "../models/Wallet.js";
 import User from "../models/User.js";
 import BlockchainLog from "../models/BlockchainLog.js";
 import mongoose from "mongoose";
 import logger from "../utils/logger.js";
 import notificationService from "./notification.service.js";
+import fabricService from "./fabric.service.js"; // ✅ ADD THIS
+
 class WalletBalanceService {
   /**
    * 💰 Get or Create Wallet for User
+   * ✅ NOW CREATES BLOCKCHAIN TOKEN ACCOUNT
    */
   async getOrCreateWallet(userId) {
     try {
@@ -19,11 +23,31 @@ class WalletBalanceService {
           throw new Error("User not found");
         }
 
+        // ✅ CREATE BLOCKCHAIN TOKEN ACCOUNT FIRST
+        try {
+          await fabricService.createTokenAccount(
+            userId.toString(),
+            user.walletAddress,
+            0
+          );
+          console.log(
+            `✅ Blockchain token account created for: ${user.walletAddress}`
+          );
+        } catch (blockchainError) {
+          if (!blockchainError.message.includes("already exists")) {
+            console.warn(
+              "⚠️ Blockchain account creation failed:",
+              blockchainError.message
+            );
+          }
+        }
+
+        // Create MongoDB wallet (cache & history)
         wallet = new Wallet({
           userId: user._id,
           walletAddress: user.walletAddress,
           balance: 0,
-          currency: "PKR",
+          currency: "CVT", // ✅ NOW CVT TOKENS
           isActive: true,
           isFrozen: false,
         });
@@ -35,7 +59,7 @@ class WalletBalanceService {
         // Log wallet creation
         await logger.logWallet({
           type: "wallet_created",
-          action: "Wallet automatically created",
+          action: "Wallet automatically created with blockchain token account",
           walletId: wallet._id,
           userId,
           userDetails: {
@@ -56,25 +80,55 @@ class WalletBalanceService {
 
   /**
    * 💵 Get Wallet Balance
+   * ✅ NOW READS FROM BLOCKCHAIN AS SOURCE OF TRUTH
    */
   async getBalance(userId) {
     try {
-      // 🆕 AUTO-CREATE WALLET IF NOT EXISTS
+      // 1. Get MongoDB wallet (for metadata)
       const wallet = await this.getOrCreateWallet(userId);
+
+      // 2. ✅ GET REAL BALANCE FROM BLOCKCHAIN
+      let blockchainBalance = 0;
+      try {
+        const tokenBalance = await fabricService.getTokenBalance(
+          userId.toString()
+        );
+
+        if (tokenBalance.success && tokenBalance.exists) {
+          blockchainBalance = parseFloat(tokenBalance.balance) || 0;
+        }
+
+        // Sync MongoDB cache with blockchain
+        if (wallet.balance !== blockchainBalance) {
+          console.log(
+            `🔄 Syncing balance: MongoDB=${wallet.balance}, Blockchain=${blockchainBalance}`
+          );
+          wallet.balance = blockchainBalance;
+          wallet.lastSyncedAt = new Date();
+          await wallet.save();
+        }
+      } catch (blockchainError) {
+        console.warn(
+          "⚠️ Blockchain balance read failed, using cached:",
+          blockchainError.message
+        );
+        blockchainBalance = wallet.balance;
+      }
 
       return {
         success: true,
-        balance: wallet.balance,
+        balance: blockchainBalance,
         wallet: {
-          balance: wallet.balance,
-          currency: wallet.currency,
+          balance: blockchainBalance,
+          currency: "CVT", // ✅ CVT TOKENS
           isActive: wallet.isActive,
           isFrozen: wallet.isFrozen,
           lastActivity: wallet.lastActivity,
+          lastSyncedAt: wallet.lastSyncedAt,
         },
         data: {
-          balance: wallet.balance,
-          currency: wallet.currency,
+          balance: blockchainBalance,
+          currency: "CVT",
           isActive: wallet.isActive,
           isFrozen: wallet.isFrozen,
           lastActivity: wallet.lastActivity,
@@ -94,6 +148,7 @@ class WalletBalanceService {
 
   /**
    * 💳 Add Funds (Deposit)
+   * ✅ NOW MINTS CVT TOKENS ON BLOCKCHAIN
    */
   async addFunds(userId, amount, paymentMethod = "card", metadata = {}) {
     const session = await mongoose.startSession();
@@ -104,7 +159,6 @@ class WalletBalanceService {
         throw new Error("Amount must be greater than 0");
       }
 
-      // 🆕 USE EXISTING WALLET ONLY
       const wallet = await Wallet.findOne({ userId });
 
       if (!wallet) {
@@ -121,13 +175,20 @@ class WalletBalanceService {
         );
       }
 
-      // Update balance
-      const { balanceBefore, balanceAfter } = wallet.updateBalance(
+      // ✅ MINT TOKENS ON BLOCKCHAIN
+      const mintResult = await fabricService.mintTokens(
+        userId.toString(),
         amount,
-        "deposit"
+        `Deposit via ${paymentMethod}`
       );
 
-      // Add transaction record
+      console.log("✅ Tokens minted on blockchain:", mintResult);
+
+      // Update MongoDB (cache & history)
+      const balanceBefore = wallet.balance;
+      wallet.updateBalance(amount, "deposit");
+      const balanceAfter = wallet.balance;
+
       const transaction = wallet.addTransaction({
         type: "deposit",
         amount,
@@ -137,19 +198,25 @@ class WalletBalanceService {
         status: "completed",
         metadata: {
           paymentMethod,
+          blockchainTxId: mintResult.mintRecord?.txId,
           ...metadata,
         },
       });
 
       await wallet.save({ session });
 
+      const user = await User.findById(userId);
       await notificationService.createNotification({
         userId,
         userRole: user.role,
         type: "wallet_credited",
         category: "payment",
         title: "Wallet Credited",
-        message: `$${amount.toFixed(2)} has been added to your wallet. New balance: $${wallet.balance.toFixed(2)}`,
+        message: `${amount.toFixed(
+          2
+        )} CVT has been added to your wallet. New balance: ${wallet.balance.toFixed(
+          2
+        )} CVT`,
         priority: "medium",
         relatedEntity: {
           entityType: "wallet",
@@ -159,10 +226,9 @@ class WalletBalanceService {
       });
 
       // LOG FUNDS ADDED
-      const user = await User.findById(userId);
       await logger.logWallet({
         type: "wallet_funds_added",
-        action: `Funds added to wallet: $${amount}`,
+        action: `Funds added to wallet: ${amount} CVT`,
         walletId: wallet._id,
         userId,
         userDetails: user
@@ -177,6 +243,7 @@ class WalletBalanceService {
           amount,
           paymentMethod,
           newBalance: wallet.balance,
+          blockchainTxId: mintResult.mintRecord?.txId,
           ...metadata,
         },
       });
@@ -189,8 +256,9 @@ class WalletBalanceService {
         data: {
           amount,
           newBalance: wallet.balance,
-          currency: wallet.currency,
+          currency: "CVT",
           transactionId: transaction._id,
+          blockchainTxId: mintResult.mintRecord?.txId,
           transaction: {
             id: transaction._id,
             type: transaction.type,
@@ -210,6 +278,7 @@ class WalletBalanceService {
 
   /**
    * 💸 Transfer Credits (User-to-User)
+   * ✅ NOW USES BLOCKCHAIN TOKEN TRANSFER
    */
   async transferCredits(fromUserId, toUserId, amount, description = "") {
     const session = await mongoose.startSession();
@@ -224,10 +293,9 @@ class WalletBalanceService {
         throw new Error("Cannot transfer to yourself");
       }
 
-      // 🆕 USE EXISTING WALLETS ONLY
       const [senderWallet, receiverWallet] = await Promise.all([
-        Wallet.findOne({ fromUserId }),
-        Wallet.findOne({ toUserId }),
+        Wallet.findOne({ userId: fromUserId }),
+        Wallet.findOne({ userId: toUserId }),
       ]);
 
       if (!senderWallet || !receiverWallet) {
@@ -239,9 +307,15 @@ class WalletBalanceService {
         throw new Error("Sender wallet is not available for transactions");
       }
 
-      if (senderWallet.balance < amount) {
+      // Get real balance from blockchain
+      const senderBalance = await fabricService.getTokenBalance(
+        fromUserId.toString()
+      );
+      const realBalance = senderBalance.balance || 0;
+
+      if (realBalance < amount) {
         throw new Error(
-          `Insufficient balance. Available: ${senderWallet.balance} ${senderWallet.currency}`
+          `Insufficient balance. Available: ${realBalance} CVT, Required: ${amount} CVT`
         );
       }
 
@@ -250,13 +324,22 @@ class WalletBalanceService {
         throw new Error("Receiver wallet is not available");
       }
 
-      // Get user details
       const [sender, receiver] = await Promise.all([
-        User.findById(fromUserId).select("name email walletAddress"),
-        User.findById(toUserId).select("name email walletAddress"),
+        User.findById(fromUserId).select("name email walletAddress role"),
+        User.findById(toUserId).select("name email walletAddress role"),
       ]);
 
-      // Deduct from sender
+      // ✅ TRANSFER ON BLOCKCHAIN
+      const transferResult = await fabricService.transferTokens(
+        fromUserId.toString(),
+        toUserId.toString(),
+        amount,
+        description || `Transfer to ${receiver.name}`
+      );
+
+      console.log("✅ Blockchain transfer completed:", transferResult);
+
+      // Update MongoDB (cache & history)
       const senderBalanceBefore = senderWallet.balance;
       senderWallet.updateBalance(amount, "transfer_out");
       const senderTransaction = senderWallet.addTransaction({
@@ -271,10 +354,10 @@ class WalletBalanceService {
           recipientName: receiver.name,
           recipientEmail: receiver.email,
           recipientWallet: receiver.walletAddress,
+          blockchainTxId: transferResult.transfer?.txId,
         },
       });
 
-      // Add to receiver
       const receiverBalanceBefore = receiverWallet.balance;
       receiverWallet.updateBalance(amount, "transfer_in");
       const receiverTransaction = receiverWallet.addTransaction({
@@ -289,6 +372,7 @@ class WalletBalanceService {
           senderName: sender.name,
           senderEmail: sender.email,
           senderWallet: sender.walletAddress,
+          blockchainTxId: transferResult.transfer?.txId,
         },
       });
 
@@ -297,10 +381,10 @@ class WalletBalanceService {
         receiverWallet.save({ session }),
       ]);
 
-      // 🆕 LOG WALLET TRANSFER
+      // LOG WALLET TRANSFER
       await logger.logWallet({
         type: "wallet_transfer",
-        action: `Wallet transfer: $${amount} from ${sender.name} to ${receiver.name}`,
+        action: `Wallet transfer: ${amount} CVT from ${sender.name} to ${receiver.name}`,
         walletId: senderWallet._id,
         userId: fromUserId,
         userDetails: {
@@ -325,6 +409,7 @@ class WalletBalanceService {
             newBalance: receiverWallet.balance,
             transactionId: receiverTransaction._id,
           },
+          blockchainTxId: transferResult.transfer?.txId,
           description,
         },
       });
@@ -336,7 +421,7 @@ class WalletBalanceService {
         message: "Transfer completed successfully",
         data: {
           amount,
-          currency: senderWallet.currency,
+          currency: "CVT",
           from: {
             userId: fromUserId,
             name: sender.name,
@@ -351,6 +436,7 @@ class WalletBalanceService {
             newBalance: receiverWallet.balance,
             transactionId: receiverTransaction._id,
           },
+          blockchainTxId: transferResult.transfer?.txId,
         },
       };
     } catch (error) {
@@ -364,6 +450,7 @@ class WalletBalanceService {
 
   /**
    * 🏦 Withdraw Funds
+   * ✅ NOW BURNS CVT TOKENS ON BLOCKCHAIN
    */
   async withdrawFunds(
     userId,
@@ -379,7 +466,6 @@ class WalletBalanceService {
         throw new Error("Amount must be greater than 0");
       }
 
-      // 🆕 USE EXISTING WALLET ONLY
       const wallet = await Wallet.findOne({ userId });
 
       if (!wallet) {
@@ -393,24 +479,40 @@ class WalletBalanceService {
             `Wallet is frozen. Reason: ${wallet.frozenReason || "N/A"}`
           );
         }
-        if (wallet.balance < amount) {
+
+        // Get real balance from blockchain
+        const tokenBalance = await fabricService.getTokenBalance(
+          userId.toString()
+        );
+        const realBalance = tokenBalance.balance || 0;
+
+        if (realBalance < amount) {
           throw new Error(
-            `Insufficient balance. Available: ${wallet.balance} ${wallet.currency}`
+            `Insufficient balance. Available: ${realBalance} CVT, Required: ${amount} CVT`
           );
         }
+
         const remaining = wallet.dailyWithdrawalLimit - wallet.dailyWithdrawn;
         throw new Error(
-          `Daily withdrawal limit exceeded. Remaining today: ${remaining} ${wallet.currency}`
+          `Daily withdrawal limit exceeded. Remaining today: ${remaining} CVT`
         );
       }
 
-      // Update balance
+      // ✅ BURN TOKENS ON BLOCKCHAIN
+      const burnResult = await fabricService.burnTokens(
+        userId.toString(),
+        amount,
+        `Withdrawal via ${withdrawalMethod}`
+      );
+
+      console.log("✅ Tokens burned on blockchain:", burnResult);
+
+      // Update MongoDB (cache & history)
       const { balanceBefore, balanceAfter } = wallet.updateBalance(
         amount,
         "withdrawal"
       );
 
-      // Add transaction record
       const transaction = wallet.addTransaction({
         type: "withdrawal",
         amount,
@@ -420,9 +522,9 @@ class WalletBalanceService {
         status: "completed",
         metadata: {
           withdrawalMethod,
+          blockchainTxId: burnResult.burnRecord?.txId,
           accountDetails: {
             ...accountDetails,
-            // Mask sensitive data
             accountNumber: accountDetails.accountNumber
               ? `****${accountDetails.accountNumber.slice(-4)}`
               : undefined,
@@ -430,19 +532,17 @@ class WalletBalanceService {
         },
       });
 
-      // Update daily withdrawn amount
       wallet.dailyWithdrawn += amount;
 
       await wallet.save({ session });
 
-      // Log to blockchain
-      // Log withdrawal to database
+      // Log withdrawal
       const user = await User.findById(userId).select(
         "name email walletAddress role"
       );
       await logger.logWallet({
         type: "wallet_transaction",
-        action: `Withdrawal: $${amount} via ${withdrawalMethod}`,
+        action: `Withdrawal: ${amount} CVT via ${withdrawalMethod}`,
         walletId: wallet._id,
         userId,
         userDetails: user
@@ -459,8 +559,8 @@ class WalletBalanceService {
           withdrawalMethod,
           balanceBefore,
           balanceAfter,
+          blockchainTxId: burnResult.burnRecord?.txId,
           accountDetails: {
-            // Masked for security
             accountNumber: accountDetails.accountNumber
               ? `****${accountDetails.accountNumber.slice(-4)}`
               : undefined,
@@ -476,9 +576,10 @@ class WalletBalanceService {
         data: {
           amount,
           newBalance: wallet.balance,
-          currency: wallet.currency,
+          currency: "CVT",
           withdrawalMethod,
           transactionId: transaction._id,
+          blockchainTxId: burnResult.burnRecord?.txId,
           estimatedArrival: "1-3 business days",
         },
       };
@@ -493,6 +594,7 @@ class WalletBalanceService {
 
   /**
    * 📜 Get Transaction History
+   * ✅ COMBINES MONGODB HISTORY WITH BLOCKCHAIN VERIFICATION
    */
   async getTransactionHistory(userId, filters = {}) {
     try {
@@ -558,6 +660,17 @@ class WalletBalanceService {
         })
       );
 
+      // ✅ GET CURRENT BALANCE FROM BLOCKCHAIN
+      let currentBalance = wallet.balance;
+      try {
+        const tokenBalance = await fabricService.getTokenBalance(
+          userId.toString()
+        );
+        currentBalance = tokenBalance.balance || wallet.balance;
+      } catch (error) {
+        console.warn("⚠️ Using cached balance:", error.message);
+      }
+
       return {
         success: true,
         data: txWithDetails,
@@ -570,8 +683,8 @@ class WalletBalanceService {
           hasPrevPage: page > 1,
         },
         summary: {
-          currentBalance: wallet.balance,
-          currency: wallet.currency,
+          currentBalance,
+          currency: "CVT",
           totalTransactions: wallet.transactions.length,
           statistics: {
             totalDeposited: wallet.totalDeposited,
@@ -589,6 +702,7 @@ class WalletBalanceService {
 
   /**
    * 💰 Process Payment (for orders)
+   * ✅ NOW USES BLOCKCHAIN TOKEN TRANSFER
    */
   async processPayment(userId, orderId, amount, description, session) {
     let localSession = session;
@@ -596,17 +710,23 @@ class WalletBalanceService {
       localSession = await mongoose.startSession();
       localSession.startTransaction();
     }
+
     try {
-      // 🆕 USE EXISTING WALLET ONLY
       const wallet = await Wallet.findOne({ userId }).session(localSession);
 
       if (!wallet) {
         throw new Error("Wallet not found");
       }
 
-      if (wallet.balance < amount) {
+      // ✅ CHECK REAL BALANCE FROM BLOCKCHAIN
+      const tokenBalance = await fabricService.getTokenBalance(
+        userId.toString()
+      );
+      const realBalance = tokenBalance.balance || 0;
+
+      if (realBalance < amount) {
         throw new Error(
-          `Insufficient balance. Available: ${wallet.balance} ${wallet.currency}, Required: ${amount} ${wallet.currency}`
+          `Insufficient balance. Available: ${realBalance} CVT, Required: ${amount} CVT`
         );
       }
 
@@ -614,7 +734,9 @@ class WalletBalanceService {
         throw new Error("Wallet is not available for transactions");
       }
 
-      // Deduct amount
+      // NOTE: Actual blockchain transfer happens in processPaymentWithCredit
+      // This method just validates and logs
+
       const { balanceBefore, balanceAfter } = wallet.updateBalance(
         amount,
         "payment"
@@ -632,11 +754,11 @@ class WalletBalanceService {
 
       await wallet.save({ session: localSession });
 
-      // 🆕 LOG PAYMENT
+      // LOG PAYMENT
       const user = await User.findById(userId);
       await logger.logWallet({
         type: "payment_processed",
-        action: `Payment processed: $${amount}`,
+        action: `Payment processed: ${amount} CVT`,
         walletId: wallet._id,
         userId,
         userDetails: user
@@ -664,7 +786,7 @@ class WalletBalanceService {
       };
     } catch (error) {
       if (!session) await localSession.abortTransaction();
-      // 🆕 LOG FAILED PAYMENT
+
       await logger.logWallet({
         type: "payment_failed",
         action: `Payment failed: ${error.message}`,
@@ -681,6 +803,7 @@ class WalletBalanceService {
 
   /**
    * 💵 Process Refund
+   * ✅ NOW MINTS TOKENS BACK TO USER
    */
   async processRefund(userId, orderId, amount, description, session) {
     let localSession = session;
@@ -693,14 +816,22 @@ class WalletBalanceService {
     }
 
     try {
-      // 🆕 USE EXISTING WALLET ONLY
       const wallet = await Wallet.findOne({ userId });
 
       if (!wallet) {
         throw new Error("Wallet not found");
       }
 
-      // Add refund amount
+      // ✅ MINT REFUND TOKENS ON BLOCKCHAIN
+      const mintResult = await fabricService.mintTokens(
+        userId.toString(),
+        amount,
+        `Refund for order ${orderId}`
+      );
+
+      console.log("✅ Refund tokens minted:", mintResult);
+
+      // Update MongoDB
       const { balanceBefore, balanceAfter } = wallet.updateBalance(
         amount,
         "refund"
@@ -714,15 +845,18 @@ class WalletBalanceService {
         relatedOrderId: orderId,
         description: description || `Refund for order`,
         status: "completed",
+        metadata: {
+          blockchainTxId: mintResult.mintRecord?.txId,
+        },
       });
 
       await wallet.save({ session: localSession });
 
-      // 🆕 LOG REFUND
+      // LOG REFUND
       const user = await User.findById(userId);
       await logger.logWallet({
         type: "refund_processed",
-        action: `Refund processed: $${amount}`,
+        action: `Refund processed: ${amount} CVT`,
         walletId: wallet._id,
         userId,
         userDetails: user
@@ -738,6 +872,7 @@ class WalletBalanceService {
           orderId,
           description,
           newBalance: wallet.balance,
+          blockchainTxId: mintResult.mintRecord?.txId,
         },
       });
 
@@ -746,13 +881,14 @@ class WalletBalanceService {
       }
 
       console.log(
-        `✅ Refunded $${amount} to wallet. New balance: $${wallet.balance}`
+        `✅ Refunded ${amount} CVT to wallet. New balance: ${wallet.balance} CVT`
       );
 
       return {
         success: true,
         newBalance: wallet.balance,
         refundAmount: amount,
+        blockchainTxId: mintResult.mintRecord?.txId,
         message: "Refund processed successfully",
       };
     } catch (error) {
@@ -760,7 +896,7 @@ class WalletBalanceService {
         await localSession.abortTransaction();
       }
 
-      // 🆕 LOG FAILED REFUND
+      // LOG FAILED REFUND
       await logger.logWallet({
         type: "refund_failed",
         action: `Refund failed: ${error.message}`,
@@ -784,7 +920,6 @@ class WalletBalanceService {
    */
   async freezeWallet(userId, reason) {
     try {
-      // 🆕 USE EXISTING WALLET ONLY
       const wallet = await Wallet.findOne({ userId });
 
       if (!wallet) {
@@ -809,7 +944,6 @@ class WalletBalanceService {
    */
   async unfreezeWallet(userId) {
     try {
-      // 🆕 USE EXISTING WALLET ONLY
       const wallet = await Wallet.findOne({ userId });
 
       if (!wallet) {
@@ -831,11 +965,9 @@ class WalletBalanceService {
 
   /**
    * 🔄 Update Transaction with Order ID
-   * Used after order creation to link the payment transaction
    */
   async updateTransactionOrderId(userId, orderId, session) {
     try {
-      // Use findOneAndUpdate with atomic operation to avoid version conflicts
       const result = await Wallet.findOneAndUpdate(
         {
           userId,
@@ -869,61 +1001,12 @@ class WalletBalanceService {
       }
     } catch (error) {
       console.error("⚠️ Failed to update transaction orderId:", error);
-      // Don't throw - this is not critical
-    }
-  }
-
-  /**
-   * 💵 Process Refund
-   */
-  async processRefund(userId, orderId, amount, description) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-      // 🆕 USE EXISTING WALLET ONLY
-      const wallet = await Wallet.findOne({ userId });
-
-      if (!wallet) {
-        throw new Error("Wallet not found");
-      }
-
-      // Add refund amount
-      const { balanceBefore, balanceAfter } = wallet.updateBalance(
-        amount,
-        "refund"
-      );
-
-      wallet.addTransaction({
-        type: "refund",
-        amount,
-        balanceBefore,
-        balanceAfter,
-        relatedOrderId: orderId,
-        description: description || `Refund for order`,
-        status: "completed",
-      });
-
-      await wallet.save({ session });
-
-      await session.commitTransaction();
-
-      return {
-        success: true,
-        newBalance: wallet.balance,
-        message: "Refund processed successfully",
-      };
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
     }
   }
 
   /**
    * 💰 Process Payment WITH Supplier Credit
-   * Deducts from buyer AND credits seller
+   * ✅ NOW USES BLOCKCHAIN TOKEN TRANSFER
    */
   async processPaymentWithCredit(
     buyerId,
@@ -940,16 +1023,20 @@ class WalletBalanceService {
     }
 
     try {
-      // 1. Get both wallets
       const [buyerWallet, sellerWallet] = await Promise.all([
         this.getOrCreateWallet(buyerId),
         this.getOrCreateWallet(sellerId),
       ]);
 
-      // 2. Validate buyer wallet
-      if (buyerWallet.balance < amount) {
+      // Validate buyer wallet
+      const buyerBalance = await fabricService.getTokenBalance(
+        buyerId.toString()
+      );
+      const realBalance = buyerBalance.balance || 0;
+
+      if (realBalance < amount) {
         throw new Error(
-          `Insufficient balance. Available: ${buyerWallet.balance}, Required: ${amount}`
+          `Insufficient balance. Available: ${realBalance} CVT, Required: ${amount} CVT`
         );
       }
 
@@ -957,18 +1044,27 @@ class WalletBalanceService {
         throw new Error("Buyer wallet is not available");
       }
 
-      // 3. Validate seller wallet
+      // Validate seller wallet
       if (!sellerWallet.isActive || sellerWallet.isFrozen) {
         throw new Error("Seller wallet cannot receive payments");
       }
 
-      // 4. Get user details
       const [buyer, seller] = await Promise.all([
         User.findById(buyerId).select("name email walletAddress role"),
         User.findById(sellerId).select("name email walletAddress role"),
       ]);
 
-      // 5. DEDUCT from buyer
+      // ✅ TRANSFER TOKENS ON BLOCKCHAIN
+      const transferResult = await fabricService.transferTokens(
+        buyerId.toString(),
+        sellerId.toString(),
+        amount,
+        description || `Payment for order ${orderId}`
+      );
+
+      console.log("✅ Blockchain payment transfer:", transferResult);
+
+      // Update MongoDB for both wallets
       const buyerBalanceBefore = buyerWallet.balance;
       const { balanceAfter: buyerBalanceAfter } = buyerWallet.updateBalance(
         amount,
@@ -988,10 +1084,10 @@ class WalletBalanceService {
           sellerName: seller.name,
           sellerWalletAddress: seller.walletAddress,
           orderReference: orderId,
+          blockchainTxId: transferResult.transfer?.txId,
         },
       });
 
-      // 6. ✅ CREDIT to seller (THIS WAS MISSING!)
       const sellerBalanceBefore = sellerWallet.balance;
       const { balanceAfter: sellerBalanceAfter } = sellerWallet.updateBalance(
         amount,
@@ -1011,19 +1107,19 @@ class WalletBalanceService {
           buyerName: buyer.name,
           buyerWalletAddress: buyer.walletAddress,
           orderReference: orderId,
+          blockchainTxId: transferResult.transfer?.txId,
         },
       });
 
-      // 7. Save both wallets
       await Promise.all([
         buyerWallet.save({ session: localSession }),
         sellerWallet.save({ session: localSession }),
       ]);
 
-      // 8. Log the transaction
+      // Log the transaction
       await logger.logWallet({
         type: "payment_processed",
-        action: `Payment: $${amount} from ${buyer.name} to ${seller.name}`,
+        action: `Payment: ${amount} CVT from ${buyer.name} to ${seller.name}`,
         walletId: buyerWallet._id,
         userId: buyerId,
         userDetails: {
@@ -1047,16 +1143,16 @@ class WalletBalanceService {
             balanceBefore: sellerBalanceBefore,
             balanceAfter: sellerBalanceAfter,
           },
+          blockchainTxId: transferResult.transfer?.txId,
         },
       });
 
-      // Commit if we created the session
       if (!session) {
         await localSession.commitTransaction();
       }
 
       console.log(
-        `✅ Payment processed: Vendor paid $${amount}, Supplier credited $${amount}`
+        `✅ Payment processed: Vendor paid ${amount} CVT, Supplier credited ${amount} CVT`
       );
 
       return {
@@ -1064,6 +1160,7 @@ class WalletBalanceService {
         message: "Payment processed and seller credited",
         data: {
           amount,
+          currency: "CVT",
           buyer: {
             userId: buyerId,
             name: buyer.name,
@@ -1074,6 +1171,7 @@ class WalletBalanceService {
             name: seller.name,
             newBalance: sellerBalanceAfter,
           },
+          blockchainTxId: transferResult.transfer?.txId,
         },
       };
     } catch (error) {
@@ -1086,6 +1184,78 @@ class WalletBalanceService {
       if (!session) {
         localSession.endSession();
       }
+    }
+  }
+
+  /**
+   * 🔄 Sync Wallet Balance with Blockchain
+   * ✅ NEW METHOD - Manually sync MongoDB cache with blockchain
+   */
+  async syncWalletBalance(userId) {
+    try {
+      const wallet = await Wallet.findOne({ userId });
+
+      if (!wallet) {
+        throw new Error("Wallet not found");
+      }
+
+      // Get blockchain balance
+      const tokenBalance = await fabricService.getTokenBalance(
+        userId.toString()
+      );
+
+      if (!tokenBalance.success) {
+        throw new Error("Failed to get blockchain balance");
+      }
+
+      const blockchainBalance = parseFloat(tokenBalance.balance) || 0;
+
+      // Update MongoDB
+      const balanceBefore = wallet.balance;
+      wallet.balance = blockchainBalance;
+      wallet.lastSyncedAt = new Date();
+      await wallet.save();
+
+      console.log(
+        `✅ Wallet synced: ${balanceBefore} CVT → ${blockchainBalance} CVT`
+      );
+
+      return {
+        success: true,
+        message: "Wallet balance synced successfully",
+        data: {
+          balanceBefore,
+          balanceAfter: blockchainBalance,
+          currency: "CVT",
+          lastSyncedAt: wallet.lastSyncedAt,
+        },
+      };
+    } catch (error) {
+      console.error("❌ Sync wallet balance failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * 💰 Check if user can afford amount
+   * ✅ NOW CHECKS BLOCKCHAIN BALANCE
+   */
+  async canAfford(userId, amount) {
+    try {
+      // Check blockchain health first
+      await fabricService.ensureBlockchainConnected();
+
+      const tokenBalance = await fabricService.getTokenBalance(
+        userId.toString()
+      );
+      const balance = tokenBalance.balance || 0;
+      return balance >= amount;
+    } catch (error) {
+      console.error("❌ Blockchain balance check failed:", error);
+      // Throw error to inform user that blockchain is required
+      throw new Error(
+        `Blockchain network error: ${error.message}. Please ensure Hyperledger Fabric is running.`
+      );
     }
   }
 }

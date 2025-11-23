@@ -9,9 +9,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Badge } from "@/components/_ui/badge";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   CubeIcon,
   ArrowTrendingUpIcon,
@@ -28,15 +28,16 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { productAPI } from "@/lib/api/product.api";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/use-page-title";
 import type { Product } from "@/types";
 import { Loader2 } from "lucide-react";
 import { badgeColors, colors } from "@/lib/colorConstants";
 
-// Currency formatting (PKR, abbreviated)
+// Currency formatting (CVT, abbreviated)
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-PK", {
     style: "currency",
-    currency: "PKR",
+    currency: "CVT",
     maximumFractionDigits: 0,
   }).format(amount);
 };
@@ -61,9 +62,11 @@ interface DashboardStats {
   totalViews: number;
   totalSales: number;
   totalRevenue: number;
+  totalOrders?: number;
 }
 
 export default function VendorDashboardPage() {
+  usePageTitle("Vendor Dashboard");
   const { user } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -127,6 +130,7 @@ export default function VendorDashboardPage() {
         totalViews,
         totalSales,
         totalRevenue,
+        totalOrders: 0,
       });
 
       setRecentProducts(normalizedProducts);
@@ -166,7 +170,20 @@ export default function VendorDashboardPage() {
     );
   }
 
-  const statsData = [
+  type StatData = {
+    title: string;
+    value: string | number;
+    subtitle?: string;
+    icon: React.ElementType;
+    badge?: React.ReactNode;
+    trend?: {
+      value: number;
+      isPositive: boolean;
+      label: string;
+    };
+  };
+
+  const statsData: StatData[] = [
     {
       title: "Total Products",
       value: stats?.totalProducts || 0,
@@ -447,7 +464,7 @@ export default function VendorDashboardPage() {
                           <img
                             src={product.images[0].url}
                             alt={product.name}
-                            className="w-12 h-12 object-cover rounded-none shadow-md"
+                            className="w-9 h-12 object-cover rounded-none"
                           />
                         ) : (
                           <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-none flex items-center justify-center shadow-md">

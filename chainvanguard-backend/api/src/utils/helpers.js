@@ -100,7 +100,7 @@ export const buildPaginationResponse = (data, page, limit, total) => {
 /**
  * Format currency
  */
-export const formatCurrency = (amount, currency = "PKR", locale = "en-PK") => {
+export const formatCurrency = (amount, currency = "CVT", locale = "en-PK") => {
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: currency,
@@ -572,6 +572,17 @@ export const throttle = (func, limit) => {
   };
 };
 
+/**
+ * Get date filter for last N days
+ * */
+export const getDateFilter = (days = 7) => {
+  const now = new Date();
+  const past = new Date();
+  past.setDate(now.getDate() - days);
+
+  return { start: past, end: now };
+};
+
 // ========================================
 // EXPORTS
 // ========================================
@@ -643,4 +654,5 @@ export default {
   timeout,
   debounce,
   throttle,
+  getDateFilter,
 };

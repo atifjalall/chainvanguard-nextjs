@@ -26,7 +26,12 @@ class AuthService {
    */
   async register(userData) {
     try {
-      // 1. Generate wallet
+      // 1. Check blockchain health FIRST
+      console.log("🔍 Checking blockchain network health...");
+      await fabricService.ensureBlockchainConnected();
+      console.log("✅ Blockchain network is active");
+
+      // 2. Generate wallet
       console.log(`🔐 Generating wallet for: ${userData.name}`);
       const wallet = await this.walletService.generateWallet();
       // 2. Hash password
@@ -100,10 +105,10 @@ class AuthService {
         },
       });
 
-      // 5. Register on blockchain (async)
-      this.registerOnBlockchain(newUser).catch((err) => {
-        console.error("⚠️ Blockchain registration failed (will retry):", err);
-      });
+      // 5. Register on blockchain (REQUIRED - synchronous)
+      console.log("📝 Registering user on blockchain...");
+      await this.registerOnBlockchain(newUser);
+      console.log("✅ User registered on blockchain successfully");
 
       await notificationService.createNotification({
         userId: newUser._id,
@@ -164,6 +169,25 @@ class AuthService {
       await user.save();
 
       console.log(`✅ User registered on blockchain: ${user.name}`);
+
+      // 🪙 Create token account and mint initial 1M tokens
+      try {
+        console.log("🪙 Creating token account and minting initial tokens...");
+        await fabricService.createTokenAccount(
+          user._id.toString(),
+          user.walletAddress,
+          0
+        );
+        await fabricService.mintTokens(
+          user._id.toString(),
+          1000000,
+          "Welcome bonus - Initial token distribution"
+        );
+        console.log("✅ Token account created with 1M CVT");
+      } catch (tokenError) {
+        console.error("⚠️ Token account creation failed:", tokenError.message);
+        // Don't fail registration if token creation fails
+      }
     } catch (error) {
       console.error("❌ Blockchain registration error:", error);
       throw error;

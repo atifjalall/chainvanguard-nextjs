@@ -3,9 +3,9 @@
 
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWallet } from "@/components/providers/wallet-provider";
-import { Button } from "@/components/_ui/button";
-import { Avatar, AvatarFallback } from "@/components/_ui/avatar";
-import { Badge } from "@/components/_ui/badge";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -439,13 +439,13 @@ export function DashboardHeader({
     return user?.name || user?.walletName || "User";
   };
 
-  const formatCurrency = (amount: number) => `Rs ${amount.toFixed(2)}`;
+  const formatCurrency = (amount: number) => `CVT ${amount.toFixed(2)}`;
 
   const formatCurrencyAbbreviated = (amount: number) => {
     if (amount >= 1e9) {
-      return `Rs ${(amount / 1e9).toFixed(2)} B`;
+      return `CVT ${(amount / 1e9).toFixed(2)} B`;
     } else if (amount >= 1e6) {
-      return `Rs ${(amount / 1e6).toFixed(2)} M`;
+      return `CVT ${(amount / 1e6).toFixed(2)} M`;
     } else {
       return formatCurrency(amount);
     }
@@ -736,17 +736,19 @@ export function DashboardHeader({
               )}
 
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-xs py-1 h-7 cursor-pointer rounded-none">
+              <DropdownMenuItem
+                onClick={() => router.push("/profile")}
+                className="text-xs py-1 h-7 cursor-pointer rounded-none"
+              >
                 <UserIcon className="mr-2 h-3.5 w-3.5" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-xs py-1 h-7 cursor-pointer rounded-none">
+              <DropdownMenuItem
+                onClick={() => router.push("/wallet")}
+                className="text-xs py-1 h-7 cursor-pointer rounded-none"
+              >
                 <WalletIcon className="mr-2 h-3.5 w-3.5" />
                 <span>Wallet</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-xs py-1 h-7 cursor-pointer rounded-none">
-                <Cog6ToothIcon className="mr-2 h-3.5 w-3.5" />
-                <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

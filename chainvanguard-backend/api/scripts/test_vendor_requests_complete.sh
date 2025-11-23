@@ -199,17 +199,17 @@ sleep 1
 print_test "Creating vendor wallet (required for payments)"
 WALLET_CREATE=$(api_call POST "/wallet/create" "$VENDOR_TOKEN" '{
     "initialBalance": 100000,
-    "currency": "PKR"
+    "currency": "CVT"
 }')
 
 if contains "$WALLET_CREATE" '"success".*true'; then
-    print_success "Vendor wallet created with PKR 100,000"
+    print_success "Vendor wallet created with CVT 100,000"
 else
     # Wallet might already exist
     WALLET_CHECK=$(api_call GET "/wallet/balance" "$VENDOR_TOKEN")
     if contains "$WALLET_CHECK" '"success".*true'; then
         WALLET_BALANCE=$(echo "$WALLET_CHECK" | jq -r '.balance // .data.balance')
-        print_success "Vendor wallet exists (Balance: PKR $WALLET_BALANCE)"
+        print_success "Vendor wallet exists (Balance: CVT $WALLET_BALANCE)"
     else
         print_error "Failed to create/verify vendor wallet"
     fi

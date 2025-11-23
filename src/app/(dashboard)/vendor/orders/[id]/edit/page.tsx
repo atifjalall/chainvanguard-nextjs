@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const statusOptions: Array<{
   value: OrderStatus;
@@ -110,6 +111,7 @@ const statusOptions: Array<{
 ];
 
 export default function VendorOrderEditPage() {
+  usePageTitle("Edit Order");
   const params = useParams();
   const router = useRouter();
   const orderId = params?.id as string;
@@ -260,7 +262,7 @@ export default function VendorOrderEditPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -441,10 +443,14 @@ export default function VendorOrderEditPage() {
                   exit={{ opacity: 0, height: 0, y: -20 }}
                   transition={{ duration: 0.3, ease: "easeInOut" }}
                 >
-                  <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+                  <Card
+                    className={`${colors.cards.base} rounded-none !shadow-none`}
+                  >
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-xs">
-                        <TruckIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                        <TruckIcon
+                          className={`h-4 w-4 ${colors.icons.primary}`}
+                        />
                         Shipping Information
                       </CardTitle>
                     </CardHeader>
@@ -452,7 +458,8 @@ export default function VendorOrderEditPage() {
                       {/* Tracking Number */}
                       <div className="space-y-2">
                         <Label className={`${colors.texts.primary} text-xs`}>
-                          Tracking Number <span className="text-red-500">*</span>
+                          Tracking Number{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           placeholder="Auto-generated tracking number"
@@ -467,7 +474,10 @@ export default function VendorOrderEditPage() {
                         <Label className={`${colors.texts.primary} text-xs`}>
                           Courier Name <span className="text-red-500">*</span>
                         </Label>
-                        <Select value={courierName} onValueChange={setCourierName}>
+                        <Select
+                          value={courierName}
+                          onValueChange={setCourierName}
+                        >
                           <SelectTrigger
                             className={`${colors.inputs.base} rounded-none text-xs w-full`}
                           >
@@ -537,7 +547,8 @@ export default function VendorOrderEditPage() {
                         className={`p-4 ${badgeColors.blue.bg} border ${badgeColors.blue.border} rounded-none`}
                       >
                         <p className={`text-xs ${badgeColors.blue.text}`}>
-                          <strong>Note:</strong> Tracking number auto-generated. Courier name is required.
+                          <strong>Note:</strong> Tracking number auto-generated.
+                          Courier name is required.
                         </p>
                       </div>
                     </CardContent>

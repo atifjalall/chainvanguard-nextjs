@@ -28,6 +28,8 @@ import {
 } from "@/lib/api/customer.wishlist.api";
 import { addToCart } from "@/lib/api/customer.cart.api";
 import type { Product } from "@/types";
+import { usePageTitle } from "@/hooks/use-page-title";
+import { useCart } from "@/components/providers/cart-provider";
 
 interface ProductCardProps {
   id: string | number;
@@ -161,11 +163,11 @@ function ProductCard({
 
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-normal text-gray-900 dark:text-white">
-            Rs {price.toFixed(2)}
+            CVT {price.toFixed(2)}
           </span>
           {costPrice && costPrice > price && (
             <span className="text-[10px] text-gray-400 line-through">
-              Rs {costPrice.toFixed(2)}
+              CVT {costPrice.toFixed(2)}
             </span>
           )}
         </div>
@@ -177,9 +179,11 @@ function ProductCard({
 }
 
 export default function ProductDetailPage() {
+  usePageTitle("Product Details");
   const router = useRouter();
   const params = useParams();
   const productId = params?.id as string;
+  const { refreshCartCount, incrementCartCount } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -261,6 +265,10 @@ export default function ProductDetailPage() {
       if (response.success) {
         toast.success("Added to cart");
         setAddedToCart(true);
+        // Immediately update cart count badge for instant feedback
+        incrementCartCount(quantity);
+        // Refresh in background for accuracy
+        refreshCartCount();
         setTimeout(() => setAddedToCart(false), 2000); // Revert after 2 seconds
       } else {
         toast.error("Failed to add to cart");
@@ -311,6 +319,9 @@ export default function ProductDetailPage() {
       });
       if (response.success) {
         toast.success("Added to cart");
+        // Immediately refresh cart count to update badge
+        await refreshCartCount();
+        console.log('[PRODUCT] Cart count refreshed after adding related product');
       } else {
         toast.error("Failed to add to cart");
       }
@@ -367,7 +378,7 @@ export default function ProductDetailPage() {
       return "Free Shipping";
     }
 
-    return `Shipping: Rs ${shippingCost.toFixed(2)}`;
+    return `Shipping: CVT ${shippingCost.toFixed(2)}`;
   };
 
   const renderStars = (rating: number) => {
@@ -525,11 +536,11 @@ export default function ProductDetailPage() {
                 </h1>
                 <div className="flex items-baseline gap-3">
                   <span className="text-2xl font-light text-gray-900 dark:text-white">
-                    Rs {product.price.toFixed(2)}
+                    CVT {product.price.toFixed(2)}
                   </span>
                   {product.costPrice && product.costPrice > product.price && (
                     <span className="text-sm text-gray-400 line-through">
-                      Rs {product.costPrice.toFixed(2)}
+                      CVT {product.costPrice.toFixed(2)}
                     </span>
                   )}
                 </div>

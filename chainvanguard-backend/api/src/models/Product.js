@@ -20,6 +20,26 @@ const productSchema = new Schema(
     },
 
     // ========================================
+    // RETURN & DEFECT TRACKING
+    // ========================================
+    damagedQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+      index: true,
+    },
+    returnedQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    writeOffQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // ========================================
     // CATEGORY SYSTEM (Apparel-focused)
     // ========================================
     category: {
@@ -605,6 +625,13 @@ productSchema.virtual("stockStatus").get(function () {
   return "in_stock";
 });
 
+// Total inventory value including damaged (damaged at 50% value)
+productSchema.virtual("totalInventoryValue").get(function () {
+  const availableValue = this.quantity * this.price;
+  const damagedValue = (this.damagedQuantity || 0) * (this.price * 0.5);
+  return availableValue + damagedValue;
+});
+
 // Product URL
 productSchema.virtual("url").get(function () {
   return `/products/${this.slug || this._id}`;
@@ -683,6 +710,28 @@ productSchema.methods.updateStockAfterPurchase = async function (quantity) {
   this.reservedQuantity = Math.max((this.reservedQuantity || 0) - quantity, 0);
   this.totalSold += quantity;
   this.lastSoldAt = new Date();
+  return this.save();
+};
+
+// Handle return restocking
+productSchema.methods.restockFromReturn = async function (quantity, condition) {
+  if (condition === "good") {
+    this.quantity += quantity;
+    this.returnedQuantity = (this.returnedQuantity || 0) + quantity;
+
+    // Update status if was out of stock
+    if (this.status === "out_of_stock" && this.quantity > 0) {
+      this.status = "active";
+    }
+  } else if (condition === "damaged") {
+    this.damagedQuantity = (this.damagedQuantity || 0) + quantity;
+    this.returnedQuantity = (this.returnedQuantity || 0) + quantity;
+  } else if (condition === "unsellable") {
+    this.writeOffQuantity = (this.writeOffQuantity || 0) + quantity;
+    this.returnedQuantity = (this.returnedQuantity || 0) + quantity;
+  }
+
+  this.lastRestockedAt = new Date();
   return this.save();
 };
 

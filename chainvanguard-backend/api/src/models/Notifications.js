@@ -37,6 +37,18 @@ const notificationSchema = new Schema(
         "order_refunded",
         "order_returned",
 
+        // Return Notifications
+        "return_received",
+        "new_return_request",
+        "return_approved",
+        "return_rejected",
+        "return_item_received",
+        "return_inspected",
+        "refund_processed",
+        "return_refund_completed",
+        "return_cancelled",
+        "return_cancelled_by_customer",
+
         // Payment Notifications
         "payment_received",
         "payment_pending",
@@ -125,6 +137,7 @@ const notificationSchema = new Schema(
         "supply_chain",
         "security",
         "vendor_requests",
+        "return",
       ],
       required: true,
       index: true,
@@ -178,6 +191,7 @@ const notificationSchema = new Schema(
           "cart",
           "batch",
           "vendor_request",
+          "return",
           "",
         ],
         default: "",
@@ -237,6 +251,8 @@ const notificationSchema = new Schema(
         "contact_support",
         "reorder",
         "review_product",
+        "view_return",
+        "view_wallet",
         "none",
       ],
       default: "none",

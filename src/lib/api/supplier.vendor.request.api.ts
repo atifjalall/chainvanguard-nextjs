@@ -38,7 +38,7 @@ export async function getSupplierRequests(params?: {
  */
 export async function getRequestStats(): Promise<VendorRequestStatsResponse> {
   const response = await apiClient.get<VendorRequestStatsResponse>(
-    "/vendor-requests/stats"
+    "/vendor-requests/supplier/stats"
   );
   return response;
 }

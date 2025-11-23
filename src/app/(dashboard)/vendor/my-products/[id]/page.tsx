@@ -56,10 +56,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { productAPI } from "@/lib/api/product.api";
 import Image from "next/image";
 import { badgeColors } from "@/lib/colorConstants";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 type BadgeKey = keyof typeof badgeColors;
 
 export default function VendorProductDetailPage() {
+  usePageTitle("Product Details");
   const router = useRouter();
   const params = useParams();
   const productId = params?.id as string;
@@ -445,7 +447,7 @@ export default function VendorProductDetailPage() {
                       Unit Price
                     </span>
                     <span className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
-                      Rs {product.price.toFixed(2)}
+                      CVT {product.price.toFixed(2)}
                     </span>
                   </div>
                   {product.costPrice && product.costPrice > 0 && (
@@ -454,7 +456,7 @@ export default function VendorProductDetailPage() {
                         Cost Price
                       </span>
                       <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                        Rs {product.costPrice.toFixed(2)}
+                        CVT {product.costPrice.toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -479,7 +481,7 @@ export default function VendorProductDetailPage() {
                       Total Value
                     </span>
                     <span className="text-base md:text-lg font-bold text-gray-900 dark:text-white">
-                      Rs {(product.quantity * product.price).toLocaleString()}
+                      CVT {(product.quantity * product.price).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -776,7 +778,7 @@ export default function VendorProductDetailPage() {
                           },
                           {
                             label: "Revenue",
-                            value: `Rs ${((product.totalSold || 0) * product.price).toFixed(0)}`,
+                            value: `CVT ${((product.totalSold || 0) * product.price).toFixed(0)}`,
                             icon: BanknotesIcon,
                           },
                         ].map((stat) => {
@@ -799,7 +801,7 @@ export default function VendorProductDetailPage() {
                           Average Order Value
                         </span>
                         <span className="font-semibold text-gray-900 dark:text-gray-100">
-                          Rs {product.price.toFixed(2)}
+                          CVT {product.price.toFixed(2)}
                         </span>
                       </div>
                     </div>

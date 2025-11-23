@@ -74,6 +74,7 @@ interface RecentActivity {
 
 // Use the TopVendor type from your shared types to ensure compatibility
 import type { TopVendor } from "@/types";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 interface TopProduct {
   id: string;
@@ -88,7 +89,7 @@ interface TopProduct {
   image?: string; // Add image field
 }
 
-// Custom Rs Icon component
+// Custom CVT Icon component
 const RsIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -107,7 +108,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -120,6 +121,7 @@ const RsIcon = () => (
 );
 
 export default function SupplierDashboard() {
+  usePageTitle("Supplier Dashboard");
   const { user } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -325,7 +327,7 @@ export default function SupplierDashboard() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
     }).format(amount);
   };
 
@@ -1000,7 +1002,7 @@ export default function SupplierDashboard() {
                   </div>
                 </button>
                 <button
-                 onClick={() => router.push("/supplier/vendors")}
+                  onClick={() => router.push("/supplier/vendors")}
                   className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
                 >
                   <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
@@ -1018,7 +1020,7 @@ export default function SupplierDashboard() {
                   </div>
                 </button>
                 <button
-                 onClick={() => router.push("/supplier/inventory")}
+                  onClick={() => router.push("/supplier/inventory")}
                   className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
                 >
                   <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
@@ -1038,7 +1040,7 @@ export default function SupplierDashboard() {
                   </div>
                 </button>
                 <button
-                 onClick={() => router.push("/supplier/insights")}
+                  onClick={() => router.push("/supplier/insights")}
                   className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
                 >
                   <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">

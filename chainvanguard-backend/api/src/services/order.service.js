@@ -25,6 +25,11 @@ class OrderService {
     session.startTransaction();
 
     try {
+      // 1. Check blockchain health FIRST
+      console.log("🔍 Checking blockchain network health...");
+      await fabricService.ensureBlockchainConnected();
+      console.log("✅ Blockchain network is active");
+
       console.log("🚀 Starting order creation...");
 
       // 1. Get customer details
@@ -81,7 +86,10 @@ class OrderService {
 
         // Validate total calculation
         const expectedTotal =
-          pricing.subtotal + pricing.shippingCost + pricing.tax - pricing.discount;
+          pricing.subtotal +
+          pricing.shippingCost +
+          pricing.tax -
+          pricing.discount;
         const totalDiff = Math.abs(pricing.total - expectedTotal);
         if (totalDiff > 0.01) {
           console.warn(
@@ -215,7 +223,7 @@ class OrderService {
         originalAmount: pricing.total,
         discountAmount: loyaltyDiscount.discount,
         discountPercentage: loyaltyDiscount.discountPercentage,
-        currency: "PKR",
+        currency: "CVT",
 
         shippingAddress: orderData.shippingAddress,
         billingAddress: orderData.billingAddress || orderData.shippingAddress,
@@ -260,11 +268,11 @@ class OrderService {
         type: "order_placed",
         category: "order",
         title: "Order Placed Successfully",
-        message: `Your order #${order.orderNumber} has been placed successfully. Total: Rs ${order.total.toFixed(2)}`,
+        message: `Your order #${order.orderNumber} has been placed successfully. Total: CVT ${order.total.toFixed(2)}`,
         orderId: order._id,
         priority: "high",
         actionType: "view_order",
-        actionUrl: `/orders/${order._id}`,
+        actionUrl: `/customer/orders/${order._id}`,
         relatedEntity: {
           entityType: "order",
           entityId: order._id,
@@ -352,10 +360,10 @@ class OrderService {
         }
       }
 
-      // 12. Record on blockchain (async - don't wait)
-      this.recordOrderOnBlockchain(order, validatedItems, customer).catch(
-        (err) => console.error("⚠️ Blockchain recording failed:", err)
-      );
+      // 12. Record on blockchain (REQUIRED - synchronous)
+      console.log("📝 Recording order on blockchain...");
+      await this.recordOrderOnBlockchain(order, validatedItems, customer);
+      console.log("✅ Order recorded on blockchain successfully");
 
       return {
         success: true,
@@ -609,9 +617,11 @@ class OrderService {
       console.log(`✅ Order recorded on blockchain: ${order.orderNumber}`);
     } catch (error) {
       console.error("❌ Blockchain recording error:", error);
-      // Don't throw - order should succeed even if blockchain fails
-    } finally {
       await fabricService.disconnect();
+      // Throw error to inform user that blockchain is required
+      throw new Error(
+        `Blockchain network error: ${error.message}. Please ensure Hyperledger Fabric is running.`
+      );
     }
   }
 
@@ -686,9 +696,11 @@ class OrderService {
       );
     } catch (error) {
       console.error("❌ Product ownership transfer error:", error);
-      // Don't throw - order should succeed even if transfers fail
-    } finally {
       await fabricService.disconnect();
+      // Throw error to inform user that blockchain is required
+      throw new Error(
+        `Blockchain network error during ownership transfer: ${error.message}. Please ensure Hyperledger Fabric is running.`
+      );
     }
   }
 
@@ -1103,7 +1115,7 @@ class OrderService {
           orderId: order._id,
           priority: newStatus === "cancelled" ? "high" : "medium",
           actionType: "view_order",
-          actionUrl: `/orders/${order._id}`,
+          actionUrl: `/customer/orders/${order._id}`,
         });
 
         // Notify vendor
@@ -1117,7 +1129,7 @@ class OrderService {
           orderId: order._id,
           priority: "medium",
           actionType: "view_order",
-          actionUrl: `/orders/${order._id}`,
+          actionUrl: `/vendor/orders/${order._id}`,
         });
       }
       // Award loyalty points when order is delivered
@@ -1180,7 +1192,7 @@ class OrderService {
           previousStatus: oldStatus,
           newStatus,
           comment: notes,
-          trackingNumber: order.trackingNumber, // ✅ Include tracking number
+          trackingNumber: order.trackingNumber,
         },
         previousState: { status: oldStatus },
         newState: order.toObject(),
@@ -1193,7 +1205,7 @@ class OrderService {
           id: order._id,
           orderNumber: order.orderNumber,
           status: order.status,
-          trackingNumber: order.trackingNumber, // ✅ Return tracking number
+          trackingNumber: order.trackingNumber,
           statusHistory: order.statusHistory,
         },
       };
@@ -1461,7 +1473,7 @@ class OrderService {
           order.refundAmount = order.total;
 
           console.log(
-            `✅ Refund processed: Rs ${order.total} returned to customer wallet`
+            `✅ Refund processed: CVT ${order.total} returned to customer wallet`
           );
         } catch (refundError) {
           console.error("❌ Refund processing failed:", refundError);
@@ -1475,7 +1487,7 @@ class OrderService {
       // Create notification with refund info if applicable
       const refundMessage =
         order.paymentStatus === "refunded"
-          ? `Your order #${order.orderNumber} has been cancelled. Rs ${order.total.toFixed(2)} has been refunded to your wallet.`
+          ? `Your order #${order.orderNumber} has been cancelled. CVT ${order.total.toFixed(2)} has been refunded to your wallet.`
           : `Your order #${order.orderNumber} has been cancelled.`;
 
       await notificationService.createNotification({

@@ -7,17 +7,18 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/_ui/card";
-import { Button } from "@/components/_ui/button";
-import { Badge } from "@/components/_ui/badge";
-import { Progress } from "@/components/_ui/progress";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/_ui/tabs";
+} from "@/components/ui/tabs";
 import {
+import { usePageTitle } from "@/hooks/use-page-title";
   Shield,
   Network,
   Monitor,
@@ -85,6 +86,7 @@ type TransactionType =
 type AlertType = "warning" | "error" | "info";
 
 export default function EnhancedBlockchainExpertDashboard() {
+  usePageTitle("Blockchain Dashboard");
   const [isLoading, setIsLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
