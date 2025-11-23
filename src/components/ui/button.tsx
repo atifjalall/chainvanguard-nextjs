@@ -18,6 +18,19 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        approve:
+          "border border-green-300 text-green-600 dark:text-green-400 " +
+          "!hover:bg-green-50 dark:!hover:bg-green-900/10 " +
+          "!hover:border-green-600 dark:!hover:border-green-400 " +
+          "!hover:text-green-600 dark:!hover:text-green-400",
+
+        reject:
+          "border border-red-300 text-red-600 dark:text-red-400 " +
+          "hover:bg-red-50 dark:hover:bg-red-900/10 " +
+          "hover:border-red-600 dark:hover:border-red-400 " +
+          "hover:text-red-600 dark:hover:text-red-400",
+        nohover:
+          "bg-transparent text-inherit !hover:bg-transparent !hover:text-inherit !hover:opacity-100 !hover:shadow-none",
       },
       size: {
         default: "h-8 px-4 py-2 has-[>svg]:px-3",

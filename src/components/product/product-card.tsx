@@ -198,11 +198,11 @@ export function ProductCard({
         {/* Price */}
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-normal text-black">
-            Rs {price.toFixed(2)}
+            CVT {price.toFixed(2)}
           </span>
           {costPrice && costPrice > price && (
             <span className="text-xs text-gray-400 line-through">
-              Rs {costPrice.toFixed(2)}
+              CVT {costPrice.toFixed(2)}
             </span>
           )}
         </div>

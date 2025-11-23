@@ -66,6 +66,7 @@ import {
 import { cn } from "@/lib/utils";
 import vendorBrowseApi from "@/lib/api/vendor.browse.api";
 import vendorRequestApi from "@/lib/api/vendor.request.api";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const categoryOptions = [
   "All Categories",
@@ -342,7 +343,7 @@ function InventoryCard({
             <span
               className={`text-sm font-semibold ${isOutOfStock ? "text-gray-400" : "text-gray-900 dark:text-white"}`}
             >
-              Rs {item.pricePerUnit.toFixed(2)}
+              CVT {item.pricePerUnit.toFixed(2)}
             </span>
             <span className="text-xs text-gray-500">per {item.unit}</span>
           </div>
@@ -361,6 +362,7 @@ function InventoryCard({
 }
 
 export default function VendorBrowsePage() {
+  usePageTitle("Browse Inventory");
   const { user } = useAuth();
   const router = useRouter();
   const [inventory, setInventory] = useState<Inventory[]>([]);
@@ -1019,7 +1021,7 @@ export default function VendorBrowsePage() {
 
         {/* Enhanced Request Dialog */}
         <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-          <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none shadow-none max-w-sm md:max-w-md">
+          <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none shadow-none max-w-lg md:max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
                 Request Material
@@ -1146,7 +1148,7 @@ export default function VendorBrowsePage() {
                     Unit Price:
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    Rs {selectedItem?.pricePerUnit.toFixed(2)}
+                    CVT {selectedItem?.pricePerUnit.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -1162,7 +1164,7 @@ export default function VendorBrowsePage() {
                     Subtotal:
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    Rs {subtotal.toFixed(2)}
+                    CVT {subtotal.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -1170,13 +1172,13 @@ export default function VendorBrowsePage() {
                     Tax (10%):
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    Rs {tax.toFixed(2)}
+                    CVT {tax.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm font-semibold pt-2 border-t border-gray-200 dark:border-gray-700">
                   <span className="text-gray-900 dark:text-white">Total:</span>
                   <span className="text-gray-900 dark:text-white">
-                    Rs {total.toFixed(2)}
+                    CVT {total.toFixed(2)}
                   </span>
                 </div>
               </div>

@@ -18,6 +18,8 @@ import {
 } from "@/lib/api/customer.wishlist.api";
 import { addToCart } from "@/lib/api/customer.cart.api";
 import type { Product } from "@/types";
+import { usePageTitle } from "@/hooks/use-page-title";
+import { useCart } from "@/components/providers/cart-provider";
 
 interface WishlistItem {
   _id: string;
@@ -129,11 +131,11 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
 
         <div className="flex items-baseline gap-1 mt-1">
           <span className="text-xs font-normal text-gray-900 dark:text-white">
-            Rs {product.price.toFixed(2)}
+            CVT {product.price.toFixed(2)}
           </span>
           {product.originalPrice && product.originalPrice > product.price && (
             <span className="text-[10px] text-gray-400 line-through">
-              Rs {product.originalPrice.toFixed(2)}
+              CVT {product.originalPrice.toFixed(2)}
             </span>
           )}
         </div>
@@ -253,11 +255,11 @@ function SimilarProductCard({ product, onAddToCart }: SimilarProductCardProps) {
 
         <div className="flex items-baseline gap-1 mt-1">
           <span className="text-xs font-normal text-gray-900 dark:text-white">
-            Rs {product.price.toFixed(2)}
+            CVT {product.price.toFixed(2)}
           </span>
           {product.originalPrice && product.originalPrice > product.price && (
             <span className="text-[10px] text-gray-400 line-through">
-              Rs {product.originalPrice.toFixed(2)}
+              CVT {product.originalPrice.toFixed(2)}
             </span>
           )}
         </div>
@@ -286,7 +288,9 @@ function SimilarProductCard({ product, onAddToCart }: SimilarProductCardProps) {
 }
 
 export default function SavedItemsPage() {
+  usePageTitle("Saved Items");
   const router = useRouter();
+  const { incrementCartCount } = useCart();
   const [savedItems, setSavedItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
@@ -379,6 +383,8 @@ export default function SavedItemsPage() {
         productId,
         quantity: 1,
       });
+      // Immediately update cart badge for instant feedback
+      incrementCartCount(1);
       await removeFromWishlist(productId);
       setSavedItems((items) =>
         items.filter((item) => item.productId._id !== productId)

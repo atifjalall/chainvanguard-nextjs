@@ -4,8 +4,12 @@ import "./globals.css";
 import { WalletProvider } from "@/components/providers/wallet-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
-import { Toaster } from "@/components/_ui/sonner";
+import { NotificationProvider } from "@/components/providers/notification-provider";
+import { CartProvider } from "@/components/providers/cart-provider";
+import { Toaster } from "@/components/ui/sonner";
 import Footer from "@/components/common/customer-footer";
+import { CookieSync } from "@/components/auth/cookie-sync";
+import { RouteGuard } from "@/components/auth/route-guard";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -20,7 +24,10 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: "ChainVanguard - Blockchain Supply Chain Management",
+  title: {
+    template: "%s - ChainVanguard",
+    default: "ChainVanguard - Blockchain Supply Chain Management",
+  },
   description:
     "Decentralized supply chain management platform powered by blockchain technology",
 };
@@ -40,11 +47,17 @@ export default function RootLayout({
         <ThemeProvider>
           <WalletProvider>
             <AuthProvider>
-              <div className="min-h-screen bg-background flex flex-col">
-                {children}
-                <Footer />
-              </div>
-              <Toaster />
+              <CookieSync />
+              <RouteGuard />
+              <NotificationProvider>
+                <CartProvider>
+                  <div className="min-h-screen bg-background flex flex-col">
+                    {children}
+                    <Footer />
+                  </div>
+                  <Toaster />
+                </CartProvider>
+              </NotificationProvider>
             </AuthProvider>
           </WalletProvider>
         </ThemeProvider>

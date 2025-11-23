@@ -219,7 +219,7 @@ const orderSchema = new Schema(
     originalAmount: { type: Number, default: 0 }, // Amount before discount
     discountAmount: { type: Number, default: 0 }, // Discount applied
     discountPercentage: { type: Number, default: 0 }, // Discount percentage
-    currency: { type: String, default: "PKR" },
+    currency: { type: String, default: "CVT" },
 
     // ========================================
     // PAYMENT INFORMATION

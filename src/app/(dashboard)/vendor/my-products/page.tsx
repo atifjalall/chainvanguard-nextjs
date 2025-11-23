@@ -68,7 +68,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-// Custom Rs Icon component
+// Custom CVT Icon component
 const RsIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -87,7 +87,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -105,6 +105,8 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { productAPI } from "@/lib/api/product.api";
 import { badgeColors, colors } from "@/lib/colorConstants";
+
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -139,7 +141,7 @@ const HEADER_GAP = "gap-3";
 const NAVIGATION_MARGIN = "mt-6";
 
 // Add currency formatting functions
-const formatCurrency = (amount: number) => `Rs ${amount.toFixed(2)}`;
+const formatCurrency = (amount: number) => `CVT ${amount.toFixed(2)}`;
 
 const formatCurrencyAbbreviated = (amount: number) => {
   if (amount >= 1e9) {
@@ -152,6 +154,7 @@ const formatCurrencyAbbreviated = (amount: number) => {
 };
 
 export default function VendorMyProductsPage() {
+  usePageTitle("My Products");
   const { user } = useAuth();
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
@@ -509,11 +512,11 @@ export default function VendorMyProductsPage() {
           {/* Price */}
           <div className="flex items-baseline gap-2 mb-3">
             <span className="text-sm font-normal text-gray-900 dark:text-white">
-              Rs {product.price.toFixed(2)}
+              CVT {product.price.toFixed(2)}
             </span>
             {product.costPrice && product.costPrice > product.price && (
               <span className="text-xs text-gray-400 line-through">
-                Rs {product.costPrice.toFixed(2)}
+                CVT {product.costPrice.toFixed(2)}
               </span>
             )}
           </div>
@@ -738,11 +741,11 @@ export default function VendorMyProductsPage() {
                   </p>
                   <div className="flex items-baseline gap-2">
                     <p className="text-base font-semibold text-gray-900 dark:text-white">
-                      Rs {product.price.toFixed(2)}
+                      CVT {product.price.toFixed(2)}
                     </p>
                     {product.costPrice && product.costPrice > product.price && (
                       <span className="text-xs text-gray-400 line-through">
-                        Rs {product.costPrice.toFixed(2)}
+                        CVT {product.costPrice.toFixed(2)}
                       </span>
                     )}
                   </div>

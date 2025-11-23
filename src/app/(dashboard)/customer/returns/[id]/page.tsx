@@ -15,9 +15,15 @@ import {
   CubeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
-import { getReturnById, type ReturnRequest } from "@/lib/api/customer.returns.api";
+
+import { usePageTitle } from "@/hooks/use-page-title";
+import {
+  getReturnById,
+  type ReturnRequest,
+} from "@/lib/api/customer.returns.api";
 
 export default function ReturnDetailPage() {
+  usePageTitle("Return Details");
   const router = useRouter();
   const params = useParams();
   const returnId = params?.id as string;
@@ -144,8 +150,11 @@ export default function ReturnDetailPage() {
 
     return returnDetail.statusHistory.map((history, index) => ({
       status: history.status,
-      label: history.status.charAt(0).toUpperCase() + history.status.slice(1).replace(/_/g, " "),
-      description: history.notes || `Return ${history.status.replace(/_/g, " ")}`,
+      label:
+        history.status.charAt(0).toUpperCase() +
+        history.status.slice(1).replace(/_/g, " "),
+      description:
+        history.notes || `Return ${history.status.replace(/_/g, " ")}`,
       timestamp: history.timestamp,
       completed: true,
     }));
@@ -279,7 +288,7 @@ export default function ReturnDetailPage() {
                                 Price
                               </p>
                               <p className="text-sm text-gray-900 dark:text-white">
-                                Rs {(item.price || 0).toFixed(2)}
+                                CVT {(item.price || 0).toFixed(2)}
                               </p>
                             </div>
                             <div>
@@ -295,7 +304,7 @@ export default function ReturnDetailPage() {
                                 Subtotal
                               </p>
                               <p className="text-sm text-gray-900 dark:text-white">
-                                Rs {(item.subtotal || 0).toFixed(2)}
+                                CVT {(item.subtotal || 0).toFixed(2)}
                               </p>
                             </div>
                           </div>
@@ -460,6 +469,36 @@ export default function ReturnDetailPage() {
                       )}
                     </div>
                   )}
+
+                  {returnDetail.status === "refunded" && (
+                    <div className="pt-6 border-t border-gray-200 dark:border-gray-800 space-y-3">
+                      <p className="text-xs font-medium text-gray-900 dark:text-white">
+                        Refund Completed
+                      </p>
+                      <p className="text-2xl font-light text-green-600 dark:text-green-400">
+                        CVT {returnDetail.refundAmount.toFixed(2)}
+                      </p>
+                      {returnDetail.refundedAt && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Processed on {formatDate(returnDetail.refundedAt)}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        The refund has been added to your wallet.
+                      </p>
+                    </div>
+                  )}
+
+                  {returnDetail.status === "rejected" && (
+                    <div className="pt-6 border-t border-gray-200 dark:border-gray-800 space-y-3">
+                      <p className="text-xs font-medium text-red-600 dark:text-red-400">
+                        Return Rejected
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Your return request was not approved. No refund will be processed.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -476,7 +515,7 @@ export default function ReturnDetailPage() {
                         Return Amount
                       </span>
                       <span className="text-sm text-gray-900 dark:text-white">
-                        Rs {returnDetail.returnAmount.toFixed(2)}
+                        CVT {returnDetail.returnAmount.toFixed(2)}
                       </span>
                     </div>
 
@@ -486,7 +525,7 @@ export default function ReturnDetailPage() {
                           Restocking Fee
                         </span>
                         <span className="text-sm text-red-600 dark:text-red-400">
-                          -Rs {returnDetail.restockingFee.toFixed(2)}
+                          -CVT {returnDetail.restockingFee.toFixed(2)}
                         </span>
                       </div>
                     )}
@@ -497,7 +536,7 @@ export default function ReturnDetailPage() {
                           Shipping Refund
                         </span>
                         <span className="text-sm text-green-600 dark:text-green-400">
-                          +Rs {returnDetail.shippingRefund.toFixed(2)}
+                          +CVT {returnDetail.shippingRefund.toFixed(2)}
                         </span>
                       </div>
                     )}
@@ -508,18 +547,19 @@ export default function ReturnDetailPage() {
                           Refund Amount
                         </span>
                         <span className="text-lg font-light text-gray-900 dark:text-white">
-                          Rs {returnDetail.refundAmount.toFixed(2)}
+                          CVT {returnDetail.refundAmount.toFixed(2)}
                         </span>
                       </div>
                     </div>
 
-                    {returnDetail.status === "refunded" && returnDetail.refundedAt && (
-                      <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                        <p className="text-xs text-green-600 dark:text-green-400">
-                          ✓ Refunded on {formatDate(returnDetail.refundedAt)}
-                        </p>
-                      </div>
-                    )}
+                    {returnDetail.status === "refunded" &&
+                      returnDetail.refundedAt && (
+                        <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            ✓ Refunded on {formatDate(returnDetail.refundedAt)}
+                          </p>
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>
@@ -554,7 +594,9 @@ export default function ReturnDetailPage() {
                       </div>
                     </div>
                     <button
-                      onClick={() => router.push(`/customer/orders/${returnDetail.orderId}`)}
+                      onClick={() =>
+                        router.push(`/customer/orders/${returnDetail.orderId}`)
+                      }
                       className="w-full border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors"
                     >
                       View Order
@@ -606,77 +648,80 @@ export default function ReturnDetailPage() {
               </div>
 
               {/* Rejection Reason */}
-              {returnDetail.status === "rejected" && returnDetail.rejectionReason && (
-                <div className="border border-red-200 dark:border-red-800 p-8 bg-red-50 dark:bg-red-900/20">
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs font-medium text-gray-900 dark:text-white mb-2">
-                          Rejection Reason
-                        </p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                          {returnDetail.rejectionReason}
-                        </p>
+              {returnDetail.status === "rejected" &&
+                returnDetail.rejectionReason && (
+                  <div className="border border-red-200 dark:border-red-800 p-8 bg-red-50 dark:bg-red-900/20">
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                        <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-gray-900 dark:text-white mb-2">
+                            Rejection Reason
+                          </p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                            {returnDetail.rejectionReason}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </div>
         </div>
       </section>
 
       {/* Image Modal */}
-      {showImageModal && returnDetail.images && returnDetail.images.length > 0 && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
-            onClick={() => setShowImageModal(false)}
-          />
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-12">
-            <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-4 max-w-4xl w-full">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center mb-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Image {selectedImage + 1} of {returnDetail.images.length}
-                  </p>
-                  <button
-                    onClick={() => setShowImageModal(false)}
-                    className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors"
-                  >
-                    <XCircleIcon className="h-5 w-5 text-gray-900 dark:text-white" />
-                  </button>
-                </div>
-
-                <div className="aspect-square bg-gray-100 dark:bg-gray-900 overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={returnDetail.images[selectedImage]}
-                    alt={`Return image ${selectedImage + 1}`}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-
-                <div className="flex justify-center gap-2">
-                  {returnDetail.images.map((_, index) => (
+      {showImageModal &&
+        returnDetail.images &&
+        returnDetail.images.length > 0 && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
+              onClick={() => setShowImageModal(false)}
+            />
+            <div className="fixed inset-0 flex items-center justify-center z-50 p-12">
+              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-4 max-w-4xl w-full">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Image {selectedImage + 1} of {returnDetail.images.length}
+                    </p>
                     <button
-                      key={index}
-                      onClick={() => setSelectedImage(index)}
-                      className={`h-2 w-2 ${
-                        selectedImage === index
-                          ? "bg-gray-900 dark:bg-white"
-                          : "bg-gray-300 dark:bg-gray-700"
-                      }`}
+                      onClick={() => setShowImageModal(false)}
+                      className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors"
+                    >
+                      <XCircleIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+                    </button>
+                  </div>
+
+                  <div className="aspect-square bg-gray-100 dark:bg-gray-900 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={returnDetail.images[selectedImage]}
+                      alt={`Return image ${selectedImage + 1}`}
+                      className="w-full h-full object-contain"
                     />
-                  ))}
+                  </div>
+
+                  <div className="flex justify-center gap-2">
+                    {returnDetail.images.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedImage(index)}
+                        className={`h-2 w-2 ${
+                          selectedImage === index
+                            ? "bg-gray-900 dark:bg-white"
+                            : "bg-gray-300 dark:bg-gray-700"
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
     </div>
   );
 }

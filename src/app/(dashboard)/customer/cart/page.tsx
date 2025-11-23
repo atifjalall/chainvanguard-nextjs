@@ -21,6 +21,8 @@ import {
 import { addToWishlist, getWishlist } from "@/lib/api/customer.wishlist.api";
 import { browseProducts } from "@/lib/api/customer.browse.api";
 import type { Cart, CartItem as CartItemType, Product } from "@/types";
+import { usePageTitle } from "@/hooks/use-page-title";
+import { useCart } from "@/components/providers/cart-provider";
 
 // Product Card Component
 interface ProductCardProps {
@@ -128,11 +130,11 @@ function ProductCard({
 
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-normal text-gray-900 dark:text-white">
-            Rs {price.toFixed(2)}
+            CVT {price.toFixed(2)}
           </span>
           {costPrice && costPrice > price && (
             <span className="text-[10px] text-gray-400 line-through">
-              Rs {costPrice.toFixed(2)}
+              CVT {costPrice.toFixed(2)}
             </span>
           )}
         </div>
@@ -256,7 +258,7 @@ function CartItemComponent({
               </button>
             )}
             <span className="text-sm font-light text-gray-900 dark:text-white">
-              Rs {item.subtotal.toFixed(2)}
+              CVT {item.subtotal.toFixed(2)}
             </span>
           </div>
         </div>
@@ -266,7 +268,9 @@ function CartItemComponent({
 }
 
 export default function CartPage() {
+  usePageTitle("Shopping Cart");
   const router = useRouter();
+  const { refreshCartCount, incrementCartCount, decrementCartCount } = useCart();
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
   const [promoCode, setPromoCode] = useState("");
@@ -322,6 +326,11 @@ export default function CartPage() {
   const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
     if (!cart) return;
 
+    // Find the current item to calculate the difference
+    const currentItem = cart.items.find((item) => item._id === itemId);
+    const oldQuantity = currentItem?.quantity || 0;
+    const quantityDiff = newQuantity - oldQuantity;
+
     // Optimistic UI update
     const updatedItems = cart.items.map((item) => {
       if (item._id === itemId) {
@@ -344,11 +353,20 @@ export default function CartPage() {
       totalQuantity: updatedItems.reduce((sum, item) => sum + item.quantity, 0),
     });
 
+    // Immediately update cart badge based on quantity change
+    if (quantityDiff > 0) {
+      incrementCartCount(quantityDiff);
+    } else if (quantityDiff < 0) {
+      decrementCartCount(Math.abs(quantityDiff));
+    }
+
     try {
       const response = await updateCartItem(itemId, { quantity: newQuantity });
       if (response.success && response.data) {
         setCart(response.data);
         toast.success("Cart updated");
+        // Refresh in background for accuracy
+        refreshCartCount();
       }
     } catch (error) {
       console.error("Error updating quantity:", error);
@@ -367,11 +385,16 @@ export default function CartPage() {
       totalItems: updatedItems.length,
     });
 
+    // Immediately decrement cart badge for instant feedback
+    decrementCartCount(1);
+
     try {
       const response = await removeCartItem(itemId);
       if (response.success && response.data) {
         setCart(response.data);
         toast.success("Item removed from cart");
+        // Refresh in background for accuracy
+        refreshCartCount();
       }
     } catch (error) {
       console.error("Error removing item:", error);
@@ -395,6 +418,9 @@ export default function CartPage() {
 
       const response = await removeCartItem(itemId);
       if (response.success && response.data) {
+        // Immediately refresh cart count to update badge
+        await refreshCartCount();
+        console.log('[CART] Cart count refreshed after moving to wishlist');
         setCart(response.data);
       }
 
@@ -438,7 +464,7 @@ export default function CartPage() {
       return 0;
     }
 
-    // Free shipping for orders over Rs 5000
+    // Free shipping for orders over CVT 5000
     if (cartData.subtotal > 5000) {
       return 0;
     }
@@ -632,7 +658,7 @@ export default function CartPage() {
                       Subtotal
                     </span>
                     <span className="text-gray-900 dark:text-white">
-                      Rs {subtotal.toFixed(2)}
+                      CVT {subtotal.toFixed(2)}
                     </span>
                   </div>
                   {discount > 0 && (
@@ -641,7 +667,7 @@ export default function CartPage() {
                         Discount
                       </span>
                       <span className="text-green-600 dark:text-green-400">
-                        -Rs {discount.toFixed(2)}
+                        -CVT {discount.toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -650,7 +676,7 @@ export default function CartPage() {
                       Shipping
                     </span>
                     <span className="text-gray-900 dark:text-white">
-                      {shipping === 0 ? "Free" : `Rs ${shipping.toFixed(2)}`}
+                      {shipping === 0 ? "Free" : `CVT ${shipping.toFixed(2)}`}
                     </span>
                   </div>
                   {shipping === 0 && subtotal <= 5000 && (
@@ -660,7 +686,7 @@ export default function CartPage() {
                   )}
                   {shipping > 0 && (
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Free shipping on orders over Rs 5000
+                      Free shipping on orders over CVT 5000
                     </p>
                   )}
                 </div>
@@ -670,7 +696,7 @@ export default function CartPage() {
                     Total
                   </span>
                   <span className="text-2xl font-light text-gray-900 dark:text-white">
-                    Rs {total.toFixed(2)}
+                    CVT {total.toFixed(2)}
                   </span>
                 </div>
 

@@ -30,13 +30,14 @@ interface WalletProviderProps {
 // Backend transaction type mapping
 interface BackendTransaction {
   _id: string;
-  type: "deposit" | "withdrawal" | "payment" | "transfer_in" | "transfer_out";
+  type: "deposit" | "withdrawal" | "payment" | "transfer_in" | "transfer_out" | "sale" | "refund";
   amount: number;
   balanceBefore: number;
   balanceAfter: number;
   description: string;
   status: "pending" | "completed" | "failed";
   relatedUserId?: string;
+  relatedOrderId?: string;
   timestamp: string;
   metadata?: any;
 }
@@ -112,11 +113,11 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       console.log("[WALLET] Transactions response:", response); // Debug log
 
       if (response.success && response.data) {
-        // ✅ Add safety check here
+        // ✅ Backend returns transactions array directly in response.data
         const backendTransactions: BackendTransaction[] = Array.isArray(
-          response.data.transactions
+          response.data
         )
-          ? response.data.transactions
+          ? response.data
           : [];
 
         // If no transactions, set empty array and return
@@ -150,15 +151,24 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
                 to =
                   tx.metadata?.recipientWallet ||
                   tx.metadata?.recipientEmail ||
+                  tx.metadata?.sellerName ||
                   tx.relatedUserId ||
                   "Unknown";
                 break;
               case "transfer_in":
+              case "sale":
+                // Supplier receiving payment from vendor/customer
                 from =
                   tx.metadata?.senderWallet ||
                   tx.metadata?.senderEmail ||
+                  tx.metadata?.buyerName ||
                   tx.relatedUserId ||
                   "Unknown";
+                to = walletAddress;
+                break;
+              case "refund":
+                // Customer receiving refund
+                from = "Refund";
                 to = walletAddress;
                 break;
               default:
@@ -233,15 +243,16 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   ): "deposit" | "withdrawal" | "payment" | "received" => {
     switch (backendType) {
       case "transfer_in":
+      case "sale":
+      case "refund":
         return "received";
       case "transfer_out":
+      case "payment":
         return "payment";
       case "deposit":
         return "deposit";
       case "withdrawal":
         return "withdrawal";
-      case "payment":
-        return "payment";
       default:
         return "payment";
     }

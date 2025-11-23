@@ -215,6 +215,8 @@ router.get(
         status: order.status,
         itemCount: order.items?.length || 0,
         date: order.createdAt,
+        blockchainTxId: order.blockchainTxId || null,
+        blockchainVerified: order.blockchainVerified || false,
       }));
 
       res.json({

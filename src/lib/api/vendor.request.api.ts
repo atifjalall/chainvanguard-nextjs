@@ -83,6 +83,20 @@ export interface VendorRequest {
   rejectionReason?: string;
   autoApproved?: boolean;
   orderId?: string;
+  shippingAddress?: {
+    name?: string;
+    phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+    latitude?: number;
+    longitude?: number;
+    addressType?: "home" | "office" | "other";
+  };
+  paidAt?: string;
   isCompleted: boolean;
   completedAt?: string;
   blockchainTxId?: string;

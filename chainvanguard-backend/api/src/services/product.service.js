@@ -26,6 +26,11 @@ class ProductService {
    */
   async createProduct(productData, files, sellerId) {
     try {
+      // 1. Check blockchain health FIRST
+      console.log("🔍 Checking blockchain network health...");
+      await fabricService.ensureBlockchainConnected();
+      console.log("✅ Blockchain network is active");
+
       console.log("🚀 Starting product creation...");
 
       // 1. Get seller details
@@ -211,7 +216,7 @@ class ProductService {
 
         // Pricing
         price: parseFloat(productData.price),
-        currency: productData.currency || "PKR",
+        currency: productData.currency || "CVT",
         costPrice: parseFloat(productData.costPrice) || 0,
         wholesalePrice: parseFloat(productData.wholesalePrice) || 0,
         markup: parseFloat(productData.markup) || 0,
@@ -290,6 +295,10 @@ class ProductService {
         minimumOrderQuantity: parseInt(productData.minimumOrderQuantity) || 1,
         warrantyPeriod: productData.warrantyPeriod || "",
         returnPolicy: productData.returnPolicy || "30 days",
+
+        // Shipping
+        freeShipping: productData.freeShipping === "true" || productData.freeShipping === true,
+        shippingCost: parseFloat(productData.shippingCost) || 0,
         shippingDetails: productData.shippingDetails || {},
       });
 
@@ -363,11 +372,10 @@ class ProductService {
         newState: product.toObject(),
       });
 
-      // 8. Record on blockchain (async - don't block response)
-      this.recordProductOnBlockchain(product).catch((err) => {
-        console.error("⚠️  Blockchain recording failed:", err.message);
-        // Don't fail the request if blockchain fails
-      });
+      // 8. Record on blockchain (REQUIRED - synchronous)
+      console.log("📝 Recording product on blockchain...");
+      await this.recordProductOnBlockchain(product);
+      console.log("✅ Product recorded on blockchain successfully");
 
       // 9. Cache in Redis
       await redisService.cacheProduct(product._id.toString(), product);
@@ -582,6 +590,11 @@ class ProductService {
 
   async updateProduct(productId, updateData, files, userId) {
     try {
+      // 1. Check blockchain health FIRST
+      console.log("🔍 Checking blockchain network health...");
+      await fabricService.ensureBlockchainConnected();
+      console.log("✅ Blockchain network is active");
+
       console.log("🚀 Starting product update...");
       console.log("📦 Product ID:", productId);
 
@@ -764,6 +777,7 @@ class ProductService {
         "certifications",
         "freeShipping",
         "shippingCost",
+        "shippingDetails",
       ];
 
       allowedUpdates.forEach((field) => {
@@ -858,10 +872,10 @@ class ProductService {
 
       console.log(`✅ Cache invalidated for product: ${productId}`);
 
-      // Update blockchain (async - don't wait)
-      this.updateProductOnBlockchain(product).catch((err) =>
-        console.error("⚠️  Blockchain update failed:", err.message)
-      );
+      // Update blockchain (REQUIRED - synchronous)
+      console.log("📝 Updating product on blockchain...");
+      await this.updateProductOnBlockchain(product);
+      console.log("✅ Product updated on blockchain successfully");
 
       // ✅ Return populated product with fresh data and cache-busted URLs
       const updatedProduct = await Product.findById(productId)
@@ -1434,9 +1448,11 @@ class ProductService {
       console.log(`✅ Product updated on blockchain: ${product._id}`);
     } catch (error) {
       console.error("❌ Blockchain update error:", error.message);
-      // Don't throw - update should succeed even if blockchain fails
-    } finally {
       await fabricService.disconnect();
+      // Throw error to inform user that blockchain is required
+      throw new Error(
+        `Blockchain network error: ${error.message}. Please ensure Hyperledger Fabric is running.`
+      );
     }
   }
 

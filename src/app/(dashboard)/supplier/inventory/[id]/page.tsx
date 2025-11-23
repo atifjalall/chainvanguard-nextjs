@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import { getInventoryDetail, deleteInventory } from "@/lib/api/inventory.api";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 type InventoryItem = {
   id: string;
@@ -160,6 +161,7 @@ type InventoryItem = {
 };
 
 export default function InventoryDetailPage() {
+  usePageTitle("Inventory Details");
   const router = useRouter();
   const params = useParams();
   const inventoryId = params?.id as string;
@@ -484,13 +486,13 @@ export default function InventoryDetailPage() {
         <Breadcrumb className="mb-4 md:mb-6">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard/supplier">
+              <BreadcrumbLink href="/supplier">
                 Dashboard
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard/supplier/inventory">
+              <BreadcrumbLink href="/supplier/inventory">
                 Inventory
               </BreadcrumbLink>
             </BreadcrumbItem>

@@ -16,6 +16,7 @@ import {
   CubeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 // Mock transaction detail - in real app, fetch by ID
 const MOCK_TRANSACTION = {
@@ -79,6 +80,7 @@ const MOCK_TRANSACTION = {
 };
 
 export default function TransactionDetailPage() {
+  usePageTitle("Transaction Details");
   const router = useRouter();
   const params = useParams();
   const transactionId = params?.id || "TX002";

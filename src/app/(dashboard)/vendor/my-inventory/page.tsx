@@ -29,15 +29,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -52,6 +50,7 @@ import {
   EyeIcon,
   ShieldCheckIcon,
   TrashIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "@/components/ui/sonner";
@@ -124,6 +123,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   getVendorInventory,
   getInventoryStats,
@@ -147,7 +147,7 @@ const sortOptions = [
   { value: "value-desc", label: "Value: High to Low" },
 ];
 
-// Custom Rs Icon component
+// Custom CVT Icon component
 const RsIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -166,7 +166,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -179,6 +179,7 @@ const RsIcon = () => (
 );
 
 export default function VendorMyInventoryPage() {
+  usePageTitle("My Inventory");
   const { user } = useAuth();
   const router = useRouter();
   const [inventory, setInventory] = useState<VendorInventoryItem[]>([]);
@@ -195,8 +196,9 @@ export default function VendorMyInventoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [sortBy, setSortBy] = useState("name-asc");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [inventoryItem, setInventoryItem] =
+    useState<VendorInventoryItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -266,19 +268,22 @@ export default function VendorMyInventoryPage() {
   };
 
   const handleDeleteClick = (id: string) => {
-    setItemToDelete(id);
-    setDeleteDialogOpen(true);
+    const item = inventory.find((inv) => inv._id === id);
+    if (item) {
+      setInventoryItem(item);
+      setIsDeleteOpen(true);
+    }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!itemToDelete) return;
+    if (!inventoryItem) return;
 
     setIsDeleting(true);
     try {
-      await deleteVendorInventory(itemToDelete);
+      await deleteVendorInventory(inventoryItem._id);
       toast.success("Inventory item deleted successfully");
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
+      setIsDeleteOpen(false);
+      setInventoryItem(null);
       // Reload inventory after deletion
       loadInventory();
     } catch (error: any) {
@@ -353,7 +358,7 @@ export default function VendorMyInventoryPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
     }).format(amount);
   };
 
@@ -558,7 +563,7 @@ export default function VendorMyInventoryPage() {
                   value={selectedStatus}
                   onValueChange={setSelectedStatus}
                 >
-                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 ${colors.borders.primary} rounded-none cursor-pointer hover:${colors.borders.hover} focus:${colors.borders.focus} outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 ${colors.borders.primary} rounded-none cursor-pointer hover:${colors.borders.hover} hover:border-black focus:${colors.borders.focus} outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
@@ -574,7 +579,7 @@ export default function VendorMyInventoryPage() {
                   </SelectContent>
                 </Select>
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 ${colors.borders.primary} rounded-none cursor-pointer hover:${colors.borders.hover} focus:${colors.borders.focus} outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 ${colors.borders.primary} rounded-none cursor-pointer hover:${colors.borders.hover} hover:border-black focus:${colors.borders.focus} outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
@@ -839,26 +844,22 @@ export default function VendorMyInventoryPage() {
                             <TableCell className="pl-4 pr-8">
                               <div className="flex items-center gap-2">
                                 <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    router.push(
-                                      `/vendor/my-inventory/${item._id}/`
-                                    )
-                                  }
-                                  className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none`}
-                                >
-                                  <EyeIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
-                                  View
-                                </Button>
-                                <Button
-                                  size="sm"
                                   variant="outline"
                                   onClick={() => handleDeleteClick(item._id)}
-                                  className={`h-8 px-3 ${colors.buttons.secondary} cursor-pointer rounded-none hover:bg-red-50 dark:hover:bg-red-950 hover:${colors.borders.primary} hover:border-red-500 dark:hover:border-red-500`}
+                                  disabled={isDeleting}
+                                  className="flex items-center justify-center gap-1 px-3 py-2 text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                                 >
-                                  <TrashIcon className="h-3 w-3 mr-1 text-black dark:text-white" />
-                                  Delete
+                                  {isDeleting ? (
+                                    <>
+                                      <ArrowPathIcon className="h-3 w-3 mr-2 animate-spin" />
+                                      Deleting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <TrashIcon className="h-3 w-3 mr-2" />
+                                      Delete Item
+                                    </>
+                                  )}
                                 </Button>
                               </div>
                             </TableCell>
@@ -923,29 +924,55 @@ export default function VendorMyInventoryPage() {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-none">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              inventory item from your records.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting} className="rounded-none">
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent
+          className={`max-w-md ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none shadow-none`}
+        >
+          <DialogHeader>
+            <DialogTitle
+              className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+            >
+              <div className="h-10 w-10 flex items-center justify-center">
+                <TrashIcon className="h-5 w-5 text-red-600" />
+              </div>
+              Delete Inventory Item
+            </DialogTitle>
+            <DialogDescription className={`text-xs ${colors.texts.secondary}`}>
+              Are you sure you want to delete &quot;
+              {inventoryItem?.inventoryItem.name}
+              &quot;? This action cannot be undone and will permanently remove
+              the item from your inventory.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setIsDeleteOpen(false)}
+              disabled={isDeleting}
+              className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-gray-900 dark:text-white bg-transparent border border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors cursor-pointer rounded-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+            >
               Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
+            </button>
+            <Button
+              variant="outline"
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 rounded-none"
+              className="flex items-center justify-center gap-1 px-3 py-2 text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
             >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {isDeleting ? (
+                <>
+                  <ArrowPathIcon className="h-3 w-3 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <TrashIcon className="h-3 w-3 mr-2" />
+                  Delete Item
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -26,11 +26,13 @@ import { WalletData } from "@/types/web3";
 import { motion, AnimatePresence } from "framer-motion";
 import { authAPI } from "@/lib/api/auth.api";
 import { AuthRouteGuard } from "@/components/guards/auth-route-guard";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 type RecoveryMode = "known-wallet" | "forgot-wallet" | null;
 type WalletInputMode = "select" | "manual";
 
 export default function ForgotPasswordPage() {
+  usePageTitle("Forgot Password");
   const [recoveryMode, setRecoveryMode] = useState<RecoveryMode>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [totalSteps, setTotalSteps] = useState(3);
@@ -1278,22 +1280,24 @@ export default function ForgotPasswordPage() {
                               transition={{ duration: 0.3 }}
                               className="overflow-hidden"
                             >
-                              <div className="border border-gray-200 dark:border-gray-800 p-3 space-y-2">
+                              <div className="p-3 space-y-2">
                                 <div className="flex items-center gap-2 text-xs">
                                   <CheckIcon
-                                    className={`h-3.5 w-3.5 ${passwordChecks.length ? "text-green-500" : "text-red-500"}`}
+                                    className={`h-3.5 w-3.5 ${passwordChecks.length ? "text-black" : "text-gray-300"}`}
                                   />
                                   <span>At least 8 characters</span>
                                 </div>
+
                                 <div className="flex items-center gap-2 text-xs">
                                   <CheckIcon
-                                    className={`h-3.5 w-3.5 ${passwordChecks.uppercase ? "text-green-500" : "text-red-500"}`}
+                                    className={`h-3.5 w-3.5 ${passwordChecks.uppercase ? "text-black" : "text-gray-300"}`}
                                   />
                                   <span>One uppercase letter</span>
                                 </div>
+
                                 <div className="flex items-center gap-2 text-xs">
                                   <CheckIcon
-                                    className={`h-3.5 w-3.5 ${passwordChecks.special ? "text-green-500" : "text-red-500"}`}
+                                    className={`h-3.5 w-3.5 ${passwordChecks.special ? "text-black" : "text-gray-300"}`}
                                   />
                                   <span>One special character</span>
                                 </div>

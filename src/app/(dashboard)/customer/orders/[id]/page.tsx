@@ -23,6 +23,7 @@ import {
   cancelOrder,
 } from "@/lib/api/customer.orders.api";
 import type { Order } from "@/types";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const STATUS_CONFIG: Record<
   string,
@@ -78,6 +79,7 @@ const STATUS_CONFIG: Record<
 };
 
 export default function OrderDetailPage() {
+  usePageTitle("Order Details");
   const router = useRouter();
   const params = useParams();
   const orderId = params?.id as string;
@@ -163,7 +165,9 @@ export default function OrderDetailPage() {
       const response = await cancelOrder(orderId, { reason: cancelReason });
 
       if (response.success) {
-        toast.success("Order cancelled successfully. Refund will be processed to your wallet.");
+        toast.success(
+          "Order cancelled successfully. Refund will be processed to your wallet."
+        );
         setShowCancelModal(false);
         // Reload order details to show updated status
         loadOrderDetails();
@@ -179,10 +183,12 @@ export default function OrderDetailPage() {
   };
 
   // Check if order can be cancelled (pending or confirmed status)
-  const canCancelOrder = order && ["pending", "confirmed"].includes(order.status);
+  const canCancelOrder =
+    order && ["pending", "confirmed"].includes(order.status);
 
   // Check if order can be returned (delivered status and not already returned)
-  const canRequestReturn = order && order.status === "delivered" && !order.returnRequested;
+  const canRequestReturn =
+    order && order.status === "delivered" && !order.returnRequested;
 
   if (loading) {
     return (
@@ -295,18 +301,16 @@ export default function OrderDetailPage() {
               )}
               {canRequestReturn && (
                 <button
-                  onClick={() => router.push(`/customer/returns?orderId=${order._id || order.id}`)}
+                  onClick={() =>
+                    router.push(
+                      `/customer/returns?orderId=${order._id || order.id}`
+                    )
+                  }
                   className="border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-500 px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
                 >
                   Request Return
                 </button>
               )}
-              <button
-                onClick={handleReorder}
-                className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-              >
-                Reorder
-              </button>
               <button
                 onClick={handleDownloadInvoice}
                 className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors"
@@ -413,14 +417,17 @@ export default function OrderDetailPage() {
                 <div className="space-y-6">
                   {order.items.map((item, index) => {
                     const product =
-                      typeof item.productId === "object" ? item.productId : null;
+                      typeof item.productId === "object"
+                        ? item.productId
+                        : null;
                     // Check multiple image sources: populated product, productSnapshot, or direct field
                     const productImage =
                       product?.images?.[0]?.url ||
                       item.productSnapshot?.images?.[0]?.url ||
                       item.productImage ||
                       "";
-                    const productName = product?.name || item.productName || "Product";
+                    const productName =
+                      product?.name || item.productName || "Product";
                     const productId = getProductId(item.productId);
 
                     return (
@@ -431,7 +438,8 @@ export default function OrderDetailPage() {
                         <div
                           className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4] cursor-pointer"
                           onClick={() =>
-                            productId && router.push(`/customer/products/${productId}`)
+                            productId &&
+                            router.push(`/customer/products/${productId}`)
                           }
                         >
                           {productImage ? (
@@ -496,10 +504,10 @@ export default function OrderDetailPage() {
 
                           <div className="flex items-end justify-between">
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              Rs {item.price.toFixed(2)} each
+                              CVT {item.price.toFixed(2)} each
                             </span>
                             <span className="text-sm font-light text-gray-900 dark:text-white">
-                              Rs {item.subtotal.toFixed(2)}
+                              CVT {item.subtotal.toFixed(2)}
                             </span>
                           </div>
                         </div>
@@ -534,7 +542,8 @@ export default function OrderDetailPage() {
                       </p>
                     )}
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
+                      {order.shippingAddress.city},{" "}
+                      {order.shippingAddress.state}{" "}
                       {order.shippingAddress.postalCode}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -579,19 +588,20 @@ export default function OrderDetailPage() {
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono text-gray-900 dark:text-white">
-                          {(order.transactionHash || order.blockchainTxHash)?.slice(
-                            0,
-                            10
-                          )}
+                          {(
+                            order.transactionHash || order.blockchainTxHash
+                          )?.slice(0, 10)}
                           ...
-                          {(order.transactionHash || order.blockchainTxHash)?.slice(
-                            -8
-                          )}
+                          {(
+                            order.transactionHash || order.blockchainTxHash
+                          )?.slice(-8)}
                         </span>
                         <button
                           onClick={() =>
                             copyToClipboard(
-                              order.transactionHash || order.blockchainTxHash || ""
+                              order.transactionHash ||
+                                order.blockchainTxHash ||
+                                ""
                             )
                           }
                           aria-label="Copy transaction hash"
@@ -648,24 +658,27 @@ export default function OrderDetailPage() {
                       Subtotal
                     </span>
                     <span className="text-gray-900 dark:text-white">
-                      Rs {order.subtotal.toFixed(2)}
+                      CVT {order.subtotal.toFixed(2)}
                     </span>
                   </div>
-                  {order.shippingCost !== undefined && order.shippingCost > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Shipping
-                      </span>
-                      <span className="text-gray-900 dark:text-white">
-                        Rs {order.shippingCost.toFixed(2)}
-                      </span>
-                    </div>
-                  )}
+                  {order.shippingCost !== undefined &&
+                    order.shippingCost > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Shipping
+                        </span>
+                        <span className="text-gray-900 dark:text-white">
+                          CVT {order.shippingCost.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                   {order.tax !== undefined && order.tax > 0 && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Tax</span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Tax
+                      </span>
                       <span className="text-gray-900 dark:text-white">
-                        Rs {order.tax.toFixed(2)}
+                        CVT {order.tax.toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -675,7 +688,7 @@ export default function OrderDetailPage() {
                         Discount
                       </span>
                       <span className="text-green-600 dark:text-green-400">
-                        -Rs {order.discount.toFixed(2)}
+                        -CVT {order.discount.toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -686,7 +699,7 @@ export default function OrderDetailPage() {
                     Total Paid
                   </span>
                   <span className="text-2xl font-light text-gray-900 dark:text-white">
-                    Rs {order.total.toFixed(2)}
+                    CVT {order.total.toFixed(2)}
                   </span>
                 </div>
 
@@ -701,7 +714,7 @@ export default function OrderDetailPage() {
                         </span>
                       </div>
                       <span className="text-lg font-light text-green-600 dark:text-green-400">
-                        Rs {(order.refundAmount || order.total).toFixed(2)}
+                        CVT {(order.refundAmount || order.total).toFixed(2)}
                       </span>
                     </div>
                     {order.refundedAt && (
@@ -735,7 +748,9 @@ export default function OrderDetailPage() {
                     Return or Exchange
                   </button>
                   <button
-                    onClick={() => toast.success("Tracking feature coming soon")}
+                    onClick={() =>
+                      toast.success("Tracking feature coming soon")
+                    }
                     className="w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     Track Shipment
@@ -763,8 +778,8 @@ export default function OrderDetailPage() {
                 Cancel Order
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Please provide a reason for cancelling this order. Your payment will be
-                refunded to your wallet.
+                Please provide a reason for cancelling this order. Your payment
+                will be refunded to your wallet.
               </p>
             </div>
 

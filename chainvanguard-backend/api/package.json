@@ -38,6 +38,7 @@
     "nodemailer": "^7.0.10",
     "qrcode": "^1.5.4",
     "streamifier": "^0.1.1",
+    "stripe": "^20.0.0",
     "uuid": "^13.0.0",
     "winston": "^3.18.3"
   },

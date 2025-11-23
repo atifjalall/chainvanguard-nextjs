@@ -582,7 +582,7 @@ class NotificationService {
       type: "payment_received",
       category: "payment",
       title: "Payment Received",
-      message: `Payment of $${amount} received for order #${orderId.slice(-8)}`,
+      message: `Payment of CVT ${amount} received for order #${orderId.slice(-8)}`,
       orderId,
       priority: "medium",
     });

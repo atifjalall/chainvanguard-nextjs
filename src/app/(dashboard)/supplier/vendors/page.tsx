@@ -38,7 +38,6 @@ import {
   EyeIcon,
   ChatBubbleLeftIcon,
   FunnelIcon,
-  ArrowDownTrayIcon,
   ArrowPathIcon,
   ClockIcon,
   CheckCircleIcon,
@@ -64,6 +63,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import * as vendorCustomerApi from "@/lib/api/supplier.vendor.api";
 import { getRequestById } from "@/lib/api/supplier.vendor.request.api";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const RsIcon = () => (
   <svg
@@ -83,7 +83,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -128,6 +128,7 @@ const sortOptions = [
 ];
 
 export default function SupplierVendorsPage() {
+  usePageTitle("My Vendors");
   const { user } = useAuth();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -296,7 +297,7 @@ export default function SupplierVendorsPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PK", {
       style: "currency",
-      currency: "PKR",
+      currency: "CVT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);

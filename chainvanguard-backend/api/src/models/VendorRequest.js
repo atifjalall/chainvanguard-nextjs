@@ -109,6 +109,30 @@ const vendorRequestSchema = new mongoose.Schema(
       ref: "Order",
     },
 
+    // Shipping address (saved when vendor pays)
+    shippingAddress: {
+      name: { type: String, default: "" },
+      phone: { type: String, default: "" },
+      addressLine1: { type: String, default: "" },
+      addressLine2: { type: String, default: "" },
+      city: { type: String, default: "" },
+      state: { type: String, default: "" },
+      country: { type: String, default: "" },
+      postalCode: { type: String, default: "" },
+      latitude: { type: Number },
+      longitude: { type: Number },
+      addressType: {
+        type: String,
+        enum: ["home", "office", "other", ""],
+        default: "",
+      },
+    },
+
+    // Payment timestamp
+    paidAt: {
+      type: Date,
+    },
+
     isCompleted: {
       type: Boolean,
       default: false,

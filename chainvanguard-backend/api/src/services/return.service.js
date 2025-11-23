@@ -2,78 +2,68 @@ import Return from "../models/Return.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
-import walletBalanceService from "./wallet.balance.service.js";
+import Wallet from "../models/Wallet.js";
+import { getDateFilter } from "../utils/helpers.js";
 import notificationService from "./notification.service.js";
-import blockchainService from "./blockchain.service.js";
+import walletBalanceService from "./wallet.balance.service.js";
 import mongoose from "mongoose";
 
 /**
  * ========================================
  * RETURN SERVICE
  * ========================================
- * Manage product returns and refunds
+ * Business logic for return management
  */
 
 class ReturnService {
-  // ========================================
-  // CREATE RETURN
-  // ========================================
-
   /**
    * Create a new return request
    */
-  async createReturn(customerId, returnData) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
+  async createReturn(userId, data) {
     try {
-      const { orderId, items, reason, reasonDetails, images } = returnData;
+      const { orderId, items, reason, reasonDetails, images } = data;
 
-      // Validate order
-      const order = await Order.findById(orderId).session(session);
-
+      // Get order
+      const order = await Order.findById(orderId);
       if (!order) {
         throw new Error("Order not found");
       }
 
-      if (order.customerId.toString() !== customerId) {
-        throw new Error("Unauthorized: This is not your order");
+      // Verify order belongs to customer
+      if (order.customerId.toString() !== userId) {
+        throw new Error("Unauthorized to return this order");
       }
 
-      if (!["delivered", "completed"].includes(order.status)) {
-        throw new Error("Only delivered orders can be returned");
+      // Check if order is delivered
+      if (order.status !== "delivered") {
+        throw new Error("Can only return delivered orders");
       }
 
       // Check if already returned
-      const existingReturn = await Return.findOne({
-        orderId,
-        status: { $nin: ["cancelled", "rejected"] },
-      }).session(session);
-
-      if (existingReturn) {
-        throw new Error("A return request already exists for this order");
+      if (order.returnRequested) {
+        throw new Error("Return already requested for this order");
       }
 
-      // Check return window (usually 30 days)
-      const returnWindow = 30; // days
-      const orderDeliveryDate = order.actualDeliveryDate || order.createdAt;
+      // Check return window (30 days)
+      const deliveryDate = new Date(order.deliveredAt || order.updatedAt);
       const daysSinceDelivery = Math.ceil(
-        (new Date() - orderDeliveryDate) / (1000 * 60 * 60 * 24)
+        (Date.now() - deliveryDate.getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      if (daysSinceDelivery > returnWindow) {
-        throw new Error(
-          `Return window has expired. Returns must be initiated within ${returnWindow} days of delivery`
-        );
+      if (daysSinceDelivery > 30) {
+        throw new Error("Return window has expired (30 days)");
       }
 
-      // Validate return items
-      const returnItems = [];
+      // Get customer info
+      const customer = await User.findById(userId);
+
+      // Calculate return amount
       let returnAmount = 0;
+      const returnItems = [];
 
       for (const item of items) {
         const orderItem = order.items.find(
-          (i) => i.productId.toString() === item.productId
+          (oi) => oi.productId.toString() === item.productId
         );
 
         if (!orderItem) {
@@ -82,373 +72,330 @@ class ReturnService {
 
         if (item.quantity > orderItem.quantity) {
           throw new Error(
-            `Cannot return more than ${orderItem.quantity} units of ${orderItem.productName}`
+            `Cannot return more than ordered quantity for ${orderItem.productName}`
           );
         }
 
-        const itemSubtotal = orderItem.price * item.quantity;
-        returnAmount += itemSubtotal;
+        const subtotal = orderItem.price * item.quantity;
+        returnAmount += subtotal;
 
         returnItems.push({
           productId: item.productId,
           productName: orderItem.productName,
           quantity: item.quantity,
           price: orderItem.price,
-          subtotal: itemSubtotal,
-          reason: item.reason || reason,
-          condition: item.condition || "unopened",
+          subtotal: subtotal,
         });
       }
 
-      // Get vendor details
-      const vendor = await User.findById(order.sellerId).session(session);
-
-      // Calculate refund details
-      let refundAmount = returnAmount;
-      let restockingFee = 0;
-      let shippingRefund = 0;
-
-      // Apply restocking fee for certain reasons (except defective/wrong item)
-      if (
-        !["defective", "damaged", "wrong_item", "not_as_described"].includes(
-          reason
-        )
-      ) {
-        restockingFee = returnAmount * 0.1; // 10% restocking fee
-        refundAmount -= restockingFee;
-      }
-
-      // Refund shipping for vendor's fault
-      if (
-        [
-          "defective",
-          "damaged",
-          "wrong_item",
-          "not_as_described",
-          "late_delivery",
-        ].includes(reason)
-      ) {
-        shippingRefund = order.shippingCost || 0;
-        refundAmount += shippingRefund;
-      }
-
-      // Generate returnNumber before saving
-      const returnNumber = `RTN-${Date.now()}-${Math.random()
-        .toString(36)
-        .substr(2, 6)
-        .toUpperCase()}`;
-      returnData.returnNumber = returnNumber;
-
       // Create return request
-      const returnRequest = new Return({
+      const returnRequest = await Return.create({
         orderId: order._id,
         orderNumber: order.orderNumber,
-        customerId,
-        customerName: order.customerName,
-        customerEmail: order.customerEmail,
+        customerId: userId,
+        customerName: customer.name,
+        customerEmail: customer.email,
         vendorId: order.sellerId,
-        vendorName: vendor.name,
+        vendorName: order.sellerName,
         items: returnItems,
         reason,
         reasonDetails,
-        returnAmount,
-        refundAmount,
-        restockingFee,
-        shippingRefund,
         images: images || [],
+        returnAmount,
+        refundAmount: returnAmount, // Default to full amount
         status: "requested",
-        returnNumber,
+        statusHistory: [
+          {
+            status: "requested",
+            timestamp: new Date(),
+            notes: "Return request submitted by customer",
+          },
+        ],
       });
 
-      await returnRequest.save({ session });
+      // Mark order as return requested
+      order.returnRequested = true;
+      order.returnStatus = "requested";
+      await order.save();
 
+      // Send notifications directly
       await notificationService.createNotification({
-        userId: customerId,
+        userId: returnRequest.customerId,
         userRole: "customer",
-        type: "order_returned",
-        category: "order",
-        title: "Return Request Submitted",
-        message: `Your return request for order #${order.orderNumber} has been submitted`,
-        orderId: order._id,
-        priority: "high",
-        actionType: "view_order",
-        actionUrl: `/returns/${returnRequest._id}`,
+        type: "return_received",
+        category: "return",
+        title: "Return Request Received",
+        message: `Your return request ${returnRequest.returnNumber} has been received and is being reviewed by ${returnRequest.vendorName}.`,
+        priority: "medium",
+        actionType: "view_return",
+        actionUrl: `/customer/returns/${returnRequest._id}`,
         relatedEntity: {
-          entityType: "order",
-          entityId: order._id,
+          entityType: "return",
+          entityId: returnRequest._id,
+          entityData: {
+            returnNumber: returnRequest.returnNumber,
+            returnAmount: returnRequest.returnAmount,
+          },
         },
       });
 
-      // Notify vendor
       await notificationService.createNotification({
-        userId: order.sellerId,
+        userId: returnRequest.vendorId,
         userRole: "vendor",
-        type: "order_returned",
-        category: "order",
-        title: "Return Request Received",
-        message: `Return request received for order #${order.orderNumber}`,
-        orderId: order._id,
+        type: "new_return_request",
+        category: "return",
+        title: "New Return Request",
+        message: `${returnRequest.customerName} has requested a return for order ${returnRequest.orderNumber}. Amount: CVT ${returnRequest.returnAmount}`,
         priority: "high",
-        actionType: "view_order",
-        actionUrl: `/returns/${returnRequest._id}`,
+        actionType: "view_return",
+        actionUrl: `/vendor/returns/${returnRequest._id}`,
+        relatedEntity: {
+          entityType: "return",
+          entityId: returnRequest._id,
+          entityData: {
+            returnNumber: returnRequest.returnNumber,
+            customerName: returnRequest.customerName,
+            returnAmount: returnRequest.returnAmount,
+          },
+        },
       });
-
-      // Update order status
-      order.returnRequested = true;
-      order.returnReason = reason;
-      order.returnStatus = "requested";
-      await order.save({ session });
-
-      // Log to blockchain
-      try {
-        const txId = await blockchainService.logTransaction({
-          type: "return_requested",
-          returnId: returnRequest._id,
-          orderId: order._id,
-          customerId,
-          vendorId: order.sellerId,
-          returnAmount,
-          reason,
-        });
-
-        returnRequest.blockchainTxId = txId;
-        returnRequest.blockchainVerified = true;
-        await returnRequest.save({ session });
-      } catch (error) {
-        console.error("Blockchain logging failed:", error);
-      }
-
-      // Send notification to vendor
-      try {
-        await notificationService.createNotification({
-          recipientId: order.sellerId,
-          title: "New Return Request",
-          message: `Customer ${order.customerName} requested a return for order ${order.orderNumber}`,
-          category: "returns",
-          priority: "high",
-          action: {
-            type: "view_return",
-            url: `/vendor/returns/${returnRequest._id}`,
-          },
-          metadata: {
-            returnId: returnRequest._id,
-            orderId: order._id,
-            returnAmount,
-          },
-        });
-      } catch (error) {
-        console.error("Notification failed:", error);
-      }
-
-      await session.commitTransaction();
 
       return {
         success: true,
-        message: "Return request submitted successfully",
-        return: await returnRequest.populate(["customerId", "vendorId"]),
+        message: "Return request created successfully",
+        return: returnRequest,
       };
     } catch (error) {
-      await session.abortTransaction();
-      console.error("❌ Create return error:", error);
+      console.error("Create return error:", error);
       throw error;
-    } finally {
-      session.endSession();
     }
   }
-
-  // ========================================
-  // GET RETURNS
-  // ========================================
 
   /**
    * Get customer's returns
    */
-  async getCustomerReturns(customerId, filters = {}) {
-    const {
-      status,
-      page = 1,
-      limit = 20,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = filters;
+  async getCustomerReturns(userId, filters = {}) {
+    try {
+      const {
+        status,
+        page = 1,
+        limit = 50,
+        sortBy = "createdAt",
+        sortOrder = "desc",
+      } = filters;
 
-    const query = { customerId };
+      const query = { customerId: userId };
 
-    if (status) {
-      query.status = status;
-    }
+      if (status) {
+        query.status = status;
+      }
 
-    const skip = (page - 1) * limit;
-    const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const total = await Return.countDocuments(query);
 
-    const [returns, total] = await Promise.all([
-      Return.find(query)
-        .populate("vendorId", "name email companyName")
-        .sort(sort)
+      const returns = await Return.find(query)
+        .sort({ [sortBy]: sortOrder === "asc" ? 1 : -1 })
         .skip(skip)
-        .limit(Number(limit)),
-      Return.countDocuments(query),
-    ]);
+        .limit(parseInt(limit))
+        .populate("vendorId", "name email companyName");
 
-    return {
-      returns,
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    };
+      return {
+        returns,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit)),
+        },
+      };
+    } catch (error) {
+      console.error("Get customer returns error:", error);
+      throw error;
+    }
   }
 
   /**
    * Get vendor's returns
    */
-  async getVendorReturns(vendorId, filters = {}) {
-    const {
-      status,
-      page = 1,
-      limit = 20,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-      startDate,
-      endDate,
-    } = filters;
+  async getVendorReturns(userId, filters = {}) {
+    try {
+      const {
+        status,
+        page = 1,
+        limit = 50,
+        sortBy = "createdAt",
+        sortOrder = "desc",
+        search,
+        startDate,
+        endDate,
+      } = filters;
 
-    const query = { vendorId };
+      const query = { vendorId: userId };
 
-    if (status) {
-      query.status = status;
-    }
+      if (status) {
+        query.status = status;
+      }
 
-    if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
-    }
+      if (search) {
+        query.$or = [
+          { returnNumber: { $regex: search, $options: "i" } },
+          { customerName: { $regex: search, $options: "i" } },
+          { orderNumber: { $regex: search, $options: "i" } },
+        ];
+      }
 
-    const skip = (page - 1) * limit;
-    const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
+      if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) query.createdAt.$gte = new Date(startDate);
+        if (endDate) query.createdAt.$lte = new Date(endDate);
+      }
 
-    const [returns, total] = await Promise.all([
-      Return.find(query)
-        .populate("customerId", "name email phone city")
-        .populate("orderId", "orderNumber total createdAt")
-        .sort(sort)
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const total = await Return.countDocuments(query);
+
+      const returns = await Return.find(query)
+        .sort({ [sortBy]: sortOrder === "asc" ? 1 : -1 })
         .skip(skip)
-        .limit(Number(limit)),
-      Return.countDocuments(query),
-    ]);
+        .limit(parseInt(limit))
+        .populate("customerId", "name email")
+        .populate("reviewedBy", "name");
 
-    return {
-      returns,
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    };
+      return {
+        returns,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit)),
+        },
+      };
+    } catch (error) {
+      console.error("Get vendor returns error:", error);
+      throw error;
+    }
   }
 
   /**
-   * Get return by ID
+   * Get single return by ID
    */
   async getReturnById(returnId, userId, userRole) {
-    const returnRequest = await Return.findById(returnId)
-      .populate("customerId", "name email phone walletAddress")
-      .populate("vendorId", "name email companyName walletAddress")
-      .populate("orderId", "orderNumber total createdAt deliveryDate items");
-
-    if (!returnRequest) {
-      throw new Error("Return request not found");
-    }
-
-    // Check authorization
-    if (userRole === "customer") {
-      if (returnRequest.customerId._id.toString() !== userId) {
-        throw new Error("Unauthorized");
-      }
-    } else if (userRole === "vendor") {
-      if (returnRequest.vendorId._id.toString() !== userId) {
-        throw new Error("Unauthorized");
-      }
-    }
-    // Experts can view all returns
-
-    return returnRequest;
-  }
-
-  // ========================================
-  // APPROVE/REJECT RETURN
-  // ========================================
-
-  /**
-   * Approve return request
-   */
-  async approveReturn(returnId, vendorId, notes = "") {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-      const returnRequest = await Return.findById(returnId).session(session);
+      const returnRequest = await Return.findById(returnId)
+        .populate("customerId", "name email phone")
+        .populate("vendorId", "name email companyName")
+        .populate("reviewedBy", "name");
 
       if (!returnRequest) {
         throw new Error("Return request not found");
       }
 
-      if (returnRequest.vendorId.toString() !== vendorId) {
+      // Check authorization
+      const isCustomer = returnRequest.customerId._id.toString() === userId;
+      const isVendor = returnRequest.vendorId._id.toString() === userId;
+      const isExpert = userRole === "expert";
+
+      if (!isCustomer && !isVendor && !isExpert) {
         throw new Error("Unauthorized");
       }
 
-      if (returnRequest.status !== "requested") {
-        throw new Error("Only requested returns can be approved");
+      return returnRequest;
+    } catch (error) {
+      console.error("Get return by ID error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve return request
+   * NOTE: Parameters are individual, not an object
+   */
+  async approveReturn(
+    returnId,
+    userId,
+    reviewNotes = "",
+    refundAmount,
+    restockingFee = 0,
+    shippingRefund = 0
+  ) {
+    try {
+      const returnRequest = await Return.findById(returnId);
+
+      if (!returnRequest) {
+        throw new Error("Return request not found");
       }
 
+      // Verify vendor
+      if (returnRequest.vendorId.toString() !== userId) {
+        throw new Error("Unauthorized to approve this return");
+      }
+
+      // Check status
+      if (returnRequest.status !== "requested") {
+        throw new Error(
+          `Cannot approve return in ${returnRequest.status} status`
+        );
+      }
+
+      // Calculate refund
+      const finalRefundAmount =
+        refundAmount !== undefined
+          ? parseFloat(refundAmount)
+          : returnRequest.returnAmount;
+
+      const finalRestockingFee =
+        restockingFee !== undefined ? parseFloat(restockingFee) : 0;
+
+      const finalShippingRefund =
+        shippingRefund !== undefined ? parseFloat(shippingRefund) : 0;
+
+      // Update return
       returnRequest.status = "approved";
-      returnRequest.reviewedBy = vendorId;
+      returnRequest.refundAmount =
+        finalRefundAmount - finalRestockingFee + finalShippingRefund;
+      returnRequest.restockingFee = finalRestockingFee;
+      returnRequest.shippingRefund = finalShippingRefund;
+      returnRequest.reviewedBy = userId;
       returnRequest.reviewedAt = new Date();
-      returnRequest.reviewNotes = notes;
+      returnRequest.reviewNotes = reviewNotes || "";
       returnRequest.returnDeadline = new Date(
         Date.now() + 14 * 24 * 60 * 60 * 1000
       ); // 14 days
 
-      returnRequest.addStatusHistory("approved", vendorId, notes);
+      returnRequest.statusHistory.push({
+        status: "approved",
+        timestamp: new Date(),
+        updatedBy: userId,
+        notes: reviewNotes || "Return approved by vendor",
+      });
 
-      await returnRequest.save({ session });
+      await returnRequest.save();
 
+      // Update order
+      await Order.findByIdAndUpdate(returnRequest.orderId, {
+        returnStatus: "approved",
+      });
+
+      // Send notification directly
       await notificationService.createNotification({
         userId: returnRequest.customerId,
         userRole: "customer",
-        type: "order_refunded",
-        category: "payment",
-        title: "Return Approved",
-        message: `Your return request has been approved. Refund of $${returnRequest.refundAmount.toFixed(2)} will be processed shortly`,
-        orderId: returnRequest.orderId,
+        type: "return_approved",
+        category: "return",
+        title: "Return Request Approved",
+        message: `Your return request ${returnRequest.returnNumber} has been approved! Refund amount: CVT ${returnRequest.refundAmount}. Please ship the item back within 14 days.`,
         priority: "high",
-      });
-
-      // Update order
-      await Order.findByIdAndUpdate(
-        returnRequest.orderId,
-        { returnStatus: "approved" },
-        { session }
-      );
-
-      // Notify customer
-      await notificationService.createNotification({
-        recipientId: returnRequest.customerId,
-        title: "Return Approved",
-        message: `Your return request for order ${returnRequest.orderNumber} has been approved`,
-        category: "returns",
-        priority: "high",
-        action: {
-          type: "view_return",
-          url: `/customer/returns/${returnRequest._id}`,
+        actionType: "view_return",
+        actionUrl: `/customer/returns/${returnRequest._id}`,
+        relatedEntity: {
+          entityType: "return",
+          entityId: returnRequest._id,
+          entityData: {
+            returnNumber: returnRequest.returnNumber,
+            refundAmount: returnRequest.refundAmount,
+            returnDeadline: returnRequest.returnDeadline,
+          },
         },
       });
-
-      await session.commitTransaction();
 
       return {
         success: true,
@@ -456,76 +403,74 @@ class ReturnService {
         return: returnRequest,
       };
     } catch (error) {
-      await session.abortTransaction();
-      console.error("❌ Approve return error:", error);
+      console.error("Approve return error:", error);
       throw error;
-    } finally {
-      session.endSession();
     }
   }
 
   /**
    * Reject return request
    */
-  async rejectReturn(returnId, vendorId, rejectionReason) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
+  async rejectReturn(returnId, userId, rejectionReason) {
     try {
-      const returnRequest = await Return.findById(returnId).session(session);
+      const returnRequest = await Return.findById(returnId);
 
       if (!returnRequest) {
         throw new Error("Return request not found");
       }
 
-      if (returnRequest.vendorId.toString() !== vendorId) {
-        throw new Error("Unauthorized");
+      // Verify vendor
+      if (returnRequest.vendorId.toString() !== userId) {
+        throw new Error("Unauthorized to reject this return");
       }
 
+      // Check status
       if (returnRequest.status !== "requested") {
-        throw new Error("Only requested returns can be rejected");
+        throw new Error(
+          `Cannot reject return in ${returnRequest.status} status`
+        );
       }
 
+      // Update return
       returnRequest.status = "rejected";
-      returnRequest.reviewedBy = vendorId;
-      returnRequest.reviewedAt = new Date();
       returnRequest.rejectionReason = rejectionReason;
+      returnRequest.reviewedBy = userId;
+      returnRequest.reviewedAt = new Date();
 
-      returnRequest.addStatusHistory("rejected", vendorId, rejectionReason);
+      returnRequest.statusHistory.push({
+        status: "rejected",
+        timestamp: new Date(),
+        updatedBy: userId,
+        notes: rejectionReason,
+      });
 
-      await returnRequest.save({ session });
+      await returnRequest.save();
 
+      // Update order
+      await Order.findByIdAndUpdate(returnRequest.orderId, {
+        returnStatus: "rejected",
+      });
+
+      // Send notification directly
       await notificationService.createNotification({
         userId: returnRequest.customerId,
         userRole: "customer",
-        type: "general",
-        category: "order",
-        title: "Return Request Declined",
-        message: `Your return request has been declined. Reason: ${reason}`,
-        orderId: returnRequest.orderId,
+        type: "return_rejected",
+        category: "return",
+        title: "Return Request Rejected",
+        message: `Your return request ${returnRequest.returnNumber} has been rejected. Reason: ${returnRequest.rejectionReason}`,
         priority: "high",
-      });
-
-      // Update order
-      await Order.findByIdAndUpdate(
-        returnRequest.orderId,
-        { returnStatus: "rejected" },
-        { session }
-      );
-
-      // Notify customer
-      await notificationService.createNotification({
-        recipientId: returnRequest.customerId,
-        title: "Return Rejected",
-        message: `Your return request for order ${returnRequest.orderNumber} was rejected`,
-        category: "returns",
-        priority: "medium",
-        metadata: {
-          reason: rejectionReason,
+        actionType: "view_return",
+        actionUrl: `/customer/returns/${returnRequest._id}`,
+        relatedEntity: {
+          entityType: "return",
+          entityId: returnRequest._id,
+          entityData: {
+            returnNumber: returnRequest.returnNumber,
+            rejectionReason: returnRequest.rejectionReason,
+          },
         },
       });
-
-      await session.commitTransaction();
 
       return {
         success: true,
@@ -533,113 +478,236 @@ class ReturnService {
         return: returnRequest,
       };
     } catch (error) {
-      await session.abortTransaction();
-      console.error("❌ Reject return error:", error);
+      console.error("Reject return error:", error);
       throw error;
-    } finally {
-      session.endSession();
     }
   }
 
-  // ========================================
-  // PROCESS REFUND
-  // ========================================
-
   /**
-   * Process refund (after item received and inspected)
+   * Process refund
    */
-  async processRefund(returnId, expertId, inspectionNotes) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
+  async processRefund(returnId, userId, notes = "") {
     try {
-      const returnRequest = await Return.findById(returnId).session(session);
+      const returnRequest =
+        await Return.findById(returnId).populate("customerId");
 
       if (!returnRequest) {
         throw new Error("Return request not found");
       }
 
-      if (
-        returnRequest.status !== "item_received" &&
-        returnRequest.status !== "inspected"
-      ) {
-        throw new Error("Item must be received and inspected before refund");
+      // Check status
+      if (returnRequest.status !== "inspected") {
+        throw new Error(
+          `Cannot process refund. Return must be inspected first. Current status: ${returnRequest.status}`
+        );
       }
 
-      // Calculate final refund amount
-      returnRequest.calculateRefundAmount();
+      // ✅ EXTRACT THE CUSTOMER ID (handle both populated and non-populated cases)
+      const customerId =
+        returnRequest.customerId._id || returnRequest.customerId;
 
-      // Process wallet refund
-      await walletBalanceService.addBalance(
-        returnRequest.customerId,
+      // ✅ ENSURE WALLET AND BLOCKCHAIN TOKEN ACCOUNT EXIST
+      await walletBalanceService.getOrCreateWallet(customerId);
+
+      // ✅ USE WALLET BALANCE SERVICE TO PROCESS REFUND
+      // This will:
+      // 1. Create wallet transaction record
+      // 2. Mint tokens on blockchain
+      // 3. Update wallet statistics
+      // 4. Log the operation properly
+      const refundResult = await walletBalanceService.processRefund(
+        customerId, // ✅ Pass ID, not the populated object
+        returnRequest.orderId,
         returnRequest.refundAmount,
         `Refund for return ${returnRequest.returnNumber}`,
-        session
+        null // no session
       );
 
+      console.log("✅ Wallet refund processed:", refundResult);
+
+      // Update return status
       returnRequest.status = "refunded";
       returnRequest.refundedAt = new Date();
-      returnRequest.refundTransactionId = `REF-${Date.now()}`;
-      returnRequest.resolution = "full_refund";
+      returnRequest.refundTransactionId =
+        refundResult.blockchainTxId || `TXN-${Date.now()}`;
 
-      returnRequest.inspection = {
-        inspectedBy: expertId,
-        inspectedAt: new Date(),
-        notes: inspectionNotes,
-        approved: true,
-      };
-
-      returnRequest.addStatusHistory("refunded", expertId, "Refund processed");
-
-      await returnRequest.save({ session });
-
-      // Update order
-      await Order.findByIdAndUpdate(
-        returnRequest.orderId,
-        {
-          returnStatus: "completed",
-          paymentStatus: "refunded",
-          refundAmount: returnRequest.refundAmount,
-          refundedAt: new Date(),
-        },
-        { session }
-      );
-
-      // Notify customer
-      await notificationService.createNotification({
-        recipientId: returnRequest.customerId,
-        title: "Refund Processed",
-        message: `Your refund of $${returnRequest.refundAmount} has been processed`,
-        category: "returns",
-        priority: "high",
+      returnRequest.statusHistory.push({
+        status: "refunded",
+        timestamp: new Date(),
+        updatedBy: userId,
+        notes: notes || `Refunded ${returnRequest.refundAmount} CVT to wallet`,
       });
 
-      await session.commitTransaction();
+      await returnRequest.save();
+
+      // Update order
+      await Order.findByIdAndUpdate(returnRequest.orderId, {
+        returnStatus: "refunded",
+      });
+
+      // Send notifications directly
+      await notificationService.createNotification({
+        userId: customerId, // ✅ Use extracted ID
+        userRole: "customer",
+        type: "refund_processed",
+        category: "return",
+        title: "Refund Processed",
+        message: `Your refund of CVT ${returnRequest.refundAmount} has been processed and added to your wallet for return ${returnRequest.returnNumber}.`,
+        priority: "high",
+        actionType: "view_wallet",
+        actionUrl: `/customer/wallet`,
+        relatedEntity: {
+          entityType: "return",
+          entityId: returnRequest._id,
+          entityData: {
+            returnNumber: returnRequest.returnNumber,
+            refundAmount: returnRequest.refundAmount,
+            refundTransactionId: returnRequest.refundTransactionId,
+          },
+        },
+      });
+
+      await notificationService.createNotification({
+        userId: returnRequest.vendorId,
+        userRole: "vendor",
+        type: "return_refund_completed",
+        category: "return",
+        title: "Return Refund Completed",
+        message: `Refund of CVT ${returnRequest.refundAmount} has been processed for return ${returnRequest.returnNumber}. Return workflow completed.`,
+        priority: "medium",
+        actionType: "view_return",
+        actionUrl: `/vendor/returns/${returnRequest._id}`,
+        relatedEntity: {
+          entityType: "return",
+          entityId: returnRequest._id,
+          entityData: {
+            returnNumber: returnRequest.returnNumber,
+            customerName: returnRequest.customerName,
+            refundAmount: returnRequest.refundAmount,
+          },
+        },
+      });
 
       return {
         success: true,
         message: "Refund processed successfully",
-        refundAmount: returnRequest.refundAmount,
         return: returnRequest,
+        refundDetails: {
+          amount: returnRequest.refundAmount,
+          newBalance: refundResult.newBalance,
+          blockchainTxId: refundResult.blockchainTxId,
+        },
       };
     } catch (error) {
-      await session.abortTransaction();
-      console.error("❌ Process refund error:", error);
+      console.error("Process refund error:", error);
       throw error;
-    } finally {
-      session.endSession();
     }
   }
 
-  // ========================================
-  // STATISTICS
-  // ========================================
-
   /**
-   * Get return statistics for vendor
+   * Get return statistics
    */
   async getReturnStatistics(vendorId, timeframe = "month") {
-    return await Return.getStatistics(vendorId, timeframe);
+    try {
+      const dateFilter = this.getDateFilter(timeframe);
+
+      console.log("📊 Getting return stats for vendor:", vendorId);
+      console.log("📊 Timeframe:", timeframe);
+      console.log("📊 Date filter:", dateFilter);
+
+      // ✅ CONVERT TO OBJECTID FOR AGGREGATION
+      const vendorObjectId = new mongoose.Types.ObjectId(vendorId);
+      console.log("📊 Vendor ObjectId:", vendorObjectId);
+
+      // First, let's see what returns exist for this vendor
+      const allVendorReturns = await Return.find({ vendorId: vendorObjectId }).lean();
+      console.log("📊 Total returns for vendor:", allVendorReturns.length);
+      console.log("📊 Return statuses:", allVendorReturns.map(r => r.status));
+
+      const stats = await Return.aggregate([
+        {
+          $match: {
+            vendorId: vendorObjectId, // ✅ Use ObjectId instead of string
+            createdAt: dateFilter,
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            requested: {
+              $sum: { $cond: [{ $eq: ["$status", "requested"] }, 1, 0] },
+            },
+            approved: {
+              $sum: { $cond: [{ $eq: ["$status", "approved"] }, 1, 0] },
+            },
+            rejected: {
+              $sum: { $cond: [{ $eq: ["$status", "rejected"] }, 1, 0] },
+            },
+            refunded: {
+              $sum: { $cond: [{ $eq: ["$status", "refunded"] }, 1, 0] },
+            },
+            totalRefunded: {
+              $sum: {
+                $cond: [{ $eq: ["$status", "refunded"] }, "$refundAmount", 0],
+              },
+            },
+            pendingAmount: {
+              $sum: {
+                $cond: [
+                  {
+                    $in: [
+                      "$status",
+                      ["requested", "approved", "item_received", "inspected"],
+                    ],
+                  },
+                  "$returnAmount",
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ]);
+
+      console.log("📊 Aggregation result:", JSON.stringify(stats, null, 2));
+
+      const result = stats[0] || {
+        total: 0,
+        requested: 0,
+        approved: 0,
+        rejected: 0,
+        refunded: 0,
+        totalRefunded: 0,
+        pendingAmount: 0,
+      };
+
+      console.log("📊 Final stats:", result);
+
+      return result;
+    } catch (error) {
+      console.error("Get return statistics error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get date filter helper
+   */
+  getDateFilter(timeframe) {
+    const now = new Date();
+    switch (timeframe) {
+      case "week":
+        return { $gte: new Date(now.setDate(now.getDate() - 7)) };
+      case "month":
+        return { $gte: new Date(now.setMonth(now.getMonth() - 1)) };
+      case "year":
+        return { $gte: new Date(now.setFullYear(now.getFullYear() - 1)) };
+      case "all":
+        return { $gte: new Date(0) };
+      default:
+        return { $gte: new Date(now.setMonth(now.getMonth() - 1)) };
+    }
   }
 }
 

@@ -427,7 +427,7 @@ if contains "$CUSTOMER_STATS" "success.*true\|stats"; then
     if echo "$CUSTOMER_STATS" | jq -e '.stats' > /dev/null 2>&1; then
         TOTAL_SPENT=$(echo "$CUSTOMER_STATS" | jq -r '.stats.totalSpent // 0')
         TOTAL_ORDERS=$(echo "$CUSTOMER_STATS" | jq -r '.stats.totalOrders // 0')
-        print_info "Total Spent: Rs. $TOTAL_SPENT"
+        print_info "Total Spent: CVT. $TOTAL_SPENT"
         print_info "Total Orders: $TOTAL_ORDERS"
     fi
 else
@@ -516,7 +516,7 @@ if contains "$CLV" "success.*true\|clv"; then
     
     if echo "$CLV" | jq -e '.clv' > /dev/null 2>&1; then
         CLV_VALUE=$(echo "$CLV" | jq -r '.clv.value // 0')
-        print_info "Customer Lifetime Value: Rs. $CLV_VALUE"
+        print_info "Customer Lifetime Value: CVT. $CLV_VALUE"
     fi
 else
     print_info "CLV calculation may need implementation"

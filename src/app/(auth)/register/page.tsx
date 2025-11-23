@@ -34,6 +34,7 @@ import { UserRole } from "@/types/web3";
 import { AnimatePresence, motion } from "framer-motion";
 import { authAPI, RegisterPayload } from "@/lib/api/auth.api";
 import { AuthRouteGuard } from "@/components/guards/auth-route-guard";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 // Province-City mapping
 const provinceCityMap: Record<string, string[]> = {
@@ -81,6 +82,7 @@ const provinceOptions = [
 ];
 
 export default function RegisterPage() {
+  usePageTitle("Register");
   // Load saved data only once on mount using useState initializer
   const [savedData] = useState(() => {
     if (typeof window === "undefined") return null;

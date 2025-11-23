@@ -28,8 +28,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   UsersIcon,
@@ -37,9 +35,7 @@ import {
   BanknotesIcon,
   EnvelopeIcon,
   EyeIcon,
-  ChatBubbleOvalLeftIcon,
   FunnelIcon,
-  ArrowDownTrayIcon,
   ArrowPathIcon,
   TrophyIcon,
   ExclamationCircleIcon,
@@ -52,6 +48,7 @@ import {
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import { colors, badgeColors } from "@/lib/colorConstants";
+import { usePageTitle } from "@/hooks/use-page-title";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -60,188 +57,30 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
-
-// Customer interface
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  avatar?: string;
-  joinDate: string;
-  lastOrderDate: string;
-  totalOrders: number;
-  totalSpent: number;
-  averageOrderValue: number;
-  status: "active" | "inactive" | "new";
-  location: {
-    city: string;
-    state: string;
-    country: string;
-  };
-  favoriteCategories: string[];
-  notes?: string;
-  walletAddress?: string;
-  loyaltyPoints: number;
-  rating?: number;
-  preferredPayment: "crypto" | "card";
-}
-
-// Mock customers data
-const mockCustomers: Customer[] = [
-  {
-    id: "cust-001",
-    name: "John Smith",
-    email: "john.smith@email.com",
-    phone: "+1 (555) 123-4567",
-    avatar: "",
-    joinDate: "2025-01-15T10:30:00Z",
-    lastOrderDate: "2025-08-16T14:20:00Z",
-    totalOrders: 12,
-    totalSpent: 2847.96,
-    averageOrderValue: 237.33,
-    status: "active",
-    location: {
-      city: "New York",
-      state: "NY",
-      country: "USA",
-    },
-    favoriteCategories: ["Electronics", "Gaming"],
-    notes: "Frequent buyer, prefers express shipping",
-    loyaltyPoints: 2847,
-    rating: 4.8,
-    preferredPayment: "crypto",
-    walletAddress: "0x742d35Cc6558C4d3b",
-  },
-  {
-    id: "cust-002",
-    name: "Sarah Johnson",
-    email: "sarah.j@email.com",
-    phone: "+1 (555) 987-6543",
-    avatar: "",
-    joinDate: "2025-02-28T16:45:00Z",
-    lastOrderDate: "2025-08-15T09:30:00Z",
-    totalOrders: 8,
-    totalSpent: 1456.78,
-    averageOrderValue: 182.1,
-    status: "active",
-    location: {
-      city: "Los Angeles",
-      state: "CA",
-      country: "USA",
-    },
-    favoriteCategories: ["Fashion", "Health & Beauty"],
-    notes: "Prefers eco-friendly products",
-    loyaltyPoints: 1456,
-    rating: 4.9,
-    preferredPayment: "crypto",
-    walletAddress: "0x8f3e2b9a1c5d7f4e6",
-  },
-  {
-    id: "cust-003",
-    name: "Mike Chen",
-    email: "mike.chen@email.com",
-    phone: "+1 (555) 456-7890",
-    avatar: "",
-    joinDate: "2025-03-10T12:15:00Z",
-    lastOrderDate: "2025-08-14T18:45:00Z",
-    totalOrders: 15,
-    totalSpent: 3892.45,
-    averageOrderValue: 259.5,
-    status: "active",
-    location: {
-      city: "Chicago",
-      state: "IL",
-      country: "USA",
-    },
-    favoriteCategories: ["Electronics", "Tools & Hardware"],
-    notes: "Tech enthusiast, early adopter",
-    loyaltyPoints: 3892,
-    rating: 4.7,
-    preferredPayment: "crypto",
-    walletAddress: "0x2a5b8c9d3e6f7a1b4",
-  },
-  {
-    id: "cust-004",
-    name: "Emily Davis",
-    email: "emily.davis@email.com",
-    phone: "+1 (555) 321-0987",
-    avatar: "",
-    joinDate: "2025-07-20T08:30:00Z",
-    lastOrderDate: "2025-08-13T15:20:00Z",
-    totalOrders: 3,
-    totalSpent: 456.23,
-    averageOrderValue: 152.08,
-    status: "new",
-    location: {
-      city: "Miami",
-      state: "FL",
-      country: "USA",
-    },
-    favoriteCategories: ["Home & Garden", "Books"],
-    notes: "New customer, potential for growth",
-    loyaltyPoints: 456,
-    rating: 5.0,
-    preferredPayment: "crypto",
-    walletAddress: "0x9d7e5f3a8b2c6e1d9",
-  },
-  {
-    id: "cust-005",
-    name: "David Wilson",
-    email: "david.w@email.com",
-    phone: "+1 (555) 654-3210",
-    avatar: "",
-    joinDate: "2024-11-05T14:00:00Z",
-    lastOrderDate: "2025-06-10T11:15:00Z",
-    totalOrders: 5,
-    totalSpent: 789.12,
-    averageOrderValue: 157.82,
-    status: "inactive",
-    location: {
-      city: "Seattle",
-      state: "WA",
-      country: "USA",
-    },
-    favoriteCategories: ["Sports & Recreation"],
-    notes: "Hasn't ordered recently, needs re-engagement",
-    loyaltyPoints: 789,
-    rating: 4.2,
-    preferredPayment: "crypto",
-    walletAddress: "0x6c4a8e2f7b9d3a5c1",
-  },
-  {
-    id: "cust-006",
-    name: "Lisa Anderson",
-    email: "lisa.anderson@email.com",
-    phone: "+1 (555) 789-0123",
-    avatar: "",
-    joinDate: "2025-04-12T09:45:00Z",
-    lastOrderDate: "2025-08-16T12:30:00Z",
-    totalOrders: 7,
-    totalSpent: 1234.56,
-    averageOrderValue: 176.37,
-    status: "active",
-    location: {
-      city: "Boston",
-      state: "MA",
-      country: "USA",
-    },
-    favoriteCategories: ["Books", "Office Supplies"],
-    notes: "Professional buyer, bulk orders",
-    loyaltyPoints: 1234,
-    rating: 4.6,
-    preferredPayment: "crypto",
-    walletAddress: "0x3f8e1b6d9c2a5e7f4",
-  },
-];
+import { toast } from "sonner";
+import {
+  getVendorCustomers,
+  getCustomerStatsSummary,
+  getCustomerDetails,
+  getCustomerOrders,
+  getNewCustomersThisMonth,
+  getAtRiskCustomers,
+} from "@/lib/api/vendor.customer.api";
+import type { VendorCustomer, CustomerDetailResponse, Order } from "@/types";
 
 const HEADER_GAP = "gap-3";
 
-const formatCurrency = (amount: number) => {
-  return `Rs ${amount.toLocaleString("en-PK")}`;
+const formatCurrency = (amount: number | undefined | null) => {
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return "CVT 0.00";
+  }
+  return `CVT ${amount.toLocaleString("en-PK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 };
 
-const statusOptions = ["All Status", "active", "inactive", "new"];
+const statusOptions = ["All Status", "active", "new", "at-risk"];
 
 const sortOptions = [
   { value: "name-asc", label: "Name: A to Z" },
@@ -250,63 +89,206 @@ const sortOptions = [
   { value: "spent-asc", label: "Lowest Spender" },
   { value: "orders-desc", label: "Most Orders" },
   { value: "orders-asc", label: "Least Orders" },
-  { value: "recent", label: "Most Recent" },
-  { value: "oldest", label: "Oldest Customer" },
+  { value: "recent", label: "Most Recent Order" },
+  { value: "oldest", label: "Oldest Member" },
 ];
 
 export default function VendorCustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
-  const [isLoading, setIsLoading] = useState(false);
+  usePageTitle("Customers");
+
+  // State
+  const [customers, setCustomers] = useState<VendorCustomer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [sortBy, setSortBy] = useState("recent");
-  const [selectedTab, setSelectedTab] = useState<"all" | "new" | "inactive">(
+  const [selectedTab, setSelectedTab] = useState<"all" | "new" | "at-risk">(
     "all"
   );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    null
-  );
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<CustomerDetailResponse | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isContactOpen, setIsContactOpen] = useState(false);
-  const [contactMessage, setContactMessage] = useState("");
   const [isVisible, setIsVisible] = useState(false);
+
+  // Stats
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [newCustomers, setNewCustomers] = useState(0);
+  const [atRiskCustomers, setAtRiskCustomers] = useState(0);
+  const [averageSpend, setAverageSpend] = useState(0);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(20);
+
+  // Loading state for orders
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
-    loadCustomers();
+    loadInitialData();
   }, []);
 
-  const loadCustomers = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    loadCustomers();
+  }, [currentPage, selectedTab, sortBy]);
+
+  const loadInitialData = async () => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      // In real app: const customers = await fetchVendorCustomers(user.id);
-      setCustomers(mockCustomers);
+      setIsLoading(true);
+      await Promise.all([loadCustomerStats(), loadCustomers()]);
     } catch (error) {
-      // toast.error("Failed to load customers");
+      console.error("Failed to load initial data:", error);
+      toast.error("Failed to load customer data");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const loadCustomerStats = async () => {
+    try {
+      const stats = await getCustomerStatsSummary();
+      setTotalCustomers(stats.totalCustomers);
+      setAverageSpend(stats.avgCustomerValue);
+
+      // Load new and at-risk customers
+      const [newCust, atRisk] = await Promise.all([
+        getNewCustomersThisMonth(),
+        getAtRiskCustomers(),
+      ]);
+      setNewCustomers(newCust.length);
+      setAtRiskCustomers(atRisk.length);
+    } catch (error) {
+      console.error("Failed to load customer stats:", error);
+    }
+  };
+
+  const loadCustomers = async () => {
+    try {
+      setIsLoading(true);
+
+      let response;
+      if (selectedTab === "new") {
+        const newCust = await getNewCustomersThisMonth();
+        setCustomers(newCust);
+        setTotalPages(1);
+      } else if (selectedTab === "at-risk") {
+        const atRisk = await getAtRiskCustomers();
+        setCustomers(atRisk);
+        setTotalPages(1);
+      } else {
+        response = await getVendorCustomers({
+          page: currentPage,
+          limit,
+          search: searchTerm,
+          sortBy: sortBy.includes("spent")
+            ? "totalSpent"
+            : sortBy.includes("orders")
+              ? "totalOrders"
+              : sortBy.includes("name")
+                ? "name"
+                : undefined,
+          sortOrder: sortBy.includes("desc") ? "desc" : "asc",
+        });
+        setCustomers(response.data || []);
+        setTotalPages(response.pagination?.totalPages || 1);
+      }
+    } catch (error) {
+      console.error("Failed to load customers:", error);
+      toast.error("Failed to load customers");
+      setCustomers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewDetails = async (customer: VendorCustomer) => {
+    try {
+      setIsLoadingOrders(true);
+      const details = await getCustomerDetails(customer.id);
+      setSelectedCustomer(details);
+      setIsDetailsOpen(true);
+    } catch (error) {
+      console.error("Failed to load customer details:", error);
+      toast.error("Failed to load customer details");
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  };
+
+  const handleContactCustomer = (customer: VendorCustomer) => {
+    setSelectedCustomer({
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        address: {
+          street: customer.address,
+          city: customer.city,
+          state: customer.state,
+          country: customer.country,
+          postalCode: customer.postalCode,
+        },
+        memberSince: customer.memberSince,
+        loyaltyPoints: customer.loyaltyPoints,
+      },
+      statistics: {
+        totalOrders: customer.stats.totalOrders,
+        totalSpent: customer.stats.totalSpent,
+        avgOrderValue: customer.stats.avgOrderValue,
+        lastOrderDate: customer.stats.lastOrderDate ?? undefined,
+        ordersByStatus: {},
+      },
+      recentOrders: [],
+      success: true,
+    });
+  };
+
+  const handleRefresh = () => {
+    loadInitialData();
+    toast.success("Customer data refreshed");
+  };
+
   // Filter and sort customers
   const filteredAndSortedCustomers = useMemo(() => {
-    const filtered = customers.filter((customer) => {
-      const matchesSearch =
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.location.city.toLowerCase().includes(searchTerm.toLowerCase());
+    let filtered = [...customers];
 
-      const matchesStatus =
-        selectedStatus === "All Status" || customer.status === selectedStatus;
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (customer) =>
+          customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          customer.city?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
 
-      const matchesTab =
-        selectedTab === "all" || customer.status === selectedTab;
-
-      return matchesSearch && matchesStatus && matchesTab;
-    });
+    // Filter by status
+    if (selectedStatus !== "All Status") {
+      if (selectedStatus === "active") {
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+        filtered = filtered.filter((c) => {
+          if (!c.stats.lastOrderDate) return false;
+          return new Date(c.stats.lastOrderDate) >= sixtyDaysAgo;
+        });
+      } else if (selectedStatus === "new") {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        filtered = filtered.filter(
+          (c) => new Date(c.memberSince) >= oneMonthAgo
+        );
+      } else if (selectedStatus === "at-risk") {
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+        filtered = filtered.filter((c) => {
+          if (!c.stats.lastOrderDate) return false;
+          return new Date(c.stats.lastOrderDate) < sixtyDaysAgo;
+        });
+      }
+    }
 
     // Sort customers
     filtered.sort((a, b) => {
@@ -316,21 +298,24 @@ export default function VendorCustomersPage() {
         case "name-desc":
           return b.name.localeCompare(a.name);
         case "spent-desc":
-          return b.totalSpent - a.totalSpent;
+          return b.stats.totalSpent - a.stats.totalSpent;
         case "spent-asc":
-          return a.totalSpent - b.totalSpent;
+          return a.stats.totalSpent - b.stats.totalSpent;
         case "orders-desc":
-          return b.totalOrders - a.totalOrders;
+          return b.stats.totalOrders - a.stats.totalOrders;
         case "orders-asc":
-          return a.totalOrders - b.totalOrders;
+          return a.stats.totalOrders - b.stats.totalOrders;
         case "recent":
+          if (!a.stats.lastOrderDate) return 1;
+          if (!b.stats.lastOrderDate) return -1;
           return (
-            new Date(b.lastOrderDate).getTime() -
-            new Date(a.lastOrderDate).getTime()
+            new Date(b.stats.lastOrderDate).getTime() -
+            new Date(a.stats.lastOrderDate).getTime()
           );
         case "oldest":
           return (
-            new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime()
+            new Date(a.memberSince).getTime() -
+            new Date(b.memberSince).getTime()
           );
         default:
           return 0;
@@ -338,9 +323,32 @@ export default function VendorCustomersPage() {
     });
 
     return filtered;
-  }, [customers, searchTerm, selectedStatus, sortBy, selectedTab]);
+  }, [customers, searchTerm, selectedStatus, sortBy]);
 
-  const getStatusConfig = (status: Customer["status"]) => {
+  const getCustomerStatus = (
+    customer: VendorCustomer
+  ): "active" | "new" | "at-risk" => {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+    if (new Date(customer.memberSince) >= oneMonthAgo) {
+      return "new";
+    }
+
+    if (
+      customer.stats.lastOrderDate &&
+      new Date(customer.stats.lastOrderDate) < sixtyDaysAgo
+    ) {
+      return "at-risk";
+    }
+
+    return "active";
+  };
+
+  const getStatusConfig = (status: "active" | "new" | "at-risk") => {
     switch (status) {
       case "active":
         return {
@@ -354,11 +362,11 @@ export default function VendorCustomersPage() {
           icon: UserPlusIcon,
           label: "New",
         };
-      case "inactive":
+      case "at-risk":
         return {
-          color: badgeColors.grey,
-          icon: ClockIcon,
-          label: "Inactive",
+          color: badgeColors.red,
+          icon: ExclamationCircleIcon,
+          label: "At Risk",
         };
       default:
         return {
@@ -369,7 +377,8 @@ export default function VendorCustomersPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Never";
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -385,47 +394,32 @@ export default function VendorCustomersPage() {
       .toUpperCase();
   };
 
-  const handleViewDetails = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setIsDetailsOpen(true);
-  };
-
-  const handleContactCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setContactMessage("");
-    setIsContactOpen(true);
-  };
-
-  const sendMessage = () => {
-    if (!selectedCustomer || !contactMessage.trim()) {
-      // toast.error("Please enter a message");
-      return;
-    }
-
-    // In real app: sendCustomerMessage(selectedCustomer.id, contactMessage);
-    // toast.success(`Message sent to ${selectedCustomer.name}`);
-    setIsContactOpen(false);
-    setContactMessage("");
-  };
-
-  const CustomerCard = ({ customer }: { customer: Customer }) => {
-    const statusConfig = getStatusConfig(customer.status);
-    const StatusIcon = statusConfig.icon;
-    const daysSinceLastOrder = Math.floor(
-      (new Date().getTime() - new Date(customer.lastOrderDate).getTime()) /
+  const getDaysSinceLastOrder = (lastOrderDate: string | null) => {
+    if (!lastOrderDate) return Infinity;
+    return Math.floor(
+      (new Date().getTime() - new Date(lastOrderDate).getTime()) /
         (1000 * 60 * 60 * 24)
+    );
+  };
+
+  const CustomerCard = ({ customer }: { customer: VendorCustomer }) => {
+    const status = getCustomerStatus(customer);
+    const statusConfig = getStatusConfig(status);
+    const StatusIcon = statusConfig.icon;
+    const daysSinceLastOrder = getDaysSinceLastOrder(
+      customer.stats.lastOrderDate
     );
 
     return (
       <Card
-        className={`${colors.cards.base} hover:${colors.cards.hover} overflow-hidden group rounded-none !shadow-none hover:!shadow-none`}
+        className={`${colors.cards.base} hover:${colors.cards.hover} overflow-hidden group rounded-none !shadow-none hover:!shadow-none transition-all duration-300`}
       >
         <CardContent className="p-6">
           <div className="flex items-start gap-4 mb-4">
             <Avatar
               className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
             >
-              <AvatarImage src={customer.avatar} alt={customer.name} />
+              <AvatarImage src="" alt={customer.name} />
               <AvatarFallback
                 className={`${colors.texts.primary} font-bold rounded-none`}
               >
@@ -456,7 +450,7 @@ export default function VendorCustomersPage() {
               className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
             >
               <EnvelopeIcon className={`h-4 w-4 ${colors.icons.muted}`} />
-              <span className={`${colors.texts.primary}`}>
+              <span className={`${colors.texts.primary} truncate`}>
                 {customer.email}
               </span>
             </div>
@@ -465,7 +459,7 @@ export default function VendorCustomersPage() {
             >
               <ShoppingBagIcon className={`h-4 w-4 ${colors.icons.muted}`} />
               <span className={`${colors.texts.primary}`}>
-                {customer.totalOrders} orders
+                {customer.stats.totalOrders} orders
               </span>
             </div>
             <div
@@ -482,14 +476,17 @@ export default function VendorCustomersPage() {
               className={`text-center p-3 ${colors.backgrounds.accent} rounded-none`}
             >
               <p className={`text-xl font-bold ${colors.texts.success}`}>
-                {formatCurrency(customer.totalSpent)}
+                {formatCurrency(customer.stats.totalSpent)}
               </p>
               <p className={`text-xs ${colors.texts.muted}`}>Total Spent</p>
             </div>
           </div>
           <div className="flex items-center justify-between mb-4">
             <div className={`text-xs ${colors.texts.muted}`}>
-              Last order: {daysSinceLastOrder}d ago
+              Last order:{" "}
+              {daysSinceLastOrder === Infinity
+                ? "Never"
+                : `${daysSinceLastOrder}d ago`}
             </div>
           </div>
           <div className="flex gap-2">
@@ -497,14 +494,17 @@ export default function VendorCustomersPage() {
               size="sm"
               variant="outline"
               onClick={() => handleViewDetails(customer)}
-              className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all`}
+              className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all hover:border-black dark:hover:border-white`}
             >
               <EyeIcon className={`h-3 w-3 mr-1 ${colors.icons.primary}`} />
               View Details
             </Button>
             <Button
               size="sm"
-              onClick={() => handleContactCustomer(customer)}
+              onClick={() => {
+                const mailtoLink = `mailto:${customer.email}?subject=${encodeURIComponent("Message from ChainVanguard Vendor")}`;
+                window.location.href = mailtoLink;
+              }}
               className={`flex-1 h-8 px-3 ${colors.buttons.primary} cursor-pointer rounded-none transition-all`}
             >
               <EnvelopeIcon
@@ -518,24 +518,24 @@ export default function VendorCustomersPage() {
     );
   };
 
-  const CustomerListItem = ({ customer }: { customer: Customer }) => {
-    const statusConfig = getStatusConfig(customer.status);
+  const CustomerListItem = ({ customer }: { customer: VendorCustomer }) => {
+    const status = getCustomerStatus(customer);
+    const statusConfig = getStatusConfig(status);
     const StatusIcon = statusConfig.icon;
-    const daysSinceLastOrder = Math.floor(
-      (new Date().getTime() - new Date(customer.lastOrderDate).getTime()) /
-        (1000 * 60 * 60 * 24)
+    const daysSinceLastOrder = getDaysSinceLastOrder(
+      customer.stats.lastOrderDate
     );
 
     return (
       <Card
-        className={`${colors.cards.base} hover:${colors.cards.hover} overflow-hidden group rounded-none !shadow-none hover:!shadow-none`}
+        className={`${colors.cards.base} hover:${colors.cards.hover} overflow-hidden group rounded-none !shadow-none hover:!shadow-none transition-all duration-300`}
       >
         <CardContent className="p-6">
           <div className="flex items-center gap-6">
             <Avatar
               className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
             >
-              <AvatarImage src={customer.avatar} alt={customer.name} />
+              <AvatarImage src="" alt={customer.name} />
               <AvatarFallback
                 className={`${colors.texts.primary} font-bold rounded-none`}
               >
@@ -551,7 +551,7 @@ export default function VendorCustomersPage() {
                 </h3>
                 <div className="flex items-center gap-3">
                   <Badge
-                    className={`flex items-center gap-1 ${statusConfig.color.bg} ${statusConfig.color.border} ${statusConfig.color.text}`}
+                    className={`flex items-center gap-1 rounded-none ${statusConfig.color.bg} ${statusConfig.color.border} ${statusConfig.color.text}`}
                     variant="secondary"
                   >
                     <StatusIcon className="h-3 w-3" />
@@ -565,20 +565,20 @@ export default function VendorCustomersPage() {
                     {customer.email}
                   </p>
                   <p className={`text-xs ${colors.texts.muted}`}>
-                    {customer.location.city}, {customer.location.state}
+                    {customer.city}, {customer.state}
                   </p>
                 </div>
                 <div>
                   <p className={`font-semibold ${colors.texts.primary}`}>
-                    {customer.totalOrders} orders
+                    {customer.stats.totalOrders} orders
                   </p>
                   <p className={`text-xs ${colors.texts.muted}`}>
-                    Avg: {formatCurrency(customer.averageOrderValue)}
+                    Avg: {formatCurrency(customer.stats.avgOrderValue)}
                   </p>
                 </div>
                 <div>
                   <p className={`font-semibold ${colors.texts.primary}`}>
-                    {formatCurrency(customer.totalSpent)}
+                    {formatCurrency(customer.stats.totalSpent)}
                   </p>
                   <p className={`text-xs ${colors.texts.muted}`}>
                     {customer.loyaltyPoints} points
@@ -586,10 +586,13 @@ export default function VendorCustomersPage() {
                 </div>
                 <div>
                   <p className={`${colors.texts.primary}`}>
-                    Last order: {daysSinceLastOrder}d ago
+                    Last order:{" "}
+                    {daysSinceLastOrder === Infinity
+                      ? "Never"
+                      : `${daysSinceLastOrder}d ago`}
                   </p>
                   <p className={`text-xs ${colors.texts.muted}`}>
-                    Joined: {formatDate(customer.joinDate)}
+                    Joined: {formatDate(customer.memberSince)}
                   </p>
                 </div>
               </div>
@@ -606,7 +609,10 @@ export default function VendorCustomersPage() {
               <Button
                 size="sm"
                 className={`${colors.buttons.primary} cursor-pointer rounded-none`}
-                onClick={() => handleContactCustomer(customer)}
+                onClick={() => {
+                  const mailtoLink = `mailto:${customer.email}?subject=${encodeURIComponent("Message from ChainVanguard Vendor")}`;
+                  window.location.href = mailtoLink;
+                }}
               >
                 <EnvelopeIcon className="h-3 w-3 mr-1" />
                 Contact
@@ -618,25 +624,18 @@ export default function VendorCustomersPage() {
     );
   };
 
-  if (isLoading) {
+  if (isLoading && customers.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading customers...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            Loading customers...
+          </p>
         </div>
       </div>
     );
   }
-
-  // Calculate stats
-  const totalCustomers = customers.length;
-  const newCustomers = customers.filter((c) => c.status === "new").length;
-  const inactiveCustomers = customers.filter(
-    (c) => c.status === "inactive"
-  ).length;
-  const averageSpend =
-    customers.reduce((sum, c) => sum + c.totalSpent, 0) / customers.length;
 
   return (
     <div className={`min-h-screen ${colors.backgrounds.secondary}`}>
@@ -645,7 +644,9 @@ export default function VendorCustomersPage() {
         <Breadcrumb className="mb-6">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/vendor">Dashboard</BreadcrumbLink>
+              <BreadcrumbLink href="/dashboard/vendor">
+                Dashboard
+              </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
@@ -683,6 +684,14 @@ export default function VendorCustomersPage() {
                 </Badge>
               </div>
             </div>
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
+              className={`${colors.buttons.outline} rounded-none`}
+            >
+              <ArrowPathIcon className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
           </div>
         </div>
 
@@ -704,7 +713,7 @@ export default function VendorCustomersPage() {
               },
               {
                 title: "At Risk",
-                value: inactiveCustomers.toString(),
+                value: atRiskCustomers.toString(),
                 icon: ExclamationCircleIcon,
               },
               {
@@ -732,7 +741,7 @@ export default function VendorCustomersPage() {
                     {stat.value}
                   </div>
                   <p className={`text-xs ${colors.texts.secondary}`}>
-                    Customers
+                    {stat.title === "Avg. Spend" ? "Per Customer" : "Customers"}
                   </p>
                 </CardContent>
               </Card>
@@ -774,7 +783,7 @@ export default function VendorCustomersPage() {
                   onValueChange={setSelectedStatus}
                 >
                   <SelectTrigger
-                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                    className={`text-sm h-9 w-full min-w-[240px] ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
                   >
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
@@ -792,7 +801,7 @@ export default function VendorCustomersPage() {
                 </Select>
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger
-                    className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                    className={`text-sm h-9 w-full min-w-[240px] ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
                   >
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
@@ -845,16 +854,14 @@ export default function VendorCustomersPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex gap-2 items-center">
-                  {/* Additional badges or content can go here if needed */}
-                </div>
+                <div className="flex gap-2 items-center"></div>
                 <div className="flex items-center gap-1">
                   <span className={`text-xs ${colors.texts.secondary} mr-2`}>
                     View:
                   </span>
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer ${
+                    className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer rounded-none ${
                       viewMode === "grid"
                         ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
                         : "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -864,7 +871,7 @@ export default function VendorCustomersPage() {
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer ${
+                    className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer rounded-none ${
                       viewMode === "list"
                         ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
                         : "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -885,9 +892,10 @@ export default function VendorCustomersPage() {
           <div className="w-full flex justify-center">
             <Tabs
               value={selectedTab}
-              onValueChange={(value) =>
-                setSelectedTab(value as "all" | "new" | "inactive")
-              }
+              onValueChange={(value) => {
+                setSelectedTab(value as "all" | "new" | "at-risk");
+                setCurrentPage(1);
+              }}
               className="w-full flex justify-center"
             >
               <TabsList
@@ -910,11 +918,11 @@ export default function VendorCustomersPage() {
                   New
                 </TabsTrigger>
                 <TabsTrigger
-                  value="inactive"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "inactive" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                  value="at-risk"
+                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "at-risk" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
                 >
                   <ClockIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-                  Inactive
+                  At Risk
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -925,22 +933,60 @@ export default function VendorCustomersPage() {
         <div
           className={`transform transition-all duration-700 delay-500 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
         >
-          {filteredAndSortedCustomers.length > 0 ? (
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                  : "space-y-6"
-              }
-            >
-              {filteredAndSortedCustomers.map((customer) =>
-                viewMode === "grid" ? (
-                  <CustomerCard key={customer.id} customer={customer} />
-                ) : (
-                  <CustomerListItem key={customer.id} customer={customer} />
-                )
-              )}
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600 dark:text-gray-400">
+                Loading customers...
+              </p>
             </div>
+          ) : filteredAndSortedCustomers.length > 0 ? (
+            <>
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    : "space-y-6"
+                }
+              >
+                {filteredAndSortedCustomers.map((customer) =>
+                  viewMode === "grid" ? (
+                    <CustomerCard key={customer.id} customer={customer} />
+                  ) : (
+                    <CustomerListItem key={customer.id} customer={customer} />
+                  )
+                )}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-8">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className={`${colors.buttons.outline} rounded-none`}
+                  >
+                    Previous
+                  </Button>
+                  <span className={`text-sm ${colors.texts.secondary}`}>
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className={`${colors.buttons.outline} rounded-none`}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-12">
               <UsersIcon
@@ -962,19 +1008,20 @@ export default function VendorCustomersPage() {
       {/* Customer Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent
-          className={`w-full max-w-[600px] ${colors.backgrounds.modal} rounded-none`}
+          style={{ width: "100%", maxWidth: "900px" }}
+          className={`w-full max-w-[900px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} rounded-none`}
         >
           <DialogHeader>
             <DialogTitle className={`${colors.texts.primary}`}>
               Customer Details
             </DialogTitle>
             <DialogDescription className={`${colors.texts.secondary}`}>
-              Detailed information about the customer
+              Detailed information about the customer and order history
             </DialogDescription>
           </DialogHeader>
           {selectedCustomer && (
-            <div className="space-y-6 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-6 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card
                   className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
                 >
@@ -994,17 +1041,27 @@ export default function VendorCustomersPage() {
                       <p
                         className={`font-medium ${colors.texts.primary} text-sm`}
                       >
-                        {selectedCustomer.name}
+                        {selectedCustomer.customer.name}
                       </p>
                     </div>
                     <div>
                       <p className={`text-xs ${colors.texts.muted}`}>Email</p>
                       <p
-                        className={`font-medium ${colors.texts.primary} text-sm`}
+                        className={`font-medium ${colors.texts.primary} text-sm break-all`}
                       >
-                        {selectedCustomer.email}
+                        {selectedCustomer.customer.email}
                       </p>
                     </div>
+                    {selectedCustomer.customer.phone && (
+                      <div>
+                        <p className={`text-xs ${colors.texts.muted}`}>Phone</p>
+                        <p
+                          className={`font-medium ${colors.texts.primary} text-sm`}
+                        >
+                          {selectedCustomer.customer.phone}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className={`text-xs ${colors.texts.muted}`}>
                         Location
@@ -1012,9 +1069,9 @@ export default function VendorCustomersPage() {
                       <p
                         className={`font-medium ${colors.texts.primary} text-sm`}
                       >
-                        {selectedCustomer.location.city},{" "}
-                        {selectedCustomer.location.state},{" "}
-                        {selectedCustomer.location.country}
+                        {selectedCustomer.customer.address.city},{" "}
+                        {selectedCustomer.customer.address.state},{" "}
+                        {selectedCustomer.customer.address.country}
                       </p>
                     </div>
                   </CardContent>
@@ -1040,7 +1097,7 @@ export default function VendorCustomersPage() {
                       <p
                         className={`font-medium ${colors.texts.primary} text-sm`}
                       >
-                        {selectedCustomer.totalOrders}
+                        {selectedCustomer.statistics.totalOrders}
                       </p>
                     </div>
                     <div>
@@ -1050,7 +1107,19 @@ export default function VendorCustomersPage() {
                       <p
                         className={`font-bold ${colors.texts.success} text-sm`}
                       >
-                        {formatCurrency(selectedCustomer.totalSpent)}
+                        {formatCurrency(selectedCustomer.statistics.totalSpent)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        Avg Order Value
+                      </p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {formatCurrency(
+                          selectedCustomer.statistics.avgOrderValue
+                        )}
                       </p>
                     </div>
                     <div>
@@ -1060,13 +1129,11 @@ export default function VendorCustomersPage() {
                       <p
                         className={`font-medium ${colors.texts.primary} text-sm`}
                       >
-                        {selectedCustomer.loyaltyPoints}
+                        {selectedCustomer.customer.loyaltyPoints}
                       </p>
                     </div>
                   </CardContent>
                 </Card>
-              </div>
-              {selectedCustomer.notes && (
                 <Card
                   className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
                 >
@@ -1074,89 +1141,165 @@ export default function VendorCustomersPage() {
                     <CardTitle
                       className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
                     >
-                      <ChatBubbleOvalLeftIcon
+                      <ShieldCheckIcon
                         className={`h-5 w-5 ${colors.icons.primary}`}
                       />
-                      Notes
+                      Activity
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        Member Since
+                      </p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {formatDate(selectedCustomer.customer.memberSince)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        First Order
+                      </p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {formatDate(
+                          selectedCustomer.statistics.firstOrderDate || null
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${colors.texts.muted}`}>
+                        Last Order
+                      </p>
+                      <p
+                        className={`font-medium ${colors.texts.primary} text-sm`}
+                      >
+                        {formatDate(
+                          selectedCustomer.statistics.lastOrderDate || null
+                        )}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent Orders */}
+              {isLoadingOrders ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                </div>
+              ) : selectedCustomer?.recentOrders &&
+                selectedCustomer.recentOrders.length > 0 ? (
+                <Card
+                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none shadow-none`}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle
+                      className={`text-base flex items-center gap-2 ${colors.texts.primary}`}
+                    >
+                      <ShoppingBagIcon
+                        className={`h-5 w-5 ${colors.icons.primary}`}
+                      />
+                      Recent Orders
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className={`text-sm ${colors.texts.accent}`}>
-                      {selectedCustomer.notes}
-                    </p>
+                    <div className="space-y-2">
+                      {selectedCustomer.recentOrders
+                        .slice(0, 5)
+                        .map((order) => (
+                          <div
+                            key={order.id}
+                            className="flex justify-between items-start gap-4 py-3 border-b border-gray-200 dark:border-gray-700 last:border-0"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className={`text-sm font-medium ${colors.texts.primary}`}
+                              >
+                                {order.orderNumber}
+                              </p>
+                              <p
+                                className={`text-xs ${colors.texts.muted} mt-0.5`}
+                              >
+                                {formatDate(order.date)}
+                              </p>
+                              {order.blockchainTxId && (
+                                <div className="mt-1">
+                                  <p
+                                    className={`text-xs ${colors.texts.muted} flex items-center gap-1`}
+                                  >
+                                    <ShieldCheckIcon className="h-3 w-3" />
+                                    <span
+                                      className="font-mono text-xs truncate max-w-[200px]"
+                                      title={order.blockchainTxId}
+                                    >
+                                      {order.blockchainTxId}
+                                    </span>
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p
+                                className={`text-sm font-semibold ${colors.texts.success}`}
+                              >
+                                {formatCurrency(order.amount)}
+                              </p>
+                              <Badge
+                                variant="secondary"
+                                className={`text-xs rounded-none mt-1 ${
+                                  order.status === "delivered"
+                                    ? badgeColors.green.bg +
+                                      " " +
+                                      badgeColors.green.text
+                                    : order.status === "refunded"
+                                      ? badgeColors.red.bg +
+                                        " " +
+                                        badgeColors.red.text
+                                      : badgeColors.blue.bg +
+                                        " " +
+                                        badgeColors.blue.text
+                                }`}
+                              >
+                                {order.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
                   </CardContent>
                 </Card>
-              )}
+              ) : null}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button
               variant="outline"
               onClick={() => setIsDetailsOpen(false)}
-              className={`${colors.buttons.outline} rounded-none`}
+              className={`${colors.buttons.outline} rounded-none transition-all hover:border-black dark:hover:border-white cursor-pointer`}
             >
               Close
             </Button>
             <Button
               onClick={() => {
                 setIsDetailsOpen(false);
-                if (selectedCustomer) handleContactCustomer(selectedCustomer);
+                if (selectedCustomer) {
+                  const mailtoLink = `mailto:${selectedCustomer.customer.email}?subject=${encodeURIComponent("Message from ChainVanguard Vendor")}`;
+                  window.location.href = mailtoLink;
+                  toast.success(
+                    `Opening email client to contact ${selectedCustomer.customer.name}`
+                  );
+                }
               }}
-              className={`${colors.buttons.primary} rounded-none`}
+              className={`${colors.buttons.primary} rounded-none cursor-pointer`}
             >
               <EnvelopeIcon className="h-4 w-4 mr-2" />
               Contact Customer
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Contact Customer Dialog */}
-      <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
-        <DialogContent
-          className={`w-full max-w-[500px] ${colors.backgrounds.modal} rounded-none`}
-        >
-          <DialogHeader>
-            <DialogTitle className={`${colors.texts.primary}`}>
-              Contact Customer
-            </DialogTitle>
-            <DialogDescription className={`${colors.texts.secondary}`}>
-              Send a message to {selectedCustomer?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label
-                htmlFor="message"
-                className={`text-sm font-medium ${colors.texts.primary}`}
-              >
-                Message
-              </Label>
-              <Textarea
-                id="message"
-                value={contactMessage}
-                onChange={(e) => setContactMessage(e.target.value)}
-                placeholder="Type your message here..."
-                rows={4}
-                className="mt-1"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsContactOpen(false)}
-              className={`${colors.buttons.outline} rounded-none`}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={sendMessage}
-              className={`${colors.buttons.primary} rounded-none`}
-            >
-              <ChatBubbleOvalLeftIcon className="h-4 w-4 mr-2" />
-              Send Message
-            </Button>
+            
           </DialogFooter>
         </DialogContent>
       </Dialog>

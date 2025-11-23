@@ -14,15 +14,16 @@ import {
   ChevronDownIcon,
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
-import { Package } from "lucide-react";
 import { WalletData } from "@/types/web3";
 import { authAPI } from "@/lib/api/auth.api";
 import { AnimatePresence, motion } from "framer-motion";
 import { AuthRouteGuard } from "@/components/guards/auth-route-guard";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 type WalletInputMode = "select" | "manual";
 
 export default function LoginPage() {
+  usePageTitle("Login");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

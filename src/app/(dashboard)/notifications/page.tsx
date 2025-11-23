@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { notificationApi, Notification } from "@/lib/api/notification.api";
 import { useRouter } from "next/navigation";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const notificationTypes = [
   "All Types",
@@ -92,6 +93,7 @@ const notificationTypes = [
 const statusOptions = ["All Status", "Read", "Unread"];
 
 export default function NotificationsPage() {
+  usePageTitle("Notifications");
   const { user } = useAuth();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);

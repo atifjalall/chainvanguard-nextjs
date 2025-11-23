@@ -69,6 +69,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const RsIcon = () => (
   <svg
@@ -88,7 +89,7 @@ const RsIcon = () => (
       strokeWidth="0.2"
       fontFamily="Arial, sans-serif"
     >
-      Rs
+      CVT
     </text>
     <path
       stroke="currentColor"
@@ -268,7 +269,7 @@ const statuses = [
   "quarantined",
 ];
 
-const currencies = ["PKR"];
+const currencies = ["CVT"];
 
 const warehouseLocations = [
   "Karachi Main Warehouse",
@@ -627,7 +628,7 @@ const PreviewCard = ({ formData }: { formData: FormDataType }) => {
         <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-gray-900 dark:text-white">
-              Rs {parseFloat(formData.pricePerUnit || "0").toFixed(2)}
+              CVT {parseFloat(formData.pricePerUnit || "0").toFixed(2)}
             </span>
             <span className="text-xs text-gray-500">per {formData.unit}</span>
           </div>
@@ -648,6 +649,7 @@ const PreviewCard = ({ formData }: { formData: FormDataType }) => {
 };
 
 export default function AddInventoryPage() {
+  usePageTitle("Add Inventory");
   const router = useRouter();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -733,7 +735,7 @@ export default function AddInventoryPage() {
     recycledContent: "",
     autoReorderEnabled: false,
     isBatchTracked: true,
-    currency: "PKR",
+    currency: "CVT",
     imageFiles: [],
     warehouseLocation: "",
     storageLocations: [],
@@ -1145,7 +1147,7 @@ export default function AddInventoryPage() {
       recycledContent: "",
       autoReorderEnabled: false,
       isBatchTracked: true,
-      currency: "PKR",
+      currency: "CVT",
       imageFiles: [],
       warehouseLocation: "",
       storageLocations: [],
@@ -1210,7 +1212,7 @@ export default function AddInventoryPage() {
         costPrice: formData.costPrice
           ? parseFloat(formData.costPrice)
           : undefined,
-        currency: formData.currency || "PKR",
+        currency: formData.currency || "CVT",
 
         quantity: parseInt(formData.quantity),
         unit: formData.unit,

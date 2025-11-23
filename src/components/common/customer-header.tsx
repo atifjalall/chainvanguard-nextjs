@@ -1,28 +1,34 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWallet } from "@/components/providers/wallet-provider";
+import { useNotifications } from "@/components/providers/notification-provider";
+import { useCart } from "@/components/providers/cart-provider";
 import {
   BookmarkIcon,
   ShoppingCartIcon,
   BellIcon,
   CheckIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearch } from "@/hooks/use-search";
+import { Product } from "@/types";
 
 const APPAREL_CATEGORIES = {
   Men: {
     label: "MEN",
     images: [
-      "https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?w=400&h=300&fit=crop",
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&h=300&fit=crop",
-      "https://images.unsplash.com/photo-1617137968427-85924c800a22?w=400&h=300&fit=crop",
-      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=300&fit=crop",
+      "/men/men1.png",
+      "/men/men2.png",
+      "/men/men3.png",
+      "/men/men4.png",
     ],
     subcategories: [
       "BEST SELLERS",
@@ -50,8 +56,8 @@ const APPAREL_CATEGORIES = {
     images: [
       "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&h=300&fit=crop",
       "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&h=300&fit=crop",
-      "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=300&fit=crop",
-      "https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=400&h=300&fit=crop",
+      "/women/women3.png",
+      "/women/women1.png",
     ],
     subcategories: [
       "BEST SELLERS",
@@ -86,9 +92,9 @@ const APPAREL_CATEGORIES = {
   Kids: {
     label: "KIDS",
     images: [
-      "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=400&h=300&fit=crop",
-      "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400&h=300&fit=crop",
-      "https://images.unsplash.com/photo-1514090458221-65bb69cf63e6?w=400&h=300&fit=crop",
+      "/kids/kids4.png",
+      "/kids/kids2.png",
+      "/kids/kids3.png",
       "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=400&h=300&fit=crop",
     ],
     subcategories: [
@@ -117,7 +123,7 @@ const APPAREL_CATEGORIES = {
     images: [
       "https://images.unsplash.com/photo-1620799140188-3b2a02fd9a77?w=400&h=300&fit=crop",
       "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=300&fit=crop",
-      "https://images.unsplash.com/photo-1614251056198-ff101ebaba5e?w=400&h=300&fit=crop",
+      "/unisex/uni2.webp",
       "https://images.unsplash.com/photo-1622445275576-721325763afe?w=400&h=300&fit=crop",
     ],
     subcategories: [
@@ -134,106 +140,30 @@ const APPAREL_CATEGORIES = {
   },
 };
 
-// Mock Notifications (top 10)
-const MOCK_NOTIFICATIONS = [
-  {
-    id: "1",
-    title: "Order Delivered",
-    message: "Your order #ORD12345 has been delivered successfully.",
-    timestamp: "2024-01-18T10:30:00",
-    read: false,
-    link: "/customer/orders/ORD12345",
-  },
-  {
-    id: "2",
-    title: "Return Approved",
-    message: "Your return request #RET001 has been approved.",
-    timestamp: "2024-01-17T15:45:00",
-    read: false,
-    link: "/customer/return/RET001",
-  },
-  {
-    id: "3",
-    title: "Refund Processed",
-    message: "$89.99 has been refunded to your wallet.",
-    timestamp: "2024-01-16T09:20:00",
-    read: false,
-    link: "/customer/wallet",
-  },
-  {
-    id: "4",
-    title: "Order Shipped",
-    message: "Your order #ORD12346 has been shipped.",
-    timestamp: "2024-01-15T14:00:00",
-    read: true,
-    link: "/customer/orders/ORD12346",
-  },
-  {
-    id: "5",
-    title: "Special Offer - 20% Off",
-    message: "Get 20% off on all winter collection items.",
-    timestamp: "2024-01-14T08:00:00",
-    read: true,
-    link: "/customer/browse",
-  },
-  {
-    id: "6",
-    title: "Order Confirmed",
-    message: "Your order #ORD12347 has been confirmed.",
-    timestamp: "2024-01-13T11:30:00",
-    read: true,
-    link: "/customer/orders/ORD12347",
-  },
-  {
-    id: "7",
-    title: "Profile Updated",
-    message: "Your profile information has been updated successfully.",
-    timestamp: "2024-01-12T16:45:00",
-    read: true,
-    link: "/customer/profile",
-  },
-  {
-    id: "8",
-    title: "Return Received",
-    message: "We have received your returned item.",
-    timestamp: "2024-01-11T10:15:00",
-    read: true,
-    link: "/customer/return/RET002",
-  },
-  {
-    id: "9",
-    title: "New Arrivals",
-    message: "Check out our latest collection.",
-    timestamp: "2024-01-10T09:00:00",
-    read: true,
-    link: "/customer/browse",
-  },
-  {
-    id: "10",
-    title: "Order Out for Delivery",
-    message: "Your order #ORD12345 is out for delivery.",
-    timestamp: "2024-01-09T07:30:00",
-    read: true,
-    link: "/customer/orders/ORD12345",
-  },
-];
-
 export default function CustomerHeader() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [searchQuery, setSearchQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("Men");
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(
     null
   );
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
 
   const { user, logout } = useAuth();
   const { disconnectWallet } = useWallet();
+  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { cartCount } = useCart();
+  const {
+    query,
+    setQuery,
+    suggestions,
+    loading: searchLoading,
+    clearSearch,
+  } = useSearch();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const searchRef = useRef<HTMLDivElement>(null);
 
   // Prevent body scroll when menu is open and prevent layout shift
   useEffect(() => {
@@ -262,16 +192,23 @@ export default function CustomerHeader() {
     };
   }, [menuOpen]);
 
-  // Close notification dropdown when clicking outside
+  // Close notification and search dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
+
+      // Close notifications
       if (
         notificationOpen &&
         !target.closest(".notification-dropdown") &&
         !target.closest(".notification-button")
       ) {
         setNotificationOpen(false);
+      }
+
+      // Close search suggestions
+      if (searchRef.current && !searchRef.current.contains(target)) {
+        setSearchOpen(false);
       }
     };
 
@@ -298,9 +235,26 @@ export default function CustomerHeader() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/customer/search?q=${encodeURIComponent(searchQuery)}`);
+    if (query.trim()) {
+      router.push(`/customer/browse?search=${encodeURIComponent(query)}`);
+      clearSearch();
+      setSearchOpen(false);
     }
+  };
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+    setSearchOpen(true);
+  };
+
+  const handleProductClick = (productId: string) => {
+    if (!productId || productId === "undefined") {
+      console.error("Invalid product ID");
+      return;
+    }
+    router.push(`/customer/products/${productId}`);
+    clearSearch();
+    setSearchOpen(false);
   };
 
   const handleCategoryClick = (category: string, subcategory?: string) => {
@@ -315,28 +269,39 @@ export default function CustomerHeader() {
     }
   };
 
-  const handleMarkAsRead = (id: string, e: React.MouseEvent) => {
+  const handleMarkAsRead = async (
+    notificationId: string,
+    e: React.MouseEvent
+  ) => {
     e.stopPropagation();
-    setNotifications(
-      notifications.map((notif) =>
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+    try {
+      await markAsRead(notificationId);
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
   };
 
-  const handleNotificationClick = (notification: any) => {
-    if (!notification.read) {
-      setNotifications(
-        notifications.map((notif) =>
-          notif.id === notification.id ? { ...notif, read: true } : notif
-        )
-      );
+  const handleNotificationClick = async (notification: any) => {
+    try {
+      if (!notification.isRead) {
+        await markAsRead(notification._id);
+      }
+      setNotificationOpen(false);
+
+      // Navigate to action URL if available
+      if (notification.actionUrl) {
+        router.push(notification.actionUrl);
+      } else if (notification.action?.url) {
+        router.push(notification.action.url);
+      }
+    } catch (error) {
+      console.error("Failed to handle notification click:", error);
     }
-    setNotificationOpen(false);
-    router.push(notification.link);
   };
 
   const formatTime = (timestamp: string) => {
+    if (!timestamp) return "";
+
     const date = new Date(timestamp);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -352,6 +317,14 @@ export default function CustomerHeader() {
       month: "short",
       day: "numeric",
     });
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("en-PK", {
+      style: "currency",
+      currency: "PKR",
+      minimumFractionDigits: 0,
+    }).format(price);
   };
 
   const getDisplayName = () => {
@@ -387,17 +360,63 @@ export default function CustomerHeader() {
 
           {/* Center Section - Search */}
           <div className="hidden md:flex md:flex-none md:w-[640px] md:absolute md:left-1/2 md:transform md:-translate-x-1/2">
-            <form onSubmit={handleSearch} className="relative w-full">
-              <div className="flex items-center border-b border-gray-900 dark:border-white pb-px">
-                <input
-                  type="search"
-                  placeholder="Search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-10 px-3 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
-                />
-              </div>
-            </form>
+            <div ref={searchRef} className="relative w-full">
+              <form onSubmit={handleSearch}>
+                <div className="flex items-center border-b border-gray-900 dark:border-white pb-px">
+                  <input
+                    type="search"
+                    placeholder="Search products..."
+                    value={query}
+                    onChange={handleSearchInputChange}
+                    className="w-full h-10 px-3 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                  />
+                  {searchLoading && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-700 border-t-gray-900 dark:border-t-white rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+              </form>
+
+              {/* Search Suggestions Dropdown */}
+              {searchOpen && query.length >= 2 && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 z-50 max-h-96 overflow-y-auto">
+                  {suggestions.map((product: Product) => (
+                    <button
+                      key={product._id || product.id}
+                      onClick={() =>
+                        handleProductClick(product._id || product.id)
+                      }
+                      className="w-full p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-left flex items-center gap-3 border-b border-gray-200 dark:border-gray-800 last:border-b-0"
+                    >
+                      {product.images?.[0] && (
+                        <div className="w-12 h-12 relative shrink-0 bg-gray-100 dark:bg-gray-800">
+                          <Image
+                            src={
+                              typeof product.images[0] === "string"
+                                ? product.images[0]
+                                : product.images[0].url
+                            }
+                            alt={product.name}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                          {product.name}
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatPrice(product.price)}
+                        </p>
+                      </div>
+                      <MagnifyingGlassIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Section - Actions */}
@@ -438,68 +457,92 @@ export default function CustomerHeader() {
 
                     {/* Notifications List */}
                     <div className="max-h-[480px] overflow-y-auto">
-                      {notifications.map((notification, index) => (
-                        <div
-                          key={notification.id}
-                          className={`${
-                            index !== notifications.length - 1
-                              ? "border-b border-gray-200 dark:border-gray-800"
-                              : ""
-                          }`}
-                        >
-                          <button
-                            onClick={() =>
-                              handleNotificationClick(notification)
-                            }
-                            className="w-full p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-left group"
-                          >
-                            <div className="flex items-start gap-3">
-                              {/* Unread Indicator - Grey Square */}
-                              {!notification.read && (
-                                <div className="h-2 w-2 bg-gray-400 dark:bg-gray-600 flex-shrink-0 mt-1" />
-                              )}
-
-                              {/* Content */}
-                              <div className="flex-1 min-w-0">
-                                <h4
-                                  className={`text-xs mb-1 ${
-                                    notification.read
-                                      ? "font-normal text-gray-600 dark:text-gray-400"
-                                      : "font-medium text-gray-900 dark:text-white"
-                                  }`}
-                                >
-                                  {notification.title}
-                                </h4>
-                                <p
-                                  className={`text-xs mb-1 line-clamp-2 ${
-                                    notification.read
-                                      ? "text-gray-500 dark:text-gray-500"
-                                      : "text-gray-600 dark:text-gray-400"
-                                  }`}
-                                >
-                                  {notification.message}
-                                </p>
-                                <p className="text-xs text-gray-400 dark:text-gray-600">
-                                  {formatTime(notification.timestamp)}
-                                </p>
-                              </div>
-
-                              {/* Mark as Read Button */}
-                              {!notification.read && (
-                                <button
-                                  onClick={(e) =>
-                                    handleMarkAsRead(notification.id, e)
-                                  }
-                                  className="h-6 w-6 border border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  title="Mark as read"
-                                >
-                                  <CheckIcon className="h-3 w-3 text-gray-900 dark:text-white" />
-                                </button>
-                              )}
-                            </div>
-                          </button>
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            No notifications yet
+                          </p>
                         </div>
-                      ))}
+                      ) : (
+                        notifications
+                          .slice(0, 10)
+                          .map((notification, index) => (
+                            <div
+                              key={notification._id}
+                              className={`${
+                                index !== Math.min(notifications.length, 10) - 1
+                                  ? "border-b border-gray-200 dark:border-gray-800"
+                                  : ""
+                              }`}
+                            >
+                              <button
+                                onClick={() =>
+                                  handleNotificationClick(notification)
+                                }
+                                className="w-full p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-left group"
+                              >
+                                <div className="flex items-start gap-3">
+                                  {/* Unread Indicator - Grey Square */}
+                                  {!notification.isRead && (
+                                    <div className="h-2 w-2 bg-gray-400 dark:bg-gray-600 shrink-0 mt-1" />
+                                  )}
+
+                                  {/* Content */}
+                                  <div className="flex-1 min-w-0">
+                                    <h4
+                                      className={`text-xs mb-1 ${
+                                        notification.isRead
+                                          ? "font-normal text-gray-600 dark:text-gray-400"
+                                          : "font-medium text-gray-900 dark:text-white"
+                                      }`}
+                                    >
+                                      {notification.title}
+                                    </h4>
+                                    <p
+                                      className={`text-xs mb-1 line-clamp-2 ${
+                                        notification.isRead
+                                          ? "text-gray-500 dark:text-gray-500"
+                                          : "text-gray-600 dark:text-gray-400"
+                                      }`}
+                                    >
+                                      {notification.shortMessage ||
+                                        notification.message}
+                                    </p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-600">
+                                      {formatTime(notification.createdAt)}
+                                    </p>
+                                  </div>
+
+                                  {/* Mark as Read Button */}
+                                  {!notification.isRead && (
+                                    <div
+                                      onClick={(e) =>
+                                        handleMarkAsRead(notification._id, e)
+                                      }
+                                      role="button"
+                                      tabIndex={0}
+                                      onKeyDown={(e) => {
+                                        if (
+                                          e.key === "Enter" ||
+                                          e.key === " "
+                                        ) {
+                                          handleMarkAsRead(
+                                            notification._id,
+                                            e as any
+                                          );
+                                        }
+                                      }}
+                                      className="h-6 w-6 border border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                      title="Mark as read"
+                                    >
+                                      <CheckIcon className="h-3 w-3 text-gray-900 dark:text-white" />
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            </div>
+                          ))
+                      )}
                     </div>
 
                     {/* Footer */}
@@ -534,9 +577,11 @@ export default function CustomerHeader() {
                 className="h-10 w-10 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-900 relative transition-colors cursor-pointer"
               >
                 <ShoppingCartIcon className="h-4 w-4 text-gray-900 dark:text-white" />
-                <span className="absolute top-1 right-1 h-4 w-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] flex items-center justify-center font-normal">
-                  3
-                </span>
+                {cartCount > 0 && (
+                  <span className="absolute top-1 right-1 h-4 w-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] flex items-center justify-center font-normal">
+                    {cartCount}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -579,11 +624,14 @@ export default function CustomerHeader() {
             <div className="flex items-center border-b border-gray-900 dark:border-white pb-px">
               <input
                 type="search"
-                placeholder="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                value={query}
+                onChange={handleSearchInputChange}
                 className="flex-1 h-10 px-3 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
               />
+              {searchLoading && (
+                <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-700 border-t-gray-900 dark:border-t-white rounded-full animate-spin mr-3" />
+              )}
             </div>
           </form>
         </div>
@@ -660,7 +708,7 @@ export default function CustomerHeader() {
                         <button
                           onClick={() => {
                             setMenuOpen(false);
-                            router.push("/customer/deals");
+                            router.push("/customer/browse?category=men&subcategory=best%20sellers");
                           }}
                           className="text-left text-[10px] uppercase tracking-[0.2em] py-1 text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors block"
                         >
@@ -669,7 +717,7 @@ export default function CustomerHeader() {
                         <button
                           onClick={() => {
                             setMenuOpen(false);
-                            router.push("/customer/new");
+                            router.push("/customer/browse?sort=newest");
                           }}
                           className="text-left text-[10px] uppercase tracking-[0.2em] py-1 text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors block"
                         >

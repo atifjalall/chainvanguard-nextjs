@@ -105,7 +105,7 @@ export interface CreateReturnData {
   items: ReturnItem[];
   reason: ReturnReason;
   reasonDetails: string;
-  images?: string[]; // Cloudinary URLs after upload
+  images?: string[];
 }
 
 // ========================================
@@ -176,18 +176,25 @@ export const createReturn = async (
  */
 export const uploadReturnImages = async (
   files: File[]
-): Promise<string[]> => {
-  const uploadedUrls: string[] = [];
+): Promise<Array<{ url: string; publicId: string }>> => {
+  const uploadedImages: Array<{ url: string; publicId: string }> = [];
+
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+  if (!cloudName) {
+    console.error("Missing NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME");
+    throw new Error("Cloudinary is not configured. Please contact support.");
+  }
 
   for (const file of files) {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "chainvanguard"); // Update with your Cloudinary preset
+    formData.append("upload_preset", "chainvanguard");
     formData.append("folder", "returns");
 
     try {
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         {
           method: "POST",
           body: formData,
@@ -195,18 +202,30 @@ export const uploadReturnImages = async (
       );
 
       if (!response.ok) {
-        throw new Error("Failed to upload image");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Cloudinary upload failed:", errorData);
+        throw new Error(
+          errorData.error?.message ||
+            `Upload failed with status ${response.status}`
+        );
       }
 
       const data = await response.json();
-      uploadedUrls.push(data.secure_url);
+      uploadedImages.push({
+        url: data.secure_url,
+        publicId: data.public_id,
+      });
     } catch (error) {
-      console.error("Error uploading image:", error);
-      throw new Error("Failed to upload images");
+      console.error("Image upload error:", error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload image. Please try again."
+      );
     }
   }
 
-  return uploadedUrls;
+  return uploadedImages;
 };
 
 /**
@@ -235,9 +254,7 @@ export const getEligibleOrders = async () => {
   const now = new Date();
 
   return response.data.orders.filter((order) => {
-    const deliveryDate = new Date(
-      order.actualDeliveryDate || order.createdAt
-    );
+    const deliveryDate = new Date(order.actualDeliveryDate || order.createdAt);
     const daysSinceDelivery = Math.ceil(
       (now.getTime() - deliveryDate.getTime()) / (1000 * 60 * 60 * 24)
     );

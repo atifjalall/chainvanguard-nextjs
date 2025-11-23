@@ -238,7 +238,7 @@ if [ -n "$VENDOR_PRODUCT_ID_1" ]; then
         SELLER_ID=$(echo "$VIEW_PRODUCT" | jq -r '.product.sellerId')
         print_result "View Vendor Product" "PASS"
         echo -e "${BLUE}   Name: $PRODUCT_NAME${NC}"
-        echo -e "${BLUE}   Price: Rs. $PRODUCT_PRICE${NC}"
+        echo -e "${BLUE}   Price: CVT. $PRODUCT_PRICE${NC}"
         echo -e "${BLUE}   Seller ID: $SELLER_ID${NC}"
     else
         print_result "View Vendor Product" "FAIL"
@@ -267,7 +267,7 @@ if [ -n "$VENDOR_PRODUCT_ID_1" ]; then
         NEW_PRICE=$(echo "$UPDATE_PRODUCT" | jq -r '.product.price')
         NEW_STOCK=$(echo "$UPDATE_PRODUCT" | jq -r '.product.quantity')
         print_result "Update Vendor Product" "PASS"
-        echo -e "${BLUE}   New Price: Rs. $NEW_PRICE${NC}"
+        echo -e "${BLUE}   New Price: CVT. $NEW_PRICE${NC}"
         echo -e "${BLUE}   New Stock: $NEW_STOCK${NC}"
     else
         print_result "Update Vendor Product" "FAIL"

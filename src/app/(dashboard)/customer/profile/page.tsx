@@ -1,28 +1,31 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { toast } from "sonner";
 import {
-  UserIcon,
-  EnvelopeIcon,
-  PhoneIcon,
-  MapPinIcon,
-  LockClosedIcon,
   EyeIcon,
   EyeSlashIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { usePageTitle } from "@/hooks/use-page-title";
+import { formatCurrency } from "@/utils/currency";
+import {
+  updateProfile,
+  getProfileStats,
+  ProfileStats,
+} from "@/lib/api/profile.api";
 
 export default function CustomerProfilePage() {
+  usePageTitle("My Profile");
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, updateProfile: updateAuthProfile } = useAuth();
   const { currentWallet, balance } = useWallet();
+  const [stats, setStats] = useState<ProfileStats | null>(null);
 
   // Personal Information
   const [personalInfo, setPersonalInfo] = useState({
@@ -35,7 +38,8 @@ export default function CustomerProfilePage() {
   const [addressInfo, setAddressInfo] = useState({
     address: user?.address || "",
     city: user?.city || "",
-    province: user?.province || "",
+    province: user?.state || "",
+    postalCode: user?.postalCode || "",
   });
 
   // Password Change
@@ -59,15 +63,73 @@ export default function CustomerProfilePage() {
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
 
+  // Fetch profile stats on mount
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await getProfileStats();
+
+        if (response.success && response.data) {
+          setStats(response.data);
+        } else {
+          toast.error("Failed to load profile statistics");
+        }
+      } catch {
+        toast.error("Error loading profile statistics");
+      }
+    };
+
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
+
+  // Update form data when user changes
+  useEffect(() => {
+    if (user) {
+      setPersonalInfo({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      });
+      setAddressInfo({
+        address: user.address || "",
+        city: user.city || "",
+        province: user.state || "",
+        postalCode: user.postalCode || "",
+      });
+    }
+  }, [user]);
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+  };
+
   const handlePersonalInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoadingPersonal(true);
     setErrors({ ...errors, personalInfo: "" });
 
     try {
-      // API call to update personal info
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Personal information updated successfully");
+      const result = await updateProfile({
+        name: personalInfo.name,
+        email: personalInfo.email,
+        phone: personalInfo.phone,
+      });
+
+      if (result.success && result.user) {
+        updateAuthProfile(result.user);
+        toast.success("Personal information updated successfully");
+      } else {
+        toast.error(result.error || "Failed to update personal information");
+        setErrors({
+          ...errors,
+          personalInfo: result.error || "Failed to update information",
+        });
+      }
     } catch (error) {
       toast.error("Failed to update personal information");
       setErrors({ ...errors, personalInfo: "Failed to update information" });
@@ -82,9 +144,23 @@ export default function CustomerProfilePage() {
     setErrors({ ...errors, addressInfo: "" });
 
     try {
-      // API call to update address info
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Address information updated successfully");
+      const result = await updateProfile({
+        address: addressInfo.address,
+        city: addressInfo.city,
+        state: addressInfo.province,
+        postalCode: addressInfo.postalCode,
+      });
+
+      if (result.success && result.user) {
+        updateAuthProfile(result.user);
+        toast.success("Address information updated successfully");
+      } else {
+        toast.error(result.error || "Failed to update address information");
+        setErrors({
+          ...errors,
+          addressInfo: result.error || "Failed to update address",
+        });
+      }
     } catch (error) {
       toast.error("Failed to update address information");
       setErrors({ ...errors, addressInfo: "Failed to update address" });
@@ -212,7 +288,10 @@ export default function CustomerProfilePage() {
                         {formatAddress(currentWallet.address)}
                       </p>
                       <p className="text-xs text-gray-900 dark:text-white">
-                        Balance: <span className="font-medium">${balance}</span>
+                        Balance:{" "}
+                        <span className="font-medium">
+                          {formatCurrency(balance, "CVT")}
+                        </span>
                       </p>
                     </div>
                   )}
@@ -231,7 +310,7 @@ export default function CustomerProfilePage() {
                         Total Orders
                       </span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        12
+                        {stats?.totalOrders ?? 0}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -239,7 +318,7 @@ export default function CustomerProfilePage() {
                         Saved Items
                       </span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        5
+                        {stats?.savedItems ?? 0}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -247,7 +326,7 @@ export default function CustomerProfilePage() {
                         Member Since
                       </span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        2024
+                        {stats ? formatDate(stats.memberSince) : "N/A"}
                       </span>
                     </div>
                   </div>
@@ -261,6 +340,12 @@ export default function CustomerProfilePage() {
                   className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
                   My Orders
+                </Link>
+                <Link
+                  href="/customer/returns"
+                  className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mt-4 block"
+                >
+                  My Returns
                 </Link>
               </div>
             </div>
@@ -281,11 +366,15 @@ export default function CustomerProfilePage() {
                 <form onSubmit={handlePersonalInfoSubmit} className="space-y-8">
                   {/* Name */}
                   <div className="space-y-3">
-                    <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                    <label
+                      htmlFor="name"
+                      className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium"
+                    >
                       Full Name
                     </label>
                     <div className="border-b border-gray-900 dark:border-white pb-px">
                       <input
+                        id="name"
                         type="text"
                         value={personalInfo.name}
                         onChange={(e) =>
@@ -301,11 +390,15 @@ export default function CustomerProfilePage() {
 
                   {/* Email */}
                   <div className="space-y-3">
-                    <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                    <label
+                      htmlFor="email"
+                      className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium"
+                    >
                       Email Address
                     </label>
                     <div className="border-b border-gray-900 dark:border-white pb-px">
                       <input
+                        id="email"
                         type="email"
                         value={personalInfo.email}
                         onChange={(e) =>
@@ -321,11 +414,15 @@ export default function CustomerProfilePage() {
 
                   {/* Phone */}
                   <div className="space-y-3">
-                    <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                    <label
+                      htmlFor="phone"
+                      className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium"
+                    >
                       Phone Number
                     </label>
                     <div className="border-b border-gray-900 dark:border-white pb-px">
                       <input
+                        id="phone"
                         type="tel"
                         placeholder="+1 (555) 000-0000"
                         value={personalInfo.phone}
@@ -371,11 +468,15 @@ export default function CustomerProfilePage() {
                 <form onSubmit={handleAddressInfoSubmit} className="space-y-8">
                   {/* Address */}
                   <div className="space-y-3">
-                    <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                    <label
+                      htmlFor="address"
+                      className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium"
+                    >
                       Street Address
                     </label>
                     <div className="border-b border-gray-900 dark:border-white pb-px">
                       <input
+                        id="address"
                         type="text"
                         placeholder="123 Main Street"
                         value={addressInfo.address}
@@ -390,16 +491,20 @@ export default function CustomerProfilePage() {
                     </div>
                   </div>
 
-                  {/* City & Province */}
-                  <div className="grid md:grid-cols-2 gap-8">
+                  {/* City, Province, Postal Code */}
+                  <div className="grid md:grid-cols-3 gap-8">
                     <div className="space-y-3">
-                      <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                      <label
+                        htmlFor="city"
+                        className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium"
+                      >
                         City
                       </label>
                       <div className="border-b border-gray-900 dark:border-white pb-px">
                         <input
+                          id="city"
                           type="text"
-                          placeholder="New York"
+                          placeholder="Karachi"
                           value={addressInfo.city}
                           onChange={(e) =>
                             setAddressInfo({
@@ -413,18 +518,46 @@ export default function CustomerProfilePage() {
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                      <label
+                        htmlFor="province"
+                        className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium"
+                      >
                         Province/State
                       </label>
                       <div className="border-b border-gray-900 dark:border-white pb-px">
                         <input
+                          id="province"
                           type="text"
-                          placeholder="NY"
+                          placeholder="Sindh"
                           value={addressInfo.province}
                           onChange={(e) =>
                             setAddressInfo({
                               ...addressInfo,
                               province: e.target.value,
+                            })
+                          }
+                          className="w-full h-12 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label
+                        htmlFor="postalCode"
+                        className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium"
+                      >
+                        Postal Code
+                      </label>
+                      <div className="border-b border-gray-900 dark:border-white pb-px">
+                        <input
+                          id="postalCode"
+                          type="text"
+                          placeholder="75500"
+                          value={addressInfo.postalCode}
+                          onChange={(e) =>
+                            setAddressInfo({
+                              ...addressInfo,
+                              postalCode: e.target.value,
                             })
                           }
                           className="w-full h-12 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
@@ -464,12 +597,16 @@ export default function CustomerProfilePage() {
                 <form onSubmit={handlePasswordSubmit} className="space-y-8">
                   {/* Current Password */}
                   <div className="space-y-3">
-                    <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                    <label
+                      htmlFor="currentPassword"
+                      className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium"
+                    >
                       Current Password
                     </label>
                     <div className="border-b border-gray-900 dark:border-white pb-px">
                       <div className="flex items-center">
                         <input
+                          id="currentPassword"
                           type={showCurrentPassword ? "text" : "password"}
                           placeholder="Enter current password"
                           value={passwordData.currentPassword}
@@ -500,12 +637,16 @@ export default function CustomerProfilePage() {
 
                   {/* New Password */}
                   <div className="space-y-3">
-                    <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                    <label
+                      htmlFor="newPassword"
+                      className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium"
+                    >
                       New Password
                     </label>
                     <div className="border-b border-gray-900 dark:border-white pb-px">
                       <div className="flex items-center">
                         <input
+                          id="newPassword"
                           type={showNewPassword ? "text" : "password"}
                           placeholder="Minimum 8 characters"
                           value={passwordData.newPassword}
@@ -534,12 +675,16 @@ export default function CustomerProfilePage() {
 
                   {/* Confirm Password */}
                   <div className="space-y-3">
-                    <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                    <label
+                      htmlFor="confirmPassword"
+                      className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium"
+                    >
                       Confirm New Password
                     </label>
                     <div className="border-b border-gray-900 dark:border-white pb-px">
                       <div className="flex items-center">
                         <input
+                          id="confirmPassword"
                           type={showConfirmPassword ? "text" : "password"}
                           placeholder="Re-enter new password"
                           value={passwordData.confirmPassword}

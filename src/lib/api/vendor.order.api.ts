@@ -238,7 +238,7 @@ function transformOrder(order: any): Order | null {
 
       // Order metadata
       orderNumber: order.orderNumber || orderId,
-      currency: order.currency || "PKR",
+      currency: order.currency || "CVT",
       customerNotes: order.customerNotes || "",
       specialInstructions: order.specialInstructions || "",
       isGift: order.isGift || false,
@@ -479,7 +479,10 @@ class OrderAPI {
         payload.estimatedDelivery = updateData.estimatedDelivery;
       }
 
-      const response: any = await apiClient.patch(`/orders/${orderId}/status`, payload);
+      const response: any = await apiClient.patch(
+        `/orders/${orderId}/status`,
+        payload
+      );
 
       console.log("[ORDER API] Update status response:", response);
 

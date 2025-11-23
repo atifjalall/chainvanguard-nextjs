@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Transaction, WalletData } from "./web3";
+import { WalletData } from "./web3";
 
 // User and Authentication Types
 export interface User {
@@ -498,6 +498,18 @@ export interface WishlistStats {
 // BLOCKCHAIN TYPES
 // ========================================
 
+export interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  timestamp: string;
+  status: string;
+  txHash?: string;
+  category?: string;
+  counterparty?: string;
+}
+
 export interface BlockchainTransaction {
   id: string;
   hash: string;
@@ -573,6 +585,16 @@ export interface VendorRequestItem {
   };
 }
 
+export interface VendorReturnStats {
+  total: number;
+  requested: number;
+  approved: number;
+  rejected: number;
+  refunded: number;
+  totalRefunded: number;
+  pendingAmount: number;
+}
+
 export interface VendorRequest {
   _id: string;
   id: string;
@@ -621,6 +643,24 @@ export interface VendorRequest {
 
   // Order reference (after payment)
   orderId?: string;
+
+  // Shipping address (saved when vendor pays)
+  shippingAddress?: {
+    name?: string;
+    phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+    latitude?: number;
+    longitude?: number;
+    addressType?: "home" | "office" | "other";
+  };
+
+  // Payment timestamp
+  paidAt?: string | Date;
 
   // Completion
   isCompleted: boolean;
@@ -764,7 +804,16 @@ export interface Order {
   trackingNumber?: string;
   trackingId?: string; // Alias for trackingNumber
   trackingUrl?: string;
-  courierName?: "FedEx" | "UPS" | "DHL" | "USPS" | "Local" | "Other" | "TCS" | "Leopard" | "";
+  courierName?:
+    | "FedEx"
+    | "UPS"
+    | "DHL"
+    | "USPS"
+    | "Local"
+    | "Other"
+    | "TCS"
+    | "Leopard"
+    | "";
   carrier?: string; // Alias for courierName
 
   // Payment
@@ -862,7 +911,14 @@ export interface Address {
   country: string;
 }
 
-export type PaymentMethod = "wallet" | "card" | "cod" | "bank_transfer" | "credit_card" | "debit_card" | "crypto";
+export type PaymentMethod =
+  | "wallet"
+  | "card"
+  | "cod"
+  | "bank_transfer"
+  | "credit_card"
+  | "debit_card"
+  | "crypto";
 
 // ========================================
 // CART TYPES
@@ -907,6 +963,102 @@ export interface CartSummary {
   tax: number;
   shipping: number;
   totalAmount: number;
+}
+
+// ========================================
+// VENDOR CUSTOMER MANAGEMENT TYPES
+// ========================================
+
+export interface VendorCustomer {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
+  memberSince: string;
+  loyaltyPoints: number;
+  stats: {
+    totalOrders: number;
+    totalSpent: number;
+    avgOrderValue: number;
+    lastOrderDate: string | null;
+  };
+}
+
+export interface VendorCustomerStats {
+  totalCustomers: number;
+  totalRevenue: number;
+  avgCustomerValue: number;
+  newCustomersThisMonth: number;
+}
+
+export interface CustomerDetailResponse {
+  success: boolean;
+  customer: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    address: {
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      postalCode?: string;
+    };
+    memberSince: string;
+    loyaltyPoints: number;
+  };
+  statistics: {
+    totalOrders: number;
+    totalSpent: number;
+    avgOrderValue: number;
+    firstOrderDate?: string;
+    lastOrderDate?: string;
+    ordersByStatus: Record<string, number>;
+  };
+  recentOrders: Array<{
+    id: string;
+    orderNumber: string;
+    amount: number;
+    status: OrderStatus;
+    itemCount: number;
+    date: string;
+    blockchainTxId?: string | null;
+    blockchainVerified?: boolean;
+  }>;
+}
+
+export interface CustomerOrdersListResponse {
+  success: boolean;
+  orders: Order[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface CustomerContactInfo {
+  name: string;
+  email: string;
+  phone?: string;
+}
+
+export type CustomerStatus = "active" | "new" | "at-risk";
+
+export interface CustomerFilters {
+  search?: string;
+  status?: CustomerStatus | "All Status";
+  sortBy?: "totalSpent" | "totalOrders" | "loyaltyPoints" | "name";
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
 }
 
 // ========================================
@@ -1896,3 +2048,16 @@ export const MSP_MAPPINGS = {
   customer: "CustomerMSP",
   "blockchain-expert": "AdminMSP",
 } as const;
+
+// ========================================
+// VENDOR ANALYTICS TYPES
+// ========================================
+
+export type {
+  SalesData as VendorSalesData,
+  ProductPerformance as VendorProductPerformance,
+  CustomerData as VendorCustomerData,
+  CategoryData as VendorCategoryData,
+  AnalyticsMetrics as VendorAnalyticsMetrics,
+  VendorAnalyticsResponse,
+} from "@/lib/api/vendor.analytics.api";

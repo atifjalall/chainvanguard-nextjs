@@ -59,6 +59,7 @@ export const colors = {
     modal: "bg-white dark:bg-gray-950",
     hover: "hover:bg-gray-50 dark:hover:bg-gray-900",
     active: "bg-gray-100 dark:bg-gray-800",
+    quaternary: "bg-gray-200 dark:bg-gray-700",
   },
   texts: {
     primary: "text-gray-900 dark:text-gray-100",
@@ -90,6 +91,7 @@ export const colors = {
     info: "text-blue-500",
     white: "text-white dark:text-gray-900",
     red: "text-red-500",
+    danger: "text-red-600",
   },
   buttons: {
     primary:

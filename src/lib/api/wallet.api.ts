@@ -17,13 +17,14 @@ export interface WalletBalance {
 
 export interface BackendTransaction {
   _id: string;
-  type: "deposit" | "withdrawal" | "payment" | "transfer_in" | "transfer_out";
+  type: "deposit" | "withdrawal" | "payment" | "transfer_in" | "transfer_out" | "sale" | "refund";
   amount: number;
   balanceBefore: number;
   balanceAfter: number;
   description: string;
   status: "pending" | "completed" | "failed";
   relatedUserId?: string;
+  relatedOrderId?: string;
   timestamp: string;
   metadata?: {
     txHash?: string;
@@ -34,6 +35,12 @@ export interface BackendTransaction {
     senderEmail?: string;
     recipientWallet?: string;
     senderWallet?: string;
+    buyerName?: string;
+    buyerWalletAddress?: string;
+    sellerName?: string;
+    sellerWalletAddress?: string;
+    orderReference?: string;
+    blockchainTxId?: string;
     [key: string]: any;
   };
 }
@@ -45,6 +52,8 @@ export interface AddFundsData {
     cardLast4?: string;
     cardType?: string;
     bankAccount?: string;
+    currency?: string;
+    originalAmount?: number;
   };
 }
 
@@ -83,20 +92,33 @@ export const getWalletBalance = async (): Promise<
 };
 
 // Get transaction history
+// Note: Backend returns transactions array directly in 'data', not nested in 'data.transactions'
 export const getTransactionHistory = async (
   page: number = 1,
   limit: number = 20
-): Promise<
-  WalletApiResponse<{
-    transactions: BackendTransaction[];
-    pagination: {
-      currentPage: number;
-      totalPages: number;
-      totalTransactions: number;
-      hasMore: boolean;
+): Promise<{
+  success: boolean;
+  data: BackendTransaction[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+  summary: {
+    currentBalance: number;
+    currency: string;
+    totalTransactions: number;
+    statistics: {
+      totalDeposited: number;
+      totalWithdrawn: number;
+      totalSpent: number;
+      totalReceived: number;
     };
-  }>
-> => {
+  };
+}> => {
   return await apiClient.get(
     `/wallet/transactions?page=${page}&limit=${limit}`
   );
@@ -133,4 +155,26 @@ export const searchUsers = async (
   query: string
 ): Promise<WalletApiResponse<any>> => {
   return await apiClient.get(`/wallet/search-users?q=${query}`);
+};
+
+// Create Stripe payment intent
+export const createPaymentIntent = async (
+  amount: number
+): Promise<WalletApiResponse<{
+  clientSecret: string;
+  paymentIntentId: string;
+  amount: number;
+}>> => {
+  return await apiClient.post("/wallet/create-payment-intent", { amount });
+};
+
+// Confirm Stripe payment
+export const confirmPayment = async (
+  paymentIntentId: string,
+  amount: number
+): Promise<WalletApiResponse<any>> => {
+  return await apiClient.post("/wallet/confirm-payment", {
+    paymentIntentId,
+    amount,
+  });
 };

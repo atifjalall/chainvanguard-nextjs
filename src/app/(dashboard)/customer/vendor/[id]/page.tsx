@@ -12,6 +12,7 @@ import {
   BuildingStorefrontIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 // Mock Vendor Data
 const MOCK_VENDOR = {
@@ -208,6 +209,7 @@ function ProductCard({ product }: ProductCardProps) {
 }
 
 export default function VendorStorePage() {
+  usePageTitle("Vendor Profile");
   const router = useRouter();
   const params = useParams();
   const vendorId = params?.id || "VENDOR001";
