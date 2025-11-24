@@ -47,8 +47,11 @@ const timeRangeOptions = [
   { value: "7d", label: "Last 7 Days" },
   { value: "30d", label: "Last 30 Days" },
 ];
+import { usePageTitle } from "@/hooks/use-page-title";
+
 
 export default function FaultTolerancePage() {
+  usePageTitle("Fault Tolerance");
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [faultStatus, setFaultStatus] = useState<any>(null);

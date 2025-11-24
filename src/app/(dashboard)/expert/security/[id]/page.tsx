@@ -66,7 +66,11 @@ interface UserDetailPageProps {
   }>;
 }
 
+import { usePageTitle } from "@/hooks/use-page-title";
+
+
 export default function UserDetailPage({ params }: UserDetailPageProps) {
+  usePageTitle("User Details");
   const router = useRouter();
   const { id: userId } = use(params);
 
@@ -272,7 +276,7 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="/expert/security">Security</BreadcrumbLink>
+            <BreadcrumbLink href="/expert/security">Security & Access Control</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>

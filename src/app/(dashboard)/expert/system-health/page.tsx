@@ -38,8 +38,10 @@ import {
 import { toast } from "sonner";
 import { expertApi } from "@/lib/api/expert.api";
 import { badgeColors, colors } from "@/lib/colorConstants";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 export default function SystemHealthPage() {
+  usePageTitle("System Health");
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);

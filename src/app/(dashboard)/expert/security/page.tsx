@@ -74,8 +74,11 @@ import { expertApi } from "@/lib/api/expert.api";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import { useRouter } from "next/navigation";
 import { formatCurrency, formatCurrencyAbbreviated } from "@/utils/currency";
+import { usePageTitle } from "@/hooks/use-page-title";
+
 
 export default function SecurityPage() {
+  usePageTitle("Security & Access Control");
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);

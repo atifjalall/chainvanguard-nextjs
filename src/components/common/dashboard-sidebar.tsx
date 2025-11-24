@@ -306,7 +306,23 @@ export function DashboardSidebar() {
                     asChild
                     title={isCollapsed && !isMobile ? item.label : undefined}
                   >
-                    <Link href={item.href} className="flex items-center">
+                    <Link
+                      href={item.href}
+                      // Prevent navigation if the link is the same as the current path (fixes metadata toggle)
+                      // Ensure mobile menu closes after clicking (even on same-route click)
+                      onClick={(e) => {
+                        if (isActive) {
+                          e.preventDefault();
+                          if (isMobile && isOpen) setIsOpen(false);
+                          // Do not navigate; metadata should remain as it currently is
+                          return;
+                        }
+                        // If navigating to a new route on mobile, close the sidebar
+                        if (isMobile && isOpen) setIsOpen(false);
+                      }}
+                      aria-current={isActive ? "page" : undefined}
+                      className="flex items-center"
+                    >
                       <Icon className={cn("h-4 w-4 flex-shrink-0 mr-3")} />
                       <span
                         className={cn(
