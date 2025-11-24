@@ -1,572 +1,594 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
-import { usePageTitle } from "@/hooks/use-page-title";
-  Activity,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
-  RefreshCw,
-  Settings,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  Database,
-  Server,
-  Network,
-  Cpu,
-  HardDrive,
-  Wifi,
-  Zap,
-} from "lucide-react";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  ArrowPathIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ExclamationTriangleIcon,
+  ServerIcon,
+  CpuChipIcon,
+  ChartBarIcon,
+  BoltIcon,
+  ShieldCheckIcon,
+  ClockIcon,
+  ArrowRightIcon,
+} from "@heroicons/react/24/outline";
+import { toast } from "sonner";
+import { expertApi } from "@/lib/api/expert.api";
+import { badgeColors, colors } from "@/lib/colorConstants";
 
-interface SystemMetric {
-  name: string;
-  value: number;
-  unit: string;
-  status: "healthy" | "warning" | "critical";
-  trend: "up" | "down" | "stable";
-  lastUpdated: string;
-}
+export default function SystemHealthPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
 
-interface HealthAlert {
-  id: string;
-  type: "performance" | "capacity" | "network" | "security";
-  severity: "low" | "medium" | "high";
-  message: string;
-  timestamp: string;
-  resolved: boolean;
-}
-
-interface NetworkStats {
-  throughput: number;
-  latency: number;
-  blockHeight: number;
-  transactionsPerSecond: number;
-  peersConnected: number;
-  channelsActive: number;
-}
-
-const SystemHealthPage = () => {
-  const [systemMetrics, setSystemMetrics] = useState<SystemMetric[]>([]);
-  const [healthAlerts, setHealthAlerts] = useState<HealthAlert[]>([]);
-  const [networkStats, setNetworkStats] = useState<NetworkStats>({
-    throughput: 0,
-    latency: 0,
-    blockHeight: 0,
-    transactionsPerSecond: 0,
-    peersConnected: 0,
-    channelsActive: 0,
-  });
-  const [selectedTimeRange, setSelectedTimeRange] = useState("1h");
-  const [isLoading, setIsLoading] = useState(false);
-  const [overallHealth, setOverallHealth] = useState(0);
+  // Data states
+  const [consensusStatus, setConsensusStatus] = useState<any>(null);
+  const [consensusMetrics, setConsensusMetrics] = useState<any>(null);
+  const [faultStatus, setFaultStatus] = useState<any>(null);
+  const [securityData, setSecurityData] = useState<any>(null);
 
   useEffect(() => {
-    generateMockData();
-    const interval = setInterval(generateMockData, 30000); // Update every 30 seconds
-    return () => clearInterval(interval);
+    setIsVisible(true);
+    loadSystemHealthData();
   }, []);
 
-  const generateMockData = () => {
-    // Generate system metrics
-    const metrics: SystemMetric[] = [
-      {
-        name: "CPU Usage",
-        value: Math.floor(Math.random() * 30) + 45,
-        unit: "%",
-        status: "healthy",
-        trend: "stable",
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: "Memory Usage",
-        value: Math.floor(Math.random() * 25) + 60,
-        unit: "%",
-        status: "healthy",
-        trend: "up",
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: "Disk Usage",
-        value: Math.floor(Math.random() * 15) + 35,
-        unit: "%",
-        status: "healthy",
-        trend: "stable",
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: "Network I/O",
-        value: Math.floor(Math.random() * 40) + 20,
-        unit: "MB/s",
-        status: "healthy",
-        trend: "down",
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: "Block Processing",
-        value: Math.floor(Math.random() * 10) + 90,
-        unit: "%",
-        status: "healthy",
-        trend: "up",
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: "Consensus Efficiency",
-        value: Math.floor(Math.random() * 5) + 95,
-        unit: "%",
-        status: "healthy",
-        trend: "stable",
-        lastUpdated: new Date().toISOString(),
-      },
-    ];
+  const loadSystemHealthData = async () => {
+    try {
+      setIsLoading(true);
 
-    // Update status based on values
-    metrics.forEach((metric) => {
-      if (
-        metric.name === "CPU Usage" ||
-        metric.name === "Memory Usage" ||
-        metric.name === "Disk Usage"
-      ) {
-        if (metric.value > 80) metric.status = "critical";
-        else if (metric.value > 65) metric.status = "warning";
-        else metric.status = "healthy";
-      } else {
-        if (metric.value < 70) metric.status = "critical";
-        else if (metric.value < 85) metric.status = "warning";
-        else metric.status = "healthy";
-      }
-    });
+      // Load all health data
+      const [consensus, metrics, fault, security] = await Promise.all([
+        expertApi.getConsensusStatus(),
+        expertApi.getConsensusMetrics("24h"),
+        expertApi.getFaultToleranceStatus(),
+        expertApi.getSecurityOverview(),
+      ]);
 
-    setSystemMetrics(metrics);
-
-    // Generate network stats
-    setNetworkStats({
-      throughput: Math.floor(Math.random() * 500) + 1000,
-      latency: Math.floor(Math.random() * 50) + 10,
-      blockHeight: Math.floor(Math.random() * 100) + 15420,
-      transactionsPerSecond: Math.floor(Math.random() * 200) + 150,
-      peersConnected: Math.floor(Math.random() * 3) + 9,
-      channelsActive: Math.floor(Math.random() * 2) + 3,
-    });
-
-    // Generate health alerts
-    const alertTypes: HealthAlert["type"][] = [
-      "performance",
-      "capacity",
-      "network",
-      "security",
-    ];
-    const severities: HealthAlert["severity"][] = ["low", "medium", "high"];
-
-    const alerts: HealthAlert[] = Array.from({ length: 5 }, (_, index) => ({
-      id: `alert_${index + 1}`,
-      type: alertTypes[Math.floor(Math.random() * alertTypes.length)],
-      severity: severities[Math.floor(Math.random() * severities.length)],
-      message: getAlertMessage(
-        alertTypes[Math.floor(Math.random() * alertTypes.length)]
-      ),
-      timestamp: new Date(Date.now() - index * 600000).toISOString(),
-      resolved: Math.random() > 0.3,
-    }));
-
-    setHealthAlerts(alerts);
-
-    // Calculate overall health
-    const healthyCount = metrics.filter((m) => m.status === "healthy").length;
-    const warningCount = metrics.filter((m) => m.status === "warning").length;
-    const criticalCount = metrics.filter((m) => m.status === "critical").length;
-
-    const healthScore =
-      ((healthyCount * 100 + warningCount * 60 + criticalCount * 20) /
-        (metrics.length * 100)) *
-      100;
-    setOverallHealth(Math.floor(healthScore));
-  };
-
-  const getAlertMessage = (type: HealthAlert["type"]) => {
-    const messages = {
-      performance: "System performance degradation detected",
-      capacity: "Storage capacity approaching threshold",
-      network: "Network connectivity issues reported",
-      security: "Security scan completed with warnings",
-    };
-    return messages[type];
-  };
-
-  const handleRefresh = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      generateMockData();
+      if (consensus.success) setConsensusStatus(consensus.data);
+      if (metrics.success) setConsensusMetrics(metrics.data);
+      if (fault.success) setFaultStatus(fault.data);
+      if (security.success) setSecurityData(security.data);
+    } catch (error) {
+      console.error("Error loading system health data:", error);
+      toast.error("Failed to load system health data");
+    } finally {
       setIsLoading(false);
-    }, 1000);
-  };
-
-  const getStatusColor = (status: SystemMetric["status"]) => {
-    switch (status) {
-      case "healthy":
-        return "text-green-600";
-      case "warning":
-        return "text-yellow-600";
-      case "critical":
-        return "text-red-600";
-      default:
-        return "text-muted-foreground";
     }
   };
 
-  const getStatusBadge = (status: SystemMetric["status"]) => {
-    const variants = {
-      healthy:
-        "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300",
-      warning:
-        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300",
-      critical:
-        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300",
-    };
+  const getOverallHealth = () => {
+    const faultScore = parseFloat(faultStatus?.score || "0");
+    const securityStatus = securityData?.status || "secure";
 
-    const icons = {
-      healthy: CheckCircle,
-      warning: AlertTriangle,
-      critical: XCircle,
-    };
-
-    const Icon = icons[status];
-
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[status]}`}
-      >
-        <Icon className="w-3 h-3 mr-1" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
-
-  const getTrendIcon = (trend: SystemMetric["trend"]) => {
-    switch (trend) {
-      case "up":
-        return <TrendingUp className="w-3 h-3 text-green-600" />;
-      case "down":
-        return <TrendingDown className="w-3 h-3 text-red-600" />;
-      case "stable":
-        return <div className="w-3 h-3 border-t-2 border-gray-400" />;
+    if (faultScore >= 90 && securityStatus === "secure") {
+      return { status: "Excellent", color: badgeColors.green }; // changed from green -> blue
+    } else if (faultScore >= 70 && securityStatus === "secure") {
+      return { status: "Good", color: badgeColors.blue }; // changed from green -> blue
+    } else if (faultScore >= 50) {
+      return { status: "Fair", color: badgeColors.yellow };
+    } else {
+      return { status: "Critical", color: badgeColors.red };
     }
   };
 
-  const getSeverityBadge = (severity: HealthAlert["severity"]) => {
-    const variants = {
-      low: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300",
-      medium:
-        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300",
-      high: "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300",
-    };
+  const overallHealth = getOverallHealth();
 
+  if (isLoading) {
     return (
-      <span
-        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[severity]}`}
+      <div
+        className={`p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
       >
-        {severity.charAt(0).toUpperCase() + severity.slice(1)}
-      </span>
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+          <div className="grid grid-cols-4 gap-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700"></div>
+            ))}
+          </div>
+          <div className="h-96 bg-gray-200 dark:bg-gray-700"></div>
+        </div>
+      </div>
     );
-  };
-
-  const getMetricIcon = (name: string) => {
-    const icons = {
-      "CPU Usage": Cpu,
-      "Memory Usage": Database,
-      "Disk Usage": HardDrive,
-      "Network I/O": Wifi,
-      "Block Processing": Server,
-      "Consensus Efficiency": Network,
-    };
-    const Icon = icons[name as keyof typeof icons] || Activity;
-    return <Icon className="w-4 h-4 text-muted-foreground" />;
-  };
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div
+      className={`relative z-10 p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
+    >
+      {/* Breadcrumb */}
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/expert">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>System Health</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">System Health</h1>
-          <p className="text-muted-foreground">
-            Monitor overall system performance and health metrics
-          </p>
-        </div>
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-          <Button variant="outline">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
+      <div
+        className={`transform transition-all duration-700 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
+              System Health Overview
+            </h1>
+            <p className={`text-base ${colors.texts.secondary}`}>
+              Comprehensive view of network health, consensus, and fault
+              tolerance
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge
+                className={`${overallHealth.color.bg} ${overallHealth.color.border} ${overallHealth.color.text} text-xs rounded-none flex items-center gap-1`}
+              >
+                {overallHealth.status === "Excellent" ||
+                overallHealth.status === "Good" ? (
+                  <CheckCircleIcon className="h-3 w-3" />
+                ) : overallHealth.status === "Fair" ? (
+                  <ExclamationTriangleIcon className="h-3 w-3" />
+                ) : (
+                  <XCircleIcon className="h-3 w-3" />
+                )}
+                {overallHealth.status}
+              </Badge>
+              <Badge
+                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+              >
+                Live Monitoring
+              </Badge>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={loadSystemHealthData}
+              variant="outline"
+              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
+            >
+              <ArrowPathIcon className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Overall Health Score */}
-      <Card>
+      {/* Overall System Status */}
+      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Activity className="w-5 h-5 mr-2" />
-            Overall System Health
+          <CardTitle
+            className={`text-lg font-semibold ${colors.texts.primary}`}
+          >
+            Overall System Status
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-4">
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Health Score</span>
-                <span
-                  className={`text-2xl font-bold ${getStatusColor(overallHealth > 80 ? "healthy" : overallHealth > 60 ? "warning" : "critical")}`}
-                >
-                  {overallHealth}%
-                </span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div
+              className={`p-6 rounded-none border-l-4 border border-gray-200 dark:border-gray-700 ${
+                overallHealth.status === "Excellent" ||
+                overallHealth.status === "Good"
+                  ? "border-l-blue-500" // changed to left-only blue border
+                  : overallHealth.status === "Fair"
+                    ? "border-l-yellow-500"
+                    : "border-l-red-500"
+              }`}
+            >
+              <div className={`text-xs ${colors.texts.secondary} mb-2`}>
+                System Health
               </div>
-              <Progress value={overallHealth} className="h-3" />
-            </div>
-            <div className="text-right">
-              {getStatusBadge(
-                overallHealth > 80
-                  ? "healthy"
-                  : overallHealth > 60
-                    ? "warning"
-                    : "critical"
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Network Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Network Throughput
-            </CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {networkStats.throughput.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">transactions/hour</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Block Height</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {networkStats.blockHeight.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">latest block</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Peers</CardTitle>
-            <Network className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {networkStats.peersConnected}
-            </div>
-            <p className="text-xs text-muted-foreground">connected peers</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* System Metrics */}
-      <Card>
-        <CardHeader>
-          <CardTitle>System Metrics</CardTitle>
-          <CardDescription>
-            Real-time system performance indicators
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {systemMetrics.map((metric, index) => (
               <div
-                key={index}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                className={`text-3xl font-bold ${colors.texts.primary} mb-1`}
               >
-                <div className="flex items-center space-x-3">
-                  {getMetricIcon(metric.name)}
-                  <div>
-                    <p className="font-medium">{metric.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {metric.value}
-                      {metric.unit}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end space-y-1">
-                  {getStatusBadge(metric.status)}
-                  <div className="flex items-center space-x-1">
-                    {getTrendIcon(metric.trend)}
-                    <span className="text-xs text-muted-foreground">trend</span>
-                  </div>
-                </div>
+                {overallHealth.status}
               </div>
-            ))}
+              <div className={`text-xs ${colors.texts.muted}`}>
+                All systems operational
+              </div>
+            </div>
+            <div
+              className={`p-6 rounded-none border-l-4 border border-gray-200 dark:border-gray-700`}
+            >
+              <div className={`text-xs ${colors.texts.secondary} mb-2`}>
+                Fault Tolerance Score
+              </div>
+              <div
+                className={`text-3xl font-bold ${colors.texts.primary} mb-1`}
+              >
+                {faultStatus?.score || "0"}%
+              </div>
+              <div className={`text-xs ${colors.texts.muted}`}>
+                {faultStatus?.status || "Good"} resilience
+              </div>
+            </div>
+            <div
+              className={`p-6 rounded-none border-l-4 border border-gray-200 dark:border-gray-700`}
+            >
+              <div className={`text-xs ${colors.texts.secondary} mb-2`}>
+                Security Status
+              </div>
+              <div
+                className={`text-3xl font-bold ${colors.texts.primary} mb-1 capitalize`}
+              >
+                {securityData?.status || "Secure"}
+              </div>
+              <div className={`text-xs ${colors.texts.muted}`}>
+                {securityData?.metrics?.securityEvents || 0} events (24h)
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+      {/* Network Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          {
+            title: "Block Count",
+            value: consensusMetrics?.metrics?.blockCount || 0,
+            subtitle: "Total blocks",
+            icon: CpuChipIcon,
+            color: badgeColors.blue,
+            link: "/expert/consensus",
+          },
+          {
+            title: "Transactions",
+            value: consensusMetrics?.metrics?.transactionCount || 0,
+            subtitle: "Last 24 hours",
+            icon: ChartBarIcon,
+            color: badgeColors.green,
+            link: "/expert/all-transactions",
+          },
+          {
+            title: "Failed Transactions",
+            value: faultStatus?.metrics?.failedTransactions || 0,
+            subtitle: "Error tracking",
+            icon: XCircleIcon,
+            color: badgeColors.red,
+            link: "/expert/fault-tolerance",
+          },
+          {
+            title: "System Uptime",
+            value: `${faultStatus?.metrics?.uptime || "0"}%`,
+            subtitle: "Availability",
+            icon: ServerIcon,
+            color: badgeColors.green,
+            link: "/expert/fault-tolerance",
+          },
+        ].map((stat, index) => (
+          <Card
+            key={stat.title || index}
+            onClick={() => stat.link && router.push(stat.link)}
+            className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02] cursor-pointer`}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle
+                className={`text-xs font-medium ${colors.texts.secondary}`}
+              >
+                {stat.title}
+              </CardTitle>
+              <stat.icon className="h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${colors.texts.primary}`}>
+                {typeof stat.value === "number"
+                  ? stat.value.toLocaleString()
+                  : stat.value}
+              </div>
+              <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                {stat.subtitle}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* System Components Status */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Consensus Health */}
+        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
           <CardHeader>
-            <CardTitle>Network Performance</CardTitle>
-            <CardDescription>
-              Blockchain network performance metrics
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle
+                  className={`text-lg font-semibold ${colors.texts.primary}`}
+                >
+                  Consensus Health
+                </CardTitle>
+                <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                  Network consensus and peer status
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/expert/consensus")}
+                className={`text-xs rounded-none ${colors.buttons.ghost}`}
+              >
+                View Details
+                <ArrowRightIcon className="h-3 w-3 ml-1" />
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium">Average Latency</p>
-                <p className="text-xs text-muted-foreground">
-                  Network response time
-                </p>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CheckCircleIcon className="h-5 w-5" />
+                  <div>
+                    <div
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      Network State
+                    </div>
+                    <div className={`text-xs ${colors.texts.muted}`}>
+                      {consensusStatus?.status || "Active"}
+                    </div>
+                  </div>
+                </div>
+                <Badge
+                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                >
+                  Online
+                </Badge>
               </div>
-              <span className="text-lg font-bold text-blue-600">
-                {networkStats.latency}ms
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium">TPS</p>
-                <p className="text-xs text-muted-foreground">
-                  Transactions per second
-                </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <ServerIcon className="h-5 w-5" />
+                  <div>
+                    <div
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      Active Peers
+                    </div>
+                    <div className={`text-xs ${colors.texts.muted}`}>
+                      {consensusStatus?.peers?.length || 0} connected
+                    </div>
+                  </div>
+                </div>
+                <div className={`text-xs font-medium ${colors.texts.primary}`}>
+                  {consensusStatus?.peers?.length || 0}
+                </div>
               </div>
-              <span className="text-lg font-bold text-green-600">
-                {networkStats.transactionsPerSecond}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium">Active Channels</p>
-                <p className="text-xs text-muted-foreground">
-                  Blockchain channels
-                </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <ClockIcon className="h-5 w-5" />
+                  <div>
+                    <div
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      Avg Block Time
+                    </div>
+                    <div className={`text-xs ${colors.texts.muted}`}>
+                      Block generation speed
+                    </div>
+                  </div>
+                </div>
+                <div className={`text-xs font-medium ${colors.texts.primary}`}>
+                  {consensusMetrics?.metrics?.avgBlockTime?.toFixed(2) || "0"}s
+                </div>
               </div>
-              <span className="text-lg font-bold text-purple-600">
-                {networkStats.channelsActive}
-              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Security Status */}
+        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Recent Alerts</CardTitle>
-                <CardDescription>
-                  System health alerts and warnings
-                </CardDescription>
+                <CardTitle
+                  className={`text-lg font-semibold ${colors.texts.primary}`}
+                >
+                  Security Status
+                </CardTitle>
+                <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                  Access control and security events
+                </p>
               </div>
-              <Select
-                value={selectedTimeRange}
-                onValueChange={setSelectedTimeRange}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/expert/security")}
+                className={`text-xs rounded-none ${colors.buttons.ghost}`}
               >
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1h">1h</SelectItem>
-                  <SelectItem value="24h">24h</SelectItem>
-                  <SelectItem value="7d">7d</SelectItem>
-                </SelectContent>
-              </Select>
+                View Details
+                <ArrowRightIcon className="h-3 w-3 ml-1" />
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-80 overflow-y-auto">
-              {healthAlerts.slice(0, 6).map((alert) => (
-                <div
-                  key={alert.id}
-                  className={`flex items-start justify-between p-3 border rounded-lg transition-colors ${
-                    alert.resolved ? "opacity-60" : "hover:bg-muted/50"
-                  }`}
-                >
-                  <div className="flex items-start space-x-3">
-                    <div className="mt-1">
-                      {alert.resolved ? (
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                      )}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <ShieldCheckIcon className="h-5 w-5" />
+                  <div>
+                    <div
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      Security Events
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <p className="font-medium text-sm capitalize">
-                          {alert.type}
-                        </p>
-                        {getSeverityBadge(alert.severity)}
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-1">
-                        {alert.message}
-                      </p>
-                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        <span>
-                          {new Date(alert.timestamp).toLocaleTimeString()}
-                        </span>
-                      </div>
+                    <div className={`text-xs ${colors.texts.muted}`}>
+                      Last 24 hours
                     </div>
                   </div>
-                  <Badge
-                    variant={alert.resolved ? "default" : "destructive"}
-                    className="text-xs"
-                  >
-                    {alert.resolved ? "Resolved" : "Active"}
-                  </Badge>
                 </div>
-              ))}
+                <div className={`text-xs font-medium ${colors.texts.primary}`}>
+                  {securityData?.metrics?.securityEvents || 0}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <ExclamationTriangleIcon className="h-5 w-5" />
+                  <div>
+                    <div
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      Failed Logins
+                    </div>
+                    <div className={`text-xs ${colors.texts.muted}`}>
+                      Authentication failures
+                    </div>
+                  </div>
+                </div>
+                <div className={`text-xs font-medium ${colors.texts.primary}`}>
+                  {securityData?.metrics?.failedLogins || 0}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CheckCircleIcon className="h-5 w-5" />
+                  <div>
+                    <div
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      Active Users
+                    </div>
+                    <div className={`text-xs ${colors.texts.muted}`}>
+                      Currently active
+                    </div>
+                  </div>
+                </div>
+                <div className={`text-xs font-medium ${colors.texts.primary}`}>
+                  {securityData?.metrics?.activeUsers || 0}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Peer Nodes Status */}
+      {consensusStatus?.peers && consensusStatus.peers.length > 0 && (
+        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle
+                  className={`text-lg font-semibold ${colors.texts.primary}`}
+                >
+                  Network Peers
+                </CardTitle>
+                <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                  Connected nodes and their status
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/expert/consensus")}
+                className={`text-xs rounded-none ${colors.buttons.ghost}`}
+              >
+                View All
+                <ArrowRightIcon className="h-3 w-3 ml-1" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className={colors.tables.header}>
+                    <TableHead className="text-xs font-semibold">
+                      Peer Name
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Type
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Block Height
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Version
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Last Seen
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {consensusStatus.peers
+                    .slice(0, 5)
+                    .map((peer: any, index: number) => (
+                      <TableRow
+                        key={peer.id || index}
+                        className={colors.tables.row}
+                      >
+                        <TableCell className="text-xs font-medium">
+                          {peer.name || `Peer ${index + 1}`}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+                          >
+                            {peer.type || "peer"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none flex items-center gap-1 w-fit`}
+                          >
+                            <CheckCircleIcon className="h-3 w-3" />
+                            {peer.status || "online"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {peer.blockHeight?.toLocaleString() || "0"}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {peer.version || "1.0.0"}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {peer.lastSeen
+                            ? new Date(peer.lastSeen).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )
+                            : "Just now"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
-};
-
-export default SystemHealthPage;
+}

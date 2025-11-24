@@ -35,6 +35,115 @@ export interface User {
   avatar?: string;
 }
 
+// ADD THIS TO END OF src/types/index.ts
+
+// ========================================
+// EXPERT DASHBOARD TYPES
+// ========================================
+
+export interface ExpertDashboardStats {
+  networkOverview: {
+    totalUsers: number;
+    activeUsers: number;
+    totalProducts: number;
+    activeProducts: number;
+    totalOrders: number;
+    usersByRole: Record<string, number>;
+  };
+  recentActivity: {
+    last24Hours: {
+      users: number;
+      products: number;
+      orders: number;
+    };
+  };
+  transactions: {
+    total: number;
+    successful: number;
+    failed: number;
+    pending: number;
+    successRate: string;
+    byType: Record<string, number>;
+  };
+  systemHealth: {
+    averageExecutionTime: number;
+    errorRate: number;
+    status: "healthy" | "warning" | "critical";
+  };
+  recentLogs: BlockchainLog[];
+}
+
+export interface BlockchainLog {
+  _id: string;
+  id: string;
+  transactionId: string;
+  type: string;
+  action: string;
+  status: "success" | "failed" | "pending";
+  userId?: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  performedBy?: string;
+  entityId?: string;
+  entityType?: string;
+  chaincodeName?: string;
+  functionName?: string;
+  executionTime?: number;
+  blockNumber?: string;
+  blockHash?: string;
+  timestamp: string;
+  errorMessage?: string;
+  metadata?: any;
+}
+
+export interface ConsensusStatus {
+  status: string;
+  peers: any[];
+  networkState: any;
+  timestamp: string;
+}
+
+export interface ConsensusMetrics {
+  timeRange: string;
+  metrics: {
+    blockCount: number;
+    transactionCount: number;
+    avgBlockTime: number;
+    avgTxPerBlock: number;
+  };
+  trends: any[];
+}
+
+export interface FaultToleranceStatus {
+  status: "excellent" | "good" | "fair" | "poor";
+  score: string;
+  metrics: {
+    totalTransactions: number;
+    failedTransactions: number;
+    systemErrors: number;
+    errorRate: number;
+    uptime: number;
+    lastIncident: string | null;
+  };
+  timestamp: string;
+}
+
+export interface SecurityOverview {
+  status: "secure" | "alert";
+  metrics: {
+    securityEvents: number;
+    failedLogins: number;
+    suspiciousActivity: number;
+    activeUsers: number;
+    inactiveUsers: number;
+  };
+  recentEvents: any[];
+  timestamp: string;
+}
+
 // ========================================
 // SUPPLIER RATING TYPES
 // ========================================

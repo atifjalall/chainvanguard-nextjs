@@ -1,16 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -19,583 +13,522 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-import { usePageTitle } from "@/hooks/use-page-title";
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Activity,
-  Shield,
-  Server,
-  RefreshCw,
-  Settings,
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  Database,
-  Network,
-  Zap,
-} from "lucide-react";
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  ArrowPathIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ExclamationTriangleIcon,
+  BoltIcon,
+  ChartBarIcon,
+  ClockIcon,
+  ServerIcon,
+} from "@heroicons/react/24/outline";
+import { toast } from "sonner";
+import { expertApi } from "@/lib/api/expert.api";
+import { badgeColors, colors } from "@/lib/colorConstants";
 
-interface Node {
-  id: string;
-  name: string;
-  type: "peer" | "orderer" | "ca";
-  status: "online" | "offline" | "syncing" | "error";
-  health: number;
-  lastSeen: string;
-  location: string;
-  version: string;
-}
+const timeRangeOptions = [
+  { value: "24h", label: "Last 24 Hours" },
+  { value: "7d", label: "Last 7 Days" },
+  { value: "30d", label: "Last 30 Days" },
+];
 
-interface FaultEvent {
-  id: string;
-  timestamp: string;
-  type: "node-failure" | "network-partition" | "consensus-failure" | "recovery";
-  severity: "low" | "medium" | "high" | "critical";
-  nodeId: string;
-  description: string;
-  status: "active" | "resolved" | "investigating";
-}
+export default function FaultTolerancePage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
+  const [faultStatus, setFaultStatus] = useState<any>(null);
+  const [faultStats, setFaultStats] = useState<any>(null);
+  const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
 
-const FaultTolerancePage = () => {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [faultEvents, setFaultEvents] = useState<FaultEvent[]>([]);
-  const [selectedTimeRange, setSelectedTimeRange] = useState("24h");
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Stats
-  const [stats, setStats] = useState({
-    totalNodes: 0,
-    onlineNodes: 0,
-    offlineNodes: 0,
-    errorNodes: 0,
-    averageHealth: 0,
-    faultTolerance: 0,
-    redundancyLevel: "High",
-    consensusHealth: 98.5,
-  });
-
-  // Generate mock data
   useEffect(() => {
-    generateMockData();
+    setIsVisible(true);
+    loadFaultToleranceData();
   }, []);
 
-  const generateMockData = () => {
-    // Generate nodes
-    const nodeTypes: Node["type"][] = ["peer", "orderer", "ca"];
-    const statuses: Node["status"][] = [
-      "online",
-      "offline",
-      "syncing",
-      "error",
-    ];
-    const locations = [
-      "US-East",
-      "EU-West",
-      "Asia-Pacific",
-      "US-West",
-      "EU-Central",
-    ];
+  useEffect(() => {
+    loadFaultStats();
+  }, [selectedTimeRange]);
 
-    const mockNodes: Node[] = Array.from({ length: 12 }, (_, index) => {
-      const status =
-        index < 9
-          ? "online"
-          : statuses[Math.floor(Math.random() * statuses.length)];
-      return {
-        id: `node_${index + 1}`,
-        name: `Node-${(index + 1).toString().padStart(2, "0")}`,
-        type: nodeTypes[index % nodeTypes.length],
-        status,
-        health:
-          status === "online"
-            ? Math.floor(Math.random() * 20) + 80
-            : Math.floor(Math.random() * 50),
-        lastSeen: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-        location: locations[Math.floor(Math.random() * locations.length)],
-        version: `v${Math.floor(Math.random() * 3) + 2}.${Math.floor(Math.random() * 10)}.${Math.floor(Math.random() * 10)}`,
-      };
-    });
+  const loadFaultToleranceData = async () => {
+    try {
+      setIsLoading(true);
+      const [statusResponse, statsResponse] = await Promise.all([
+        expertApi.getFaultToleranceStatus(),
+        expertApi.getFaultToleranceStats(selectedTimeRange),
+      ]);
 
-    // Generate fault events
-    const eventTypes: FaultEvent["type"][] = [
-      "node-failure",
-      "network-partition",
-      "consensus-failure",
-      "recovery",
-    ];
-    const severities: FaultEvent["severity"][] = [
-      "low",
-      "medium",
-      "high",
-      "critical",
-    ];
-    const eventStatuses: FaultEvent["status"][] = [
-      "active",
-      "resolved",
-      "investigating",
-    ];
-
-    const mockEvents: FaultEvent[] = Array.from({ length: 20 }, (_, index) => {
-      const type = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-      const severity =
-        severities[Math.floor(Math.random() * severities.length)];
-
-      return {
-        id: `event_${index + 1}`,
-        timestamp: new Date(Date.now() - index * 300000).toISOString(), // 5 minutes apart
-        type,
-        severity,
-        nodeId: mockNodes[Math.floor(Math.random() * mockNodes.length)].id,
-        description: getEventDescription(type, severity),
-        status:
-          index < 3
-            ? "active"
-            : eventStatuses[Math.floor(Math.random() * eventStatuses.length)],
-      };
-    });
-
-    setNodes(mockNodes);
-    setFaultEvents(mockEvents);
-
-    // Calculate stats
-    const onlineCount = mockNodes.filter((n) => n.status === "online").length;
-    const offlineCount = mockNodes.filter((n) => n.status === "offline").length;
-    const errorCount = mockNodes.filter((n) => n.status === "error").length;
-    const avgHealth =
-      mockNodes.reduce((sum, node) => sum + node.health, 0) / mockNodes.length;
-    const faultTolerance = (onlineCount / mockNodes.length) * 100;
-
-    setStats({
-      totalNodes: mockNodes.length,
-      onlineNodes: onlineCount,
-      offlineNodes: offlineCount,
-      errorNodes: errorCount,
-      averageHealth: Math.floor(avgHealth),
-      faultTolerance: Math.floor(faultTolerance),
-      redundancyLevel:
-        faultTolerance > 85 ? "High" : faultTolerance > 70 ? "Medium" : "Low",
-      consensusHealth: 95 + Math.random() * 5,
-    });
-  };
-
-  const getEventDescription = (
-    type: FaultEvent["type"],
-    severity: FaultEvent["severity"]
-  ) => {
-    const descriptions = {
-      "node-failure": `${severity} node failure detected`,
-      "network-partition": `Network partition ${severity} impact`,
-      "consensus-failure": `Consensus mechanism ${severity} disruption`,
-      recovery: `System recovery process ${severity} priority`,
-    };
-    return descriptions[type];
-  };
-
-  const handleRefresh = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      generateMockData();
+      if (statusResponse.success) {
+        setFaultStatus(statusResponse.data);
+      }
+      if (statsResponse.success) {
+        setFaultStats(statsResponse.data);
+      }
+    } catch (error) {
+      console.error("Error loading fault tolerance data:", error);
+      toast.error("Failed to load fault tolerance data");
+    } finally {
       setIsLoading(false);
-    }, 1000);
-  };
-
-  const getStatusBadge = (status: Node["status"]) => {
-    const variants = {
-      online:
-        "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300",
-      offline:
-        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300",
-      syncing:
-        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300",
-      error:
-        "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-300",
-    };
-
-    const icons = {
-      online: CheckCircle,
-      offline: XCircle,
-      syncing: RefreshCw,
-      error: AlertTriangle,
-    };
-
-    const Icon = icons[status];
-
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[status]}`}
-      >
-        <Icon
-          className={`w-3 h-3 mr-1 ${status === "syncing" ? "animate-spin" : ""}`}
-        />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
-
-  const getSeverityBadge = (severity: FaultEvent["severity"]) => {
-    const variants = {
-      low: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300",
-      medium:
-        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300",
-      high: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-300",
-      critical:
-        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300",
-    };
-
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[severity]}`}
-      >
-        {severity.charAt(0).toUpperCase() + severity.slice(1)}
-      </span>
-    );
-  };
-
-  const getNodeTypeIcon = (type: Node["type"]) => {
-    const icons = {
-      peer: Database,
-      orderer: Server,
-      ca: Shield,
-    };
-    const Icon = icons[type];
-    return <Icon className="w-4 h-4 text-muted-foreground" />;
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString();
-  };
-
-  const getHealthColor = (health: number) => {
-    if (health >= 80) return "text-green-600";
-    if (health >= 60) return "text-yellow-600";
-    return "text-red-600";
-  };
-
-  const filteredEvents = faultEvents.filter((event) => {
-    const now = new Date();
-    const eventTime = new Date(event.timestamp);
-    const timeDiff = now.getTime() - eventTime.getTime();
-
-    switch (selectedTimeRange) {
-      case "1h":
-        return timeDiff <= 60 * 60 * 1000;
-      case "24h":
-        return timeDiff <= 24 * 60 * 60 * 1000;
-      case "7d":
-        return timeDiff <= 7 * 24 * 60 * 60 * 1000;
-      default:
-        return true;
     }
-  });
+  };
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Fault Tolerance</h1>
-          <p className="text-muted-foreground">
-            Monitor system resilience and node health
-          </p>
-        </div>
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-          <Button variant="outline">
-            <Settings className="h-4 w-4 mr-2" />
-            Configure
-          </Button>
-        </div>
-      </div>
+  const loadFaultStats = async () => {
+    try {
+      const response =
+        await expertApi.getFaultToleranceStats(selectedTimeRange);
+      if (response.success) {
+        setFaultStats(response.data);
+      }
+    } catch (error) {
+      console.error("Error loading stats:", error);
+      toast.error("Failed to load fault tolerance stats");
+    }
+  };
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Fault Tolerance
-            </CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.faultTolerance}%</div>
-            <div className="flex items-center mt-2">
-              <Progress value={stats.faultTolerance} className="flex-1 mr-2" />
-              <Badge variant="outline">{stats.redundancyLevel}</Badge>
-            </div>
-          </CardContent>
-        </Card>
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "excellent":
+        return badgeColors.green;
+      case "good":
+        return badgeColors.blue;
+      case "fair":
+        return badgeColors.yellow;
+      case "poor":
+        return badgeColors.red;
+      default:
+        return badgeColors.blue;
+    }
+  };
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Online Nodes</CardTitle>
-            <Activity className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.onlineNodes}/{stats.totalNodes}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {Math.floor((stats.onlineNodes / stats.totalNodes) * 100)}%
-              operational
-            </p>
-          </CardContent>
-        </Card>
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return badgeColors.green;
+    if (score >= 70) return badgeColors.blue;
+    if (score >= 50) return badgeColors.yellow;
+    return badgeColors.red;
+  };
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Average Health
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${getHealthColor(stats.averageHealth)}`}
-            >
-              {stats.averageHealth}%
-            </div>
-            <p className="text-xs text-muted-foreground">System-wide health</p>
-          </CardContent>
-        </Card>
+  // Helper to show number or a dash when data is missing
+  const displayNumberOrDash = (val: number | undefined | null) => {
+    if (val === null || val === undefined) return "—";
+    if (typeof val !== "number" || isNaN(val)) return "—";
+    return val.toLocaleString();
+  };
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Consensus Health
-            </CardTitle>
-            <Network className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {stats.consensusHealth.toFixed(1)}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Consensus performance
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+  // Helper for percentage (show dash when not available)
+  const displayPercentOrDash = (val: number | undefined | null) => {
+    if (val === null || val === undefined) return "—";
+    if (typeof val !== "number" || isNaN(val)) return "—";
+    return `${val}%`;
+  };
 
-      {/* Node Status Grid */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Node Status Overview</CardTitle>
-          <CardDescription>
-            Real-time status of all network nodes
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {nodes.map((node) => (
-              <div
-                key={node.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  {getNodeTypeIcon(node.type)}
-                  <div>
-                    <p className="font-medium">{node.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {node.type} • {node.location}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end space-y-1">
-                  {getStatusBadge(node.status)}
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`text-sm font-medium ${getHealthColor(node.health)}`}
-                    >
-                      {node.health}%
-                    </span>
-                    <div className="w-12 h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-300 ${
-                          node.health >= 80
-                            ? "bg-green-500"
-                            : node.health >= 60
-                              ? "bg-yellow-500"
-                              : "bg-red-500"
-                        }`}
-                        style={{ width: `${node.health}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+  if (isLoading) {
+    return (
+      <div
+        className={`p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
+      >
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+          <div className="grid grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700"></div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+          <div className="h-96 bg-gray-200 dark:bg-gray-700"></div>
+        </div>
+      </div>
+    );
+  }
 
-      {/* Fault Events */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Fault Events</CardTitle>
-              <CardDescription>
-                Recent system events and failures
-              </CardDescription>
+  return (
+    <div
+      className={`relative z-10 p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
+    >
+      {/* Breadcrumb */}
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/expert">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Fault Tolerance</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {/* Header */}
+      <div
+        className={`transform transition-all duration-700 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
+              System Fault Tolerance
+            </h1>
+            <p className={`text-base ${colors.texts.secondary}`}>
+              Monitor system resilience and error recovery capabilities
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge
+                className={`${getStatusColor(faultStatus?.status).bg} ${
+                  getStatusColor(faultStatus?.status).border
+                } ${getStatusColor(faultStatus?.status).text} text-xs rounded-none flex items-center gap-1`}
+              >
+                <BoltIcon className="h-3 w-3" />
+                {faultStatus?.status || "Good"}
+              </Badge>
+              <Badge
+                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+              >
+                Score: {faultStatus?.score || "0"}%
+              </Badge>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
             <Select
               value={selectedTimeRange}
               onValueChange={setSelectedTimeRange}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger
+                className={`w-[180px] rounded-none text-xs ${colors.inputs.base}`}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1h">Last Hour</SelectItem>
-                <SelectItem value="24h">Last 24h</SelectItem>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {filteredEvents.map((event) => (
-              <div
-                key={event.id}
-                className="flex items-start justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="mt-1">
-                    {event.type === "recovery" ? (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 text-red-600" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <p className="font-medium capitalize">
-                        {event.type.replace("-", " ")}
-                      </p>
-                      {getSeverityBadge(event.severity)}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      {event.description}
-                    </p>
-                    <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatTimestamp(event.timestamp)}</span>
-                      <span>•</span>
-                      <span>Node: {event.nodeId}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end space-y-1">
-                  <Badge
-                    variant={
-                      event.status === "resolved" ? "default" : "destructive"
-                    }
+                {timeRangeOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
                     className="text-xs"
                   >
-                    {event.status.charAt(0).toUpperCase() +
-                      event.status.slice(1)}
-                  </Badge>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={loadFaultToleranceData}
+              variant="outline"
+              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
+            >
+              <ArrowPathIcon className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Fault Tolerance Score */}
+      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+        <CardHeader>
+          <CardTitle
+            className={`text-lg font-semibold ${colors.texts.primary}`}
+          >
+            Fault Tolerance Score
+          </CardTitle>
+          <p className={`text-xs ${colors.texts.muted} mt-1`}>
+            Overall system resilience and reliability rating
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-8">
+            <div className="flex-shrink-0">
+              <div className="relative w-32 h-32 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="56"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="none"
+                    className="text-gray-200 dark:text-gray-700"
+                  />
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="56"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 56}`}
+                    strokeDashoffset={`${2 * Math.PI * 56 * (1 - parseFloat(faultStatus?.score || "0") / 100)}`}
+                    className={
+                      parseFloat(faultStatus?.score || "0") >= 90
+                        ? "text-green-500"
+                        : parseFloat(faultStatus?.score || "0") >= 70
+                          ? "text-blue-500"
+                          : parseFloat(faultStatus?.score || "0") >= 50
+                            ? "text-yellow-500"
+                            : "text-red-500"
+                    }
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <div
+                      className={`text-2xl font-bold ${colors.texts.primary}`}
+                    >
+                      {faultStatus?.score || "0"}%
+                    </div>
+                    <div className={`text-xs ${colors.texts.muted}`}>
+                      {faultStatus?.status || "Good"}
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
+            <div className="flex-1 grid grid-cols-2 gap-4">
+              <div
+                className={`p-4 rounded-none border ${colors.borders.default}`}
+              >
+                <div className={`text-xs ${colors.texts.secondary} mb-1`}>
+                  Total Transactions
+                </div>
+                <div className={`text-xl font-bold ${colors.texts.primary}`}>
+                  {displayNumberOrDash(faultStatus?.metrics?.totalTransactions)}
+                </div>
+              </div>
+              <div
+                className={`p-4 rounded-none border ${colors.borders.default}`}
+              >
+                <div className={`text-xs ${colors.texts.secondary} mb-1`}>
+                  Failed Transactions
+                </div>
+                <div className={`text-xl font-bold ${colors.texts.primary}`}>
+                  {displayNumberOrDash(
+                    faultStatus?.metrics?.failedTransactions
+                  )}
+                </div>
+              </div>
+              <div
+                className={`p-4 rounded-none border ${colors.borders.default}`}
+              >
+                <div className={`text-xs ${colors.texts.secondary} mb-1`}>
+                  System Errors
+                </div>
+                <div className={`text-xl font-bold ${colors.texts.primary}`}>
+                  {displayNumberOrDash(faultStatus?.metrics?.systemErrors)}
+                </div>
+              </div>
+              <div
+                className={`p-4 rounded-none border ${colors.borders.default}`}
+              >
+                <div className={`text-xs ${colors.texts.secondary} mb-1`}>
+                  System Uptime
+                </div>
+                <div className={`text-xl font-bold ${colors.texts.primary}`}>
+                  {displayPercentOrDash(faultStatus?.metrics?.uptime)}
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* System Resilience Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Redundancy Levels</CardTitle>
-            <CardDescription>
-              System backup and failover capabilities
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Data Replication</span>
-                <span className="text-sm font-medium">3x Redundancy</span>
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          {
+            title: "Total Transactions",
+            value: faultStatus?.metrics?.totalTransactions ?? null,
+            subtitle: "Last 24 hours",
+            icon: ChartBarIcon,
+            color: badgeColors.blue,
+          },
+          {
+            title: "Failed",
+            value: faultStatus?.metrics?.failedTransactions ?? null,
+            subtitle: "Transaction failures",
+            icon: XCircleIcon,
+            color: badgeColors.red,
+          },
+          {
+            title: "System Errors",
+            value: faultStatus?.metrics?.systemErrors ?? null,
+            subtitle: "Critical errors",
+            icon: ExclamationTriangleIcon,
+            color: badgeColors.yellow,
+          },
+          {
+            title: "Uptime",
+            value: faultStatus?.metrics?.uptime ?? null,
+            subtitle: "System availability",
+            icon: ServerIcon,
+            color: badgeColors.green,
+          },
+        ].map((stat, index) => (
+          <Card
+            key={stat.title || index}
+            className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle
+                className={`text-xs font-medium ${colors.texts.secondary}`}
+              >
+                {stat.title}
+              </CardTitle>
+              <stat.icon className={`h-4 w-4`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${colors.texts.primary}`}>
+                {stat.title === "Uptime"
+                  ? displayPercentOrDash(
+                      stat.value as number | undefined | null
+                    )
+                  : displayNumberOrDash(
+                      stat.value as number | undefined | null
+                    )}
               </div>
-              <Progress value={90} />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Node Backup</span>
-                <span className="text-sm font-medium">Active Standby</span>
-              </div>
-              <Progress value={85} />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Network Failover</span>
-                <span className="text-sm font-medium">Auto-Recovery</span>
-              </div>
-              <Progress value={95} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recovery Metrics</CardTitle>
-            <CardDescription>
-              System recovery and restoration times
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium">
-                  Recovery Time Objective (RTO)
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Maximum downtime
-                </p>
-              </div>
-              <span className="text-lg font-bold text-green-600"> 2 min</span>
-            </div>
-
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium">
-                  Recovery Point Objective (RPO)
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Maximum data loss
-                </p>
-              </div>
-              <span className="text-lg font-bold text-blue-600"> 10 sec</span>
-            </div>
-
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium">Mean Time to Recovery</p>
-                <p className="text-xs text-muted-foreground">
-                  Average recovery time
-                </p>
-              </div>
-              <span className="text-lg font-bold text-purple-600">45 sec</span>
-            </div>
-          </CardContent>
-        </Card>
+              <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                {stat.subtitle}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
+      {/* Daily Statistics */}
+      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+        <CardHeader>
+          <CardTitle
+            className={`text-lg font-semibold ${colors.texts.primary}`}
+          >
+            Daily Performance Metrics
+          </CardTitle>
+          <p className={`text-xs ${colors.texts.muted} mt-1`}>
+            Transaction success rates and error trends over {selectedTimeRange}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {faultStats?.stats && faultStats.stats.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className={colors.tables.header}>
+                    <TableHead className="text-xs font-semibold">
+                      Date
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Total
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Success
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Failed
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Error Rate
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Avg Execution
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {faultStats.stats.map((stat: any, index: number) => (
+                    <TableRow key={index} className={colors.tables.row}>
+                      <TableCell className="text-xs">
+                        {new Date(stat.date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell className="text-xs font-medium">
+                        {stat.total?.toLocaleString() || "0"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <CheckCircleIcon className="h-4 w-4" />
+                          <span className="text-xs">{stat.success || "0"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <XCircleIcon className="h-4 w-4" />
+                          <span className="text-xs">{stat.failed || "0"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={`${
+                            parseFloat(stat.errorRate) < 5
+                              ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text}`
+                              : parseFloat(stat.errorRate) < 15
+                                ? `${badgeColors.yellow.bg} ${badgeColors.yellow.border} ${badgeColors.yellow.text}`
+                                : `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text}`
+                          } text-xs rounded-none`}
+                        >
+                          {stat.errorRate || "0"}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {stat.avgExecutionTime || "0"}ms
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <ClockIcon className="h-12 w-12 mx-auto mb-4" />
+              <div className={`text-sm ${colors.texts.secondary}`}>
+                No statistical data available
+              </div>
+              <p className={`text-xs ${colors.texts.muted} mt-2`}>
+                Statistics will appear here as the system processes transactions
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Last Incident */}
+      {faultStatus?.metrics?.lastIncident && (
+        <Card
+          className={`${colors.cards.base} rounded-none !shadow-none border-l-4 border-yellow-500`}
+        >
+          <CardHeader>
+            <CardTitle
+              className={`text-lg font-semibold ${colors.texts.primary}`}
+            >
+              Last Incident
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-xs ${colors.texts.secondary}`}>
+              {new Date(faultStatus.metrics.lastIncident).toLocaleDateString(
+                "en-US",
+                {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
-};
-
-export default FaultTolerancePage;
+}

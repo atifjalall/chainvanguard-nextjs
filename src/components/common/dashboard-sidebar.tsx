@@ -28,6 +28,7 @@ import {
   ReceiptRefundIcon,
   MagnifyingGlassIcon,
   BookmarkIcon,
+  LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useState, createContext, useContext } from "react";
 
@@ -187,34 +188,29 @@ export function DashboardSidebar() {
       // 3. Blockchain Expert
       case "expert":
         return [
-          { href: "expert", label: "Dashboard", icon: HomeIcon },
+          { href: "/expert", label: "Dashboard", icon: HomeIcon },
           {
-            href: "expert/all-transactions",
+            href: "/expert/all-transactions",
             label: "All Transactions",
             icon: ListBulletIcon,
           },
           {
-            href: "expert/blockchain-logs",
-            label: "Blockchain Logs",
-            icon: DocumentTextIcon,
-          },
-          {
-            href: "expert/consensus",
+            href: "/expert/consensus",
             label: "Consensus",
             icon: CodeBracketSquareIcon,
           },
           {
-            href: "expert/security",
+            href: "/expert/security",
             label: "Security",
             icon: ShieldCheckIcon,
           },
           {
-            href: "expert/fault-tolerance",
+            href: "/expert/fault-tolerance",
             label: "Fault Tolerance",
             icon: BoltIcon,
           },
           {
-            href: "expert/system-health",
+            href: "/expert/system-health",
             label: "System Health",
             icon: ComputerDesktopIcon,
           },

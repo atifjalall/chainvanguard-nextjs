@@ -39,11 +39,18 @@ export const formatCurrency = (
 export const formatCurrencyAbbreviated = (
   amountInCVT: number,
   currency: Currency
-) => {
+): string => {
   if (currency === "USD") {
     const usdAmount = amountInCVT / CONVERSION_RATE;
-    return formatUSD(usdAmount);
+    if (usdAmount >= 1e9) {
+      return `$${(usdAmount / 1e9).toFixed(2)} B`;
+    } else if (usdAmount >= 1e6) {
+      return `$${(usdAmount / 1e6).toFixed(2)} M`;
+    } else {
+      return formatUSD(usdAmount);
+    }
   } else {
+    // CVT abbreviation logic (keeps previous behavior)
     if (amountInCVT >= 1e9) {
       return `CVT ${(amountInCVT / 1e9).toFixed(2)} B`;
     } else if (amountInCVT >= 1e6) {

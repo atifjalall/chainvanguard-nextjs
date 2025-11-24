@@ -33,6 +33,7 @@ import {
   getProfileStats,
   ProfileStats,
 } from "@/lib/api/profile.api";
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
 
 // Province-City mapping (reuse from register page)
 const provinceCityMap: Record<string, string[]> = {
@@ -245,6 +246,18 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="relative z-10 p-6 space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/expert">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Profile Settings</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         {/* Header */}
         <div
           className={`transform transition-all duration-700 ${
@@ -293,7 +306,9 @@ export default function ProfilePage() {
         {stats && (
           <div
             className={`transform transition-all duration-700 delay-100 ${
-              isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-4 opacity-0"
             }`}
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -14,7 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/common/theme-toggle";
 import {
   CubeIcon,
   ArrowRightOnRectangleIcon,
@@ -379,7 +378,9 @@ export function DashboardHeader({
   const isSupplier = user?.role === "supplier";
   const isVendor = user?.role === "vendor";
   const isCustomer = user?.role === "customer";
-  const isBlockchainExpert = user?.role === "expert";
+  // Support both "expert" and "blockchain-expert" role strings
+  const isExpert =
+    user?.role === "expert" || user?.role === "blockchain-expert";
 
   const getRoleColor = (role?: string) => {
     switch (role) {
@@ -390,6 +391,7 @@ export function DashboardHeader({
       case "customer":
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
       case "blockchain-expert":
+      case "expert":
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
@@ -399,7 +401,8 @@ export function DashboardHeader({
   const getRoleDisplayName = (role?: string) => {
     switch (role) {
       case "blockchain-expert":
-        return "BLOCKCHAIN EXPERT";
+      case "expert":
+        return "EXPERT";
       case "supplier":
         return "SUPPLIER";
       case "vendor":
@@ -537,11 +540,6 @@ export function DashboardHeader({
               </span>
             </div>
           )}
-
-          {/* Theme Toggle */}
-          <div className="cursor-pointer">
-            <ThemeToggle />
-          </div>
 
           {/* Notifications (Everyone sees this) */}
           <div className="relative">
