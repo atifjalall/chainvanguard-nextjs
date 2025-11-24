@@ -32,24 +32,46 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          // Check if this is a login/register request - don't redirect
-          const isAuthRequest = error.config?.url?.includes('/auth/login') ||
-                                error.config?.url?.includes('/auth/register');
+        // Handle auth errors (401 & 403)
+        const status = error.response?.status;
+        if (status === 401 || status === 403) {
+          const url = error.config?.url || "";
+          const isAuthRequest =
+            url.includes("/auth/login") ||
+            url.includes("/auth/register") ||
+            url.includes("/auth/refresh") ||
+            url.includes("/login") ||
+            url.includes("/register");
 
-          // Check if we're already on login/register page
-          const isOnAuthPage = typeof window !== "undefined" &&
-                              (window.location.pathname === '/login' ||
-                               window.location.pathname === '/register');
+          const isOnAuthPage =
+            typeof window !== "undefined" &&
+            (window.location.pathname === "/login" ||
+              window.location.pathname === "/register" ||
+              window.location.pathname === "/auth/login" ||
+              window.location.pathname === "/auth/register");
 
           if (!isAuthRequest && !isOnAuthPage) {
-            // Token expired on a protected page - redirect to login
-            this.clearToken();
-            if (typeof window !== "undefined") {
-              window.location.href = "/login";
-            }
+            // Derive a clean reason string from the server message to pass to the login page
+            const message =
+              (error.response?.data as any)?.message ||
+              (error.response?.data as any)?.error ||
+              error.message ||
+              "";
+            const m = String(message).toLowerCase();
+
+            const reason = m.includes("disabled")
+              ? "disabled"
+              : m.includes("session invalid") || m.includes("invalid token")
+                ? "invalid-session"
+                : m.includes("expired")
+                  ? "expired"
+                  : "unauthorized";
+
+            // Use the logout helper (which clears tokens & redirects to /login)
+            logoutAndRedirect(reason);
           }
         }
+
         return Promise.reject(this.handleError(error));
       }
     );
@@ -80,8 +102,10 @@ class ApiClient {
     localStorage.removeItem("chainvanguard_auth_user");
     localStorage.removeItem("chainvanguard_user");
     // Clear cookies
-    document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
-    document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+    document.cookie =
+      "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+    document.cookie =
+      "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
   }
 
   private handleError(error: AxiosError): Error {
@@ -210,6 +234,59 @@ class ApiClient {
   isAuthenticated(): boolean {
     return !!this.getToken() && !!this.getAuthUser();
   }
+}
+
+/**
+ * Small client-side logout helper — clears common auth keys and redirects to login.
+ * Uses a guard to avoid infinite loops and runs only in the browser.
+ */
+function logoutAndRedirect(reason?: string) {
+  // Only run in browser context
+  if (typeof window === "undefined") return;
+
+  // Avoid repeated redirects
+  if ((window as any).__logoutInProgress) return;
+  (window as any).__logoutInProgress = true;
+
+  try {
+    // Remove common keys used to store tokens/session on the client
+    [
+      "token",
+      "accessToken",
+      "access_token",
+      "refreshToken",
+      "refresh_token",
+      "auth",
+      "user",
+      "profile",
+      "chainvanguard_auth_token",
+      "chainvanguard_auth_user",
+      "chainvanguard_user",
+    ].forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch {
+        /* ignore */
+      }
+    });
+  } catch {
+    /* ignore */
+  }
+
+  // Optional: call the backend logout endpoint if present (non-blocking)
+  try {
+    // Fire-and-forget
+    fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(
+      () => {}
+    );
+  } catch {
+    // ignore
+  }
+
+  // Redirect to login screen — include reason so UI can show a message if desired
+  const query = reason ? `?reason=${encodeURIComponent(reason)}` : "";
+  // <-- changed redirect target to /login instead of /auth/login
+  window.location.href = `/login${query}`;
 }
 
 export const apiClient = new ApiClient();

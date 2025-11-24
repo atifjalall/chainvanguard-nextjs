@@ -47,6 +47,14 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
+    const userId = decoded?.id || decoded?.userId;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid token payload",
+      });
+    }
+
     // 4. Check session in Redis (fast check)
     const session = await sessionService.getSession(decoded.userId);
     if (!session) {
@@ -68,12 +76,37 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
-    // 6. Check if user is active
-    if (!user.isActive) {
+    // If the account was disabled — explicitly reject and communicate
+    if (user.isActive === false) {
       return res.status(403).json({
         success: false,
-        error: "Account deactivated",
+        error: "Account disabled. Contact support or log in again.",
       });
+    }
+
+    // Token iat is seconds — compare with forceLogoutAt (ms)
+    if (user.forceLogoutAt) {
+      const tokenIat = (decoded?.iat || 0) * 1000; // convert to ms
+      const forceAt = new Date(user.forceLogoutAt).getTime();
+      if (tokenIat < forceAt) {
+        return res.status(401).json({
+          success: false,
+          error: "Session invalidated. Please log in again.",
+        });
+      }
+    }
+
+    // If token version is present in token — check mismatch
+    if (
+      decoded?.tokenVersion !== undefined &&
+      user.tokenVersion !== undefined
+    ) {
+      if (decoded.tokenVersion !== user.tokenVersion) {
+        return res.status(401).json({
+          success: false,
+          error: "Session invalidated. Please log in again.",
+        });
+      }
     }
 
     // 7. Refresh session activity (async - don't block)

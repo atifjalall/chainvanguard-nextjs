@@ -1,16 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useEffect, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -20,670 +22,550 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  EyeIcon,
+  ArrowDownTrayIcon,
+} from "@heroicons/react/24/outline";
+import { toast } from "sonner";
+import { expertApi } from "@/lib/api/expert.api";
+import { badgeColors, colors } from "@/lib/colorConstants";
+import { format } from "date-fns";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
+const statusOptions = ["All Status", "success", "failed", "pending"];
+const typeOptions = [
+  "All Types",
+  "product",
+  "order",
+  "user",
+  "payment",
+  "inventory",
+  "vendor-request",
+];
 import { usePageTitle } from "@/hooks/use-page-title";
-import {
-  Search,
-  Filter,
-  Download,
-  RefreshCw,
-  Eye,
-  TrendingUp,
-  Activity,
-  Hash,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  Package,
-  CreditCard,
-  Users,
-  ShieldCheck,
-  FileText,
-  MoreHorizontal,
-  Copy,
-  CheckCircle,
-  AlertCircle,
-  ArrowUpRight,
-  ArrowDownLeft,
-} from "lucide-react";
 
-interface Transaction {
-  id: string;
-  txId: string;
-  blockNumber: number;
-  channelName: string;
-  chaincodeName: string;
-  from: string;
-  to: string;
-  value: string;
-  timestamp: string;
-  type:
-    | "product-creation"
-    | "product-transfer"
-    | "payment"
-    | "consensus"
-    | "audit";
-  status: "confirmed" | "pending" | "failed";
-  productId?: string;
-  productName?: string;
-  gasUsed?: number;
-  endorsements?: number;
-}
 
-const AllTransactionsPage = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<
-    Transaction[]
-  >([]);
+export default function AllTransactionsPage() {
+  usePageTitle("All Transactions");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedTimeRange, setSelectedTimeRange] = useState("24h");
-  const [showFilters, setShowFilters] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("All Status");
+  const [selectedType, setSelectedType] = useState("All Types");
+  // store as Date | undefined to match Calendar's expected type
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage] = useState(20);
 
-  // Transaction statistics
-  const [stats, setStats] = useState({
-    totalTransactions: 0,
-    confirmedTransactions: 0,
-    pendingTransactions: 0,
-    failedTransactions: 0,
-  });
-
-  // Generate mock Hyperledger Fabric transactions
+  // Add debounce for searchTerm to avoid sending excessive requests
   useEffect(() => {
-    generateMockTransactions();
-  }, []);
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500); // 500ms debounce
 
-  const generateMockTransactions = () => {
-    const transactionTypes: Transaction["type"][] = [
-      "product-creation",
-      "product-transfer",
-      "payment",
-      "consensus",
-      "audit",
-    ];
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
-    const statuses: Transaction["status"][] = [
-      "confirmed",
-      "pending",
-      "failed",
-    ];
-    const roles = ["supplier", "vendor", "customer", "ministry"];
-    const channels = [
-      "supply-chain-channel",
-      "payment-channel",
-      "audit-channel",
-    ];
-    const chaincodes = [
-      "supply-contract",
-      "payment-contract",
-      "audit-contract",
-    ];
+  useEffect(() => {
+    setIsVisible(true);
+    loadTransactions();
+  }, [
+    currentPage,
+    selectedStatus,
+    selectedType,
+    startDate,
+    endDate,
+    debouncedSearch, // use debouncedSearch instead of searchTerm
+  ]); // Add debouncedSearch to dependencies
 
-    const mockTransactions: Transaction[] = Array.from(
-      { length: 150 },
-      (_, index) => {
-        const status = statuses[Math.floor(Math.random() * statuses.length)];
-        const type =
-          transactionTypes[Math.floor(Math.random() * transactionTypes.length)];
-        const fromRole = roles[Math.floor(Math.random() * roles.length)];
-        const toRole = roles[Math.floor(Math.random() * roles.length)];
+  // Add effect to reset page when debounced search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
-        return {
-          id: `tx_${(150 - index).toString().padStart(6, "0")}`,
-          txId: `${Math.random().toString(36).substr(2, 16)}${Date.now().toString(36)}`,
-          blockNumber: 15000 + (150 - index),
-          channelName: channels[Math.floor(Math.random() * channels.length)],
-          chaincodeName:
-            chaincodes[Math.floor(Math.random() * chaincodes.length)],
-          type,
-          status,
-          from: `${fromRole}_${Math.random().toString(36).substr(2, 8)}`,
-          to: `${toRole}_${Math.random().toString(36).substr(2, 8)}`,
-          value: (Math.random() * 1000).toFixed(2) + " HLFC", // Hyperledger Fabric Coins
-          gasUsed: Math.floor(Math.random() * 100000) + 21000,
-          endorsements: Math.floor(Math.random() * 5) + 1,
-          timestamp: new Date(Date.now() - index * 60000).toISOString(),
-          productId:
-            type === "product-creation" || type === "product-transfer"
-              ? `prod_${Math.random().toString(36).substr(2, 8)}`
-              : undefined,
-          productName:
-            type === "product-creation" || type === "product-transfer"
-              ? [
-                  "Organic Rice 25kg",
-                  "Fresh Apples 5kg",
-                  "Wheat Flour 50kg",
-                  "Premium Coffee 1kg",
-                ][Math.floor(Math.random() * 4)]
-              : undefined,
-        };
+  const loadTransactions = async () => {
+    try {
+      setIsLoading(true);
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+        search: debouncedSearch, // Use debouncedSearch
+      };
+
+      if (selectedStatus !== "All Status") params.status = selectedStatus;
+      if (selectedType !== "All Types") params.type = selectedType;
+      // Convert Date objects to ISO strings (backend expects parseable dates)
+      if (startDate) params.startDate = startDate?.toISOString();
+      if (endDate) params.endDate = endDate?.toISOString();
+
+      const response = await expertApi.getAllTransactions(params);
+
+      const typedResponse = response as {
+        success: boolean;
+        data?: any[];
+        pagination?: { totalPages?: number; totalItems?: number };
+      };
+
+      if (typedResponse.success) {
+        setTransactions(typedResponse.data || []);
+        setTotalPages(typedResponse.pagination?.totalPages || 1);
+        setTotalItems(typedResponse.pagination?.totalItems || 0);
       }
-    );
+    } catch (error) {
+      console.error("Error loading transactions:", error);
+      toast.error("Failed to load transactions");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    setTransactions(mockTransactions);
-    setFilteredTransactions(mockTransactions);
+  const viewTransactionDetails = async (tx: any) => {
+    try {
+      const response = (await expertApi.getTransactionDetails(
+        tx.id || tx._id
+      )) as { success: boolean; data?: any };
+      if (response.success) {
+        setSelectedTransaction(response.data);
+        setIsDetailOpen(true);
+      }
+    } catch (error) {
+      console.error("Error loading transaction details:", error);
+      toast.error("Failed to load transaction details");
+    }
+  };
 
-    // Calculate stats
-    const confirmed = mockTransactions.filter(
-      (tx) => tx.status === "confirmed"
-    ).length;
-    const pending = mockTransactions.filter(
-      (tx) => tx.status === "pending"
-    ).length;
-    const failed = mockTransactions.filter(
-      (tx) => tx.status === "failed"
-    ).length;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "success":
+        return badgeColors.green;
+      case "failed":
+        return badgeColors.red;
+      case "pending":
+        return badgeColors.yellow;
+      default:
+        return badgeColors.blue;
+    }
+  };
 
-    setStats({
-      totalTransactions: mockTransactions.length,
-      confirmedTransactions: confirmed,
-      pendingTransactions: pending,
-      failedTransactions: failed,
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "success":
+        return <CheckCircleIcon className="h-4 w-4" />;
+      case "failed":
+        return <XCircleIcon className="h-4 w-4" />;
+      case "pending":
+        return <ClockIcon className="h-4 w-4" />;
+      default:
+        return null;
+    }
+  };
+
+  const filteredTransactions = useMemo(() => {
+    // Remove client-side filtering since it's now server-side
+    return transactions;
+  }, [transactions]); // Remove searchTerm dependency
+
+  const handleExport = () => {
+    toast.info("Export functionality coming soon");
+  };
+
+  // Add a helper to format timestamp with fallback
+  const formatTimestamp = (ts?: string | Date) => {
+    const raw = ts || (ts === undefined ? undefined : ts);
+    if (!raw) return "Not Available";
+    return new Date(raw).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
-  // Filter and search functionality
+  // Helper to format pickers
+  const formatPickerDate = (date: Date | undefined) =>
+    date ? format(date, "MMM dd, yyyy") : "";
+
+  // Reset page when filters change (optional but useful UX)
   useEffect(() => {
-    let filtered = transactions;
-
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (tx) =>
-          tx.txId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          tx.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          tx.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          tx.to.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          tx.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          tx.channelName.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Apply type filter
-    if (filterType !== "all") {
-      filtered = filtered.filter((tx) => tx.type === filterType);
-    }
-
-    // Apply status filter
-    if (filterStatus !== "all") {
-      filtered = filtered.filter((tx) => tx.status === filterStatus);
-    }
-
-    // Apply time range filter
-    const now = new Date();
-    let timeThreshold: Date | null = null;
-
-    switch (selectedTimeRange) {
-      case "1h":
-        timeThreshold = new Date(now.getTime() - 60 * 60 * 1000);
-        break;
-      case "24h":
-        timeThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        break;
-      case "7d":
-        timeThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case "30d":
-        timeThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        timeThreshold = null;
-    }
-
-    if (timeThreshold) {
-      filtered = filtered.filter(
-        (tx) => new Date(tx.timestamp) >= timeThreshold
-      );
-    }
-
-    setFilteredTransactions(filtered);
     setCurrentPage(1);
-  }, [searchTerm, filterType, filterStatus, selectedTimeRange, transactions]);
+  }, [debouncedSearch, selectedStatus, selectedType, startDate, endDate]);
 
-  const handleRefresh = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      generateMockTransactions();
-      setIsLoading(false);
-    }, 1000);
-  };
-
-  const exportTransactions = () => {
-    const csv = [
-      [
-        "Transaction ID",
-        "Tx Hash",
-        "Block",
-        "Channel",
-        "Type",
-        "Status",
-        "From",
-        "To",
-        "Value",
-        "Endorsements",
-        "Timestamp",
-      ],
-      ...filteredTransactions.map((tx) => [
-        tx.id,
-        tx.txId,
-        tx.blockNumber,
-        tx.channelName,
-        tx.type,
-        tx.status,
-        tx.from,
-        tx.to,
-        tx.value,
-        tx.endorsements || 0,
-        tx.timestamp,
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `hyperledger_transactions_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const getStatusBadge = (status: Transaction["status"]) => {
-    const colors = {
-      confirmed:
-        "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300",
-      pending:
-        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300",
-      failed:
-        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300",
-    };
-
-    const icons = {
-      confirmed: CheckCircle,
-      pending: Clock,
-      failed: AlertCircle,
-    };
-
-    const Icon = icons[status];
-
+  if (isLoading && currentPage === 1) {
     return (
-      <span
-        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${colors[status]}`}
+      <div
+        className={`p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
       >
-        <Icon className="w-3 h-3 mr-1" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
-
-  const getTypeIcon = (type: Transaction["type"]) => {
-    const iconClass = "h-4 w-4";
-    switch (type) {
-      case "product-creation":
-        return <Package className={`${iconClass} text-blue-600`} />;
-      case "product-transfer":
-        return <ArrowUpRight className={`${iconClass} text-green-600`} />;
-      case "payment":
-        return <CreditCard className={`${iconClass} text-purple-600`} />;
-      case "consensus":
-        return <Users className={`${iconClass} text-orange-600`} />;
-      case "audit":
-        return <ShieldCheck className={`${iconClass} text-red-600`} />;
-      default:
-        return <FileText className={`${iconClass} text-gray-600`} />;
-    }
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString();
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    // Add toast notification here if needed
-  };
-
-  const paginatedTransactions = filteredTransactions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
-
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">All Transactions</h1>
-          <p className="text-muted-foreground">
-            Monitor all Hyperledger Fabric transactions across the network
-          </p>
-        </div>
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-          <Button onClick={exportTransactions}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+          <div className="h-64 bg-gray-200 dark:bg-gray-700"></div>
         </div>
       </div>
+    );
+  }
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Transactions
-            </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTransactions}</div>
-            <p className="text-xs text-muted-foreground">All time</p>
-          </CardContent>
-        </Card>
+  return (
+    <div
+      className={`relative z-10 p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
+    >
+      {/* Breadcrumb */}
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/expert">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>All Transactions</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.confirmedTransactions}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {(
-                (stats.confirmedTransactions / stats.totalTransactions) *
-                100
-              ).toFixed(1)}
-              % success rate
+      {/* Header */}
+      <div
+        className={`transform transition-all duration-700 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
+              All Blockchain Transactions
+            </h1>
+            <p className={`text-base ${colors.texts.secondary}`}>
+              Monitor and analyze all network transactions
             </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {stats.pendingTransactions}
+            <div className="flex items-center gap-2 mt-2">
+              <Badge
+                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+              >
+                {totalItems} Total Transactions
+              </Badge>
+              <Badge
+                className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none flex items-center gap-1`}
+              >
+                <CheckCircleIcon className="h-3 w-3" />
+                Live Data
+              </Badge>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting confirmation
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Failed</CardTitle>
-            <Hash className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {stats.failedTransactions}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {(
-                (stats.failedTransactions / stats.totalTransactions) *
-                100
-              ).toFixed(1)}
-              % failure rate
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={loadTransactions}
+              variant="outline"
+              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
+            >
+              <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+              Refresh
+            </Button>
+            <Button
+              onClick={handleExport}
+              variant="outline"
+              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
+            >
+              <ArrowDownTrayIcon
+                className={`h-4 w-4 ${colors.icons.primary}`}
+              />
+              Export
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filters & Search
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              {showFilters ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
+          <CardTitle
+            className={`text-lg font-semibold ${colors.texts.primary} flex items-center gap-2`}
+          >
+            <FunnelIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+            Filters
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-4">
-            <div className="flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Search */}
+            <div>
+              <label
+                className={`text-xs font-medium ${colors.texts.secondary} mb-2 block`}
+              >
+                Search
+              </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <MagnifyingGlassIcon
+                  className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                />
                 <Input
-                  placeholder="Search by ID, hash, address, or channel..."
+                  placeholder="Transaction ID, type, user..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className={`pl-10 rounded-none text-xs ${colors.inputs.base}`}
                 />
               </div>
             </div>
 
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Transaction Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="product-creation">
-                  Product Creation
-                </SelectItem>
-                <SelectItem value="product-transfer">
-                  Product Transfer
-                </SelectItem>
-                <SelectItem value="payment">Payment</SelectItem>
-                <SelectItem value="consensus">Consensus</SelectItem>
-                <SelectItem value="audit">Audit</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={selectedTimeRange}
-              onValueChange={setSelectedTimeRange}
-            >
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Time Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1h">Last Hour</SelectItem>
-                <SelectItem value="24h">Last 24h</SelectItem>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="all">All Time</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {showFilters && (
-            <div className="border-t pt-4">
-              <div className="flex justify-between items-center text-sm text-muted-foreground">
-                <span>
-                  Showing {filteredTransactions.length} of {transactions.length}{" "}
-                  transactions
-                </span>
-                <span className="flex items-center">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
-                  Live:{" "}
-                  {
-                    filteredTransactions.filter((tx) => tx.status === "pending")
-                      .length
-                  }{" "}
-                  pending
-                </span>
-              </div>
+            {/* Status Filter */}
+            <div>
+              <label
+                className={`text-xs font-medium ${colors.texts.secondary} mb-2 block`}
+              >
+                Status
+              </label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger
+                  className={`w-full rounded-none text-xs ${colors.inputs.base}`}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status} className="text-xs">
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
+
+            {/* Type Filter */}
+            <div>
+              <label
+                className={`text-xs font-medium ${colors.texts.secondary} mb-2 block`}
+              >
+                Type
+              </label>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger
+                  className={`w-full rounded-none text-xs ${colors.inputs.base}`}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {typeOptions.map((type) => (
+                    <SelectItem key={type} value={type} className="text-xs">
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Start Date */}
+            <div>
+              <label
+                className={`text-xs font-medium ${colors.texts.secondary} mb-2 block`}
+              >
+                Start Date
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full text-left rounded-none text-xs ${colors.inputs.base}`}
+                  >
+                    {startDate
+                      ? formatPickerDate(startDate)
+                      : "Select start date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      if (!date) return;
+                      // If endDate exists and is before the new startDate, clear endDate
+                      if (endDate && date && endDate < date)
+                        setEndDate(undefined);
+                      setStartDate(date);
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* End Date */}
+            <div>
+              <label
+                className={`text-xs font-medium ${colors.texts.secondary} mb-2 block`}
+              >
+                End Date
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full text-left rounded-none text-xs ${colors.inputs.base}`}
+                  >
+                    {endDate ? formatPickerDate(endDate) : "Select end date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => {
+                      if (!date) return;
+                      // Enforce endDate >= startDate
+                      if (startDate && date < startDate) {
+                        toast.error(
+                          "End date cannot be earlier than start date"
+                        );
+                        return;
+                      }
+                      setEndDate(date);
+                    }}
+                    // set minDate so the user can't select a date before startDate
+                    {...(startDate ? { fromDate: startDate } : {})}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       {/* Transactions Table */}
-      <Card>
+      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>
-            Page {currentPage} of {totalPages} • {filteredTransactions.length}{" "}
-            total results
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <CardTitle
+              className={`text-lg font-semibold ${colors.texts.primary}`}
+            >
+              Transactions List
+            </CardTitle>
+            <div className={`text-xs ${colors.texts.secondary}`}>
+              Showing {filteredTransactions.length} of {totalItems} transactions
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Transaction ID</TableHead>
-                  <TableHead>Channel</TableHead>
-                  <TableHead>From → To</TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Value</TableHead>
-                  <TableHead>Block</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Actions</TableHead>
+                <TableRow className={colors.tables.header}>
+                  <TableHead className="text-xs font-semibold">
+                    Transaction ID
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold">Type</TableHead>
+                  <TableHead className="text-xs font-semibold">
+                    Action
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold">User</TableHead>
+                  <TableHead className="text-xs font-semibold">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold">
+                    Timestamp
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        {getTypeIcon(transaction.type)}
-                        <span className="text-sm capitalize font-medium">
-                          {transaction.type.replace("-", " ")}
-                        </span>
+                {filteredTransactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <div className={`text-sm ${colors.texts.secondary}`}>
+                        No transactions found
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <code className="text-sm bg-muted px-2 py-1 rounded font-mono">
-                          {transaction.id}
-                        </code>
+                  </TableRow>
+                ) : (
+                  filteredTransactions.map((tx, index) => (
+                    <TableRow
+                      key={tx.id || index}
+                      className={colors.tables.row}
+                    >
+                      <TableCell className="font-mono text-xs">
+                        {tx.transactionId || tx.id || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+                        >
+                          {tx.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{tx.action}</TableCell>
+                      <TableCell className="text-xs">
+                        <div>{tx.user?.name || "System"}</div>
+                        <div className={`text-xs ${colors.texts.muted}`}>
+                          {tx.user?.role || "-"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={`${getStatusColor(tx.status).bg} ${
+                            getStatusColor(tx.status).border
+                          } ${getStatusColor(tx.status).text} text-xs rounded-none flex items-center gap-1 w-fit`}
+                        >
+                          {getStatusIcon(tx.status)}
+                          {tx.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {formatTimestamp(tx.timestamp || tx.createdAt)}
+                      </TableCell>
+                      <TableCell>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => copyToClipboard(transaction.txId)}
+                          onClick={() => viewTransactionDetails(tx)}
+                          className={`text-xs rounded-none ${colors.buttons.outline}`}
                         >
-                          <Copy className="w-3 h-3" />
+                          <EyeIcon className="h-4 w-4" />
                         </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{transaction.channelName}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm font-mono">
-                          {transaction.from.slice(0, 15)}...
-                        </div>
-                        <div className="text-xs text-muted-foreground">↓</div>
-                        <div className="text-sm font-mono">
-                          {transaction.to.slice(0, 15)}...
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {transaction.productName ? (
-                        <div className="text-sm">{transaction.productName}</div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-sm">
-                        {transaction.value}
-                      </span>
-                      {transaction.endorsements && (
-                        <div className="text-xs text-muted-foreground">
-                          {transaction.endorsements} endorsements
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        #{transaction.blockNumber}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(transaction.status)}</TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {formatTimestamp(transaction.timestamp)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => copyToClipboard(transaction.txId)}
-                          >
-                            <Copy className="w-4 h-4 mr-2" />
-                            Copy Tx Hash
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -691,106 +573,248 @@ const AllTransactionsPage = () => {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-muted-foreground">
+              <div className={`text-xs ${colors.texts.secondary}`}>
                 Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                {Math.min(
-                  currentPage * itemsPerPage,
-                  filteredTransactions.length
-                )}{" "}
-                of {filteredTransactions.length} results
+                {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
+                {totalItems} transactions
               </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(prev - 1, 1))
-                  }
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className={`cursor-pointer rounded-none ${
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }`}
+                    />
+                  </PaginationItem>
 
-                {/* Page numbers */}
-                {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                  const page = Math.max(
-                    1,
-                    Math.min(currentPage - 2 + i, totalPages - 4 + i)
-                  );
-                  if (page <= totalPages) {
-                    return (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
+                  {/* First page */}
+                  {currentPage > 2 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(1)}
+                        className="cursor-pointer rounded-none"
                       >
-                        {page}
-                      </Button>
-                    );
-                  }
-                  return null;
-                })}
+                        1
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                  }
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </Button>
-              </div>
+                  {/* Ellipsis before current */}
+                  {currentPage > 3 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+
+                  {/* Previous page */}
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        className="cursor-pointer rounded-none"
+                      >
+                        {currentPage - 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+
+                  {/* Current page */}
+                  <PaginationItem>
+                    <PaginationLink isActive className="rounded-none">
+                      {currentPage}
+                    </PaginationLink>
+                  </PaginationItem>
+
+                  {/* Next page */}
+                  {currentPage < totalPages && (
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        className="cursor-pointer rounded-none"
+                      >
+                        {currentPage + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+
+                  {/* Ellipsis after current */}
+                  {currentPage < totalPages - 2 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+
+                  {/* Last page */}
+                  {currentPage < totalPages - 1 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(totalPages)}
+                        className="cursor-pointer rounded-none"
+                      >
+                        {totalPages}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      className={`cursor-pointer rounded-none ${
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }`}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Live Transaction Stream */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-            Live Transaction Stream
-          </CardTitle>
-          <CardDescription>
-            Recent Hyperledger Fabric transactions
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {filteredTransactions.slice(0, 5).map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-              >
-                <div className="flex items-center space-x-3">
-                  {getTypeIcon(transaction.type)}
-                  <div>
-                    <div className="font-mono text-sm font-medium">
-                      {transaction.id}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {transaction.channelName} • {transaction.from} →{" "}
-                      {transaction.to}
-                    </div>
+      {/* Transaction Details Dialog */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent
+          className={`max-w-2xl ${colors.cards.base} rounded-none`}
+        >
+          <DialogHeader>
+            <DialogTitle
+              className={`text-lg font-semibold ${colors.texts.primary}`}
+            >
+              Transaction Details
+            </DialogTitle>
+            <DialogDescription className={`text-xs ${colors.texts.secondary}`}>
+              Complete information about this blockchain transaction
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    className={`text-xs font-medium ${colors.texts.secondary}`}
+                  >
+                    Transaction ID
+                  </label>
+                  <div
+                    className={`text-xs ${colors.texts.primary} font-mono mt-1`}
+                  >
+                    {selectedTransaction.transaction?.transactionId}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {getStatusBadge(transaction.status)}
-                  <span className="text-sm font-medium">
-                    {transaction.value}
-                  </span>
+                <div>
+                  <label
+                    className={`text-xs font-medium ${colors.texts.secondary}`}
+                  >
+                    Status
+                  </label>
+                  <div className="mt-1">
+                    <Badge
+                      className={`${getStatusColor(selectedTransaction.transaction?.status).bg} ${
+                        getStatusColor(selectedTransaction.transaction?.status)
+                          .border
+                      } ${
+                        getStatusColor(selectedTransaction.transaction?.status)
+                          .text
+                      } text-xs rounded-none`}
+                    >
+                      {selectedTransaction.transaction?.status}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <label
+                    className={`text-xs font-medium ${colors.texts.secondary}`}
+                  >
+                    Type
+                  </label>
+                  <div className={`text-xs ${colors.texts.primary} mt-1`}>
+                    {selectedTransaction.transaction?.type}
+                  </div>
+                </div>
+                <div>
+                  <label
+                    className={`text-xs font-medium ${colors.texts.secondary}`}
+                  >
+                    Action
+                  </label>
+                  <div className={`text-xs ${colors.texts.primary} mt-1`}>
+                    {selectedTransaction.transaction?.action}
+                  </div>
+                </div>
+                <div>
+                  <label
+                    className={`text-xs font-medium ${colors.texts.secondary}`}
+                  >
+                    User
+                  </label>
+                  <div className={`text-xs ${colors.texts.primary} mt-1`}>
+                    {selectedTransaction.transaction?.user?.name || "System"}
+                  </div>
+                </div>
+                <div>
+                  <label
+                    className={`text-xs font-medium ${colors.texts.secondary}`}
+                  >
+                    Role
+                  </label>
+                  <div className={`text-xs ${colors.texts.primary} mt-1`}>
+                    {selectedTransaction.transaction?.user?.role || "-"}
+                  </div>
+                </div>
+                {selectedTransaction.transaction?.executionTime && (
+                  <div>
+                    <label
+                      className={`text-xs font-medium ${colors.texts.secondary}`}
+                    >
+                      Execution Time
+                    </label>
+                    <div className={`text-xs ${colors.texts.primary} mt-1`}>
+                      {selectedTransaction.transaction.executionTime}ms
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label
+                    className={`text-xs font-medium ${colors.texts.secondary}`}
+                  >
+                    Timestamp
+                  </label>
+                  <div className={`text-xs ${colors.texts.primary} mt-1`}>
+                    {/* Use fallback and format */}
+                    {formatTimestamp(
+                      selectedTransaction.transaction?.timestamp ||
+                        selectedTransaction.transaction?.createdAt
+                    )}
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+
+              {selectedTransaction.transaction?.errorMessage && (
+                <div>
+                  <label
+                    className={`text-xs font-medium ${colors.texts.secondary}`}
+                  >
+                    Error Message
+                  </label>
+                  <div
+                    className={`text-xs ${colors.texts.primary} mt-1 p-3 bg-red-50 dark:bg-red-900/20 rounded`}
+                  >
+                    {selectedTransaction.transaction.errorMessage}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default AllTransactionsPage;
+}

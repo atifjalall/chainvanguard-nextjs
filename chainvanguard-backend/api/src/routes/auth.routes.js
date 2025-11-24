@@ -607,14 +607,15 @@ router.get("/profile/stats", authenticate, async (req, res) => {
 
     // Count orders based on role
     if (user.role === "customer") {
-      stats.totalOrders = await Order.countDocuments({ customerId: req.userId });
+      stats.totalOrders = await Order.countDocuments({
+        customerId: req.userId,
+      });
     } else if (user.role === "vendor") {
       stats.totalOrders = await Order.countDocuments({ sellerId: req.userId });
     } else if (user.role === "supplier") {
       // For suppliers, count vendor requests or related orders
-      const VendorRequest = (
-        await import("../models/VendorRequest.js")
-      ).default;
+      const VendorRequest = (await import("../models/VendorRequest.js"))
+        .default;
       stats.totalOrders = await VendorRequest.countDocuments({
         supplierId: req.userId,
       });
@@ -641,6 +642,43 @@ router.get("/profile/stats", authenticate, async (req, res) => {
 
 router.get("/me", authenticate, getProfileHandler);
 router.get("/profile", authenticate, getProfileHandler);
+
+/**
+ * GET /api/auth/users/:userId
+ * Get single user by ID (Admin only)
+ */
+router.get(
+  "/users/:userId",
+  authenticate,
+  authorizeRoles(["expert"]),
+  async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      const user = await User.findById(userId).select(
+        "-passwordHash -encryptedMnemonic"
+      );
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "User not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        data: user,
+      });
+    } catch (error) {
+      console.error("❌ Get user error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get user",
+      });
+    }
+  }
+);
 
 /**
  * PUT /api/auth/profile

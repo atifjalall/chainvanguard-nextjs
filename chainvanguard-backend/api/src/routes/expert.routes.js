@@ -40,6 +40,7 @@ router.get("/transactions", async (req, res) => {
       userId: req.query.userId,
       startDate: req.query.startDate,
       endDate: req.query.endDate,
+      search: req.query.search, // Add search parameter
       sortBy: req.query.sortBy || "timestamp",
       sortOrder: req.query.sortOrder || "desc",
     };
@@ -227,6 +228,40 @@ router.get("/security/overview", async (req, res) => {
 });
 
 /**
+ * GET /api/expert/security/wallets
+ * Get all users with their wallet information for security monitoring
+ * Query params: page, limit, search, status, role, sortBy, sortOrder, balanceMin, balanceMax
+ */
+router.get("/security/wallets", async (req, res) => {
+  try {
+    const filters = {
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 20,
+      search: req.query.search,
+      status: req.query.status, // all, active, frozen
+      role: req.query.role,
+      sortBy: req.query.sortBy || "recent",
+      sortOrder: req.query.sortOrder || "desc",
+      balanceMin: req.query.balanceMin
+        ? parseFloat(req.query.balanceMin)
+        : undefined,
+      balanceMax: req.query.balanceMax
+        ? parseFloat(req.query.balanceMax)
+        : undefined,
+    };
+
+    const result = await expertService.getSecurityWallets(filters);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Get security wallets failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to get security wallets",
+    });
+  }
+});
+
+/**
  * POST /api/expert/security/disable-user
  * Disable a user account (security action)
  * Body: { userId, reason }
@@ -258,6 +293,70 @@ router.post("/security/disable-user", async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Failed to disable user",
+    });
+  }
+});
+
+/**
+ * POST /api/expert/security/unfreeze-user
+ * Unfreeze / re-enable a user account (security action)
+ * Body: { userId, reason }
+ */
+router.post("/security/unfreeze-user", async (req, res) => {
+  try {
+    const { userId, reason } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required",
+      });
+    }
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: "Reason is required",
+      });
+    }
+
+    const expertId = req.userId;
+    const result = await expertService.unfreezeUser(userId, expertId, reason);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Unfreeze user failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to unfreeze user",
+    });
+  }
+});
+
+/**
+ * GET /api/expert/wallet/:userId
+ * Get wallet details for a single user (for Expert UI)
+ */
+router.get("/wallet/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required",
+      });
+    }
+
+    const result = await expertService.getWalletByUserId(userId);
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Get wallet by user id failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to get wallet details",
     });
   }
 });
