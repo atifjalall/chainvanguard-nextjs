@@ -393,6 +393,27 @@ class ProductAPI {
   }
 
   /**
+   * Get new arrival products
+   */
+  async getNewArrivals(limit: number = 10): Promise<{
+    success: boolean;
+    products: Product[];
+    count: number;
+  }> {
+    return apiClient.get(`/products/new-arrivals?limit=${limit}`);
+  }
+
+  /**
+   * Get category statistics (count of products per category)
+   */
+  async getCategoryStats(): Promise<{
+    success: boolean;
+    categories: Array<{ category: string; count: number }>;
+  }> {
+    return apiClient.get("/products/stats/categories");
+  }
+
+  /**
    * Get products by category
    */
   async getProductsByCategory(

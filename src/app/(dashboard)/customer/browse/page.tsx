@@ -75,7 +75,7 @@ function ProductCard({
   return (
     <div className="group relative w-full">
       <div className="relative bg-gray-100 dark:bg-gray-900 w-full overflow-hidden">
-        <a href={`/customer/products/${id}`} className="block">
+        <a href={`/customer/product/${id}`} className="block">
           <div className="relative w-full aspect-[3/4]">
             {!imageError && images && images.length > 0 ? (
               <img
@@ -127,7 +127,7 @@ function ProductCard({
 
       <div className="pt-1 pb-1">
         <div className="flex items-center justify-between mb-0">
-          <a href={`/customer/products/${id}`} className="block flex-1">
+          <a href={`/customer/product/${id}`} className="block flex-1">
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               {name}
             </h3>
@@ -278,6 +278,13 @@ export default function BrowsePage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
 
+  // New filters
+  const [isFeatured, setIsFeatured] = useState<boolean | undefined>(undefined);
+  const [isNewArrival, setIsNewArrival] = useState<boolean | undefined>(
+    undefined
+  );
+  const [selectedSeason, setSelectedSeason] = useState<string | null>(null);
+
   // Data state
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -293,6 +300,9 @@ export default function BrowsePage() {
   useEffect(() => {
     const categoryFromUrl = searchParams?.get("category");
     const subcategoryFromUrl = searchParams?.get("subcategory");
+    const featuredFromUrl = searchParams?.get("featured");
+    const newArrivalFromUrl = searchParams?.get("newArrival");
+    const seasonFromUrl = searchParams?.get("season");
 
     if (categoryFromUrl) {
       const formattedCategory =
@@ -306,6 +316,18 @@ export default function BrowsePage() {
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join("-");
       setSelectedSubcategory(formattedSubcategory);
+    }
+
+    if (featuredFromUrl === "true") {
+      setIsFeatured(true);
+    }
+
+    if (newArrivalFromUrl === "true") {
+      setIsNewArrival(true);
+    }
+
+    if (seasonFromUrl) {
+      setSelectedSeason(seasonFromUrl);
     }
   }, [searchParams]);
 
@@ -341,6 +363,9 @@ export default function BrowsePage() {
         const response = await browseProducts({
           category: selectedCategory !== "All" ? selectedCategory : undefined,
           subcategory: selectedSubcategory || undefined,
+          isFeatured: isFeatured,
+          isNewArrival: isNewArrival,
+          season: selectedSeason || undefined,
           sortBy: sortField,
           sortOrder: sortOrder,
           page: pagination.page,
@@ -369,6 +394,9 @@ export default function BrowsePage() {
   }, [
     selectedCategory,
     selectedSubcategory,
+    isFeatured,
+    isNewArrival,
+    selectedSeason,
     sortBy,
     pagination.page,
     pagination.limit,

@@ -78,7 +78,7 @@ function ProductCard({
   return (
     <div className="group relative w-full">
       <div className="relative bg-gray-100 dark:bg-gray-900 w-full overflow-hidden">
-        <a href={`/customer/products/${id}`} className="block">
+        <a href={`/customer/product/${id}`} className="block">
           <div
             className="relative w-full aspect-[3/4]"
             onMouseEnter={handleMouseEnter}
@@ -121,7 +121,7 @@ function ProductCard({
 
       <div className="pt-1 pb-1">
         <div className="flex items-center justify-between mb-0">
-          <a href={`/customer/products/${id}`} className="block flex-1">
+          <a href={`/customer/product/${id}`} className="block flex-1">
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               {name}
             </h3>
@@ -171,7 +171,7 @@ function CartItemComponent({
     <div className="grid grid-cols-[120px_1fr] md:grid-cols-[140px_1fr] gap-6 py-8 border-b border-gray-200 dark:border-gray-800">
       <div
         className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4] overflow-hidden cursor-pointer"
-        onClick={() => router.push(`/customer/products/${productId}`)}
+        onClick={() => router.push(`/customer/product/${productId}`)}
       >
         {productImage ? (
           <img
@@ -191,7 +191,7 @@ function CartItemComponent({
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <button
-                onClick={() => router.push(`/customer/products/${productId}`)}
+                onClick={() => router.push(`/customer/product/${productId}`)}
                 className="text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-left"
               >
                 {productName}
@@ -270,7 +270,8 @@ function CartItemComponent({
 export default function CartPage() {
   usePageTitle("Shopping Cart");
   const router = useRouter();
-  const { refreshCartCount, incrementCartCount, decrementCartCount } = useCart();
+  const { refreshCartCount, incrementCartCount, decrementCartCount } =
+    useCart();
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
   const [promoCode, setPromoCode] = useState("");
@@ -420,7 +421,7 @@ export default function CartPage() {
       if (response.success && response.data) {
         // Immediately refresh cart count to update badge
         await refreshCartCount();
-        console.log('[CART] Cart count refreshed after moving to wishlist');
+        console.log("[CART] Cart count refreshed after moving to wishlist");
         setCart(response.data);
       }
 

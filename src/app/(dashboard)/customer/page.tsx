@@ -16,187 +16,19 @@ import {
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { usePageTitle } from "@/hooks/use-page-title";
-
-// Mock data for featured products
-const FEATURED_PRODUCTS = [
-  {
-    id: 1,
-    name: "Premium Cotton T-Shirt",
-    category: "Men",
-    price: 29.99,
-    costPrice: 49.99,
-    images: [
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500",
-    ],
-    badge: "Best Seller",
-    rating: 4.8,
-    reviews: 234,
-    quantity: 50,
-    inStock: true,
-  },
-  {
-    id: 2,
-    name: "Classic Denim Jacket",
-    category: "Women",
-    price: 89.99,
-    costPrice: 129.99,
-    images: ["https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500"],
-    badge: "Trending",
-    rating: 4.9,
-    reviews: 187,
-    quantity: 30,
-    inStock: true,
-  },
-  {
-    id: 3,
-    name: "Sneakers Collection",
-    category: "Unisex",
-    price: 79.99,
-    costPrice: 119.99,
-    images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500"],
-    badge: "New",
-    rating: 4.7,
-    reviews: 156,
-    quantity: 45,
-    inStock: true,
-  },
-  {
-    id: 4,
-    name: "Summer Dress",
-    category: "Women",
-    price: 59.99,
-    costPrice: 89.99,
-    images: [
-      "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=500",
-    ],
-    badge: "Sale",
-    rating: 4.6,
-    reviews: 203,
-    quantity: 25,
-    inStock: true,
-  },
-  {
-    id: 5,
-    name: "Casual Hoodie",
-    category: "Unisex",
-    price: 39.99,
-    costPrice: 59.99,
-    images: ["https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500"],
-
-    rating: 4.7,
-    reviews: 142,
-    quantity: 60,
-    inStock: true,
-  },
-  {
-    id: 6,
-    name: "Formal Suit",
-    category: "Men",
-    price: 149.99,
-    costPrice: 199.99,
-    images: [
-      "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500",
-    ],
-    badge: "Premium",
-    rating: 4.9,
-    reviews: 289,
-    quantity: 15,
-    inStock: true,
-  },
-  {
-    id: 7,
-    name: "Sports Jersey",
-    category: "Unisex",
-    price: 69.99,
-    costPrice: 99.99,
-    images: [
-      "https://images.unsplash.com/photo-1614251056198-ff101ebaba5e?w=500",
-    ],
-    badge: "Popular",
-    rating: 4.5,
-    reviews: 198,
-    quantity: 40,
-    inStock: true,
-  },
-  {
-    id: 8,
-    name: "Printed Kurta",
-    category: "Women",
-    price: 129.99,
-    costPrice: 179.99,
-    images: [
-      "https://images.unsplash.com/photo-1583391733956-6c78276477e5?w=500",
-    ],
-    badge: "Traditional",
-    rating: 4.8,
-    reviews: 167,
-    quantity: 20,
-    inStock: true,
-  },
-];
-
-const NEW_ARRIVALS = [
-  {
-    id: 9,
-    name: "Winter Coat",
-    price: 189.99,
-    costPrice: 229.99,
-    images: [
-      "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400",
-    ],
-    quantity: 35,
-    inStock: true,
-  },
-  {
-    id: 10,
-    name: "Wool Sweater",
-    price: 79.99,
-    costPrice: 99.99,
-    images: [
-      "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400",
-    ],
-    quantity: 50,
-    inStock: true,
-  },
-  {
-    id: 11,
-    name: "Formal Trousers",
-    price: 139.99,
-    costPrice: 179.99,
-    images: [
-      "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400",
-    ],
-    quantity: 28,
-    inStock: true,
-  },
-  {
-    id: 12,
-    name: "Embroidered Shalwar Kameez",
-    price: 119.99,
-    costPrice: 149.99,
-    images: [
-      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400",
-    ],
-    quantity: 100,
-    inStock: true,
-  },
-];
-
-const CATEGORIES = [
-  { name: "Men", count: "2,456" },
-  { name: "Women", count: "3,821" },
-  { name: "Kids", count: "1,203" },
-  { name: "Unisex", count: "945" },
-];
+import { productAPI } from "@/lib/api/product.api";
+import type { Product } from "@/types";
 
 const COLLECTIONS = [
   {
     title: "Summer Collection",
     image: "/summer.jpg",
+    season: "Summer",
   },
   {
     title: "Winter Essentials",
     image: "/winter.jpg",
+    season: "Winter",
   },
 ];
 
@@ -335,7 +167,7 @@ function ProductCard({
       <div className="pt-1 pb-2">
         {/* Product Name */}
         <div className="flex items-center justify-between mb-0">
-          <a href={href || `/customer/products/${id}`} className="block flex-1">
+          <a href={href || `/customer/product/${id}`} className="block flex-1">
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               {name}
             </h3>
@@ -384,7 +216,90 @@ export default function CustomerDashboard() {
   const [subscribed, setSubscribed] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  // Real data state
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [newArrivals, setNewArrivals] = useState<Product[]>([]);
+  const [categoryStats, setCategoryStats] = useState({
+    Men: 0,
+    Women: 0,
+    Kids: 0,
+    Unisex: 0,
+  });
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [loading, setLoading] = useState(true);
+
   const carouselImages = ["/crousal/image5.png"];
+
+  // Fetch real data on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch featured products, new arrivals, and total count in parallel
+        const [featuredRes, newArrivalsRes, allProductsRes] = await Promise.all(
+          [
+            productAPI.getFeaturedProducts(10),
+            productAPI.getNewArrivals(5),
+            productAPI.getProducts({ page: 1, limit: 100 }), // Fetch first 100 to count categories
+          ]
+        );
+
+        if (featuredRes.success && featuredRes.products) {
+          setFeaturedProducts(featuredRes.products);
+        }
+
+        if (newArrivalsRes.success && newArrivalsRes.products) {
+          setNewArrivals(newArrivalsRes.products);
+        }
+
+        if (allProductsRes.success && allProductsRes.pagination) {
+          setTotalProducts(allProductsRes.pagination.total);
+
+          // Count products by category (Men, Women, Kids, Unisex)
+          const stats = {
+            Men: 0,
+            Women: 0,
+            Kids: 0,
+            Unisex: 0,
+          };
+
+          // Backend returns 'data' field, not 'products'
+          const productsData = allProductsRes as {
+            data?: Product[];
+            products?: Product[];
+            pagination: { total: number };
+          };
+          const products = productsData.data || productsData.products || [];
+
+          if (products && Array.isArray(products)) {
+            products.forEach((product: Product) => {
+              const cat = product.category;
+              if (
+                cat === "Men" ||
+                cat === "Women" ||
+                cat === "Kids" ||
+                cat === "Unisex"
+              ) {
+                stats[cat] = stats[cat] + 1;
+              }
+            });
+
+            setCategoryStats(stats);
+          } else {
+            console.warn("No products found in response");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        toast.error("Failed to load some data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Auto-slide carousel
   useEffect(() => {
@@ -576,33 +491,46 @@ export default function CustomerDashboard() {
             </h2>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {CATEGORIES.map((category, index) => (
-              <button
-                key={index}
-                onClick={() =>
-                  router.push(`/customer/browse?category=${category.name}`)
-                }
-                className="group relative aspect-[4/3] bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all duration-300 cursor-pointer overflow-hidden border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white"
-              >
-                <div className="h-full flex flex-col items-center justify-center px-6 text-center space-y-3">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white tracking-wider uppercase">
-                    {category.name}
-                  </h3>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500 tracking-wider">
-                    {category.count} Items
-                  </p>
-                  <div className="flex items-center justify-center text-gray-900 dark:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 pt-1">
-                    <span className="tracking-wider text-[10px] uppercase">
-                      Explore
-                    </span>
-                    <ArrowRightIcon
-                      className="h-3 w-3 ml-1 transform group-hover:translate-x-1 transition-transform"
-                      strokeWidth={1.5}
-                    />
-                  </div>
-                </div>
-              </button>
-            ))}
+            {loading
+              ? // Loading skeletons
+                Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="aspect-[4/3] bg-gray-200 dark:bg-gray-800 animate-pulse border border-gray-200 dark:border-gray-800"
+                  />
+                ))
+              : ["Men", "Women", "Kids", "Unisex"].map((categoryName) => (
+                  <button
+                    key={categoryName}
+                    onClick={() =>
+                      router.push(`/customer/browse?category=${categoryName}`)
+                    }
+                    className="group relative aspect-[4/3] bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all duration-300 cursor-pointer overflow-hidden border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white"
+                  >
+                    <div className="h-full flex flex-col items-center justify-center px-6 text-center space-y-3">
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-white tracking-wider uppercase">
+                        {categoryName}
+                      </h3>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 tracking-wider">
+                        {
+                          categoryStats[
+                            categoryName as keyof typeof categoryStats
+                          ]
+                        }{" "}
+                        Items
+                      </p>
+                      <div className="flex items-center justify-center text-gray-900 dark:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 pt-1">
+                        <span className="tracking-wider text-[10px] uppercase">
+                          Explore
+                        </span>
+                        <ArrowRightIcon
+                          className="h-3 w-3 ml-1 transform group-hover:translate-x-1 transition-transform"
+                          strokeWidth={1.5}
+                        />
+                      </div>
+                    </div>
+                  </button>
+                ))}
           </div>
         </div>
       </section>
@@ -617,7 +545,9 @@ export default function CustomerDashboard() {
               <div
                 key={index}
                 className="group relative h-[40vh] overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white transition-all duration-300"
-                onClick={() => router.push("/customer/browse")}
+                onClick={() =>
+                  router.push(`/customer/browse?season=${collection.season}`)
+                }
               >
                 <img
                   src={collection.image}
@@ -672,22 +602,37 @@ export default function CustomerDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
             {" "}
             {/* changed grid to match browse: 5 on lg, gap-10 */}
-            {FEATURED_PRODUCTS.map((product) => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                price={product.price}
-                costPrice={product.costPrice}
-                images={product.images}
-                quantity={product.quantity}
-                inStock={product.inStock}
-                onAddToCart={handleAddToCart}
-                onToggleWishlist={toggleWishlist}
-                isInWishlist={wishlist.includes(product.id)}
-                showActions={true}
-              />
-            ))}
+            {loading ? (
+              // Loading skeletons
+              Array.from({ length: 10 }).map((_, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="aspect-[3/4] bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                  <div className="h-4 bg-gray-200 dark:bg-gray-800 animate-pulse rounded" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-800 animate-pulse rounded w-1/2" />
+                </div>
+              ))
+            ) : featuredProducts.length > 0 ? (
+              featuredProducts.map((product) => (
+                <ProductCard
+                  key={product._id}
+                  id={product._id}
+                  name={product.name}
+                  price={product.price}
+                  costPrice={product.costPrice}
+                  images={product.images?.map((img) => img.url) || []}
+                  quantity={product.quantity}
+                  inStock={product.quantity > 0}
+                  onAddToCart={handleAddToCart}
+                  onToggleWishlist={toggleWishlist}
+                  isInWishlist={wishlist.includes(product._id)}
+                  showActions={true}
+                />
+              ))
+            ) : (
+              <div className="col-span-5 text-center py-16 text-gray-500">
+                No featured products available
+              </div>
+            )}
           </div>
           <div className="mt-24 text-center">
             <button
@@ -719,22 +664,37 @@ export default function CustomerDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
             {" "}
             {/* changed to match browse: 5 columns on lg and gap-10 */}
-            {NEW_ARRIVALS.map((item) => (
-              <ProductCard
-                key={item.id}
-                id={item.id}
-                name={item.name}
-                price={item.price}
-                costPrice={item.costPrice}
-                images={item.images}
-                quantity={item.quantity}
-                inStock={item.inStock}
-                onAddToCart={handleAddToCart}
-                onToggleWishlist={toggleWishlist}
-                isInWishlist={wishlist.includes(item.id)}
-                showActions={true}
-              />
-            ))}
+            {loading ? (
+              // Loading skeletons
+              Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="aspect-[3/4] bg-gray-300 dark:bg-gray-700 animate-pulse" />
+                  <div className="h-4 bg-gray-300 dark:bg-gray-700 animate-pulse rounded" />
+                  <div className="h-3 bg-gray-300 dark:bg-gray-700 animate-pulse rounded w-1/2" />
+                </div>
+              ))
+            ) : newArrivals.length > 0 ? (
+              newArrivals.map((item) => (
+                <ProductCard
+                  key={item._id}
+                  id={item._id}
+                  name={item.name}
+                  price={item.price}
+                  costPrice={item.costPrice}
+                  images={item.images?.map((img) => img.url) || []}
+                  quantity={item.quantity}
+                  inStock={item.quantity > 0}
+                  onAddToCart={handleAddToCart}
+                  onToggleWishlist={toggleWishlist}
+                  isInWishlist={wishlist.includes(item._id)}
+                  showActions={true}
+                />
+              ))
+            ) : (
+              <div className="col-span-5 text-center py-16 text-gray-500 dark:text-gray-400">
+                No new arrivals available
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -47,9 +47,14 @@ router.get("/products", async (req, res) => {
 
       // Features
       isFeatured: req.query.isFeatured === "true" ? true : undefined,
+      isNewArrival: req.query.isNewArrival === "true" ? true : undefined,
+      isBestseller: req.query.isBestseller === "true" ? true : undefined,
       isOrganic: req.query.isOrganic === "true" ? true : undefined,
       isFairTrade: req.query.isFairTrade === "true" ? true : undefined,
       isRecycled: req.query.isRecycled === "true" ? true : undefined,
+
+      // Season
+      season: req.query.season,
 
       // Sort
       sortBy: req.query.sortBy || "createdAt",

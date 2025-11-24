@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import productService from "../services/product.service.js";
 import { parseJsonFields } from "../middleware/parse-json-fields.js";
 import {
@@ -10,6 +11,10 @@ import {
   uploadProductFiles,
   handleUploadError,
 } from "../middleware/upload.middleware.js";
+
+import User from "../models/User.js";
+import Product from "../models/Product.js";
+import Order from "../models/Order.js";
 
 const router = express.Router();
 
@@ -53,7 +58,12 @@ router.get("/", async (req, res) => {
       // Status filters
       status: req.query.status || "active",
       isFeatured: req.query.isFeatured === "true" ? true : undefined,
+      isNewArrival: req.query.isNewArrival === "true" ? true : undefined,
+      isBestseller: req.query.isBestseller === "true" ? true : undefined,
       isVerified: req.query.isVerified === "true" ? true : undefined,
+
+      // Season filter
+      season: req.query.season,
 
       // Seller filter
       sellerId: req.query.sellerId,
@@ -945,33 +955,51 @@ router.get(
  * Get vendor's public storefront information
  * Access: Public (no auth required)
  */
+/**
+ * GET /api/products/vendor/:vendorId/store
+ * Get vendor's public storefront information
+ * Access: Public (no auth required)
+ */
 router.get("/vendor/:vendorId/store", async (req, res) => {
   try {
     const vendor = await User.findById(req.params.vendorId).select(
-      "name companyName email phone city state country businessType vendorSettings createdAt"
+      "name companyName email phone city state country businessType vendorSettings createdAt role"
     );
 
-    if (!vendor || vendor.role !== "vendor") {
+    if (!vendor) {
       return res.status(404).json({
         success: false,
         message: "Vendor not found",
       });
     }
 
+    if (vendor.role !== "vendor") {
+      return res.status(404).json({
+        success: false,
+        message: "User is not a vendor",
+      });
+    }
+
     // Get vendor statistics
     const [productCount, totalSales, recentOrders, avgRating] =
       await Promise.all([
-        // Count active products
+        // Count ALL products by this vendor (not just active ones)
         Product.countDocuments({
-          seller: req.params.vendorId,
-          status: "active",
+          $or: [
+            { seller: req.params.vendorId },
+            { seller: new mongoose.Types.ObjectId(req.params.vendorId) },
+            { sellerId: req.params.vendorId },
+            { sellerId: new mongoose.Types.ObjectId(req.params.vendorId) },
+            { vendorId: req.params.vendorId },
+            { vendorId: new mongoose.Types.ObjectId(req.params.vendorId) },
+          ],
         }),
 
         // Count delivered orders
         Order.aggregate([
           {
             $match: {
-              sellerId: mongoose.Types.ObjectId(req.params.vendorId),
+              sellerId: new mongoose.Types.ObjectId(req.params.vendorId),
               status: "delivered",
             },
           },
@@ -986,7 +1014,7 @@ router.get("/vendor/:vendorId/store", async (req, res) => {
 
         // Get recent orders count (last 30 days)
         Order.countDocuments({
-          sellerId: req.params.vendorId,
+          sellerId: new mongoose.Types.ObjectId(req.params.vendorId),
           createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
         }),
 
@@ -994,12 +1022,22 @@ router.get("/vendor/:vendorId/store", async (req, res) => {
         Promise.resolve(4.5),
       ]);
 
+    console.log("📊 Vendor Stats:", {
+      vendorId: req.params.vendorId,
+      productCount,
+      totalSales: totalSales[0]?.total || 0,
+      recentOrders,
+    });
+
     // Get top categories
     const topCategories = await Product.aggregate([
       {
         $match: {
-          seller: mongoose.Types.ObjectId(req.params.vendorId),
-          status: "active",
+          $or: [
+            { seller: new mongoose.Types.ObjectId(req.params.vendorId) },
+            { sellerId: new mongoose.Types.ObjectId(req.params.vendorId) },
+            { vendorId: new mongoose.Types.ObjectId(req.params.vendorId) },
+          ],
         },
       },
       {
@@ -1053,10 +1091,69 @@ router.get("/vendor/:vendorId/store", async (req, res) => {
 });
 
 /**
+ * GET /api/products/vendor/:vendorId/categories
+ * Get vendor's product categories with counts
+ * Access: Public
+ */
+router.get("/vendor/:vendorId/categories", async (req, res) => {
+  try {
+    const categories = await Product.aggregate([
+      {
+        $match: {
+          seller: new mongoose.Types.ObjectId(req.params.vendorId),
+          status: "active",
+        },
+      },
+      {
+        $group: {
+          _id: {
+            category: "$category",
+            subcategory: "$subcategory",
+          },
+          count: { $sum: 1 },
+          minPrice: { $min: "$price" },
+          maxPrice: { $max: "$price" },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.category",
+          subcategories: {
+            $push: {
+              name: "$_id.subcategory",
+              count: "$count",
+              priceRange: {
+                min: "$minPrice",
+                max: "$maxPrice",
+              },
+            },
+          },
+          totalProducts: { $sum: "$count" },
+        },
+      },
+      { $sort: { totalProducts: -1 } },
+    ]);
+
+    res.json({
+      success: true,
+      categories,
+    });
+  } catch (error) {
+    console.error(
+      "❌ GET /api/products/vendor/:vendorId/categories error:",
+      error
+    );
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to get vendor categories",
+    });
+  }
+});
+
+/**
  * GET /api/products/vendor/:vendorId/products
  * Get vendor's products with filtering
  * Access: Public (no auth required)
- * Query params: category, subcategory, minPrice, maxPrice, search, inStock, page, limit, sortBy, sortOrder
  */
 router.get("/vendor/:vendorId/products", async (req, res) => {
   try {
@@ -1073,9 +1170,19 @@ router.get("/vendor/:vendorId/products", async (req, res) => {
       sortOrder = "desc",
     } = req.query;
 
-    // Build query
+    console.log("🔍 Fetching products for vendor:", req.params.vendorId);
+    console.log("📋 Query params:", req.query);
+
+    // Build query - Try both 'seller' and 'sellerId' fields
     const query = {
-      seller: req.params.vendorId,
+      $or: [
+        { seller: req.params.vendorId },
+        { seller: new mongoose.Types.ObjectId(req.params.vendorId) },
+        { sellerId: req.params.vendorId },
+        { sellerId: new mongoose.Types.ObjectId(req.params.vendorId) },
+        { vendorId: req.params.vendorId },
+        { vendorId: new mongoose.Types.ObjectId(req.params.vendorId) },
+      ],
       status: "active",
     };
 
@@ -1083,10 +1190,13 @@ router.get("/vendor/:vendorId/products", async (req, res) => {
     if (subcategory) query.subcategory = subcategory;
 
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-      ];
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+        ],
+      });
     }
 
     if (minPrice || maxPrice) {
@@ -1096,8 +1206,10 @@ router.get("/vendor/:vendorId/products", async (req, res) => {
     }
 
     if (inStock === "true") {
-      query.stock = { $gt: 0 };
+      query.quantity = { $gt: 0 };
     }
+
+    console.log("🔎 MongoDB Query:", JSON.stringify(query, null, 2));
 
     // Pagination and sorting
     const skip = (page - 1) * limit;
@@ -1106,17 +1218,27 @@ router.get("/vendor/:vendorId/products", async (req, res) => {
     const [products, total] = await Promise.all([
       Product.find(query)
         .select(
-          "name price images category subcategory stock description createdAt"
+          "name price images category subcategory quantity stock description createdAt seller sellerId vendorId"
         )
         .sort(sort)
         .skip(skip)
-        .limit(Number(limit)),
+        .limit(Number(limit))
+        .lean(),
       Product.countDocuments(query),
     ]);
 
+    console.log("✅ Products found:", products.length);
+    console.log("📦 First product:", products[0]);
+
+    // Map stock field to quantity if needed
+    const mappedProducts = products.map((product) => ({
+      ...product,
+      stock: product.stock || product.quantity || 0,
+    }));
+
     res.json({
       success: true,
-      products,
+      products: mappedProducts,
       pagination: {
         page: Number(page),
         limit: Number(limit),

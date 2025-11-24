@@ -58,7 +58,7 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
       <div className="relative bg-gray-100 dark:bg-gray-900 overflow-hidden">
         <div
           className="relative w-full aspect-[3/4] cursor-pointer"
-          onClick={() => router.push(`/customer/products/${product._id}`)}
+          onClick={() => router.push(`/customer/product/${product._id}`)}
         >
           {!imageError && mainImage ? (
             <img
@@ -120,7 +120,7 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
       <div className="pt-1 pb-1">
         <div className="flex items-center justify-between mb-0">
           <button
-            onClick={() => router.push(`/customer/products/${product._id}`)}
+            onClick={() => router.push(`/customer/product/${product._id}`)}
             className="block flex-1 text-left"
           >
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
@@ -190,7 +190,7 @@ function SimilarProductCard({ product, onAddToCart }: SimilarProductCardProps) {
       <div className="relative bg-gray-100 dark:bg-gray-900 overflow-hidden">
         <div
           className="relative w-full aspect-[3/4] cursor-pointer"
-          onClick={() => router.push(`/customer/products/${product.id}`)}
+          onClick={() => router.push(`/customer/product/${product.id}`)}
         >
           {!imageError && mainImage ? (
             <img
@@ -244,7 +244,7 @@ function SimilarProductCard({ product, onAddToCart }: SimilarProductCardProps) {
       <div className="pt-1 pb-1">
         <div className="flex items-center justify-between mb-0">
           <button
-            onClick={() => router.push(`/customer/products/${product.id}`)} // Changed from product._id to product.id
+            onClick={() => router.push(`/customer/product/${product.id}`)} // Changed from product._id to product.id
             className="block flex-1 text-left"
           >
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">

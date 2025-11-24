@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   ChevronRightIcon,
@@ -13,112 +14,20 @@ import {
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { usePageTitle } from "@/hooks/use-page-title";
-
-// Mock Vendor Data
-const MOCK_VENDOR = {
-  id: "VENDOR001",
-  name: "Fashion Store",
-  storeName: "Fashion Store - Premium Clothing",
-  description:
-    "Your destination for premium fashion and style. We offer carefully curated collections of contemporary clothing and accessories.",
-  image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200",
-  address: "123 Fashion Street, New York, NY 10001",
-  rating: 4.8,
-  totalReviews: 256,
-  totalProducts: 45,
-  totalSales: 1234,
-  joinedDate: "2023-01-15",
-  verified: true,
-};
-
-// Mock Products
-const MOCK_PRODUCTS = [
-  {
-    id: 1,
-    name: "Premium Cotton T-Shirt",
-    price: 29.99,
-    costPrice: 49.99,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500",
-    category: "T-Shirts",
-    inStock: true,
-    rating: 4.5,
-    reviews: 23,
-  },
-  {
-    id: 2,
-    name: "Classic Denim Jacket",
-    price: 89.99,
-    costPrice: 129.99,
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500",
-    category: "Jackets",
-    inStock: true,
-    rating: 4.8,
-    reviews: 45,
-  },
-  {
-    id: 3,
-    name: "Casual Sneakers",
-    price: 79.99,
-    costPrice: 119.99,
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500",
-    category: "Shoes",
-    inStock: true,
-    rating: 4.6,
-    reviews: 34,
-  },
-  {
-    id: 4,
-    name: "Summer Dress",
-    price: 59.99,
-    costPrice: 89.99,
-    image: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=500",
-    category: "Dresses",
-    inStock: false,
-    rating: 4.7,
-    reviews: 28,
-  },
-  {
-    id: 5,
-    name: "Leather Wallet",
-    price: 39.99,
-    costPrice: 59.99,
-    image: "https://images.unsplash.com/photo-1627123424574-724758594e93?w=500",
-    category: "Accessories",
-    inStock: true,
-    rating: 4.9,
-    reviews: 56,
-  },
-  {
-    id: 6,
-    name: "Sport Watch",
-    price: 149.99,
-    costPrice: 199.99,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500",
-    category: "Accessories",
-    inStock: true,
-    rating: 4.8,
-    reviews: 42,
-  },
-];
+import { vendorAPI, VendorStore, VendorProduct } from "@/lib/api/vendor.api";
 
 interface ProductCardProps {
-  product: {
-    id: number;
-    name: string;
-    price: number;
-    costPrice?: number;
-    image: string;
-    category: string;
-    inStock: boolean;
-    rating: number;
-    reviews: number;
-  };
+  product: VendorProduct;
 }
 
 function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+
+  const mainImage =
+    product.images?.find((img) => img.isMain) || product.images?.[0];
+  const isInStock = product.stock > 0;
 
   const PlaceholderImage = () => (
     <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 flex items-center justify-center">
@@ -131,16 +40,17 @@ function ProductCard({ product }: ProductCardProps) {
       {/* Product Image */}
       <div className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4] overflow-hidden mb-4">
         <div
-          className="cursor-pointer"
-          onClick={() => router.push(`/customer/products/${product.id}`)}
+          className="cursor-pointer w-full h-full"
+          onClick={() => router.push(`/customer/product/${product._id}`)}
         >
-          {!imageError ? (
+          {mainImage && !imageError ? (
             <img
-              src={product.image}
+              src={mainImage.url}
               alt={product.name}
-              className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${
+              className={`w-full h-full transition-all duration-500 group-hover:scale-105 ${
                 imageLoaded ? "opacity-100" : "opacity-0"
               }`}
+              style={{ objectFit: "cover", objectPosition: "center" }}
               onLoad={() => {
                 setImageLoaded(true);
                 setImageError(false);
@@ -154,11 +64,11 @@ function ProductCard({ product }: ProductCardProps) {
             <PlaceholderImage />
           )}
 
-          {!imageLoaded && !imageError && (
+          {!imageLoaded && !imageError && mainImage && (
             <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse" />
           )}
 
-          {!product.inStock && (
+          {!isInStock && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
               <span className="text-xs font-medium text-gray-900 uppercase tracking-wider">
                 Out of Stock
@@ -171,7 +81,7 @@ function ProductCard({ product }: ProductCardProps) {
       {/* Product Info */}
       <div className="space-y-2">
         <button
-          onClick={() => router.push(`/customer/products/${product.id}`)}
+          onClick={() => router.push(`/customer/product/${product._id}`)}
           className="block w-full text-left"
         >
           <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
@@ -179,25 +89,10 @@ function ProductCard({ product }: ProductCardProps) {
           </h3>
         </button>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <StarIcon className="h-3 w-3 fill-gray-900 dark:fill-white text-gray-900 dark:text-white" />
-            <span className="text-xs text-gray-900 dark:text-white">
-              {product.rating}
-            </span>
-          </div>
-          <span className="text-xs text-gray-400">({product.reviews})</span>
-        </div>
-
         <div className="flex items-baseline gap-2">
           <span className="text-xs font-normal text-gray-900 dark:text-white">
-            ${product.price.toFixed(2)}
+            {product.price.toFixed(2)} CVT
           </span>
-          {product.costPrice && product.costPrice > product.price && (
-            <span className="text-[10px] text-gray-400 line-through">
-              ${product.costPrice.toFixed(2)}
-            </span>
-          )}
         </div>
 
         <p className="text-[10px] text-gray-500 dark:text-gray-400">
@@ -212,33 +107,113 @@ export default function VendorStorePage() {
   usePageTitle("Vendor Profile");
   const router = useRouter();
   const params = useParams();
-  const vendorId = params?.id || "VENDOR001";
+  const vendorId = params?.id as string;
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<
-    "newest" | "price-low" | "price-high" | "popular"
-  >("newest");
+  const [sortBy, setSortBy] = useState<"createdAt" | "price" | "name">(
+    "createdAt"
+  );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [loading, setLoading] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [vendor, setVendor] = useState<VendorStore | null>(null);
+  const [products, setProducts] = useState<VendorProduct[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
 
-  const vendor = MOCK_VENDOR;
-  const [products] = useState(MOCK_PRODUCTS);
-
-  // Filter and sort products
-  const filteredProducts = products
-    .filter((product) =>
-      product.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "price-low":
-          return a.price - b.price;
-        case "price-high":
-          return b.price - a.price;
-        case "popular":
-          return b.rating - a.rating;
-        default:
-          return 0;
+  // Fetch vendor store information
+  useEffect(() => {
+    const fetchVendorStore = async () => {
+      try {
+        setLoading(true);
+        const response = await vendorAPI.getVendorStore(vendorId);
+        if (response.success) {
+          setVendor(response.store);
+        }
+      } catch (error: any) {
+        console.error("Error fetching vendor store:", error);
+        toast.error(error.message || "Failed to load vendor store");
+      } finally {
+        setLoading(false);
       }
-    });
+    };
+
+    if (vendorId) {
+      fetchVendorStore();
+    }
+  }, [vendorId]);
+
+  // Fetch vendor products
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        console.log("🔍 Fetching products for vendor:", vendorId);
+        setLoadingProducts(true);
+        const response = await vendorAPI.getVendorProducts(vendorId, {
+          search: searchQuery || undefined,
+          sortBy:
+            sortBy === "createdAt"
+              ? "createdAt"
+              : sortBy === "name"
+                ? "name"
+                : "price",
+          sortOrder,
+          page: currentPage,
+          limit: 20,
+        });
+
+        console.log("📦 Products API Response:", response);
+        console.log("✅ Products count:", response.products?.length);
+        console.log("✅ First product:", response.products?.[0]);
+
+        if (response.success) {
+          setProducts(response.products);
+          setTotalPages(response.pagination.pages);
+          setTotalProducts(response.pagination.total);
+          console.log(
+            "✅ Products state updated:",
+            response.products.length,
+            "products"
+          );
+        }
+      } catch (error: any) {
+        console.error("❌ Error fetching vendor products:", error);
+        toast.error(error.message || "Failed to load products");
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    if (vendorId) {
+      fetchProducts();
+    }
+  }, [vendorId, searchQuery, sortBy, sortOrder, currentPage]);
+
+  // Handle sort changes
+  const handleSortChange = (
+    newSort: "newest" | "price-low" | "price-high" | "popular"
+  ) => {
+    switch (newSort) {
+      case "newest":
+        setSortBy("createdAt");
+        setSortOrder("desc");
+        break;
+      case "price-low":
+        setSortBy("price");
+        setSortOrder("asc");
+        break;
+      case "price-high":
+        setSortBy("price");
+        setSortOrder("desc");
+        break;
+      case "popular":
+        setSortBy("name");
+        setSortOrder("asc");
+        break;
+    }
+    setCurrentPage(1);
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -248,10 +223,30 @@ export default function VendorStorePage() {
     });
   };
 
+  const getCurrentSort = () => {
+    if (sortBy === "createdAt" && sortOrder === "desc") return "newest";
+    if (sortBy === "price" && sortOrder === "asc") return "price-low";
+    if (sortBy === "price" && sortOrder === "desc") return "price-high";
+    return "newest";
+  };
+
+  if (loading || !vendor) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+          <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+            Loading vendor store...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Breadcrumb */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
+      <div className="">
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
           <div className="flex items-center gap-2">
             <button
@@ -269,7 +264,7 @@ export default function VendorStorePage() {
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <span className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white">
-              {vendor.name}
+              {vendor.vendor.name}
             </span>
           </div>
         </div>
@@ -280,11 +275,19 @@ export default function VendorStorePage() {
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
           {/* Store Banner */}
           <div className="relative h-64 bg-gray-100 dark:bg-gray-900 overflow-hidden">
-            <img
-              src={vendor.image}
-              alt={vendor.name}
-              className="w-full h-full object-cover"
-            />
+            {vendor.vendor.banner ? (
+              <img
+                src={vendor.vendor.banner}
+                alt={vendor.vendor.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <img
+                src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&h=400&fit=crop"
+                alt="Store banner"
+                className="w-full h-full object-cover"
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           </div>
 
@@ -293,46 +296,40 @@ export default function VendorStorePage() {
             <div className="flex items-start justify-between">
               <div className="space-y-4 flex-1">
                 <div className="flex items-center gap-3">
-                  {vendor.verified && (
-                    <CheckCircleIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  )}
+                  <CheckCircleIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
                   <h1 className="text-4xl font-extralight text-gray-900 dark:text-white tracking-tight">
-                    {vendor.storeName}
+                    {vendor.vendor.companyName || vendor.vendor.name}
                   </h1>
                 </div>
 
-                <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl font-light leading-relaxed">
-                  {vendor.description}
-                </p>
+                {vendor.vendor.description && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl font-light leading-relaxed">
+                    {vendor.vendor.description}
+                  </p>
+                )}
 
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <MapPinIcon className="h-4 w-4" />
-                  <span>{vendor.address}</span>
-                </div>
+                {vendor.vendor.location && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <MapPinIcon className="h-4 w-4" />
+                    <span>{vendor.vendor.location}</span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-4 gap-8 pt-8 border-t border-gray-200 dark:border-gray-800">
+            <div className="grid grid-cols-3 gap-8 pt-8 border-t border-gray-200 dark:border-gray-800">
               <div>
                 <p className="text-2xl font-extralight text-gray-900 dark:text-white mb-1">
-                  {vendor.rating}
+                  {vendor.stats.recentOrders}
                 </p>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
-                  Rating
+                  Recent Orders
                 </p>
               </div>
               <div>
                 <p className="text-2xl font-extralight text-gray-900 dark:text-white mb-1">
-                  {vendor.totalReviews}
-                </p>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
-                  Reviews
-                </p>
-              </div>
-              <div>
-                <p className="text-2xl font-extralight text-gray-900 dark:text-white mb-1">
-                  {vendor.totalProducts}
+                  {vendor.stats.productCount}
                 </p>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
                   Products
@@ -340,7 +337,7 @@ export default function VendorStorePage() {
               </div>
               <div>
                 <p className="text-2xl font-extralight text-gray-900 dark:text-white mb-1">
-                  {vendor.totalSales}+
+                  {vendor.stats.totalSales}+
                 </p>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
                   Sales
@@ -372,9 +369,9 @@ export default function VendorStorePage() {
             {/* Sort */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setSortBy("newest")}
+                onClick={() => handleSortChange("newest")}
                 className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors ${
-                  sortBy === "newest"
+                  sortBy === "createdAt" && sortOrder === "desc"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
                 }`}
@@ -382,9 +379,9 @@ export default function VendorStorePage() {
                 Newest
               </button>
               <button
-                onClick={() => setSortBy("popular")}
+                onClick={() => handleSortChange("popular")}
                 className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors ${
-                  sortBy === "popular"
+                  sortBy === "name"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
                 }`}
@@ -392,9 +389,9 @@ export default function VendorStorePage() {
                 Popular
               </button>
               <button
-                onClick={() => setSortBy("price-low")}
+                onClick={() => handleSortChange("price-low")}
                 className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors ${
-                  sortBy === "price-low"
+                  sortBy === "price" && sortOrder === "asc"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
                 }`}
@@ -402,9 +399,9 @@ export default function VendorStorePage() {
                 Price: Low
               </button>
               <button
-                onClick={() => setSortBy("price-high")}
+                onClick={() => handleSortChange("price-high")}
                 className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors ${
-                  sortBy === "price-high"
+                  sortBy === "price" && sortOrder === "desc"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
                 }`}
@@ -419,20 +416,58 @@ export default function VendorStorePage() {
       {/* Products Grid */}
       <section className="py-16">
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
-          {filteredProducts.length > 0 ? (
+          {(() => {
+            console.log("🎨 Render - products:", products);
+            console.log("🎨 Render - products.length:", products?.length);
+            console.log("🎨 Render - loadingProducts:", loadingProducts);
+            return null;
+          })()}
+
+          {loadingProducts ? (
+            <div className="text-center py-32">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent" />
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                Loading products...
+              </p>
+            </div>
+          ) : products && products.length > 0 ? (
             <>
               <div className="mb-8">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Showing {filteredProducts.length} of {products.length}{" "}
-                  products
+                  Showing {products.length} of {totalProducts} products
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
-                {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                {products.map((product) => (
+                  <ProductCard key={product._id} product={product} />
                 ))}
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-16 flex justify-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="h-11 px-6 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-black dark:hover:border-white transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <span className="h-11 px-6 flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="h-11 px-6 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-black dark:hover:border-white transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div className="text-center py-32 border border-gray-200 dark:border-gray-800">
@@ -473,13 +508,13 @@ export default function VendorStorePage() {
               </h2>
               <div className="space-y-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {vendor.description}
+                  {vendor.vendor.description || "No description available."}
                 </p>
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
                   <div className="flex items-center gap-3">
                     <BuildingStorefrontIcon className="h-5 w-5 text-gray-400 dark:text-gray-600" />
                     <span className="text-xs text-gray-600 dark:text-gray-400">
-                      Member since {formatDate(vendor.joinedDate)}
+                      Member since {formatDate(vendor.vendor.memberSince)}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -504,14 +539,6 @@ export default function VendorStorePage() {
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     30-day return policy on all items
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-900 dark:text-white mb-2 uppercase tracking-[0.2em]">
-                    Shipping
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Free shipping on orders over $50
                   </p>
                 </div>
                 <div>

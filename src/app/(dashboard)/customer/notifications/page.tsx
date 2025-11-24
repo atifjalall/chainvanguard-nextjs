@@ -245,7 +245,7 @@ export default function NotificationsPage() {
             router.push(`/customer/returns/${entityId}`);
             break;
           case "product":
-            router.push(`/customer/products/${entityId}`);
+            router.push(`/customer/product/${entityId}`);
             break;
           case "payment":
             router.push(`/customer/wallet`); // Wallet page for payments
