@@ -419,10 +419,13 @@ class ProductService {
         sellerId,
         sellerRole,
         isFeatured,
+        isNewArrival,
+        isBestseller,
         isVerified,
         isOrganic,
         isFairTrade,
         isRecycled,
+        season,
         tags,
         sortBy = "createdAt",
         sortOrder = "desc",
@@ -470,7 +473,12 @@ class ProductService {
 
       // Feature filters
       if (isFeatured !== undefined) query.isFeatured = isFeatured;
+      if (isNewArrival !== undefined) query.isNewArrival = isNewArrival;
+      if (isBestseller !== undefined) query.isBestseller = isBestseller;
       if (isVerified !== undefined) query.isVerified = isVerified;
+
+      // Season filter
+      if (season) query.season = season;
 
       // Sustainability filters
       if (isOrganic !== undefined)
@@ -1518,7 +1526,6 @@ class ProductService {
       const query = {
         status: "active",
         isFeatured: true,
-        isPublished: true,
       };
 
       if (category) {
@@ -1545,7 +1552,7 @@ class ProductService {
     try {
       const query = {
         status: "active",
-        isPublished: true,
+        isNewArrival: true,
       };
 
       if (category) {

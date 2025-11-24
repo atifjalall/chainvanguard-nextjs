@@ -86,7 +86,7 @@ function ProductCard({
   return (
     <div className="group relative w-full">
       <div className="relative bg-gray-100 dark:bg-gray-900 w-full overflow-hidden">
-        <a href={`/customer/products/${id}`} className="block">
+        <a href={`/customer/product/${id}`} className="block">
           <div className="relative w-full aspect-[3/4]">
             {!imageError && images && images.length > 0 ? (
               <img
@@ -138,7 +138,7 @@ function ProductCard({
 
       <div className="pt-1 pb-1">
         <div className="flex items-center justify-between mb-0">
-          <a href={`/customer/products/${id}`} className="block flex-1">
+          <a href={`/customer/product/${id}`} className="block flex-1">
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               {name}
             </h3>
@@ -321,7 +321,9 @@ export default function ProductDetailPage() {
         toast.success("Added to cart");
         // Immediately refresh cart count to update badge
         await refreshCartCount();
-        console.log('[PRODUCT] Cart count refreshed after adding related product');
+        console.log(
+          "[PRODUCT] Cart count refreshed after adding related product"
+        );
       } else {
         toast.error("Failed to add to cart");
       }

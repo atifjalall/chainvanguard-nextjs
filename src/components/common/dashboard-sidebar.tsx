@@ -187,34 +187,34 @@ export function DashboardSidebar() {
       // 3. Blockchain Expert
       case "expert":
         return [
-          { href: "/blockchain-expert", label: "Dashboard", icon: HomeIcon },
+          { href: "expert", label: "Dashboard", icon: HomeIcon },
           {
-            href: "/blockchain-expert/all-transactions",
+            href: "expert/all-transactions",
             label: "All Transactions",
             icon: ListBulletIcon,
           },
           {
-            href: "/blockchain-expert/blockchain-logs",
+            href: "expert/blockchain-logs",
             label: "Blockchain Logs",
             icon: DocumentTextIcon,
           },
           {
-            href: "/blockchain-expert/consensus",
+            href: "expert/consensus",
             label: "Consensus",
             icon: CodeBracketSquareIcon,
           },
           {
-            href: "/blockchain-expert/security",
+            href: "expert/security",
             label: "Security",
             icon: ShieldCheckIcon,
           },
           {
-            href: "/blockchain-expert/fault-tolerance",
+            href: "expert/fault-tolerance",
             label: "Fault Tolerance",
             icon: BoltIcon,
           },
           {
-            href: "/blockchain-expert/system-health",
+            href: "expert/system-health",
             label: "System Health",
             icon: ComputerDesktopIcon,
           },

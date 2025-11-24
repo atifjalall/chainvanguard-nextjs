@@ -623,4 +623,100 @@ router.get(
   }
 );
 
+// ========================================
+// GET SINGLE INVENTORY ITEM DETAILS
+// GET /api/inventory/browse/:inventoryId
+// Get detailed information about a specific inventory item for vendors
+// ========================================
+router.get(
+  "/browse/:inventoryId",
+  authenticate,
+  authorizeRoles("vendor"),
+  async (req, res) => {
+    try {
+      const { inventoryId } = req.params;
+
+      const item = await Inventory.findOne({
+        _id: inventoryId,
+        status: "active",
+        $expr: {
+          $gt: [
+            {
+              $subtract: [
+                "$quantity",
+                {
+                  $add: [
+                    "$reservedQuantity",
+                    "$committedQuantity",
+                    "$damagedQuantity",
+                  ],
+                },
+              ],
+            },
+            0,
+          ],
+        },
+      })
+        .populate(
+          "supplierId",
+          "name email companyName contactPhone businessAddress averageRating"
+        )
+        .select(
+          "name description category subcategory materialType sku status " +
+            "quantity reservedQuantity committedQuantity damagedQuantity " +
+            "availableQuantity minStockLevel reorderLevel reorderQuantity " +
+            "maximumQuantity safetyStockLevel unit pricePerUnit costPrice " +
+            "originalPrice discount currency totalValue images textileDetails " +
+            "supplierId certifications sustainabilityCertifications " +
+            "complianceStandards qualityGrade countryOfOrigin manufacturer " +
+            "leadTime estimatedDeliveryDays shelfLife tags season weight " +
+            "dimensions notes internalCode barcode carbonFootprint " +
+            "recycledContent autoReorderEnabled isBatchTracked isSustainable " +
+            "warehouseLocation storageLocations specifications suitableFor " +
+            "manufactureDate expiryDate createdAt updatedAt lastRestocked " +
+            "qrCode qrCodeImageUrl qrCodeGenerated totalScans ipfsHash " +
+            "blockchainInventoryId qrMetadata"
+        )
+        .lean();
+
+      if (!item) {
+        return res.status(404).json({
+          success: false,
+          message: "Inventory item not found or not available",
+        });
+      }
+
+      // Calculate available quantity
+      const availableQuantity = Math.max(
+        0,
+        item.quantity -
+          (item.reservedQuantity || 0) -
+          (item.committedQuantity || 0) -
+          (item.damagedQuantity || 0)
+      );
+
+      // Add supplier name
+      const itemWithSupplier = {
+        ...item,
+        supplierName:
+          item.supplierId?.companyName ||
+          item.supplierId?.name ||
+          "Unknown Supplier",
+        availableQuantity,
+      };
+
+      res.json({
+        success: true,
+        data: itemWithSupplier,
+      });
+    } catch (error) {
+      logger.error("Error in GET /inventory/browse/:inventoryId:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Error fetching inventory details",
+      });
+    }
+  }
+);
+
 export default router;

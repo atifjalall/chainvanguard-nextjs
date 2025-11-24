@@ -252,7 +252,7 @@ export default function CustomerHeader() {
       console.error("Invalid product ID");
       return;
     }
-    router.push(`/customer/products/${productId}`);
+    router.push(`/customer/product/${productId}`);
     clearSearch();
     setSearchOpen(false);
   };
@@ -260,10 +260,24 @@ export default function CustomerHeader() {
   const handleCategoryClick = (category: string, subcategory?: string) => {
     setMenuOpen(false);
     setSelectedSubcategory(subcategory?.toLowerCase() || null);
+
     if (subcategory) {
-      router.push(
-        `/customer/browse?category=${category.toLowerCase()}&subcategory=${subcategory.toLowerCase()}`
-      );
+      const subLower = subcategory.toLowerCase();
+
+      // Handle special filters
+      if (subLower === "best sellers") {
+        router.push(
+          `/customer/browse?category=${category.toLowerCase()}&featured=true`
+        );
+      } else if (subLower === "new arrivals") {
+        router.push(
+          `/customer/browse?category=${category.toLowerCase()}&newArrival=true`
+        );
+      } else {
+        router.push(
+          `/customer/browse?category=${category.toLowerCase()}&subcategory=${subLower}`
+        );
+      }
     } else {
       router.push(`/customer/browse?category=${category.toLowerCase()}`);
     }
@@ -708,7 +722,9 @@ export default function CustomerHeader() {
                         <button
                           onClick={() => {
                             setMenuOpen(false);
-                            router.push("/customer/browse?category=men&subcategory=best%20sellers");
+                            router.push(
+                              "/customer/browse?category=men&subcategory=best%20sellers"
+                            );
                           }}
                           className="text-left text-[10px] uppercase tracking-[0.2em] py-1 text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors block"
                         >
@@ -717,7 +733,7 @@ export default function CustomerHeader() {
                         <button
                           onClick={() => {
                             setMenuOpen(false);
-                            router.push("/customer/browse?sort=newest");
+                            router.push("/customer/browse?newArrival=true");
                           }}
                           className="text-left text-[10px] uppercase tracking-[0.2em] py-1 text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors block"
                         >

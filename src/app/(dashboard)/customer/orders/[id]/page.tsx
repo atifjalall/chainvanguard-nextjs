@@ -439,7 +439,7 @@ export default function OrderDetailPage() {
                           className="relative bg-gray-100 dark:bg-gray-900 aspect-[3/4] cursor-pointer"
                           onClick={() =>
                             productId &&
-                            router.push(`/customer/products/${productId}`)
+                            router.push(`/customer/product/${productId}`)
                           }
                         >
                           {productImage ? (
@@ -466,7 +466,7 @@ export default function OrderDetailPage() {
                             <button
                               onClick={() =>
                                 productId &&
-                                router.push(`/customer/products/${productId}`)
+                                router.push(`/customer/product/${productId}`)
                               }
                               className="text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-left"
                             >

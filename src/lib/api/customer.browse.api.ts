@@ -29,9 +29,14 @@ export interface BrowseProductsParams {
 
   // Features
   isFeatured?: boolean;
+  isNewArrival?: boolean;
+  isBestseller?: boolean;
   isOrganic?: boolean;
   isFairTrade?: boolean;
   isRecycled?: boolean;
+
+  // Season Filter
+  season?: string;
 
   // Vendor Filter
   vendorId?: string;
@@ -156,12 +161,17 @@ export const browseProducts = async (
     queryParams.append("inStock", params.inStock.toString());
   if (params.isFeatured !== undefined)
     queryParams.append("isFeatured", params.isFeatured.toString());
+  if (params.isNewArrival !== undefined)
+    queryParams.append("isNewArrival", params.isNewArrival.toString());
+  if (params.isBestseller !== undefined)
+    queryParams.append("isBestseller", params.isBestseller.toString());
   if (params.isOrganic !== undefined)
     queryParams.append("isOrganic", params.isOrganic.toString());
   if (params.isFairTrade !== undefined)
     queryParams.append("isFairTrade", params.isFairTrade.toString());
   if (params.isRecycled !== undefined)
     queryParams.append("isRecycled", params.isRecycled.toString());
+  if (params.season) queryParams.append("season", params.season);
   if (params.vendorId) queryParams.append("vendorId", params.vendorId);
   if (params.page) queryParams.append("page", params.page.toString());
   if (params.limit) queryParams.append("limit", params.limit.toString());

@@ -29,11 +29,11 @@ export default function Footer() {
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
                 <MapPinIcon className="h-4 w-4 text-gray-400" />
-                <span className="font-light">Heilbronn, Germany</span>
+                <span className="font-light">Karachi, Pakistan</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
                 <EnvelopeIcon className="h-4 w-4 text-gray-400" />
-                <span className="font-light">contact@yourproject.com</span>
+                <span className="font-light">chainvainguard@gmail.com</span>
               </div>
             </div>
           </div>

@@ -36,9 +36,12 @@ class CustomerBrowseService {
         maxPrice,
         inStock,
         isFeatured,
+        isNewArrival,
+        isBestseller,
         isOrganic,
         isFairTrade,
         isRecycled,
+        season,
         sortBy = "createdAt",
         sortOrder = "desc",
         vendorId,
@@ -81,6 +84,11 @@ class CustomerBrowseService {
 
       // Feature filters
       if (isFeatured !== undefined) query.isFeatured = isFeatured;
+      if (isNewArrival !== undefined) query.isNewArrival = isNewArrival;
+      if (isBestseller !== undefined) query.isBestseller = isBestseller;
+
+      // Season filter
+      if (season) query.season = season;
 
       // Vendor filter
       if (vendorId) query.sellerId = vendorId;
