@@ -118,7 +118,7 @@ const walletSchema = new mongoose.Schema(
     // Transaction limits
     dailyWithdrawalLimit: {
       type: Number,
-      default: 10000,
+      default: 100000, // ~$360 USD (with 1 USD = 278 CVT conversion rate)
     },
     dailyWithdrawn: {
       type: Number,

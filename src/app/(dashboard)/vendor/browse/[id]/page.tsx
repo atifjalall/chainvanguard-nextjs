@@ -489,6 +489,92 @@ export default function VendorInventoryDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all duration-300 rounded-none shadow-none">
+              <CardHeader className={CARD_HEADER_PADDING}>
+                <h3 className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
+                  QR Code & Tracking
+                </h3>
+              </CardHeader>
+              <Separator className="-mt-2" />
+              <CardContent className={CARD_CONTENT_PADDING}>
+                <div className="flex flex-col items-center space-y-4">
+                  {inventoryItem.qrCodeImageUrl ? (
+                    <>
+                      <div className="relative bg-white p-4 rounded-none border border-gray-200 dark:border-gray-700">
+                        <img
+                          src={inventoryItem.qrCodeImageUrl}
+                          alt="QR Code"
+                          className="w-48 h-48 object-contain"
+                        />
+                      </div>
+                      <div className="w-full space-y-3">
+                        <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-none">
+                          <span className="text-xs text-gray-600 dark:text-gray-400">
+                            QR Code
+                          </span>
+                          <code className="text-xs font-mono font-semibold text-gray-900 dark:text-white">
+                            {inventoryItem.qrCode}
+                          </code>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-none">
+                          <span className="text-xs text-gray-600 dark:text-gray-400">
+                            Total Scans
+                          </span>
+                          <span className="text-sm font-bold text-gray-900 dark:text-white">
+                            {inventoryItem.totalScans || 0}
+                          </span>
+                        </div>
+                        {inventoryItem.qrMetadata?.trackingUrl && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                              Tracking URL
+                            </p>
+                            <a
+                              href={inventoryItem.qrMetadata.trackingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all"
+                            >
+                              {inventoryItem.qrMetadata.trackingUrl}
+                            </a>
+                          </div>
+                        )}
+                        {inventoryItem.ipfsHash && (
+                          <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-none">
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                              IPFS Hash
+                            </span>
+                            <code className="text-xs font-mono text-gray-900 dark:text-white truncate max-w-[200px]">
+                              {inventoryItem.ipfsHash}
+                            </code>
+                          </div>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const link = document.createElement("a");
+                            link.href = inventoryItem.qrCodeImageUrl!;
+                            link.download = `QR-${inventoryItem.sku}.png`;
+                            link.click();
+                          }}
+                          className="w-full text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all hover:border-black dark:hover:border-white"
+                        >
+                          Download QR Code
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        No QR code available
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="lg:col-span-2">

@@ -258,7 +258,7 @@ export default function FaultTolerancePage() {
                     stroke="currentColor"
                     strokeWidth="8"
                     fill="none"
-                    className="text-gray-200 dark:text-gray-700"
+                    className="text-gray-300 dark:text-gray-800"
                   />
                   <circle
                     cx="64"

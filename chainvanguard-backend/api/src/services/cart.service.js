@@ -56,12 +56,14 @@ class CartService {
         : `cart:guest:${sessionId}`;
 
       // Cache cart summary for quick access
+      // Use correct totalItems value (0 if no items)
+      const totalItems = cart.items.length || 0;
       await redisService.set(
         cacheKey,
         JSON.stringify({
-          totalItems: cart.totalItems,
-          subtotal: cart.subtotal,
-          totalQuantity: cart.totalQuantity,
+          totalItems: totalItems,
+          subtotal: cart.subtotal || 0,
+          totalQuantity: cart.totalQuantity || 0,
         }),
         300 // 5 minutes TTL
       );
@@ -391,8 +393,15 @@ class CartService {
     try {
       console.log("🛒 Clearing cart...");
 
-      // 1. Get cart
-      const cart = await this.getCart(userId, sessionId);
+      // 1. Find cart directly without caching
+      let cart;
+      if (userId) {
+        cart = await Cart.findOne({ userId });
+      } else if (sessionId) {
+        cart = await Cart.findOne({ sessionId });
+      } else {
+        throw new Error("User ID or Session ID is required");
+      }
 
       if (!cart) {
         throw new Error("Cart not found");
@@ -401,11 +410,24 @@ class CartService {
       // 2. Clear cart
       await cart.clearCart();
 
-      // 3. Invalidate cache
+      // 3. Invalidate cache AND set it to empty values
       const cacheKey = userId
         ? `cart:user:${userId}`
         : `cart:guest:${sessionId}`;
       await redisService.del(cacheKey);
+
+      // 4. Set cache with empty values to prevent stale data
+      await redisService.set(
+        cacheKey,
+        JSON.stringify({
+          totalItems: 0,
+          totalQuantity: 0,
+          subtotal: 0,
+          discount: 0,
+          total: 0,
+        }),
+        300 // 5 minutes TTL
+      );
 
       console.log("✅ Cart cleared");
 
