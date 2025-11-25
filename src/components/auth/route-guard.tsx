@@ -42,7 +42,7 @@ export function RouteGuard() {
       customer: "/customer",
       vendor: "/vendor",
       supplier: "/supplier",
-      expert: "/blockchain-expert",
+      expert: "/expert",
     };
 
     // Define role-specific route patterns
@@ -50,7 +50,7 @@ export function RouteGuard() {
       customer: /^\/(customer)/,
       vendor: /^\/(vendor)/,
       supplier: /^\/(supplier)/,
-      expert: /^\/(blockchain-expert)/,
+      expert: /^\/(expert)/,
     };
 
     // Shared routes accessible by all authenticated users

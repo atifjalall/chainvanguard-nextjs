@@ -314,6 +314,7 @@ router.post("/transfer", async (req, res) => {
 /**
  * POST /api/wallet/withdraw
  * Withdraw funds from wallet (burn tokens)
+ * Accepts USD amount and converts to CVT tokens (1 USD = 278 CVT)
  */
 router.post("/withdraw", async (req, res) => {
   try {
@@ -326,14 +327,32 @@ router.post("/withdraw", async (req, res) => {
       });
     }
 
+    // Calculate CVT tokens (conversion rate: 1 USD = 278 CVT)
+    const CONVERSION_RATE = 278;
+    const cvtAmount = parseFloat(amount) * CONVERSION_RATE;
+
     const result = await walletBalanceService.withdrawFunds(
       req.userId,
-      parseFloat(amount),
+      cvtAmount,
       withdrawalMethod,
-      accountDetails
+      {
+        ...accountDetails,
+        amountUSD: amount,
+        amountCVT: cvtAmount,
+        conversionRate: CONVERSION_RATE,
+      }
     );
 
-    res.json(result);
+    res.json({
+      success: true,
+      message: "Withdrawal completed successfully",
+      data: {
+        ...result.data,
+        amountUSD: amount,
+        amountCVT: cvtAmount,
+        conversionRate: CONVERSION_RATE,
+      },
+    });
   } catch (error) {
     console.error("❌ Withdrawal failed:", error);
     res.status(500).json({

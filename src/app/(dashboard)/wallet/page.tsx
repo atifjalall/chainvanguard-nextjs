@@ -80,6 +80,11 @@ export default function WalletPage() {
   const [currency, setCurrency] = useState<Currency>("CVT");
   const [activeAddTab, setActiveAddTab] = useState("amount");
 
+  // Withdraw states
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [activeWithdrawTab, setActiveWithdrawTab] = useState("amount");
+
   // Payment form states
   const [cardNumber, setCardNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -386,6 +391,55 @@ export default function WalletPage() {
     }
   };
 
+  // Withdraw Funds
+  const handleWithdraw = async () => {
+    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    const amountUSD = parseFloat(withdrawAmount);
+    const cvtAmount = amountUSD * CONVERSION_RATE;
+
+    // Check if user has enough balance
+    if (cvtAmount > balance) {
+      toast.error("Insufficient balance");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const withdrawResponse = await walletApi.withdrawFunds({
+        amount: amountUSD,
+        withdrawalMethod: "bank",
+        accountDetails: {},
+      });
+
+      if (!withdrawResponse.success) {
+        throw new Error("Failed to withdraw funds");
+      }
+
+      toast.success(
+        `Successfully withdrew $${amountUSD} (${formatCVT(cvtAmount)} CVT) from your wallet!`
+      );
+
+      if (refreshBalance) await refreshBalance();
+      if (refreshTransactions) await refreshTransactions();
+
+      setWithdrawAmount("");
+      setWithdrawOpen(false);
+      setActiveWithdrawTab("amount");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error("❌ Withdrawal failed:", error);
+      toast.error(`Withdrawal failed: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getTransactionIcon = (type: string) => {
     switch (type) {
       case "deposit":
@@ -681,7 +735,7 @@ export default function WalletPage() {
 
                     {/* Quick Actions */}
                     <div className={`pt-8 border-t ${colors.borders.primary}`}>
-                      <div className="grid grid-cols-1 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <button
                           onClick={() => setAddFundsOpen(true)}
                           className={`h-16 flex flex-col gap-2 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
@@ -693,6 +747,19 @@ export default function WalletPage() {
                             className={`font-semibold ${colors.texts.primary} text-xs`}
                           >
                             Add Funds
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => setWithdrawOpen(true)}
+                          className={`h-16 flex flex-col gap-2 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
+                        >
+                          <ArrowDownLeftIcon
+                            className={`h-5 w-5 ${colors.texts.primary} transform rotate-180`}
+                          />
+                          <span
+                            className={`font-semibold ${colors.texts.primary} text-xs`}
+                          >
+                            Withdraw
                           </span>
                         </button>
                       </div>
@@ -1508,6 +1575,334 @@ export default function WalletPage() {
                 setExpiryDate("");
                 setCvv("");
                 setCardholderName("");
+              }}
+              disabled={isLoading}
+              className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Withdraw Funds Modal */}
+      <Dialog
+        open={withdrawOpen}
+        onOpenChange={(open) => {
+          setWithdrawOpen(open);
+          if (!open) {
+            setActiveWithdrawTab("amount");
+            setWithdrawAmount("");
+          }
+        }}
+      >
+        <DialogContent
+          style={{ width: "100%", maxWidth: "600px" }}
+          className={`w-full max-w-[600px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none p-0 !shadow-none hover:!shadow-none`}
+        >
+          {/* Header */}
+          <div className="p-6">
+            <DialogHeader>
+              <DialogTitle
+                className={`flex items-center gap-3 text-xl font-bold ${colors.texts.primary}`}
+              >
+                <div className="h-8 w-8 flex items-center justify-center rounded-none">
+                  <ArrowDownLeftIcon className="h-5 w-5 transform rotate-180" />
+                </div>
+                Withdraw Funds
+              </DialogTitle>
+              <DialogDescription
+                className={`text-base ${colors.texts.secondary} mt-2`}
+              >
+                Withdraw funds from your ChainVanguard wallet
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          {/* Tabs */}
+          <Tabs
+            value={activeWithdrawTab}
+            onValueChange={setActiveWithdrawTab}
+            className="w-full"
+          >
+            <div className="flex justify-center px-6">
+              <div className="w-full flex justify-center">
+                <TabsList
+                  className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
+                >
+                  <TabsTrigger
+                    value="amount"
+                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                    ${
+                      activeWithdrawTab === "amount"
+                        ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
+                        : `${colors.texts.secondary} hover:${colors.texts.primary}`
+                    }`}
+                  >
+                    Amount
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="review"
+                    disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                    ${
+                      activeWithdrawTab === "review"
+                        ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
+                        : `${colors.texts.secondary} hover:${colors.texts.primary}`
+                    }`}
+                  >
+                    Review
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-6">
+              {/* Amount Tab */}
+              <TabsContent value="amount" className="mt-0 space-y-6">
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <Label
+                        className={`text-xs font-medium ${colors.texts.primary}`}
+                      >
+                        Select Amount (USD)
+                      </Label>
+                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <CurrencyDollarIcon className="h-4 w-4" />
+                        <span>Withdrawals in USD only</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      {[50, 100, 200, 500].map((amount) => (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() => setWithdrawAmount(amount.toString())}
+                          disabled={amount * CONVERSION_RATE > balance}
+                          className={`h-9 flex items-center justify-center cursor-pointer ${
+                            withdrawAmount === amount.toString()
+                              ? "bg-black dark:bg-white text-white dark:text-black border border-black dark:border-white"
+                              : `${colors.backgrounds.tertiary} border ${colors.borders.primary} ${colors.texts.primary} hover:border-black dark:hover:border-white`
+                          } transition-all rounded-none text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          ${amount}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Amount */}
+                  <div className="space-y-3">
+                    <Label
+                      className={`text-xs font-medium ${colors.texts.primary}`}
+                    >
+                      Or Enter Custom Amount
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                        className={`text-sm font-medium ${colors.inputs.base} h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
+                      />
+                    </div>
+                    {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                      <div
+                        className={`flex items-center gap-2 text-xs ${colors.texts.secondary}`}
+                      >
+                        <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                        <span>
+                          ≈ {formatCVT(parseFloat(withdrawAmount) * CONVERSION_RATE)}{" "}
+                          will be burned • Available: {formatCVT(balance)}
+                        </span>
+                      </div>
+                    )}
+                    {withdrawAmount &&
+                      parseFloat(withdrawAmount) * CONVERSION_RATE > balance && (
+                        <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+                          <ExclamationCircleIcon className="h-4 w-4" />
+                          <span>Insufficient balance</span>
+                        </div>
+                      )}
+                    {withdrawAmount && parseFloat(withdrawAmount) <= 0 && (
+                      <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+                        <ExclamationCircleIcon className="h-4 w-4" />
+                        <span>Please enter an amount greater than 0</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (
+                        withdrawAmount &&
+                        parseFloat(withdrawAmount) > 0 &&
+                        parseFloat(withdrawAmount) * CONVERSION_RATE <= balance
+                      ) {
+                        setActiveWithdrawTab("review");
+                      }
+                    }}
+                    disabled={
+                      !withdrawAmount ||
+                      parseFloat(withdrawAmount) <= 0 ||
+                      parseFloat(withdrawAmount) * CONVERSION_RATE > balance
+                    }
+                    className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer`}
+                  >
+                    Continue to Review
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Review Tab */}
+              <TabsContent value="review" className="mt-0 space-y-6">
+                <Card
+                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none !shadow-none hover:!shadow-none`}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <p
+                        className={`text-base font-semibold ${colors.texts.primary}`}
+                      >
+                        Withdrawal Summary
+                      </p>
+                      <Badge
+                        className={`${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} text-xs rounded-none`}
+                      >
+                        <ExclamationCircleIcon className="h-3 w-3 mr-1" />
+                        Tokens will be burned
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+                      <div className="flex justify-between text-sm">
+                        <span className={colors.texts.secondary}>
+                          Withdrawal Amount (USD):
+                        </span>
+                        <span
+                          className={`font-semibold ${colors.texts.primary}`}
+                        >
+                          ${parseFloat(withdrawAmount).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className={colors.texts.secondary}>
+                          Tokens to burn:
+                        </span>
+                        <span
+                          className={`font-semibold ${colors.texts.primary}`}
+                        >
+                          {formatCVT(parseFloat(withdrawAmount) * CONVERSION_RATE)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className={colors.texts.secondary}>
+                          Processing Fee:
+                        </span>
+                        <span
+                          className={`font-semibold ${colors.texts.primary}`}
+                        >
+                          $0.00
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className={colors.texts.secondary}>
+                          New Balance:
+                        </span>
+                        <span
+                          className={`font-semibold ${colors.texts.primary}`}
+                        >
+                          {formatCVT(
+                            balance - parseFloat(withdrawAmount) * CONVERSION_RATE
+                          )}
+                        </span>
+                      </div>
+                      <div
+                        className={`pt-3 border-t border-gray-200 dark:border-gray-800`}
+                      >
+                        <div className="flex justify-between">
+                          <span
+                            className={`text-base font-semibold ${colors.texts.primary}`}
+                          >
+                            Total:
+                          </span>
+                          <span
+                            className={`text-lg font-bold ${colors.texts.primary}`}
+                          >
+                            ${parseFloat(withdrawAmount).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`flex items-start gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-800`}
+                    >
+                      <ShieldCheckIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p
+                          className={`text-xs font-semibold ${colors.texts.primary} mb-1`}
+                        >
+                          Secure Withdrawal
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Tokens will be burned on the blockchain and the
+                          equivalent USD amount will be processed to your account.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setActiveWithdrawTab("amount")}
+                    disabled={isLoading}
+                    className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}
+                  >
+                    <ArrowLeftIcon className="h-4 w-4 inline mr-2" />
+                    Back
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleWithdraw}
+                    disabled={isLoading}
+                    className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer`}
+                  >
+                    {isLoading && (
+                      <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                    )}
+                    {isLoading ? "Processing..." : "Confirm Withdrawal"}
+                  </Button>
+                </div>
+              </TabsContent>
+            </div>
+          </Tabs>
+
+          {/* Footer */}
+          <div
+            className={`p-6 border-t ${colors.borders.primary} flex items-center justify-between`}
+          >
+            <div className={`text-xs ${colors.texts.secondary}`}>
+              <p>Need help? Contact support@chainvanguard.com</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setWithdrawOpen(false);
+                setActiveWithdrawTab("amount");
+                setWithdrawAmount("");
               }}
               disabled={isLoading}
               className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}

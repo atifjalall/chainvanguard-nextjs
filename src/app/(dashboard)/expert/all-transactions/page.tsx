@@ -30,13 +30,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
@@ -52,7 +45,6 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
-  EyeIcon,
   ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
@@ -78,14 +70,12 @@ const typeOptions = [
 ];
 import { usePageTitle } from "@/hooks/use-page-title";
 
-
 export default function AllTransactionsPage() {
   usePageTitle("All Transactions");
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  // Removed selectedTransaction and isDetailOpen states
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -161,21 +151,6 @@ export default function AllTransactionsPage() {
       toast.error("Failed to load transactions");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const viewTransactionDetails = async (tx: any) => {
-    try {
-      const response = (await expertApi.getTransactionDetails(
-        tx.id || tx._id
-      )) as { success: boolean; data?: any };
-      if (response.success) {
-        setSelectedTransaction(response.data);
-        setIsDetailOpen(true);
-      }
-    } catch (error) {
-      console.error("Error loading transaction details:", error);
-      toast.error("Failed to load transaction details");
     }
   };
 
@@ -493,9 +468,7 @@ export default function AllTransactionsPage() {
                     Transaction ID
                   </TableHead>
                   <TableHead className="text-xs font-semibold">Type</TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    Action
-                  </TableHead>
+                  {/* Removed "Action" column */}
                   <TableHead className="text-xs font-semibold">User</TableHead>
                   <TableHead className="text-xs font-semibold">
                     Status
@@ -503,15 +476,13 @@ export default function AllTransactionsPage() {
                   <TableHead className="text-xs font-semibold">
                     Timestamp
                   </TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    Actions
-                  </TableHead>
+                  {/* Removed "Actions" column */}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={5} className="text-center py-8">
                       <div className={`text-sm ${colors.texts.secondary}`}>
                         No transactions found
                       </div>
@@ -533,7 +504,9 @@ export default function AllTransactionsPage() {
                           {tx.type}
                         </Badge>
                       </TableCell>
+                      {/* Removed action column cell
                       <TableCell className="text-xs">{tx.action}</TableCell>
+                      */}
                       <TableCell className="text-xs">
                         <div>{tx.user?.name || "System"}</div>
                         <div className={`text-xs ${colors.texts.muted}`}>
@@ -553,16 +526,7 @@ export default function AllTransactionsPage() {
                       <TableCell className="text-xs">
                         {formatTimestamp(tx.timestamp || tx.createdAt)}
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => viewTransactionDetails(tx)}
-                          className={`text-xs rounded-none ${colors.buttons.outline}`}
-                        >
-                          <EyeIcon className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                      {/* Removed Actions column with Eye icon button */}
                     </TableRow>
                   ))
                 )}
@@ -678,143 +642,6 @@ export default function AllTransactionsPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Transaction Details Dialog */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent
-          className={`max-w-2xl ${colors.cards.base} rounded-none`}
-        >
-          <DialogHeader>
-            <DialogTitle
-              className={`text-lg font-semibold ${colors.texts.primary}`}
-            >
-              Transaction Details
-            </DialogTitle>
-            <DialogDescription className={`text-xs ${colors.texts.secondary}`}>
-              Complete information about this blockchain transaction
-            </DialogDescription>
-          </DialogHeader>
-          {selectedTransaction && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    className={`text-xs font-medium ${colors.texts.secondary}`}
-                  >
-                    Transaction ID
-                  </label>
-                  <div
-                    className={`text-xs ${colors.texts.primary} font-mono mt-1`}
-                  >
-                    {selectedTransaction.transaction?.transactionId}
-                  </div>
-                </div>
-                <div>
-                  <label
-                    className={`text-xs font-medium ${colors.texts.secondary}`}
-                  >
-                    Status
-                  </label>
-                  <div className="mt-1">
-                    <Badge
-                      className={`${getStatusColor(selectedTransaction.transaction?.status).bg} ${
-                        getStatusColor(selectedTransaction.transaction?.status)
-                          .border
-                      } ${
-                        getStatusColor(selectedTransaction.transaction?.status)
-                          .text
-                      } text-xs rounded-none`}
-                    >
-                      {selectedTransaction.transaction?.status}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <label
-                    className={`text-xs font-medium ${colors.texts.secondary}`}
-                  >
-                    Type
-                  </label>
-                  <div className={`text-xs ${colors.texts.primary} mt-1`}>
-                    {selectedTransaction.transaction?.type}
-                  </div>
-                </div>
-                <div>
-                  <label
-                    className={`text-xs font-medium ${colors.texts.secondary}`}
-                  >
-                    Action
-                  </label>
-                  <div className={`text-xs ${colors.texts.primary} mt-1`}>
-                    {selectedTransaction.transaction?.action}
-                  </div>
-                </div>
-                <div>
-                  <label
-                    className={`text-xs font-medium ${colors.texts.secondary}`}
-                  >
-                    User
-                  </label>
-                  <div className={`text-xs ${colors.texts.primary} mt-1`}>
-                    {selectedTransaction.transaction?.user?.name || "System"}
-                  </div>
-                </div>
-                <div>
-                  <label
-                    className={`text-xs font-medium ${colors.texts.secondary}`}
-                  >
-                    Role
-                  </label>
-                  <div className={`text-xs ${colors.texts.primary} mt-1`}>
-                    {selectedTransaction.transaction?.user?.role || "-"}
-                  </div>
-                </div>
-                {selectedTransaction.transaction?.executionTime && (
-                  <div>
-                    <label
-                      className={`text-xs font-medium ${colors.texts.secondary}`}
-                    >
-                      Execution Time
-                    </label>
-                    <div className={`text-xs ${colors.texts.primary} mt-1`}>
-                      {selectedTransaction.transaction.executionTime}ms
-                    </div>
-                  </div>
-                )}
-                <div>
-                  <label
-                    className={`text-xs font-medium ${colors.texts.secondary}`}
-                  >
-                    Timestamp
-                  </label>
-                  <div className={`text-xs ${colors.texts.primary} mt-1`}>
-                    {/* Use fallback and format */}
-                    {formatTimestamp(
-                      selectedTransaction.transaction?.timestamp ||
-                        selectedTransaction.transaction?.createdAt
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {selectedTransaction.transaction?.errorMessage && (
-                <div>
-                  <label
-                    className={`text-xs font-medium ${colors.texts.secondary}`}
-                  >
-                    Error Message
-                  </label>
-                  <div
-                    className={`text-xs ${colors.texts.primary} mt-1 p-3 bg-red-50 dark:bg-red-900/20 rounded`}
-                  >
-                    {selectedTransaction.transaction.errorMessage}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

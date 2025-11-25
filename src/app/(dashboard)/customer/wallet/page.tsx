@@ -19,7 +19,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { loadStripe } from "@stripe/stripe-js";
-import { createPaymentIntent, confirmPayment } from "@/lib/api/wallet.api";
+import { createPaymentIntent, confirmPayment, withdrawFunds } from "@/lib/api/wallet.api";
 import { toast } from "sonner";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -227,7 +227,7 @@ function PaymentModal({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/10 z-[10000]"
+        className="fixed inset-0 bg-black/60 z-[10000]"
         onClick={handleClose}
       />
       <div className="fixed inset-0 flex items-center justify-center z-[10001] p-4 overflow-hidden">
@@ -529,6 +529,11 @@ export default function CustomerWalletPage() {
   );
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
+  // Withdraw states
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+
   // Use real wallet data from provider
   const { user } = useAuth();
   const {
@@ -690,6 +695,55 @@ export default function CustomerWalletPage() {
       ["deposit", "transfer_in", "refund", "sale"].includes(t.type)
     )
     .reduce((sum, t) => sum + t.amount, 0);
+
+  // Handle withdraw
+  const handleWithdraw = async () => {
+    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    const amountUSD = parseFloat(withdrawAmount);
+    const cvtAmount = amountUSD * CONVERSION_RATE;
+
+    // Check if user has enough balance
+    if (cvtAmount > balance) {
+      toast.error("Insufficient balance");
+      return;
+    }
+
+    setIsWithdrawing(true);
+
+    try {
+      const withdrawResponse = await withdrawFunds({
+        amount: amountUSD,
+        withdrawalMethod: "bank",
+        accountDetails: {},
+      });
+
+      if (!withdrawResponse.success) {
+        throw new Error("Failed to withdraw funds");
+      }
+
+      toast.success(
+        `Successfully withdrew $${amountUSD} (${formatCVT(cvtAmount)} CVT) from your wallet!`
+      );
+
+      setIsWithdrawModalOpen(false);
+      setWithdrawAmount("");
+
+      // Refresh wallet data
+      if (refreshBalance) await refreshBalance();
+      if (refreshTransactions) await refreshTransactions();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error("❌ Withdrawal failed:", error);
+      toast.error(`Withdrawal failed: ${errorMessage}`);
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
 
   // Backdrop overlay state for white balance effect
   const [showBackdrop, setShowBackdrop] = useState(false);
@@ -914,6 +968,101 @@ export default function CustomerWalletPage() {
                     Add Funds
                   </button>
                 </form>
+              </div>
+
+              {/* Withdraw Funds */}
+              <div className="pt-12 border-t border-gray-200 dark:border-gray-800">
+                <div className="mb-8">
+                  <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-2">
+                    Withdraw Funds
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Withdraw funds from your wallet in USD
+                  </p>
+                </div>
+
+                <div className="space-y-8">
+                  {/* Quick Amount Buttons */}
+                  <div className="grid grid-cols-4 gap-4">
+                    {[50, 100, 200, 500].map((amount) => (
+                      <button
+                        key={amount}
+                        type="button"
+                        onClick={() => {
+                          setWithdrawAmount(amount.toString());
+                        }}
+                        disabled={amount * CONVERSION_RATE > balance}
+                        className={`border px-4 h-12 text-sm font-medium transition-colors ${
+                          withdrawAmount === amount.toString()
+                            ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black"
+                            : "border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        ${amount}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Amount */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                      Custom Amount (USD)
+                    </label>
+                    <div className="border-b border-gray-900 dark:border-white pb-px">
+                      <div className="flex items-center">
+                        <span className="text-sm text-gray-900 dark:text-white">
+                          $
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={withdrawAmount}
+                          onChange={(e) => setWithdrawAmount(e.target.value)}
+                          className="flex-1 h-12 px-2 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        ≈{" "}
+                        {formatCVT(
+                          parseFloat(withdrawAmount) * CONVERSION_RATE
+                        )}{" "}
+                        will be burned • Available: {formatCVT(balance)}
+                      </p>
+                    )}
+                    {withdrawAmount &&
+                      parseFloat(withdrawAmount) * CONVERSION_RATE > balance && (
+                        <p className="text-xs text-red-600 dark:text-red-400">
+                          Insufficient balance
+                        </p>
+                      )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        withdrawAmount &&
+                        parseFloat(withdrawAmount) > 0 &&
+                        parseFloat(withdrawAmount) * CONVERSION_RATE <= balance
+                      ) {
+                        setIsWithdrawModalOpen(true);
+                      }
+                    }}
+                    disabled={
+                      !withdrawAmount ||
+                      parseFloat(withdrawAmount) <= 0 ||
+                      parseFloat(withdrawAmount) * CONVERSION_RATE > balance
+                    }
+                    className="border border-black dark:border-white text-black dark:text-white px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full"
+                  >
+                    <ArrowUpIcon className="h-4 w-4" />
+                    Withdraw Funds
+                  </button>
+                </div>
               </div>
 
               {/* Transaction History */}
@@ -1201,6 +1350,118 @@ export default function CustomerWalletPage() {
         onSubmit={handlePaymentSubmit}
         isLoading={isAddingFunds}
       />
+
+      {/* Withdraw Confirmation Modal */}
+      {isWithdrawModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-[10000]"
+            onClick={() => {
+              if (!isWithdrawing) {
+                setIsWithdrawModalOpen(false);
+              }
+            }}
+          />
+          <div className="fixed inset-0 flex items-center justify-center z-[10001] p-4 overflow-hidden">
+            <div className="bg-white w-full max-w-3xl flex flex-col max-h-[85vh]">
+              {/* Header */}
+              <div className="border-b border-gray-100 p-6">
+                <h3 className="text-xl font-light text-gray-900 tracking-tight mb-1">
+                  Confirm Withdrawal
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Review your withdrawal details
+                </p>
+              </div>
+
+              {/* Content - Scrollable */}
+              <div className="overflow-y-auto flex-1 p-6">
+                <div className="space-y-6">
+                  <div className="border border-gray-100 p-6 bg-gray-50 space-y-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">
+                        Withdrawal Amount (USD):
+                      </span>
+                      <span className="font-semibold text-gray-900">
+                        ${parseFloat(withdrawAmount).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">
+                        Tokens to burn:
+                      </span>
+                      <span className="font-semibold text-gray-900">
+                        {formatCVT(parseFloat(withdrawAmount) * CONVERSION_RATE)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">
+                        New Balance:
+                      </span>
+                      <span className="font-semibold text-gray-900">
+                        {formatCVT(
+                          balance - parseFloat(withdrawAmount) * CONVERSION_RATE
+                        )}
+                      </span>
+                    </div>
+                    <div className="pt-3 border-t border-gray-100">
+                      <div className="flex justify-between">
+                        <span className="text-sm font-semibold text-gray-900 uppercase tracking-[0.1em]">
+                          Total:
+                        </span>
+                        <span className="text-lg font-semibold text-gray-900">
+                          ${parseFloat(withdrawAmount).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2 p-4 bg-green-50 border border-green-200">
+                    <ShieldCheckIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-gray-900 mb-1">
+                        Secure Withdrawal
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Tokens will be burned on the blockchain and funds will be
+                        processed to your account.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        if (!isWithdrawing) {
+                          setIsWithdrawModalOpen(false);
+                        }
+                      }}
+                      disabled={isWithdrawing}
+                      className="flex-1 border border-gray-300 text-gray-900 px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleWithdraw}
+                      disabled={isWithdrawing}
+                      className="flex-1 bg-black text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isWithdrawing ? (
+                        <>
+                          <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                          Processing
+                        </>
+                      ) : (
+                        "Confirm"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

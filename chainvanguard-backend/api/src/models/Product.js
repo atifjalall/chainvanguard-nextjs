@@ -547,6 +547,46 @@ const productSchema = new Schema(
     },
 
     // ========================================
+    // MATERIALS USED (Optional - for traceability)
+    // ========================================
+    materialsUsed: [
+      {
+        vendorInventoryId: {
+          type: Schema.Types.ObjectId,
+          ref: "VendorInventory",
+        },
+        inventoryName: {
+          type: String,
+          default: "",
+        },
+        supplierName: {
+          type: String,
+          default: "",
+        },
+        supplierId: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+        quantityUsed: {
+          type: Number,
+          min: 0,
+        },
+        unit: {
+          type: String,
+          default: "",
+        },
+        inventoryQRCode: {
+          type: String,
+          default: "",
+        },
+        addedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    // ========================================
     // BLOCKCHAIN
     // ========================================
     blockchainProductId: {

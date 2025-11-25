@@ -472,6 +472,31 @@ class WalletBalanceService {
         throw new Error("Wallet not found. Please create wallet first.");
       }
 
+      // Log wallet state for debugging
+      console.log("🔍 Withdrawal check:", {
+        userId,
+        amount,
+        currentLimit: wallet.dailyWithdrawalLimit,
+        currentWithdrawn: wallet.dailyWithdrawn,
+        remaining: wallet.dailyWithdrawalLimit - wallet.dailyWithdrawn,
+        balance: wallet.balance,
+      });
+
+      // Check daily reset and save if needed
+      const today = new Date();
+      const lastReset = new Date(wallet.lastWithdrawalReset);
+      const needsReset =
+        today.getDate() !== lastReset.getDate() ||
+        today.getMonth() !== lastReset.getMonth() ||
+        today.getFullYear() !== lastReset.getFullYear();
+
+      if (needsReset) {
+        console.log("🔄 Resetting daily withdrawal counter");
+        wallet.dailyWithdrawn = 0;
+        wallet.lastWithdrawalReset = today;
+        await wallet.save({ session });
+      }
+
       // Check if withdrawal is allowed
       if (!wallet.canWithdraw(amount)) {
         if (wallet.isFrozen) {
@@ -493,6 +518,12 @@ class WalletBalanceService {
         }
 
         const remaining = wallet.dailyWithdrawalLimit - wallet.dailyWithdrawn;
+        console.log("❌ Daily limit exceeded:", {
+          limit: wallet.dailyWithdrawalLimit,
+          withdrawn: wallet.dailyWithdrawn,
+          remaining,
+          attemptedAmount: amount,
+        });
         throw new Error(
           `Daily withdrawal limit exceeded. Remaining today: ${remaining} CVT`
         );

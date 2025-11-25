@@ -157,4 +157,73 @@ router.get("/:qrCode/image", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/qr/inventory/:inventoryId/generate
+ * Generate QR code for inventory
+ * Access: Private (Supplier)
+ */
+router.post(
+  "/inventory/:inventoryId/generate",
+  authenticate,
+  authorizeRoles("supplier"),
+  async (req, res) => {
+    try {
+      const { inventoryId } = req.params;
+      const userId = req.userId;
+
+      const result = await qrService.generateInventoryQR(inventoryId, userId);
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error("❌ Generate inventory QR failed:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to generate inventory QR code",
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/qr/track/inventory/:qrCode
+ * Track inventory via QR code with full history
+ * Access: Public
+ */
+router.get("/track/inventory/:qrCode", async (req, res) => {
+  try {
+    const { qrCode } = req.params;
+
+    const result = await qrService.trackInventory(qrCode);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Inventory tracking failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to track inventory",
+    });
+  }
+});
+
+/**
+ * GET /api/qr/track/product/:qrCode/enhanced
+ * Track product via QR code with materials used
+ * Access: Public
+ */
+router.get("/track/product/:qrCode/enhanced", async (req, res) => {
+  try {
+    const { qrCode } = req.params;
+
+    const result = await qrService.trackProductEnhanced(qrCode);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Enhanced product tracking failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to track product",
+    });
+  }
+});
+
 export default router;

@@ -717,32 +717,6 @@ export default function CartPage() {
                   </button>
                 </div>
               </div>
-
-              <div className="p-8 space-y-4">
-                <h3 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wider">
-                  Promo Code
-                </h3>
-                <div className="flex gap-0 border-b border-gray-900 dark:border-white pb-px">
-                  <input
-                    type="text"
-                    placeholder="Enter code"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        handleApplyPromo();
-                      }
-                    }}
-                    className="flex-1 h-10 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
-                  />
-                  <button
-                    onClick={handleApplyPromo}
-                    className="h-10 px-4 uppercase tracking-[0.2em] text-[10px] font-medium text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
-                  >
-                    Apply
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -764,14 +738,14 @@ export default function CartPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
-              {recommendedProducts.map((product) => (
+              {recommendedProducts.map((product, index) => (
                 <ProductCard
-                  key={product._id}
+                  key={product._id ?? `${product.name ?? "product"}-${index}`}
                   id={product._id}
                   name={product.name}
                   price={product.price}
                   costPrice={product.originalPrice}
-                  images={product.images.map((img) => img.url)}
+                  images={product.images?.map((img) => img.url) || []}
                   quantity={product.quantity}
                   inStock={product.inStock}
                   showActions={true}
