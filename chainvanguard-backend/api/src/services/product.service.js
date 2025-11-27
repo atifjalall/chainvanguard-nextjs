@@ -297,13 +297,180 @@ class ProductService {
         returnPolicy: productData.returnPolicy || "30 days",
 
         // Shipping
-        freeShipping: productData.freeShipping === "true" || productData.freeShipping === true,
+        freeShipping:
+          productData.freeShipping === "true" ||
+          productData.freeShipping === true,
         shippingCost: parseFloat(productData.shippingCost) || 0,
         shippingDetails: productData.shippingDetails || {},
       });
 
       await product.save();
       console.log(`✅ Product saved to MongoDB: ${product._id}`);
+
+      // ✅ FIX: Convert to plain object for IPFS upload
+      const productForIPFS = product.toObject();
+
+      // 7.5 Upload ALL data to IPFS
+      try {
+        console.log("📤 Uploading comprehensive product metadata to IPFS...");
+        const ipfsMetadata = {
+          // Basic Info
+          productId: productForIPFS._id.toString(),
+          name: productForIPFS.name,
+          description: productForIPFS.description,
+          category: productForIPFS.category,
+          subcategory: productForIPFS.subcategory,
+          productType: productForIPFS.productType,
+          brand: productForIPFS.brand,
+
+          // Apparel Details (ALL fields)
+          apparelDetails: {
+            size: productForIPFS.apparelDetails?.size || "",
+            fit: productForIPFS.apparelDetails?.fit || "",
+            color: productForIPFS.apparelDetails?.color || "",
+            pattern: productForIPFS.apparelDetails?.pattern || "",
+            material: productForIPFS.apparelDetails?.material || "",
+            fabricType: productForIPFS.apparelDetails?.fabricType || "",
+            fabricWeight: productForIPFS.apparelDetails?.fabricWeight || "",
+            fabricComposition: productForIPFS.apparelDetails?.fabricComposition || [],
+            neckline: productForIPFS.apparelDetails?.neckline || "",
+            sleeveLength: productForIPFS.apparelDetails?.sleeveLength || "",
+            careInstructions: productForIPFS.apparelDetails?.careInstructions || "",
+            washingTemperature:
+              productForIPFS.apparelDetails?.washingTemperature || "",
+            ironingInstructions:
+              productForIPFS.apparelDetails?.ironingInstructions || "",
+            dryCleanOnly: productForIPFS.apparelDetails?.dryCleanOnly || false,
+            measurements: productForIPFS.apparelDetails?.measurements || {},
+          },
+
+          // Seller Info
+          sellerId: productForIPFS.sellerId.toString(),
+          sellerName: productForIPFS.sellerName,
+          sellerWalletAddress: productForIPFS.sellerWalletAddress,
+          sellerRole: productForIPFS.sellerRole,
+
+          // Pricing
+          price: productForIPFS.price,
+          currency: productForIPFS.currency,
+          costPrice: productForIPFS.costPrice,
+          wholesalePrice: productForIPFS.wholesalePrice,
+          markup: productForIPFS.markup,
+
+          // Inventory
+          quantity: productForIPFS.quantity,
+          minStockLevel: productForIPFS.minStockLevel,
+          sku: productForIPFS.sku,
+          barcode: productForIPFS.barcode,
+          unit: productForIPFS.unit,
+
+          // Images & Documents
+          images: (productForIPFS.images || []).map((img) => ({
+            url: img.url,
+            ipfsHash: img.ipfsHash,
+            isMain: img.isMain,
+            viewType: img.viewType,
+          })),
+          certificates: (productForIPFS.certificates || []).map((cert) => ({
+            name: cert.name,
+            type: cert.type,
+            certificateNumber: cert.certificateNumber,
+            ipfsHash: cert.ipfsHash,
+            ipfsUrl: cert.ipfsUrl,
+            cloudinaryUrl: cert.cloudinaryUrl,
+            issueDate: cert.issueDate,
+            expiryDate: cert.expiryDate,
+          })),
+
+          // Manufacturing
+          manufacturingDetails: {
+            manufacturerId: productForIPFS.manufacturingDetails?.manufacturerId || "",
+            manufacturerName:
+              productForIPFS.manufacturingDetails?.manufacturerName || "",
+            manufactureDate: productForIPFS.manufacturingDetails?.manufactureDate,
+            batchNumber: productForIPFS.manufacturingDetails?.batchNumber || "",
+            productionCountry:
+              productForIPFS.manufacturingDetails?.productionCountry || "",
+            productionFacility:
+              productForIPFS.manufacturingDetails?.productionFacility || "",
+            productionLine: productForIPFS.manufacturingDetails?.productionLine || "",
+          },
+
+          // Specifications
+          specifications: {
+            weight: productForIPFS.specifications?.weight || 0,
+            weightUnit: productForIPFS.specifications?.weightUnit || "",
+            packageWeight: productForIPFS.specifications?.packageWeight || 0,
+            packageType: productForIPFS.specifications?.packageType || "",
+            dimensions: productForIPFS.specifications?.dimensions || {},
+          },
+
+          // Sustainability
+          sustainability: {
+            isOrganic: productForIPFS.sustainability?.isOrganic || false,
+            isFairTrade: productForIPFS.sustainability?.isFairTrade || false,
+            isRecycled: productForIPFS.sustainability?.isRecycled || false,
+            isCarbonNeutral: productForIPFS.sustainability?.isCarbonNeutral || false,
+            waterSaving: productForIPFS.sustainability?.waterSaving || false,
+            ethicalProduction:
+              productForIPFS.sustainability?.ethicalProduction || false,
+          },
+
+          qualityGrade: productForIPFS.qualityGrade,
+
+          // Location
+          currentLocation: {
+            facility: productForIPFS.currentLocation?.facility || "",
+            country: productForIPFS.currentLocation?.country || "",
+          },
+
+          supplyChainSummary: productForIPFS.supplyChainSummary,
+
+          // QR Code
+          qrCode: productForIPFS.qrCode,
+
+          // Status
+          status: productForIPFS.status,
+          isPublished: productForIPFS.isPublished,
+
+          // SEO
+          tags: productForIPFS.tags || [],
+          keywords: productForIPFS.keywords || [],
+          metaDescription: productForIPFS.metaDescription || "",
+          season: productForIPFS.season || "",
+          collection: productForIPFS.collection || "",
+
+          // Additional
+          minimumOrderQuantity: productForIPFS.minimumOrderQuantity,
+          warrantyPeriod: productForIPFS.warrantyPeriod,
+          returnPolicy: productForIPFS.returnPolicy,
+
+          // Shipping
+          freeShipping: productForIPFS.freeShipping,
+          shippingCost: productForIPFS.shippingCost,
+          shippingDetails: productForIPFS.shippingDetails || {},
+
+          // Timestamps
+          createdAt: productForIPFS.createdAt,
+          updatedAt: productForIPFS.updatedAt,
+        };
+
+        const ipfsFileName = `product-metadata-${productForIPFS._id.toString()}.json`;
+        const ipfsResult = await ipfsService.uploadJSON(
+          ipfsMetadata,
+          ipfsFileName
+        );
+
+        if (ipfsResult.success) {
+          product.ipfsHash = ipfsResult.ipfsHash;
+          await product.save();
+          console.log("✅ ALL product data uploaded to IPFS", {
+            ipfsHash: ipfsResult.ipfsHash,
+          });
+        }
+      } catch (ipfsError) {
+        console.error("❌ IPFS upload error:", ipfsError);
+      }
 
       await notificationService.createNotification({
         userId: product.sellerId,
@@ -880,6 +1047,180 @@ class ProductService {
 
       console.log(`✅ Cache invalidated for product: ${productId}`);
 
+      // Update IPFS with comprehensive metadata
+      console.log("📝 Updating product metadata on IPFS...");
+      try {
+        const ipfsMetadata = {
+          // Basic Info
+          productId: product._id.toString(),
+          name: product.name,
+          description: product.description || "",
+          category: product.category,
+          subcategory: product.subcategory || "",
+          brand: product.brand || "",
+          sku: product.sku || "",
+
+          // Apparel Details (ALL fields)
+          apparelDetails: {
+            size: product.apparelDetails?.size || "",
+            fit: product.apparelDetails?.fit || "",
+            color: product.apparelDetails?.color || "",
+            pattern: product.apparelDetails?.pattern || "",
+            material: product.apparelDetails?.material || "",
+            fabricType: product.apparelDetails?.fabricType || "",
+            fabricWeight: product.apparelDetails?.fabricWeight || "",
+            fabricComposition: product.apparelDetails?.fabricComposition || "",
+            neckline: product.apparelDetails?.neckline || "",
+            sleeveLength: product.apparelDetails?.sleeveLength || "",
+            careInstructions: product.apparelDetails?.careInstructions || "",
+            washingTemperature:
+              product.apparelDetails?.washingTemperature || "",
+            ironingInstructions:
+              product.apparelDetails?.ironingInstructions || "",
+            dryCleanOnly: product.apparelDetails?.dryCleanOnly || false,
+            measurements: product.apparelDetails?.measurements || {},
+          },
+
+          // Seller Info
+          sellerId: product.sellerId?.toString() || "",
+          sellerName: product.sellerId?.name || "",
+          sellerWalletAddress: product.sellerId?.walletAddress || "",
+          sellerRole: product.sellerRole || "supplier",
+
+          // Pricing Details
+          price: product.price || 0,
+          originalPrice: product.originalPrice || 0,
+          currency: product.currency || "USD",
+          discount: product.discount || 0,
+          finalPrice: product.finalPrice || product.price || 0,
+
+          // Inventory
+          stockQuantity: product.stockQuantity || 0,
+          minStockLevel: product.minStockLevel || 0,
+          maxStockLevel: product.maxStockLevel || 0,
+          reorderPoint: product.reorderPoint || 0,
+          availableQuantity: product.availableQuantity || 0,
+
+          // Images
+          images: (product.images || []).map((img) => ({
+            url: img.url || "",
+            publicId: img.publicId || "",
+            caption: img.caption || "",
+            isMain: img.isMain || false,
+            order: img.order || 0,
+            ipfsHash: img.ipfsHash || "",
+          })),
+
+          // Certificates
+          certificates: (product.certificates || []).map((cert) => ({
+            name: cert.name || "",
+            type: cert.type || "",
+            certificateNumber: cert.certificateNumber || "",
+            issuingAuthority: cert.issuingAuthority || "",
+            issueDate: cert.issueDate || null,
+            expiryDate: cert.expiryDate || null,
+            ipfsHash: cert.ipfsHash || "",
+            certificateUrl: cert.certificateUrl || "",
+            verificationUrl: cert.verificationUrl || "",
+          })),
+
+          // Manufacturing Details
+          manufacturingDetails: {
+            manufacturerName:
+              product.manufacturingDetails?.manufacturerName || "",
+            manufactureDate:
+              product.manufacturingDetails?.manufactureDate || null,
+            expiryDate: product.manufacturingDetails?.expiryDate || null,
+            batchNumber: product.manufacturingDetails?.batchNumber || "",
+            productionCountry:
+              product.manufacturingDetails?.productionCountry || "",
+            productionFacility:
+              product.manufacturingDetails?.productionFacility || "",
+            productionLine: product.manufacturingDetails?.productionLine || "",
+          },
+
+          // Specifications
+          specifications: product.specifications || {},
+
+          // Sustainability
+          sustainability: {
+            isOrganic: product.sustainability?.isOrganic || false,
+            isFairTrade: product.sustainability?.isFairTrade || false,
+            isRecycled: product.sustainability?.isRecycled || false,
+            isCarbonNeutral: product.sustainability?.isCarbonNeutral || false,
+            isEcoFriendly: product.sustainability?.isEcoFriendly || false,
+            isVegan: product.sustainability?.isVegan || false,
+            carbonFootprint: product.sustainability?.carbonFootprint || 0,
+            sustainabilityScore:
+              product.sustainability?.sustainabilityScore || 0,
+            sustainabilityCertifications:
+              product.sustainability?.sustainabilityCertifications || [],
+          },
+
+          // Quality
+          qualityGrade: product.qualityGrade || "",
+          qualityScore: product.qualityScore || 0,
+          qualityChecks: product.qualityChecks || [],
+
+          // Supply Chain
+          supplyChainSummary: product.supplyChainSummary || "",
+          supplyChainStages: product.supplyChainStages || [],
+
+          // Location
+          currentLocation: {
+            facility: product.currentLocation?.facility || "",
+            address: product.currentLocation?.address || "",
+            city: product.currentLocation?.city || "",
+            state: product.currentLocation?.state || "",
+            country: product.currentLocation?.country || "",
+            postalCode: product.currentLocation?.postalCode || "",
+            coordinates: product.currentLocation?.coordinates || {},
+          },
+
+          // Status
+          status: product.status || "active",
+          isVerified: product.isVerified || false,
+          verifiedBy: product.verifiedBy || null,
+          verifiedAt: product.verifiedAt || null,
+          blockchainVerified: product.blockchainVerified || false,
+          isFeatured: product.isFeatured || false,
+          isPublished: product.isPublished || false,
+          publishedAt: product.publishedAt || null,
+
+          // SEO
+          seoTags: product.seoTags || [],
+          seoKeywords: product.seoKeywords || [],
+          metaDescription: product.metaDescription || "",
+
+          // Shipping
+          shippingDetails: {
+            weight: product.shippingDetails?.weight || 0,
+            dimensions: product.shippingDetails?.dimensions || {},
+            shippingClass: product.shippingDetails?.shippingClass || "",
+            handlingTime: product.shippingDetails?.handlingTime || 0,
+            freeShipping: product.shippingDetails?.freeShipping || false,
+          },
+
+          // Timestamps
+          createdAt: product.createdAt || null,
+          updatedAt: product.updatedAt || new Date(),
+        };
+
+        const ipfsResult = await ipfsService.uploadJSON(ipfsMetadata);
+        if (ipfsResult.success) {
+          product.ipfsHash = ipfsResult.ipfsHash;
+          await product.save();
+          console.log(`✅ IPFS metadata updated: ${ipfsResult.ipfsHash}`);
+        } else {
+          console.warn("⚠️  IPFS update failed (non-critical)");
+        }
+      } catch (ipfsError) {
+        console.warn(
+          "⚠️  IPFS update failed (non-critical):",
+          ipfsError.message
+        );
+      }
+
       // Update blockchain (REQUIRED - synchronous)
       console.log("📝 Updating product on blockchain...");
       await this.updateProductOnBlockchain(product);
@@ -1297,82 +1638,156 @@ class ProductService {
 
       await fabricService.connect();
 
+      // ✅ FIX: Convert Mongoose document to plain object to avoid circular references
+      const productObj = product.toObject ? product.toObject() : product;
+
       // ✅ FIX: Ensure productId is a string and never undefined
-      const productId = String(product._id || product.id || "");
+      const productId = String(productObj._id || productObj.id || "");
 
       if (!productId || productId === "undefined") {
-        throw new Error(`Invalid product ID: ${product._id}`);
+        throw new Error(`Invalid product ID: ${productObj._id}`);
       }
 
-      // Prepare blockchain data with proper structure
+      // Prepare blockchain data with ALL comprehensive data
       const blockchainData = {
-        productId: productId, // ✅ Main product identifier
-        sku: product.sku || "",
-        qrCode: product.qrCode || "",
-        name: product.name || "",
-        description: product.description || "",
-        category: product.category || "",
-        subcategory: product.subcategory || "",
-        brand: product.brand || "",
+        // Basic Info
+        productId: productId,
+        sku: productObj.sku || "",
+        qrCode: productObj.qrCode || "",
+        name: productObj.name || "",
+        description: productObj.description || "",
+        category: productObj.category || "",
+        subcategory: productObj.subcategory || "",
+        productType: productObj.productType || "",
+        brand: productObj.brand || "",
 
-        // Seller info - ensure strings
-        sellerId: String(product.sellerId || ""),
-        sellerName: product.sellerName || "",
-        sellerWalletAddress: product.sellerWalletAddress || "",
-        sellerRole: product.sellerRole || "supplier",
+        // Seller Info
+        sellerId: String(productObj.sellerId || ""),
+        sellerName: productObj.sellerName || "",
+        sellerWalletAddress: productObj.sellerWalletAddress || "",
+        sellerRole: productObj.sellerRole || "supplier",
 
-        // Apparel details
+        // Apparel Details (ALL fields)
         apparelDetails: {
-          size: product.apparelDetails?.size || "",
-          color: product.apparelDetails?.color || "",
-          material: product.apparelDetails?.material || "",
-          fit: product.apparelDetails?.fit || "",
-          pattern: product.apparelDetails?.pattern || "",
+          size: productObj.apparelDetails?.size || "",
+          fit: productObj.apparelDetails?.fit || "",
+          color: productObj.apparelDetails?.color || "",
+          pattern: productObj.apparelDetails?.pattern || "",
+          material: productObj.apparelDetails?.material || "",
+          fabricType: productObj.apparelDetails?.fabricType || "",
+          fabricWeight: productObj.apparelDetails?.fabricWeight || "",
+          fabricComposition: productObj.apparelDetails?.fabricComposition || [],
+          neckline: productObj.apparelDetails?.neckline || "",
+          sleeveLength: productObj.apparelDetails?.sleeveLength || "",
+          careInstructions: productObj.apparelDetails?.careInstructions || "",
+          washingTemperature: productObj.apparelDetails?.washingTemperature || "",
+          ironingInstructions:
+            productObj.apparelDetails?.ironingInstructions || "",
+          dryCleanOnly: productObj.apparelDetails?.dryCleanOnly || false,
+          measurements: productObj.apparelDetails?.measurements || {},
         },
 
-        // Manufacturing details
+        // Pricing
+        price: productObj.price || 0,
+        currency: productObj.currency || "CVT",
+        costPrice: productObj.costPrice || 0,
+        wholesalePrice: productObj.wholesalePrice || 0,
+        markup: productObj.markup || 0,
+
+        // Inventory
+        quantity: productObj.quantity || 0,
+        minStockLevel: productObj.minStockLevel || 0,
+        barcode: productObj.barcode || "",
+        unit: productObj.unit || "piece",
+
+        // Images (URLs only)
+        images: (productObj.images || []).map((img) => ({
+          url: img.url || "",
+          ipfsHash: img.ipfsHash || "",
+          isMain: img.isMain || false,
+          viewType: img.viewType || "",
+        })),
+
+        // Manufacturing Details
         manufacturingDetails: {
+          manufacturerId: productObj.manufacturingDetails?.manufacturerId || "",
           manufacturerName:
-            product.manufacturingDetails?.manufacturerName || "",
+            productObj.manufacturingDetails?.manufacturerName || "",
           manufactureDate:
-            product.manufacturingDetails?.manufactureDate || null,
-          batchNumber: product.manufacturingDetails?.batchNumber || "",
+            productObj.manufacturingDetails?.manufactureDate || null,
+          batchNumber: productObj.manufacturingDetails?.batchNumber || "",
           productionCountry:
-            product.manufacturingDetails?.productionCountry || "",
+            productObj.manufacturingDetails?.productionCountry || "",
           productionFacility:
-            product.manufacturingDetails?.productionFacility || "",
+            productObj.manufacturingDetails?.productionFacility || "",
+          productionLine: productObj.manufacturingDetails?.productionLine || "",
         },
 
-        // Certificates - map to include only essential data
-        certificates: (product.certificates || []).map((cert) => ({
+        // Certificates
+        certificates: (productObj.certificates || []).map((cert) => ({
           name: cert.name || "",
           type: cert.type || "Other",
           certificateNumber: cert.certificateNumber || "",
           ipfsHash: cert.ipfsHash || "",
+          ipfsUrl: cert.ipfsUrl || "",
+          cloudinaryUrl: cert.cloudinaryUrl || "",
           issueDate: cert.issueDate || null,
           expiryDate: cert.expiryDate || null,
         })),
 
+        // Specifications
+        specifications: {
+          weight: productObj.specifications?.weight || 0,
+          weightUnit: productObj.specifications?.weightUnit || "",
+          packageWeight: productObj.specifications?.packageWeight || 0,
+          packageType: productObj.specifications?.packageType || "",
+          dimensions: productObj.specifications?.dimensions || {},
+        },
+
         // Sustainability
         sustainability: {
-          isOrganic: Boolean(product.sustainability?.isOrganic),
-          isFairTrade: Boolean(product.sustainability?.isFairTrade),
-          isRecycled: Boolean(product.sustainability?.isRecycled),
-          isCarbonNeutral: Boolean(product.sustainability?.isCarbonNeutral),
+          isOrganic: Boolean(productObj.sustainability?.isOrganic),
+          isFairTrade: Boolean(productObj.sustainability?.isFairTrade),
+          isRecycled: Boolean(productObj.sustainability?.isRecycled),
+          isCarbonNeutral: Boolean(productObj.sustainability?.isCarbonNeutral),
+          waterSaving: Boolean(productObj.sustainability?.waterSaving),
+          ethicalProduction: Boolean(productObj.sustainability?.ethicalProduction),
         },
+
+        qualityGrade: productObj.qualityGrade || "Standard",
+
+        // Location
+        currentLocation: {
+          facility: productObj.currentLocation?.facility || "",
+          country: productObj.currentLocation?.country || "",
+        },
+
+        supplyChainSummary: productObj.supplyChainSummary || {},
 
         // Status
-        status: product.status || "active",
-        isVerified: Boolean(product.isVerified),
+        status: productObj.status || "active",
+        isVerified: Boolean(productObj.isVerified),
+        isPublished: Boolean(productObj.isPublished),
 
-        // IPFS hash
-        ipfsHash: product.ipfsHash || "",
+        // SEO & Marketing
+        tags: productObj.tags || [],
+        keywords: productObj.keywords || [],
+        metaDescription: productObj.metaDescription || "",
+        season: productObj.season || "",
+        collection: productObj.collection || "",
 
-        // Current location
-        currentLocation: {
-          facility: product.currentLocation?.facility || "",
-          country: product.currentLocation?.country || "",
-        },
+        // Additional
+        minimumOrderQuantity: productObj.minimumOrderQuantity || 1,
+        warrantyPeriod: productObj.warrantyPeriod || "",
+        returnPolicy: productObj.returnPolicy || "",
+
+        // Shipping
+        freeShipping: Boolean(productObj.freeShipping),
+        shippingCost: productObj.shippingCost || 0,
+        shippingDetails: productObj.shippingDetails || {},
+
+        // IPFS Reference
+        ipfsHash: productObj.ipfsHash || "",
       };
 
       console.log("📦 Blockchain data prepared:", {
@@ -1427,9 +1842,148 @@ class ProductService {
       await fabricService.connect();
 
       const updateData = {
+        // Basic Info
+        name: product.name,
+        description: product.description || "",
+        category: product.category || "",
+        subcategory: product.subcategory || "",
+        brand: product.brand || "",
+
+        // Apparel Details (ALL fields)
+        apparelDetails: {
+          size: product.apparelDetails?.size || "",
+          fit: product.apparelDetails?.fit || "",
+          color: product.apparelDetails?.color || "",
+          pattern: product.apparelDetails?.pattern || "",
+          material: product.apparelDetails?.material || "",
+          fabricType: product.apparelDetails?.fabricType || "",
+          fabricWeight: product.apparelDetails?.fabricWeight || "",
+          fabricComposition: product.apparelDetails?.fabricComposition || "",
+          neckline: product.apparelDetails?.neckline || "",
+          sleeveLength: product.apparelDetails?.sleeveLength || "",
+          careInstructions: product.apparelDetails?.careInstructions || "",
+          washingTemperature: product.apparelDetails?.washingTemperature || "",
+          ironingInstructions:
+            product.apparelDetails?.ironingInstructions || "",
+          dryCleanOnly: product.apparelDetails?.dryCleanOnly || false,
+          measurements: product.apparelDetails?.measurements || {},
+        },
+
+        // Pricing
+        price: product.price || 0,
+        originalPrice: product.originalPrice || 0,
+        currency: product.currency || "USD",
+        discount: product.discount || 0,
+        finalPrice: product.finalPrice || product.price || 0,
+
+        // Inventory
+        stockQuantity: product.stockQuantity || 0,
+        minStockLevel: product.minStockLevel || 0,
+        maxStockLevel: product.maxStockLevel || 0,
+        reorderPoint: product.reorderPoint || 0,
+        availableQuantity: product.availableQuantity || 0,
+
+        // Images
+        images: (product.images || []).map((img) => ({
+          url: img.url || "",
+          caption: img.caption || "",
+          isMain: img.isMain || false,
+          order: img.order || 0,
+          ipfsHash: img.ipfsHash || "",
+        })),
+
+        // Manufacturing Details
+        manufacturingDetails: {
+          manufacturerName:
+            product.manufacturingDetails?.manufacturerName || "",
+          manufactureDate:
+            product.manufacturingDetails?.manufactureDate || null,
+          expiryDate: product.manufacturingDetails?.expiryDate || null,
+          batchNumber: product.manufacturingDetails?.batchNumber || "",
+          productionCountry:
+            product.manufacturingDetails?.productionCountry || "",
+          productionFacility:
+            product.manufacturingDetails?.productionFacility || "",
+          productionLine: product.manufacturingDetails?.productionLine || "",
+        },
+
+        // Certificates
+        certificates: (product.certificates || []).map((cert) => ({
+          name: cert.name || "",
+          type: cert.type || "",
+          certificateNumber: cert.certificateNumber || "",
+          issuingAuthority: cert.issuingAuthority || "",
+          issueDate: cert.issueDate || null,
+          expiryDate: cert.expiryDate || null,
+          ipfsHash: cert.ipfsHash || "",
+          certificateUrl: cert.certificateUrl || "",
+          verificationUrl: cert.verificationUrl || "",
+        })),
+
+        // Specifications
+        specifications: product.specifications || {},
+
+        // Sustainability
+        sustainability: {
+          isOrganic: product.sustainability?.isOrganic || false,
+          isFairTrade: product.sustainability?.isFairTrade || false,
+          isRecycled: product.sustainability?.isRecycled || false,
+          isCarbonNeutral: product.sustainability?.isCarbonNeutral || false,
+          isEcoFriendly: product.sustainability?.isEcoFriendly || false,
+          isVegan: product.sustainability?.isVegan || false,
+          carbonFootprint: product.sustainability?.carbonFootprint || 0,
+          sustainabilityScore: product.sustainability?.sustainabilityScore || 0,
+          sustainabilityCertifications:
+            product.sustainability?.sustainabilityCertifications || [],
+        },
+
+        // Quality
+        qualityGrade: product.qualityGrade || "",
+        qualityScore: product.qualityScore || 0,
+        qualityChecks: product.qualityChecks || [],
+
+        // Supply Chain
+        supplyChainSummary: product.supplyChainSummary || "",
+        supplyChainStages: product.supplyChainStages || [],
+
+        // Location
+        currentLocation: {
+          facility: product.currentLocation?.facility || "",
+          address: product.currentLocation?.address || "",
+          city: product.currentLocation?.city || "",
+          state: product.currentLocation?.state || "",
+          country: product.currentLocation?.country || "",
+          postalCode: product.currentLocation?.postalCode || "",
+          coordinates: product.currentLocation?.coordinates || {},
+        },
+
+        // Status
         status: product.status || "active",
         isVerified: Boolean(product.isVerified),
-        currentLocation: product.currentLocation || {},
+        verifiedBy: product.verifiedBy || null,
+        verifiedAt: product.verifiedAt || null,
+        isFeatured: product.isFeatured || false,
+        isPublished: product.isPublished || false,
+        publishedAt: product.publishedAt || null,
+
+        // SEO
+        seoTags: product.seoTags || [],
+        seoKeywords: product.seoKeywords || [],
+        metaDescription: product.metaDescription || "",
+
+        // Shipping
+        shippingDetails: {
+          weight: product.shippingDetails?.weight || 0,
+          dimensions: product.shippingDetails?.dimensions || {},
+          shippingClass: product.shippingDetails?.shippingClass || "",
+          handlingTime: product.shippingDetails?.handlingTime || 0,
+          freeShipping: product.shippingDetails?.freeShipping || false,
+        },
+
+        // IPFS Hash
+        ipfsHash: product.ipfsHash || "",
+
+        // Update metadata
         updatedBy: String(product.sellerId),
         updatedByRole: product.sellerRole || "supplier",
         supplyChainEvent: {

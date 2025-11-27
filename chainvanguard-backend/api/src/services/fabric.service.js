@@ -25,8 +25,7 @@ class FabricService {
       console.log("🔹 Connecting to Fabric using Gateway SDK...");
 
       const channelName = "supply-chain-channel";
-      const userChaincodeName = "user";
-      const productChaincodeName = "product";
+      const chaincodeName = "chainvanguard";
       const mspId = "Org1MSP";
 
       const fabricSamplesPath = resolve(
@@ -106,19 +105,39 @@ class FabricService {
 
       this.network = this.gateway.getNetwork(channelName);
 
-      this.userContract = this.network.getContract(userChaincodeName);
-      this.productContract = this.network.getContract(productChaincodeName);
-      this.orderContract = this.network.getContract("order");
-      this.tokenContract = this.network.getContract("token"); // ✅ ADD THIS
+      this.userContract = this.network.getContract(
+        chaincodeName,
+        "UserContract"
+      );
+      this.productContract = this.network.getContract(
+        chaincodeName,
+        "ProductContract"
+      );
+      this.orderContract = this.network.getContract(
+        chaincodeName,
+        "OrderContract"
+      );
+      this.inventoryContract = this.network.getContract(
+        chaincodeName,
+        "InventoryContract"
+      );
+      this.vendorRequestContract = this.network.getContract(
+        chaincodeName,
+        "VendorRequestContract"
+      );
+      this.tokenContract = this.network.getContract(
+        chaincodeName,
+        "TokenContract"
+      );
 
       this.contract = this.userContract;
 
       console.log("✅ Successfully connected to Fabric network");
       console.log(`   Channel: ${channelName}`);
-      console.log(`   User Chaincode: ${userChaincodeName}`);
-      console.log(`   Product Chaincode: ${productChaincodeName}`);
-      console.log(`   Order Chaincode: order`);
-      console.log(`   Token Chaincode: token`); // ✅ ADD THIS
+      console.log(`   Chaincode: ${chaincodeName}`);
+      console.log(
+        `   Contracts: UserContract, ProductContract, OrderContract, InventoryContract, VendorRequestContract, TokenContract`
+      );
 
       return true;
     } catch (error) {
@@ -348,7 +367,9 @@ class FabricService {
         throw new Error("Not connected to Fabric network");
       }
 
-      const result = await this.userContract.evaluateTransaction("getAllUsers");
+      const result = await this.userContract.evaluateTransaction(
+        "getAllUsers"
+      );
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -395,8 +416,9 @@ class FabricService {
         throw new Error("Not connected to Fabric network");
       }
 
-      const result =
-        await this.userContract.evaluateTransaction("getUserStats");
+      const result = await this.userContract.evaluateTransaction(
+        "getUserStats"
+      );
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -418,7 +440,10 @@ class FabricService {
         throw new Error("Not connected to Fabric network");
       }
 
-      await this.userContract.submitTransaction("recordLogin", userId);
+      await this.userContract.submitTransaction(
+        "recordLogin",
+        userId
+      );
       console.log(`✅ Login recorded on blockchain for: ${userId}`);
     } catch (error) {
       console.warn("⚠️ Failed to record login on blockchain:", error.message);
@@ -471,7 +496,9 @@ class FabricService {
         await this.ensureContract("token");
       }
 
-      const result = await this.tokenContract.submitTransaction("TokenContract:initLedger");
+      const result = await this.tokenContract.submitTransaction(
+        "initLedger"
+      );
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -502,7 +529,7 @@ class FabricService {
       }
 
       const result = await this.tokenContract.submitTransaction(
-        "TokenContract:createAccount",
+        "createAccount",
         userId,
         walletAddress,
         initialBalance.toString()
@@ -540,7 +567,7 @@ class FabricService {
       }
 
       const result = await this.tokenContract.evaluateTransaction(
-        "TokenContract:balanceOf",
+        "balanceOf",
         userId
       );
 
@@ -569,7 +596,7 @@ class FabricService {
       }
 
       const result = await this.tokenContract.evaluateTransaction(
-        "TokenContract:getAccount",
+        "getAccount",
         userId
       );
 
@@ -601,7 +628,7 @@ class FabricService {
       }
 
       const result = await this.tokenContract.submitTransaction(
-        "TokenContract:transfer",
+        "transfer",
         fromUserId,
         toUserId,
         amount.toString(),
@@ -637,7 +664,7 @@ class FabricService {
       }
 
       const result = await this.tokenContract.submitTransaction(
-        "TokenContract:mint",
+        "mint",
         userId,
         amount.toString(),
         reason
@@ -672,7 +699,7 @@ class FabricService {
       }
 
       const result = await this.tokenContract.submitTransaction(
-        "TokenContract:burn",
+        "burn",
         userId,
         amount.toString(),
         reason
@@ -704,8 +731,9 @@ class FabricService {
         await this.ensureContract("token");
       }
 
-      const result =
-        await this.tokenContract.evaluateTransaction("TokenContract:getTokenInfo");
+      const result = await this.tokenContract.evaluateTransaction(
+        "getTokenInfo"
+      );
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -731,7 +759,7 @@ class FabricService {
       }
 
       const result = await this.tokenContract.evaluateTransaction(
-        "TokenContract:getAccountHistory",
+        "getAccountHistory",
         userId
       );
 
@@ -772,7 +800,7 @@ class FabricService {
       });
 
       const result = await this.productContract.submitTransaction(
-        "ProductContract:createProduct",
+        "createProduct",
         JSON.stringify(productData)
       );
 
@@ -805,7 +833,7 @@ class FabricService {
       }
 
       const result = await this.productContract.evaluateTransaction(
-        "ProductContract:readProduct",
+        "readProduct",
         productId
       );
 
@@ -832,7 +860,7 @@ class FabricService {
       }
 
       const result = await this.productContract.evaluateTransaction(
-        "ProductContract:getAllProducts"
+        "getAllProducts"
       );
 
       let resultStr;
@@ -863,7 +891,7 @@ class FabricService {
           : JSON.stringify(updateData);
 
       const result = await this.productContract.submitTransaction(
-        "ProductContract:updateProduct",
+        "updateProduct",
         productId,
         data
       );
@@ -893,7 +921,7 @@ class FabricService {
       }
 
       const result = await this.productContract.evaluateTransaction(
-        "ProductContract:getProductHistory",
+        "getProductHistory",
         productId
       );
 
@@ -920,7 +948,7 @@ class FabricService {
       }
 
       const result = await this.productContract.evaluateTransaction(
-        "ProductContract:queryProductsBySeller",
+        "queryProductsBySeller",
         sellerId
       );
 
@@ -947,7 +975,7 @@ class FabricService {
       }
 
       const result = await this.productContract.evaluateTransaction(
-        "ProductContract:queryProductsByCategory",
+        "queryProductsByCategory",
         category
       );
 
@@ -974,7 +1002,7 @@ class FabricService {
       }
 
       const result = await this.productContract.evaluateTransaction(
-        "ProductContract:queryVerifiedProducts"
+        "queryVerifiedProducts"
       );
 
       let resultStr;
@@ -1000,7 +1028,7 @@ class FabricService {
       }
 
       const result = await this.productContract.submitTransaction(
-        "ProductContract:verifyProduct",
+        "verifyProduct",
         productId,
         JSON.stringify(verificationData)
       );
@@ -1030,7 +1058,7 @@ class FabricService {
       }
 
       const result = await this.productContract.submitTransaction(
-        "ProductContract:transferProduct",
+        "transferProduct",
         productId,
         JSON.stringify(transferData)
       );
@@ -1060,7 +1088,7 @@ class FabricService {
       }
 
       const result = await this.productContract.submitTransaction(
-        "ProductContract:archiveProduct",
+        "archiveProduct",
         productId,
         deletedBy
       );
@@ -1090,7 +1118,7 @@ class FabricService {
       }
 
       const result = await this.productContract.evaluateTransaction(
-        "ProductContract:productExists",
+        "productExists",
         productId
       );
 
@@ -1129,7 +1157,7 @@ class FabricService {
       }
 
       const result = await this.orderContract.submitTransaction(
-        "OrderContract:createOrder",
+        "createOrder",
         JSON.stringify(orderData)
       );
 
@@ -1158,7 +1186,7 @@ class FabricService {
       }
 
       const result = await this.orderContract.evaluateTransaction(
-        "OrderContract:readOrder",
+        "readOrder",
         orderId
       );
 
@@ -1185,7 +1213,7 @@ class FabricService {
       }
 
       const result = await this.orderContract.submitTransaction(
-        "OrderContract:updateOrderStatus",
+        "updateOrderStatus",
         orderId,
         JSON.stringify(updateData)
       );
@@ -1244,7 +1272,7 @@ class FabricService {
       }
 
       const result = await this.orderContract.evaluateTransaction(
-        "OrderContract:getAllOrders"
+        "getAllOrders"
       );
 
       let resultStr;
@@ -1270,7 +1298,7 @@ class FabricService {
       }
 
       const result = await this.orderContract.evaluateTransaction(
-        "OrderContract:queryOrdersByCustomer",
+        "queryOrdersByCustomer",
         customerId
       );
 
@@ -1297,7 +1325,7 @@ class FabricService {
       }
 
       const result = await this.orderContract.evaluateTransaction(
-        "OrderContract:queryOrdersBySeller",
+        "queryOrdersBySeller",
         sellerId
       );
 
@@ -1324,7 +1352,7 @@ class FabricService {
       }
 
       const result = await this.orderContract.submitTransaction(
-        "OrderContract:recordOwnershipTransfer",
+        "recordOwnershipTransfer",
         orderId,
         JSON.stringify(transferData)
       );
@@ -1354,7 +1382,7 @@ class FabricService {
       }
 
       const result = await this.orderContract.submitTransaction(
-        "OrderContract:cancelOrder",
+        "cancelOrder",
         orderId,
         JSON.stringify(cancellationData)
       );
@@ -1448,7 +1476,7 @@ class FabricService {
       }
 
       const result = await this.orderContract.submitTransaction(
-        "OrderContract:createLog",
+        "createLog",
         logId,
         JSON.stringify(logData)
       );
@@ -1477,37 +1505,61 @@ class FabricService {
       await this.connect();
     }
 
+    const chaincodeName = "chainvanguard";
+
     switch (contractType.toLowerCase()) {
       case "user":
         if (!this.userContract) {
-          this.userContract = this.network.getContract("user");
+          this.userContract = this.network.getContract(
+            chaincodeName,
+            "UserContract"
+          );
           console.log("✅ User contract initialized");
         }
         break;
       case "product":
         if (!this.productContract) {
-          this.productContract = this.network.getContract("product");
+          this.productContract = this.network.getContract(
+            chaincodeName,
+            "ProductContract"
+          );
           console.log("✅ Product contract initialized");
         }
-        break;
+        break; // ✅ ADD THIS!
       case "order":
         if (!this.orderContract) {
-          this.orderContract = this.network.getContract("order");
+          this.orderContract = this.network.getContract(
+            chaincodeName,
+            "OrderContract"
+          );
           console.log("✅ Order contract initialized");
         }
         break;
       case "inventory":
         if (!this.inventoryContract) {
           this.inventoryContract = this.network.getContract(
-            "inventory",
-            "inventory"
+            chaincodeName,
+            "InventoryContract"
           );
-          console.log("✅ Inventory contract initialized");
+          console.log("✅ InventoryContract contract initialized");
         }
         break;
-      case "token": // ✅ ADD THIS
+      case "vendorrequest":
+      case "vendor-request":
+        if (!this.vendorRequestContract) {
+          this.vendorRequestContract = this.network.getContract(
+            chaincodeName,
+            "VendorRequestContract"
+          );
+          console.log("✅ Vendor Request contract initialized");
+        }
+        break;
+      case "token":
         if (!this.tokenContract) {
-          this.tokenContract = this.network.getContract("token");
+          this.tokenContract = this.network.getContract(
+            chaincodeName,
+            "TokenContract"
+          );
           console.log("✅ Token contract initialized");
         }
         break;
@@ -1557,13 +1609,23 @@ class FabricService {
         case "inventory":
           if (!this.inventoryContract) {
             this.inventoryContract = this.network.getContract(
-              "inventory",
-              "inventory"
+              "chainvanguard",
+              "InventoryContract"
             );
           }
           contract = this.inventoryContract;
           break;
-        case "token": // ✅ ADD THIS
+        case "vendorrequest":
+        case "vendor-request":
+          if (!this.vendorRequestContract) {
+            this.vendorRequestContract = this.network.getContract(
+              "chainvanguard",
+              "VendorRequestContract"
+            );
+          }
+          contract = this.vendorRequestContract;
+          break;
+        case "token":
           contract = this.tokenContract;
           break;
         default:
@@ -1663,16 +1725,16 @@ class FabricService {
         case "order":
           contract = this.orderContract;
           break;
-        case "inventory":
+        case "InventoryContract":
           if (!this.inventoryContract) {
             this.inventoryContract = this.network.getContract(
-              "inventory",
-              "inventory"
+              "chainvanguard",
+              "InventoryContract"
             );
           }
           contract = this.inventoryContract;
           break;
-        case "token": // ✅ ADD THIS
+        case "token":
           contract = this.tokenContract;
           break;
         default:
@@ -1728,8 +1790,8 @@ class FabricService {
 
       const network = await this.gateway.getNetwork("supply-chain-channel");
       this.vendorRequestContract = network.getContract(
-        "vendor-request",
-        "vendorRequest"
+        "chainvanguard",
+        "VendorRequestContract"
       );
 
       console.log("✅ Vendor Request Contract initialized");

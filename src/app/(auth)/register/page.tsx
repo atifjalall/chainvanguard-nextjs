@@ -265,7 +265,7 @@ export default function RegisterPage() {
       setIsCheckingEmail(true);
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"}/auth/check-email?email=${encodeURIComponent(email)}`
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/auth/check-email?email=${encodeURIComponent(email)}`
         );
 
         if (!response.ok) throw new Error("Failed to check email");
@@ -336,7 +336,7 @@ export default function RegisterPage() {
     try {
       setIsLoading(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"}/auth/send-otp`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/auth/send-otp`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -370,7 +370,7 @@ export default function RegisterPage() {
     try {
       setIsVerifyingOtp(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"}/auth/verify-otp`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/auth/verify-otp`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -393,7 +393,7 @@ export default function RegisterPage() {
         try {
           const user = JSON.parse(userData);
           await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"}/auth/send-welcome-email`,
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/auth/send-welcome-email`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

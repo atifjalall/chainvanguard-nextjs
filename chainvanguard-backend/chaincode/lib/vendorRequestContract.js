@@ -8,9 +8,6 @@ const { Contract } = require("fabric-contract-api");
  * ============================================
  */
 class VendorRequestContract extends Contract {
-  constructor() {
-    super("vendorRequest");
-  }
 
   /**
    * Initialize the ledger with empty state

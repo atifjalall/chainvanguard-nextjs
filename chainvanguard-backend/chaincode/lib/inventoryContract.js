@@ -8,9 +8,6 @@ const { Contract } = require("fabric-contract-api");
  * ============================================
  */
 class InventoryContract extends Contract {
-  constructor() {
-    super("inventory");
-  }
 
   /**
    * Initialize the ledger with empty state
@@ -44,23 +41,103 @@ class InventoryContract extends Contract {
         );
       }
 
-      // Create inventory record
+      // Create inventory record - STORE ALL DATA
       const inventory = {
+        // Basic Info
         inventoryId: inventoryData.inventoryId,
         name: inventoryData.name,
+        description: inventoryData.description || "",
         category: inventoryData.category || "",
         subcategory: inventoryData.subcategory || "",
+        materialType: inventoryData.materialType || "",
+        brand: inventoryData.brand || "",
+
+        // Textile Details
+        textileDetails: inventoryData.textileDetails || {},
+
+        // Pricing & Quantity
+        pricePerUnit: inventoryData.pricePerUnit || 0,
+        costPrice: inventoryData.costPrice || 0,
+        originalPrice: inventoryData.originalPrice || 0,
+        discount: inventoryData.discount || 0,
+        quantity: inventoryData.quantity || 0,
+        reservedQuantity: inventoryData.reservedQuantity || 0,
+        committedQuantity: inventoryData.committedQuantity || 0,
+        damagedQuantity: inventoryData.damagedQuantity || 0,
+
+        // Stock Management
+        minStockLevel: inventoryData.minStockLevel || 0,
+        reorderLevel: inventoryData.reorderLevel || 0,
+        reorderQuantity: inventoryData.reorderQuantity || 0,
+        maximumQuantity: inventoryData.maximumQuantity || 0,
+        safetyStockLevel: inventoryData.safetyStockLevel || 0,
+        unit: inventoryData.unit || "",
+        sku: inventoryData.sku || "",
+
+        // Media & Documents
+        images: inventoryData.images || [],
+        documents: inventoryData.documents || [],
+
+        // Physical Properties
+        weight: inventoryData.weight || 0,
+        dimensions: inventoryData.dimensions || "",
+
+        // Metadata
+        tags: inventoryData.tags || [],
+        season: inventoryData.season || "",
+        countryOfOrigin: inventoryData.countryOfOrigin || "",
+        manufacturer: inventoryData.manufacturer || "",
+
+        // Supplier Info
         supplierId: inventoryData.supplierId,
         supplierName: inventoryData.supplierName || "",
-        quantity: inventoryData.quantity || 0,
-        price: inventoryData.price || 0,
+        supplierWalletAddress: inventoryData.supplierWalletAddress || "",
+        supplierContact: inventoryData.supplierContact || {},
+
+        // Status & Verification
+        status: inventoryData.status || "active",
+        isVerified: inventoryData.isVerified || false,
+        isFeatured: inventoryData.isFeatured || false,
+
+        // Sustainability & Compliance
+        isSustainable: inventoryData.isSustainable || false,
+        certifications: inventoryData.certifications || [],
+        sustainabilityCertifications: inventoryData.sustainabilityCertifications || [],
+        complianceStandards: inventoryData.complianceStandards || [],
+        qualityGrade: inventoryData.qualityGrade || "",
+        carbonFootprint: inventoryData.carbonFootprint || 0,
+        recycledContent: inventoryData.recycledContent || 0,
+
+        // Delivery & Storage
+        leadTime: inventoryData.leadTime || 0,
+        estimatedDeliveryDays: inventoryData.estimatedDeliveryDays || 0,
+        shelfLife: inventoryData.shelfLife || 0,
+        storageLocations: inventoryData.storageLocations || [],
+        primaryLocation: inventoryData.primaryLocation || "",
+
+        // Additional Info
+        notes: inventoryData.notes || "",
+        internalCode: inventoryData.internalCode || "",
+        barcode: inventoryData.barcode || "",
+        autoReorderEnabled: inventoryData.autoReorderEnabled || false,
+
+        // Batch Tracking
+        isBatchTracked: inventoryData.isBatchTracked || false,
+        batches: inventoryData.batches || [],
+
+        // Specifications & Suitability
+        specifications: inventoryData.specifications || {},
+        suitableFor: inventoryData.suitableFor || [],
+
+        // IPFS Reference
         ipfsHash: inventoryData.ipfsHash || "",
-        status: "active",
+
+        // Blockchain specific
         movements: [],
         transfers: [],
         qualityChecks: [],
         createdAt: inventoryData.timestamp || new Date().toISOString(),
-        updatedAt: inventoryData.timestamp || new Date().toISOString(), // Use same timestamp as createdAt for determinism
+        updatedAt: inventoryData.timestamp || new Date().toISOString(),
         docType: "inventory",
       };
 
@@ -115,12 +192,93 @@ class InventoryContract extends Contract {
 
       const inventory = JSON.parse(inventoryBytes.toString());
 
-      // Update fields
-      if (updateData.name) inventory.name = updateData.name;
-      if (updateData.quantity !== undefined)
-        inventory.quantity = updateData.quantity;
-      if (updateData.price !== undefined) inventory.price = updateData.price;
-      if (updateData.status) inventory.status = updateData.status;
+      // Update ALL fields
+      // Basic Info
+      if (updateData.name !== undefined) inventory.name = updateData.name;
+      if (updateData.description !== undefined) inventory.description = updateData.description;
+      if (updateData.category !== undefined) inventory.category = updateData.category;
+      if (updateData.subcategory !== undefined) inventory.subcategory = updateData.subcategory;
+      if (updateData.materialType !== undefined) inventory.materialType = updateData.materialType;
+      if (updateData.brand !== undefined) inventory.brand = updateData.brand;
+
+      // Textile Details
+      if (updateData.textileDetails !== undefined) inventory.textileDetails = updateData.textileDetails;
+
+      // Pricing & Quantity
+      if (updateData.pricePerUnit !== undefined) inventory.pricePerUnit = updateData.pricePerUnit;
+      if (updateData.costPrice !== undefined) inventory.costPrice = updateData.costPrice;
+      if (updateData.originalPrice !== undefined) inventory.originalPrice = updateData.originalPrice;
+      if (updateData.discount !== undefined) inventory.discount = updateData.discount;
+      if (updateData.quantity !== undefined) inventory.quantity = updateData.quantity;
+      if (updateData.reservedQuantity !== undefined) inventory.reservedQuantity = updateData.reservedQuantity;
+      if (updateData.committedQuantity !== undefined) inventory.committedQuantity = updateData.committedQuantity;
+      if (updateData.damagedQuantity !== undefined) inventory.damagedQuantity = updateData.damagedQuantity;
+
+      // Stock Management
+      if (updateData.minStockLevel !== undefined) inventory.minStockLevel = updateData.minStockLevel;
+      if (updateData.reorderLevel !== undefined) inventory.reorderLevel = updateData.reorderLevel;
+      if (updateData.reorderQuantity !== undefined) inventory.reorderQuantity = updateData.reorderQuantity;
+      if (updateData.maximumQuantity !== undefined) inventory.maximumQuantity = updateData.maximumQuantity;
+      if (updateData.safetyStockLevel !== undefined) inventory.safetyStockLevel = updateData.safetyStockLevel;
+      if (updateData.unit !== undefined) inventory.unit = updateData.unit;
+      if (updateData.sku !== undefined) inventory.sku = updateData.sku;
+
+      // Media & Documents
+      if (updateData.images !== undefined) inventory.images = updateData.images;
+      if (updateData.documents !== undefined) inventory.documents = updateData.documents;
+
+      // Physical Properties
+      if (updateData.weight !== undefined) inventory.weight = updateData.weight;
+      if (updateData.dimensions !== undefined) inventory.dimensions = updateData.dimensions;
+
+      // Metadata
+      if (updateData.tags !== undefined) inventory.tags = updateData.tags;
+      if (updateData.season !== undefined) inventory.season = updateData.season;
+      if (updateData.countryOfOrigin !== undefined) inventory.countryOfOrigin = updateData.countryOfOrigin;
+      if (updateData.manufacturer !== undefined) inventory.manufacturer = updateData.manufacturer;
+
+      // Supplier Info
+      if (updateData.supplierName !== undefined) inventory.supplierName = updateData.supplierName;
+      if (updateData.supplierWalletAddress !== undefined) inventory.supplierWalletAddress = updateData.supplierWalletAddress;
+      if (updateData.supplierContact !== undefined) inventory.supplierContact = updateData.supplierContact;
+
+      // Status & Verification
+      if (updateData.status !== undefined) inventory.status = updateData.status;
+      if (updateData.isVerified !== undefined) inventory.isVerified = updateData.isVerified;
+      if (updateData.isFeatured !== undefined) inventory.isFeatured = updateData.isFeatured;
+
+      // Sustainability & Compliance
+      if (updateData.isSustainable !== undefined) inventory.isSustainable = updateData.isSustainable;
+      if (updateData.certifications !== undefined) inventory.certifications = updateData.certifications;
+      if (updateData.sustainabilityCertifications !== undefined) inventory.sustainabilityCertifications = updateData.sustainabilityCertifications;
+      if (updateData.complianceStandards !== undefined) inventory.complianceStandards = updateData.complianceStandards;
+      if (updateData.qualityGrade !== undefined) inventory.qualityGrade = updateData.qualityGrade;
+      if (updateData.carbonFootprint !== undefined) inventory.carbonFootprint = updateData.carbonFootprint;
+      if (updateData.recycledContent !== undefined) inventory.recycledContent = updateData.recycledContent;
+
+      // Delivery & Storage
+      if (updateData.leadTime !== undefined) inventory.leadTime = updateData.leadTime;
+      if (updateData.estimatedDeliveryDays !== undefined) inventory.estimatedDeliveryDays = updateData.estimatedDeliveryDays;
+      if (updateData.shelfLife !== undefined) inventory.shelfLife = updateData.shelfLife;
+      if (updateData.storageLocations !== undefined) inventory.storageLocations = updateData.storageLocations;
+      if (updateData.primaryLocation !== undefined) inventory.primaryLocation = updateData.primaryLocation;
+
+      // Additional Info
+      if (updateData.notes !== undefined) inventory.notes = updateData.notes;
+      if (updateData.internalCode !== undefined) inventory.internalCode = updateData.internalCode;
+      if (updateData.barcode !== undefined) inventory.barcode = updateData.barcode;
+      if (updateData.autoReorderEnabled !== undefined) inventory.autoReorderEnabled = updateData.autoReorderEnabled;
+
+      // Batch Tracking
+      if (updateData.isBatchTracked !== undefined) inventory.isBatchTracked = updateData.isBatchTracked;
+      if (updateData.batches !== undefined) inventory.batches = updateData.batches;
+
+      // Specifications & Suitability
+      if (updateData.specifications !== undefined) inventory.specifications = updateData.specifications;
+      if (updateData.suitableFor !== undefined) inventory.suitableFor = updateData.suitableFor;
+
+      // IPFS Reference
+      if (updateData.ipfsHash !== undefined) inventory.ipfsHash = updateData.ipfsHash;
 
       inventory.updatedAt = updateData.updatedAt || new Date().toISOString();
 

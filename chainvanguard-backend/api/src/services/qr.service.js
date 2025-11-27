@@ -91,7 +91,7 @@ class QRService {
       const qrCodeString = this.generateQRCodeString(productId, "product");
 
       // Create tracking URL
-      const trackingUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${qrCodeString}`;
+      const trackingUrl = `${process.env.FRONTEND_URL || "http://localhost:3001"}/track/${qrCodeString}`;
 
       // Generate QR image
       const qrImageBuffer = await this.generateQRImage(trackingUrl, {
@@ -193,7 +193,7 @@ class QRService {
       }
 
       const qrCodeString = this.generateQRCodeString(orderId, "order");
-      const trackingUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/track/order/${qrCodeString}`;
+      const trackingUrl = `${process.env.FRONTEND_URL || "http://localhost:3001"}/track/order/${qrCodeString}`;
 
       const qrImageBuffer = await this.generateQRImage(trackingUrl);
 
@@ -477,7 +477,7 @@ class QRService {
       }
 
       const qrCodeString = this.generateQRCodeString(inventoryId, "inventory");
-      const trackingUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/track/inventory/${qrCodeString}`;
+      const trackingUrl = `${process.env.FRONTEND_URL || "http://localhost:3001"}/track/inventory/${qrCodeString}`;
 
       const qrImageBuffer = await this.generateQRImage(trackingUrl, {
         width: 512,
