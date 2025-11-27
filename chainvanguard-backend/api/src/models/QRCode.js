@@ -71,7 +71,7 @@ QRCodeSchema.index({ status: 1, expiresAt: 1 });
 
 // Virtual for tracking URL
 QRCodeSchema.virtual("trackingUrl").get(function () {
-  return `${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${this.code}`;
+  return `${process.env.FRONTEND_URL || "http://localhost:3001"}/track/${this.code}`;
 });
 
 // Method to increment scan count

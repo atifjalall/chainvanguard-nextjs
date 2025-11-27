@@ -5,9 +5,6 @@
 const { Contract } = require("fabric-contract-api");
 
 class OrderContract extends Contract {
-  constructor() {
-    super("OrderContract");
-  }
 
   // ========================================
   // INITIALIZATION

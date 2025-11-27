@@ -4,9 +4,6 @@
 const { Contract } = require("fabric-contract-api");
 
 class ProductContract extends Contract {
-  constructor() {
-    super("ProductContract");
-  }
 
   // ========================================
   // INITIALIZATION
@@ -67,7 +64,7 @@ class ProductContract extends Contract {
     const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
     const txId = ctx.stub.getTxID();
 
-    // Build blockchain product record
+    // Build blockchain product record with ALL comprehensive data
     const blockchainProduct = {
       docType: "product",
 
@@ -94,48 +91,134 @@ class ProductContract extends Contract {
       currentOwnerRole: product.sellerRole || "supplier",
       originalCreator: product.sellerId,
 
-      // Apparel Details (essential info only)
+      // Apparel Details (ALL fields)
       apparelDetails: {
         size: product.apparelDetails?.size || "",
-        color: product.apparelDetails?.color || "",
-        material: product.apparelDetails?.material || "",
         fit: product.apparelDetails?.fit || "",
+        color: product.apparelDetails?.color || "",
         pattern: product.apparelDetails?.pattern || "",
+        material: product.apparelDetails?.material || "",
+        fabricType: product.apparelDetails?.fabricType || "",
+        fabricWeight: product.apparelDetails?.fabricWeight || "",
+        fabricComposition: product.apparelDetails?.fabricComposition || "",
+        neckline: product.apparelDetails?.neckline || "",
+        sleeveLength: product.apparelDetails?.sleeveLength || "",
+        careInstructions: product.apparelDetails?.careInstructions || "",
+        washingTemperature: product.apparelDetails?.washingTemperature || "",
+        ironingInstructions: product.apparelDetails?.ironingInstructions || "",
+        dryCleanOnly: product.apparelDetails?.dryCleanOnly || false,
+        measurements: product.apparelDetails?.measurements || {},
       },
 
-      // Manufacturing
+      // Pricing Details
+      price: product.price || 0,
+      originalPrice: product.originalPrice || 0,
+      currency: product.currency || "USD",
+      discount: product.discount || 0,
+      finalPrice: product.finalPrice || product.price || 0,
+
+      // Inventory
+      stockQuantity: product.stockQuantity || 0,
+      minStockLevel: product.minStockLevel || 0,
+      maxStockLevel: product.maxStockLevel || 0,
+      reorderPoint: product.reorderPoint || 0,
+      availableQuantity: product.availableQuantity || 0,
+
+      // Images (with metadata)
+      images: (product.images || []).map((img) => ({
+        url: img.url || img,
+        caption: img.caption || "",
+        isMain: img.isMain || false,
+        order: img.order || 0,
+        ipfsHash: img.ipfsHash || "",
+      })),
+
+      // Manufacturing Details (ALL fields)
       manufacturingDetails: {
         manufacturerName: product.manufacturingDetails?.manufacturerName || "",
         manufactureDate: product.manufacturingDetails?.manufactureDate || null,
+        expiryDate: product.manufacturingDetails?.expiryDate || null,
         batchNumber: product.manufacturingDetails?.batchNumber || "",
         productionCountry:
           product.manufacturingDetails?.productionCountry || "",
         productionFacility:
           product.manufacturingDetails?.productionFacility || "",
+        productionLine: product.manufacturingDetails?.productionLine || "",
       },
 
-      // Certifications (IPFS hashes only)
+      // Certifications (comprehensive data)
       certificates: (product.certificates || []).map((cert) => ({
-        name: cert.name,
-        type: cert.type,
+        name: cert.name || "",
+        type: cert.type || "",
         certificateNumber: cert.certificateNumber || "",
-        ipfsHash: cert.ipfsHash,
+        issuingAuthority: cert.issuingAuthority || "",
         issueDate: cert.issueDate || null,
         expiryDate: cert.expiryDate || null,
+        ipfsHash: cert.ipfsHash || "",
+        certificateUrl: cert.certificateUrl || "",
+        verificationUrl: cert.verificationUrl || "",
       })),
 
-      // Sustainability flags
+      // Specifications
+      specifications: product.specifications || {},
+
+      // Sustainability (ALL fields)
       sustainability: {
         isOrganic: product.sustainability?.isOrganic || false,
         isFairTrade: product.sustainability?.isFairTrade || false,
         isRecycled: product.sustainability?.isRecycled || false,
         isCarbonNeutral: product.sustainability?.isCarbonNeutral || false,
+        isEcoFriendly: product.sustainability?.isEcoFriendly || false,
+        isVegan: product.sustainability?.isVegan || false,
+        carbonFootprint: product.sustainability?.carbonFootprint || 0,
+        sustainabilityScore: product.sustainability?.sustainabilityScore || 0,
+        sustainabilityCertifications:
+          product.sustainability?.sustainabilityCertifications || [],
+      },
+
+      // Quality
+      qualityGrade: product.qualityGrade || "",
+      qualityScore: product.qualityScore || 0,
+      qualityChecks: product.qualityChecks || [],
+
+      // Supply Chain
+      supplyChainSummary: product.supplyChainSummary || "",
+      supplyChainStages: product.supplyChainStages || [],
+
+      // Location
+      currentLocation: {
+        facility: product.currentLocation?.facility || "",
+        address: product.currentLocation?.address || "",
+        city: product.currentLocation?.city || "",
+        state: product.currentLocation?.state || "",
+        country: product.currentLocation?.country || "",
+        postalCode: product.currentLocation?.postalCode || "",
+        coordinates: product.currentLocation?.coordinates || {},
       },
 
       // Status
       status: product.status || "active",
       isVerified: product.isVerified || false,
+      verifiedBy: product.verifiedBy || null,
+      verifiedAt: product.verifiedAt || null,
       blockchainVerified: true,
+      isFeatured: product.isFeatured || false,
+      isPublished: product.isPublished || false,
+      publishedAt: product.publishedAt || null,
+
+      // SEO
+      seoTags: product.seoTags || [],
+      seoKeywords: product.seoKeywords || [],
+      metaDescription: product.metaDescription || "",
+
+      // Shipping
+      shippingDetails: {
+        weight: product.shippingDetails?.weight || 0,
+        dimensions: product.shippingDetails?.dimensions || {},
+        shippingClass: product.shippingDetails?.shippingClass || "",
+        handlingTime: product.shippingDetails?.handlingTime || 0,
+        freeShipping: product.shippingDetails?.freeShipping || false,
+      },
 
       // Supply Chain History
       supplyChainHistory: [
@@ -264,7 +347,160 @@ class ProductContract extends Contract {
     // Track what changed
     const changes = [];
 
-    // Update allowed fields
+    // Update Basic Info
+    if (updates.name && updates.name !== product.name) {
+      changes.push(`Name updated`);
+      product.name = updates.name;
+    }
+
+    if (updates.description !== undefined && updates.description !== product.description) {
+      changes.push(`Description updated`);
+      product.description = updates.description;
+    }
+
+    if (updates.category && updates.category !== product.category) {
+      changes.push(`Category updated`);
+      product.category = updates.category;
+    }
+
+    if (updates.subcategory !== undefined) {
+      product.subcategory = updates.subcategory;
+    }
+
+    if (updates.brand !== undefined) {
+      product.brand = updates.brand;
+    }
+
+    // Update Apparel Details
+    if (updates.apparelDetails) {
+      changes.push(`Apparel details updated`);
+      product.apparelDetails = {
+        ...product.apparelDetails,
+        ...updates.apparelDetails,
+      };
+    }
+
+    // Update Pricing
+    if (updates.price !== undefined && updates.price !== product.price) {
+      changes.push(`Price: ${product.price} → ${updates.price}`);
+      product.price = updates.price;
+    }
+
+    if (updates.originalPrice !== undefined) {
+      product.originalPrice = updates.originalPrice;
+    }
+
+    if (updates.discount !== undefined) {
+      product.discount = updates.discount;
+    }
+
+    if (updates.finalPrice !== undefined) {
+      product.finalPrice = updates.finalPrice;
+    }
+
+    // Update Inventory
+    if (updates.stockQuantity !== undefined) {
+      changes.push(`Stock quantity updated`);
+      product.stockQuantity = updates.stockQuantity;
+    }
+
+    if (updates.availableQuantity !== undefined) {
+      product.availableQuantity = updates.availableQuantity;
+    }
+
+    if (updates.minStockLevel !== undefined) {
+      product.minStockLevel = updates.minStockLevel;
+    }
+
+    if (updates.maxStockLevel !== undefined) {
+      product.maxStockLevel = updates.maxStockLevel;
+    }
+
+    if (updates.reorderPoint !== undefined) {
+      product.reorderPoint = updates.reorderPoint;
+    }
+
+    // Update Images
+    if (updates.images) {
+      changes.push(`Images updated`);
+      product.images = updates.images;
+    }
+
+    // Update Manufacturing Details
+    if (updates.manufacturingDetails) {
+      changes.push(`Manufacturing details updated`);
+      product.manufacturingDetails = {
+        ...product.manufacturingDetails,
+        ...updates.manufacturingDetails,
+      };
+    }
+
+    // Update Certificates
+    if (updates.certificates) {
+      changes.push(`Certificates updated`);
+      product.certificates = updates.certificates;
+    }
+
+    // Update Specifications
+    if (updates.specifications) {
+      changes.push(`Specifications updated`);
+      product.specifications = updates.specifications;
+    }
+
+    // Update Sustainability
+    if (updates.sustainability) {
+      changes.push(`Sustainability info updated`);
+      product.sustainability = {
+        ...product.sustainability,
+        ...updates.sustainability,
+      };
+    }
+
+    // Update Quality
+    if (updates.qualityGrade !== undefined) {
+      product.qualityGrade = updates.qualityGrade;
+    }
+
+    if (updates.qualityScore !== undefined) {
+      product.qualityScore = updates.qualityScore;
+    }
+
+    if (updates.qualityChecks) {
+      product.qualityChecks = updates.qualityChecks;
+    }
+
+    // Update Supply Chain Info
+    if (updates.supplyChainSummary !== undefined) {
+      product.supplyChainSummary = updates.supplyChainSummary;
+    }
+
+    if (updates.supplyChainStages) {
+      product.supplyChainStages = updates.supplyChainStages;
+    }
+
+    // Update SEO
+    if (updates.seoTags) {
+      product.seoTags = updates.seoTags;
+    }
+
+    if (updates.seoKeywords) {
+      product.seoKeywords = updates.seoKeywords;
+    }
+
+    if (updates.metaDescription !== undefined) {
+      product.metaDescription = updates.metaDescription;
+    }
+
+    // Update Shipping Details
+    if (updates.shippingDetails) {
+      changes.push(`Shipping details updated`);
+      product.shippingDetails = {
+        ...product.shippingDetails,
+        ...updates.shippingDetails,
+      };
+    }
+
+    // Update Status
     if (updates.status && updates.status !== product.status) {
       changes.push(`Status: ${product.status} → ${updates.status}`);
       product.status = updates.status;
@@ -276,6 +512,8 @@ class ProductContract extends Contract {
     ) {
       changes.push(`Verified: ${product.isVerified} → ${updates.isVerified}`);
       product.isVerified = updates.isVerified;
+      product.verifiedBy = updates.verifiedBy || null;
+      product.verifiedAt = updates.isVerified ? timestamp : null;
 
       // Add to verification history
       if (updates.isVerified) {
@@ -287,8 +525,25 @@ class ProductContract extends Contract {
       }
     }
 
+    if (updates.isFeatured !== undefined) {
+      product.isFeatured = updates.isFeatured;
+    }
+
+    if (updates.isPublished !== undefined) {
+      product.isPublished = updates.isPublished;
+      if (updates.isPublished && !product.publishedAt) {
+        product.publishedAt = timestamp;
+      }
+    }
+
+    // Update Location
     if (updates.currentLocation) {
       changes.push(`Location updated`);
+      product.currentLocation = {
+        ...product.currentLocation,
+        ...updates.currentLocation,
+      };
+
       product.supplyChainHistory.push({
         stage: "location_updated",
         action: "Product location updated",
@@ -300,6 +555,11 @@ class ProductContract extends Contract {
         transactionId: txId,
         verified: true,
       });
+    }
+
+    // Update IPFS Hash
+    if (updates.ipfsHash !== undefined) {
+      product.ipfsHash = updates.ipfsHash;
     }
 
     // Add supply chain event if provided

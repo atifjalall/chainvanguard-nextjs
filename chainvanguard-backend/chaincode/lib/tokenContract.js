@@ -4,9 +4,7 @@
 const { Contract } = require("fabric-contract-api");
 
 class TokenContract extends Contract {
-  constructor() {
-    super("TokenContract");
-  }
+
 
   // ========================================
   // HELPER FUNCTIONS

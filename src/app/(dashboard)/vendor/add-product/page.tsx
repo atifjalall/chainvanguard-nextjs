@@ -823,7 +823,7 @@ export default function AddProductPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"}/products`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/products`,
         {
           method: "POST",
           headers: {
