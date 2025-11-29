@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { calculateTax } from "@/config/constants";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -271,7 +272,7 @@ export default function VendorInventoryDetailPage() {
     if (!inventoryItem) return { subtotal: 0, tax: 0, total: 0 };
 
     const subtotal = inventoryItem.pricePerUnit * requestQuantity;
-    const tax = subtotal * 0.1; // 10% tax
+    const tax = calculateTax(subtotal); // Pakistan Sales Tax (17%)
     const total = subtotal + tax;
 
     return { subtotal, tax, total };
@@ -831,7 +832,7 @@ export default function VendorInventoryDetailPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">
-                    Tax (10%):
+                    Tax (17%):
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     CVT {tax.toFixed(2)}

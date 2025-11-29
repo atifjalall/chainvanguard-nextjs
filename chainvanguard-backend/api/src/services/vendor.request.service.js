@@ -9,6 +9,7 @@ import ipfsService from "./ipfs.service.js"; // ✅ NEW: IPFS storage
 import dataSyncService from "./data.sync.service.js"; // ✅ NEW: Data sync
 import walletBalanceService from "./wallet.balance.service.js";
 import inventoryService from "./inventory.service.js";
+import { calculateTax } from "../config/constants.js";
 class VendorRequestService {
   /**
    * Create a new purchase request
@@ -81,8 +82,8 @@ class VendorRequestService {
         });
       }
 
-      // Calculate tax and total
-      const tax = subtotal * 0.1; // 10% tax
+      // Calculate tax and total using centralized tax configuration (Pakistan Sales Tax - 17%)
+      const tax = calculateTax(subtotal);
       const total = subtotal + tax;
 
       // Check if supplier has auto-approve enabled

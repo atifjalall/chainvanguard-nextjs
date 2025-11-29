@@ -331,6 +331,9 @@ class InvoiceService {
    * Generate PDF using easyinvoice
    */
   async _generatePDF(invoice) {
+    // Calculate tax rate if applicable
+    const taxRate = invoice.subtotal > 0 ? (invoice.tax / invoice.subtotal) * 100 : 0;
+
     const data = {
       // Customize enables you to provide your own templates
       customize: {
@@ -361,18 +364,18 @@ class InvoiceService {
       information: {
         number: invoice.invoiceNumber,
         date: invoice.issueDate.toLocaleDateString(),
-        "due-date": invoice.dueDate ? invoice.dueDate.toLocaleDateString() : "Paid",
+        "due-date": invoice.dueDate ? invoice.dueDate.toLocaleDateString() : invoice.paymentStatus === "refunded" ? "REFUNDED" : "PAID",
       },
       products: invoice.items.map((item) => ({
         quantity: item.quantity,
         description: item.description,
-        "tax-rate": 0,
+        "tax-rate": taxRate,
         price: item.pricePerUnit,
       })),
-      "bottom-notice": invoice.terms || "Thank you for your business!",
+      "bottom-notice": this._buildBottomNotice(invoice),
       settings: {
         currency: invoice.currency,
-        "tax-notation": "tax",
+        "tax-notation": "vat",
         "margin-top": 25,
         "margin-right": 25,
         "margin-left": 25,
@@ -394,6 +397,43 @@ class InvoiceService {
 
     const result = await easyinvoice.createInvoice(data);
     return Buffer.from(result.pdf, "base64");
+  }
+
+  /**
+   * Build bottom notice with tax, shipping, and discount information
+   */
+  _buildBottomNotice(invoice) {
+    let notice = "";
+
+    // Add breakdown of charges
+    if (invoice.tax > 0 || invoice.shipping > 0 || invoice.discount > 0) {
+      notice += "PAYMENT BREAKDOWN:\n";
+      notice += `Subtotal: ${invoice.currency} ${invoice.subtotal.toFixed(2)}\n`;
+
+      if (invoice.tax > 0) {
+        const taxRate = invoice.subtotal > 0 ? ((invoice.tax / invoice.subtotal) * 100).toFixed(2) : 0;
+        notice += `Tax (${taxRate}%): ${invoice.currency} ${invoice.tax.toFixed(2)}\n`;
+      }
+
+      if (invoice.shipping > 0) {
+        notice += `Shipping: ${invoice.currency} ${invoice.shipping.toFixed(2)}\n`;
+      }
+
+      if (invoice.discount > 0) {
+        notice += `Discount: -${invoice.currency} ${invoice.discount.toFixed(2)}\n`;
+      }
+
+      notice += `Total: ${invoice.currency} ${invoice.total.toFixed(2)}\n\n`;
+    }
+
+    // Add notes and terms
+    if (invoice.notes) {
+      notice += invoice.notes + '\n\n';
+    }
+
+    notice += invoice.terms || "Thank you for your business!";
+
+    return notice;
   }
 
   /**
