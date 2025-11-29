@@ -12,6 +12,7 @@ import logger from "../utils/logger.js";
 import loyaltyService from "./loyalty.service.js";
 import vendorInventoryService from "./vendor.inventory.service.js";
 import notificationService from "./notification.service.js";
+import { calculateTax, calculateShipping } from "../config/constants.js";
 
 class OrderService {
   // ========================================
@@ -510,8 +511,8 @@ class OrderService {
     }
     // Free shipping for orders over $100
 
-    // Calculate tax (10% - simplified)
-    const tax = subtotal * 0.1;
+    // Calculate tax using centralized tax configuration (Pakistan Sales Tax - 17%)
+    const tax = calculateTax(subtotal);
 
     // Apply discount (simplified - should check discount code validity)
     let discount = 0;
@@ -1154,9 +1155,33 @@ class OrderService {
         await this.confirmProductSale(order.items);
       }
 
-      // If cancelled, release reserved stock
+      // If cancelled, release reserved stock and process refund if needed
       if (newStatus === "cancelled") {
         await this.releaseProductStock(order.items);
+
+        // Process refund if payment was made
+        if (order.paymentStatus === "paid" && order.paymentMethod === "wallet") {
+          try {
+            await walletBalanceService.processRefund(
+              order.customerId,
+              order._id,
+              order.total,
+              `Refund for cancelled order ${order.orderNumber}: ${notes || "Cancelled by vendor"}`
+            );
+
+            order.paymentStatus = "refunded";
+            order.refundedAt = new Date();
+            order.refundAmount = order.total;
+            order.cancellationReason = notes || "Cancelled by vendor";
+
+            console.log(
+              `✅ Refund processed: CVT ${order.total} returned to customer wallet`
+            );
+          } catch (refundError) {
+            console.error("❌ Refund processing failed:", refundError);
+            // Continue with cancellation even if refund fails
+          }
+        }
       }
 
       await order.save();
@@ -1184,11 +1209,41 @@ class OrderService {
           const seller = await User.findById(order.sellerId);
 
           if (customer && seller) {
-            await invoiceService.generateOrderInvoice(order, customer, seller);
+            const invoice = await invoiceService.generateOrderInvoice(order, customer, seller);
             console.log(`✅ Invoice auto-generated for delivered order: ${order.orderNumber}`);
+
+            // Store invoice reference in order
+            order.invoiceId = invoice._id;
+            order.invoiceNumber = invoice.invoiceNumber;
+            order.invoiceIpfsHash = invoice.ipfsHash;
+            await order.save();
           }
         } catch (invoiceError) {
           console.error("⚠️ Failed to generate invoice (non-critical):", invoiceError.message);
+          // Continue even if invoice generation fails
+        }
+      }
+
+      // 🧾 REGENERATE INVOICE when order is cancelled (with refund status)
+      if (newStatus === "cancelled" && order.paymentStatus === "refunded") {
+        try {
+          const invoiceService = (await import("./invoice.service.js")).default;
+          const customer = await User.findById(order.customerId);
+          const seller = await User.findById(order.sellerId);
+
+          if (customer && seller) {
+            // Generate updated invoice with refund status
+            const updatedInvoice = await invoiceService.generateOrderInvoice(order, customer, seller);
+            console.log(`✅ Updated invoice generated for cancelled order: ${order.orderNumber} (IPFS: ${updatedInvoice.ipfsHash})`);
+
+            // Update order with new invoice reference
+            order.invoiceId = updatedInvoice._id;
+            order.invoiceNumber = updatedInvoice.invoiceNumber;
+            order.invoiceIpfsHash = updatedInvoice.ipfsHash;
+            await order.save();
+          }
+        } catch (invoiceError) {
+          console.error("⚠️ Failed to generate updated invoice (non-critical):", invoiceError.message);
           // Continue even if invoice generation fails
         }
       }

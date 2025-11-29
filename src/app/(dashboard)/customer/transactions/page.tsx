@@ -1,120 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-import { usePageTitle } from "@/hooks/use-page-title";
   ChevronRightIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
   ArrowDownTrayIcon,
   ArrowUpIcon,
   ArrowDownIcon,
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
-  CalendarIcon,
+  ChevronLeftIcon,
 } from "@heroicons/react/24/outline";
-
-// Mock Transaction Data
-const MOCK_TRANSACTIONS = [
-  {
-    id: "TX001",
-    type: "credit",
-    amount: 500.0,
-    description: "Added Funds",
-    category: "Deposit",
-    date: "2024-01-15T10:30:00",
-    status: "completed",
-    txHash: "0x1234567890abcdef1234567890abcdef12345678",
-    from: "Bank Account",
-    to: "Your Wallet",
-  },
-  {
-    id: "TX002",
-    type: "debit",
-    amount: 89.99,
-    description: "Purchase - Classic Denim Jacket",
-    category: "Purchase",
-    date: "2024-01-14T15:45:00",
-    status: "completed",
-    txHash: "0x2345678901bcdef2345678901bcdef23456789",
-    from: "Your Wallet",
-    to: "Vendor: Fashion Store",
-  },
-  {
-    id: "TX003",
-    type: "debit",
-    amount: 29.99,
-    description: "Purchase - Premium Cotton T-Shirt",
-    category: "Purchase",
-    date: "2024-01-12T09:15:00",
-    status: "completed",
-    txHash: "0x3456789012cdef3456789012cdef34567890",
-    from: "Your Wallet",
-    to: "Vendor: Style Hub",
-  },
-  {
-    id: "TX004",
-    type: "credit",
-    amount: 50.0,
-    description: "Refund - Summer Dress",
-    category: "Refund",
-    date: "2024-01-10T14:20:00",
-    status: "completed",
-    txHash: "0x4567890123def4567890123def45678901",
-    from: "Vendor: Fashion Store",
-    to: "Your Wallet",
-  },
-  {
-    id: "TX005",
-    type: "debit",
-    amount: 79.99,
-    description: "Purchase - Casual Sneakers",
-    category: "Purchase",
-    date: "2024-01-08T11:30:00",
-    status: "pending",
-    txHash: "0x5678901234ef5678901234ef56789012",
-    from: "Your Wallet",
-    to: "Vendor: Shoe Palace",
-  },
-  {
-    id: "TX006",
-    type: "debit",
-    amount: 149.99,
-    description: "Purchase - Leather Jacket",
-    category: "Purchase",
-    date: "2024-01-05T16:00:00",
-    status: "completed",
-    txHash: "0x6789012345f6789012345f67890123",
-    from: "Your Wallet",
-    to: "Vendor: Premium Outfits",
-  },
-  {
-    id: "TX007",
-    type: "credit",
-    amount: 300.0,
-    description: "Added Funds",
-    category: "Deposit",
-    date: "2024-01-03T08:45:00",
-    status: "completed",
-    txHash: "0x7890123456789012345678901234567890",
-    from: "Bank Account",
-    to: "Your Wallet",
-  },
-  {
-    id: "TX008",
-    type: "debit",
-    amount: 39.99,
-    description: "Purchase - Sports Watch",
-    category: "Purchase",
-    date: "2024-01-02T13:20:00",
-    status: "failed",
-    txHash: "0x8901234567890123456789012345678901",
-    from: "Your Wallet",
-    to: "Vendor: Tech Accessories",
-  },
-];
+import { usePageTitle } from "@/hooks/use-page-title";
+import { toast } from "sonner";
+import { getTransactionHistory, BackendTransaction } from "@/lib/api/wallet.api";
+import { formatCVT } from "@/utils/currency";
 
 type FilterType =
   | "all"
@@ -129,37 +31,83 @@ export default function TransactionsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
-  const [dateRange, setDateRange] = useState({ from: "", to: "" });
-  const [showFilters, setShowFilters] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState<BackendTransaction[]>([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 20,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+  const [summary, setSummary] = useState({
+    currentBalance: 0,
+    currency: "CVT",
+    totalTransactions: 0,
+    statistics: {
+      totalDeposited: 0,
+      totalWithdrawn: 0,
+      totalSpent: 0,
+      totalReceived: 0,
+    },
+  });
 
-  // Filter transactions
-  const filteredTransactions = MOCK_TRANSACTIONS.filter((tx) => {
+  // Load transactions from API
+  useEffect(() => {
+    loadTransactions(1);
+  }, [filterType]);
+
+  const loadTransactions = async (page: number) => {
+    try {
+      setLoading(true);
+      const response = await getTransactionHistory(page, 20);
+
+      if (response.success) {
+        setTransactions(response.data);
+        setPagination(response.pagination);
+        setSummary(response.summary);
+      } else {
+        toast.error("Failed to load transactions");
+      }
+    } catch (error) {
+      console.error("Error loading transactions:", error);
+      toast.error("Failed to load transactions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Map transaction type to credit/debit
+  const getTransactionDisplayType = (type: string): "credit" | "debit" => {
+    const creditTypes = ["deposit", "transfer_in", "refund", "sale"];
+    return creditTypes.includes(type) ? "credit" : "debit";
+  };
+
+  // Filter transactions by search and type
+  const filteredTransactions = transactions.filter((tx) => {
     // Search filter
     const matchesSearch =
+      !searchQuery ||
       tx.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.txHash.toLowerCase().includes(searchQuery.toLowerCase());
+      tx._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tx.metadata?.blockchainTxId?.toLowerCase().includes(searchQuery.toLowerCase());
 
     // Type filter
+    const displayType = getTransactionDisplayType(tx.type);
     const matchesType =
       filterType === "all" ||
-      tx.type === filterType ||
+      displayType === filterType ||
       tx.status === filterType;
 
     return matchesSearch && matchesType;
   });
 
-  // Calculate stats
-  const totalTransactions = filteredTransactions.length;
-  const totalCredit = filteredTransactions
-    .filter((tx) => tx.type === "credit" && tx.status === "completed")
-    .reduce((sum, tx) => sum + tx.amount, 0);
-  const totalDebit = filteredTransactions
-    .filter((tx) => tx.type === "debit" && tx.status === "completed")
-    .reduce((sum, tx) => sum + tx.amount, 0);
-  const pendingCount = filteredTransactions.filter(
-    (tx) => tx.status === "pending"
-  ).length;
+  // Calculate stats from summary
+  const totalTransactions = summary.totalTransactions;
+  const totalCredit = summary.statistics.totalReceived + summary.statistics.totalDeposited;
+  const totalDebit = summary.statistics.totalSpent + summary.statistics.totalWithdrawn;
+  const pendingCount = transactions.filter((tx) => tx.status === "pending").length;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -214,6 +162,40 @@ export default function TransactionsPage() {
     // Export functionality
     toast.success("Exporting transactions...");
   };
+
+  const handlePageChange = (newPage: number) => {
+    loadTransactions(newPage);
+  };
+
+  // Get from/to for transaction display
+  const getTransactionParties = (tx: BackendTransaction) => {
+    const displayType = getTransactionDisplayType(tx.type);
+
+    if (displayType === "credit") {
+      // Money coming in
+      const from = tx.metadata?.senderName || tx.metadata?.buyerName || "External";
+      const to = "Your Wallet";
+      return { from, to };
+    } else {
+      // Money going out
+      const from = "Your Wallet";
+      const to = tx.metadata?.recipientName || tx.metadata?.sellerName || "External";
+      return { from, to };
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Loading transactions...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -371,100 +353,137 @@ export default function TransactionsPage() {
       <section className="py-16">
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
           {filteredTransactions.length > 0 ? (
-            <div className="space-y-0 border border-gray-200 dark:border-gray-800">
-              {filteredTransactions.map((transaction, index) => (
-                <div
-                  key={transaction.id}
-                  className={`p-8 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer ${
-                    index !== filteredTransactions.length - 1
-                      ? "border-b border-gray-200 dark:border-gray-800"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    router.push(`/customer/transactions/${transaction.id}`)
-                  }
-                >
-                  <div className="flex items-start justify-between gap-8">
-                    {/* Left Section */}
-                    <div className="flex items-start gap-6 flex-1">
-                      {/* Icon */}
-                      <div
-                        className={`h-12 w-12 flex items-center justify-center flex-shrink-0 ${
-                          transaction.type === "credit"
-                            ? "bg-green-50 dark:bg-green-900/20"
-                            : "bg-gray-100 dark:bg-gray-900"
-                        }`}
-                      >
-                        {transaction.type === "credit" ? (
-                          <ArrowDownIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-                        ) : (
-                          <ArrowUpIcon className="h-5 w-5 text-gray-900 dark:text-white" />
-                        )}
-                      </div>
+            <>
+              <div className="space-y-0 border border-gray-200 dark:border-gray-800">
+                {filteredTransactions.map((transaction, index) => {
+                  const displayType = getTransactionDisplayType(transaction.type);
+                  const parties = getTransactionParties(transaction);
+                  const category = transaction.metadata?.category || transaction.type.replace(/_/g, " ");
 
-                      {/* Details */}
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                            {transaction.description}
-                          </h3>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {transaction.category}
-                          </span>
+                  return (
+                    <div
+                      key={transaction._id}
+                      className={`p-8 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer ${
+                        index !== filteredTransactions.length - 1
+                          ? "border-b border-gray-200 dark:border-gray-800"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        router.push(`/customer/transactions/${transaction._id}`)
+                      }
+                    >
+                      <div className="flex items-start justify-between gap-8">
+                        {/* Left Section */}
+                        <div className="flex items-start gap-6 flex-1">
+                          {/* Icon */}
+                          <div
+                            className={`h-12 w-12 flex items-center justify-center shrink-0 ${
+                              displayType === "credit"
+                                ? "bg-green-50 dark:bg-green-900/20"
+                                : "bg-gray-100 dark:bg-gray-900"
+                            }`}
+                          >
+                            {displayType === "credit" ? (
+                              <ArrowDownIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <ArrowUpIcon className="h-5 w-5 text-gray-900 dark:text-white" />
+                            )}
+                          </div>
+
+                          {/* Details */}
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-3">
+                              <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                                {transaction.description}
+                              </h3>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                                {category}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                              <span>{formatDate(transaction.timestamp)}</span>
+                              <span>•</span>
+                              <span>{formatTime(transaction.timestamp)}</span>
+                              <span>•</span>
+                              <span className="font-mono">{transaction._id.slice(0, 8)}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-gray-500 dark:text-gray-400">
+                                From:
+                              </span>
+                              <span className="text-gray-900 dark:text-white">
+                                {parties.from}
+                              </span>
+                              <ChevronRightIcon className="h-3 w-3 text-gray-400" />
+                              <span className="text-gray-900 dark:text-white">
+                                {parties.to}
+                              </span>
+                            </div>
+
+                            {transaction.metadata?.blockchainTxId && (
+                              <p className="text-xs text-gray-400 dark:text-gray-600 font-mono">
+                                {transaction.metadata.blockchainTxId}
+                              </p>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                          <span>{formatDate(transaction.date)}</span>
-                          <span>•</span>
-                          <span>{formatTime(transaction.date)}</span>
-                          <span>•</span>
-                          <span className="font-mono">{transaction.id}</span>
+                        {/* Right Section */}
+                        <div className="text-right space-y-2 shrink-0">
+                          <p
+                            className={`text-lg font-normal ${
+                              displayType === "credit"
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-gray-900 dark:text-white"
+                            }`}
+                          >
+                            {displayType === "credit" ? "+" : "-"}
+                            {formatCVT(transaction.amount)}
+                          </p>
+                          <div
+                            className={`flex items-center justify-end gap-1.5 text-xs ${getStatusColor(
+                              transaction.status
+                            )}`}
+                          >
+                            {getStatusIcon(transaction.status)}
+                            <span className="capitalize">{transaction.status}</span>
+                          </div>
                         </div>
-
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-500 dark:text-gray-400">
-                            From:
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {transaction.from}
-                          </span>
-                          <ChevronRightIcon className="h-3 w-3 text-gray-400" />
-                          <span className="text-gray-900 dark:text-white">
-                            {transaction.to}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-gray-400 dark:text-gray-600 font-mono">
-                          {transaction.txHash}
-                        </p>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
 
-                    {/* Right Section */}
-                    <div className="text-right space-y-2 flex-shrink-0">
-                      <p
-                        className={`text-lg font-normal ${
-                          transaction.type === "credit"
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-gray-900 dark:text-white"
-                        }`}
-                      >
-                        {transaction.type === "credit" ? "+" : "-"}$
-                        {transaction.amount.toFixed(2)}
-                      </p>
-                      <div
-                        className={`flex items-center justify-end gap-1.5 text-xs ${getStatusColor(
-                          transaction.status
-                        )}`}
-                      >
-                        {getStatusIcon(transaction.status)}
-                        <span className="capitalize">{transaction.status}</span>
-                      </div>
-                    </div>
+              {/* Pagination */}
+              {pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Page {pagination.currentPage} of {pagination.totalPages} • {pagination.totalItems} total transactions
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handlePageChange(pagination.currentPage - 1)}
+                      disabled={!pagination.hasPrevPage}
+                      className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <ChevronLeftIcon className="h-4 w-4" />
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(pagination.currentPage + 1)}
+                      disabled={!pagination.hasNextPage}
+                      className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      Next
+                      <ChevronRightIcon className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-32 border border-gray-200 dark:border-gray-800">
               <div className="space-y-4">

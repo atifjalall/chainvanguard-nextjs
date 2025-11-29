@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   WalletIcon,
   ArrowUpIcon,
@@ -519,6 +520,7 @@ function PaymentModal({
 // Main Wallet Component
 export default function CustomerWalletPage() {
   const CONVERSION_RATE = 278;
+  const router = useRouter();
 
   const [currency, setCurrency] = useState<Currency>("CVT");
   const [showQRCode, setShowQRCode] = useState(false);
@@ -1067,13 +1069,22 @@ export default function CustomerWalletPage() {
 
               {/* Transaction History */}
               <div className="pt-12 border-t border-gray-200 dark:border-gray-800">
-                <div className="mb-8">
-                  <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-2">
-                    Transaction History
-                  </h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Recent wallet activity
-                  </p>
+                <div className="mb-8 flex items-end justify-between">
+                  <div>
+                    <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-2">
+                      Transaction History
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Recent wallet activity
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => router.push("/customer/transactions")}
+                    className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2"
+                  >
+                    View All
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </button>
                 </div>
 
                 {transactions.length === 0 ? (
