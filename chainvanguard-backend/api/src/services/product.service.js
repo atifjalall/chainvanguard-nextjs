@@ -68,42 +68,32 @@ class ProductService {
         );
       }
 
-      // 4. Upload images to Cloudinary + IPFS
+      // 4. Upload images to Cloudinary ONLY (image hashes go to blockchain/IPFS)
       let uploadedImages = [];
       if (files && files.images) {
-        console.log(`📸 Uploading ${files.images.length} images...`);
+        console.log(`📸 Uploading ${files.images.length} images to Cloudinary...`);
 
         for (let i = 0; i < files.images.length; i++) {
           const file = files.images[i];
 
-          // Upload to Cloudinary (primary - fast CDN)
+          // Upload to Cloudinary with hash generation
           const cloudinaryResult = await cloudinaryService.uploadImage(
             file.buffer,
-            file.originalname,
             "products"
-          );
-
-          // Upload to IPFS (verification backup)
-          const ipfsResult = await ipfsService.uploadBuffer(
-            file.buffer,
-            file.originalname,
-            {
-              productName: productData.name,
-              sellerId: sellerId.toString(),
-              type: "product-image",
-            }
           );
 
           uploadedImages.push({
             url: cloudinaryResult.url,
             publicId: cloudinaryResult.publicId,
-            ipfsHash: ipfsResult.success ? ipfsResult.ipfsHash : "",
+            imageHash: cloudinaryResult.imageHash, // ✅ SHA-256 hash for blockchain
             isMain: i === 0, // First image is main
             viewType: this._getViewType(file.originalname, i),
           });
+
+          console.log(`✅ Image ${i + 1}: Cloudinary + Hash generated`);
         }
 
-        console.log(`✅ Uploaded ${uploadedImages.length} images`);
+        console.log(`✅ Uploaded ${uploadedImages.length} images with hashes`);
       }
 
       // 5. Upload certificates to IPFS + Cloudinary
@@ -307,169 +297,67 @@ class ProductService {
       await product.save();
       console.log(`✅ Product saved to MongoDB: ${product._id}`);
 
-      // ✅ FIX: Convert to plain object for IPFS upload
-      const productForIPFS = product.toObject();
-
-      // 7.5 Upload ALL data to IPFS
+      // ========================================
+      // 📦 CREATE IPFS METADATA SNAPSHOT
+      // ========================================
+      let ipfsMetadataHash = null;
       try {
-        console.log("📤 Uploading comprehensive product metadata to IPFS...");
-        const ipfsMetadata = {
-          // Basic Info
-          productId: productForIPFS._id.toString(),
-          name: productForIPFS.name,
-          description: productForIPFS.description,
-          category: productForIPFS.category,
-          subcategory: productForIPFS.subcategory,
-          productType: productForIPFS.productType,
-          brand: productForIPFS.brand,
+        console.log("📦 Creating IPFS metadata snapshot...");
 
-          // Apparel Details (ALL fields)
-          apparelDetails: {
-            size: productForIPFS.apparelDetails?.size || "",
-            fit: productForIPFS.apparelDetails?.fit || "",
-            color: productForIPFS.apparelDetails?.color || "",
-            pattern: productForIPFS.apparelDetails?.pattern || "",
-            material: productForIPFS.apparelDetails?.material || "",
-            fabricType: productForIPFS.apparelDetails?.fabricType || "",
-            fabricWeight: productForIPFS.apparelDetails?.fabricWeight || "",
-            fabricComposition: productForIPFS.apparelDetails?.fabricComposition || [],
-            neckline: productForIPFS.apparelDetails?.neckline || "",
-            sleeveLength: productForIPFS.apparelDetails?.sleeveLength || "",
-            careInstructions: productForIPFS.apparelDetails?.careInstructions || "",
-            washingTemperature:
-              productForIPFS.apparelDetails?.washingTemperature || "",
-            ironingInstructions:
-              productForIPFS.apparelDetails?.ironingInstructions || "",
-            dryCleanOnly: productForIPFS.apparelDetails?.dryCleanOnly || false,
-            measurements: productForIPFS.apparelDetails?.measurements || {},
+        const productSnapshot = {
+          productId: product._id.toString(),
+          name: product.name,
+          category: product.category,
+          subcategory: product.subcategory,
+
+          // Price at creation (snapshot)
+          originalPrice: product.price,
+          currency: "CVT",
+
+          // Creator info (never changes)
+          createdBy: {
+            sellerId: product.sellerId.toString(),
+            sellerName: product.sellerName,
+            sellerRole: product.sellerRole,
+            sellerWalletAddress: product.sellerWalletAddress
           },
 
-          // Seller Info
-          sellerId: productForIPFS.sellerId.toString(),
-          sellerName: productForIPFS.sellerName,
-          sellerWalletAddress: productForIPFS.sellerWalletAddress,
-          sellerRole: productForIPFS.sellerRole,
+          // Materials used (if product is made from inventory)
+          materials: product.materialsUsed || [],
 
-          // Pricing
-          price: productForIPFS.price,
-          currency: productForIPFS.currency,
-          costPrice: productForIPFS.costPrice,
-          wholesalePrice: productForIPFS.wholesalePrice,
-          markup: productForIPFS.markup,
+          // Original specifications (snapshot at creation)
+          specifications: product.specifications || {},
+          apparelDetails: product.apparelDetails || {},
 
-          // Inventory
-          quantity: productForIPFS.quantity,
-          minStockLevel: productForIPFS.minStockLevel,
-          sku: productForIPFS.sku,
-          barcode: productForIPFS.barcode,
-          unit: productForIPFS.unit,
+          // Image hashes for verification
+          imageHashes: uploadedImages.map(img => img.imageHash || img.ipfsHash || ""),
 
-          // Images & Documents
-          images: (productForIPFS.images || []).map((img) => ({
-            url: img.url,
-            ipfsHash: img.ipfsHash,
-            isMain: img.isMain,
-            viewType: img.viewType,
-          })),
-          certificates: (productForIPFS.certificates || []).map((cert) => ({
-            name: cert.name,
-            type: cert.type,
-            certificateNumber: cert.certificateNumber,
-            ipfsHash: cert.ipfsHash,
-            ipfsUrl: cert.ipfsUrl,
-            cloudinaryUrl: cert.cloudinaryUrl,
-            issueDate: cert.issueDate,
-            expiryDate: cert.expiryDate,
-          })),
-
-          // Manufacturing
-          manufacturingDetails: {
-            manufacturerId: productForIPFS.manufacturingDetails?.manufacturerId || "",
-            manufacturerName:
-              productForIPFS.manufacturingDetails?.manufacturerName || "",
-            manufactureDate: productForIPFS.manufacturingDetails?.manufactureDate,
-            batchNumber: productForIPFS.manufacturingDetails?.batchNumber || "",
-            productionCountry:
-              productForIPFS.manufacturingDetails?.productionCountry || "",
-            productionFacility:
-              productForIPFS.manufacturingDetails?.productionFacility || "",
-            productionLine: productForIPFS.manufacturingDetails?.productionLine || "",
-          },
-
-          // Specifications
-          specifications: {
-            weight: productForIPFS.specifications?.weight || 0,
-            weightUnit: productForIPFS.specifications?.weightUnit || "",
-            packageWeight: productForIPFS.specifications?.packageWeight || 0,
-            packageType: productForIPFS.specifications?.packageType || "",
-            dimensions: productForIPFS.specifications?.dimensions || {},
-          },
-
-          // Sustainability
-          sustainability: {
-            isOrganic: productForIPFS.sustainability?.isOrganic || false,
-            isFairTrade: productForIPFS.sustainability?.isFairTrade || false,
-            isRecycled: productForIPFS.sustainability?.isRecycled || false,
-            isCarbonNeutral: productForIPFS.sustainability?.isCarbonNeutral || false,
-            waterSaving: productForIPFS.sustainability?.waterSaving || false,
-            ethicalProduction:
-              productForIPFS.sustainability?.ethicalProduction || false,
-          },
-
-          qualityGrade: productForIPFS.qualityGrade,
-
-          // Location
-          currentLocation: {
-            facility: productForIPFS.currentLocation?.facility || "",
-            country: productForIPFS.currentLocation?.country || "",
-          },
-
-          supplyChainSummary: productForIPFS.supplyChainSummary,
-
-          // QR Code
-          qrCode: productForIPFS.qrCode,
-
-          // Status
-          status: productForIPFS.status,
-          isPublished: productForIPFS.isPublished,
-
-          // SEO
-          tags: productForIPFS.tags || [],
-          keywords: productForIPFS.keywords || [],
-          metaDescription: productForIPFS.metaDescription || "",
-          season: productForIPFS.season || "",
-          collection: productForIPFS.collection || "",
-
-          // Additional
-          minimumOrderQuantity: productForIPFS.minimumOrderQuantity,
-          warrantyPeriod: productForIPFS.warrantyPeriod,
-          returnPolicy: productForIPFS.returnPolicy,
-
-          // Shipping
-          freeShipping: productForIPFS.freeShipping,
-          shippingCost: productForIPFS.shippingCost,
-          shippingDetails: productForIPFS.shippingDetails || {},
+          // Certifications at creation
+          certifications: product.certifications || [],
 
           // Timestamps
-          createdAt: productForIPFS.createdAt,
-          updatedAt: productForIPFS.updatedAt,
+          createdAt: product.createdAt.toISOString()
         };
 
-        const ipfsFileName = `product-metadata-${productForIPFS._id.toString()}.json`;
         const ipfsResult = await ipfsService.uploadJSON(
-          ipfsMetadata,
-          ipfsFileName
+          productSnapshot,
+          `product-metadata-${product._id}.json`,
+          {
+            entityType: 'product',
+            entityId: product._id.toString()
+          }
         );
 
         if (ipfsResult.success) {
-          product.ipfsHash = ipfsResult.ipfsHash;
+          ipfsMetadataHash = ipfsResult.ipfsHash;
+          product.metadataIpfsHash = ipfsResult.ipfsHash;
+          product.metadataIpfsUrl = ipfsResult.ipfsUrl;
           await product.save();
-          console.log("✅ ALL product data uploaded to IPFS", {
-            ipfsHash: ipfsResult.ipfsHash,
-          });
+          console.log(`✅ IPFS snapshot uploaded: ${ipfsResult.ipfsHash}`);
         }
       } catch (ipfsError) {
-        console.error("❌ IPFS upload error:", ipfsError);
+        console.warn("⚠️ IPFS metadata upload failed (non-critical):", ipfsError.message);
+        // Continue without IPFS - blockchain will still have basic data
       }
 
       await notificationService.createNotification({
@@ -541,7 +429,7 @@ class ProductService {
 
       // 8. Record on blockchain (REQUIRED - synchronous)
       console.log("📝 Recording product on blockchain...");
-      await this.recordProductOnBlockchain(product);
+      await this.recordProductOnBlockchain(product, ipfsMetadataHash);
       console.log("✅ Product recorded on blockchain successfully");
 
       // 9. Cache in Redis
@@ -841,45 +729,28 @@ class ProductService {
           });
 
           try {
-            // Upload to Cloudinary
+            // Upload to Cloudinary ONLY (generates SHA-256 hash)
             const cloudinaryResult = await cloudinaryService.uploadImage(
               file.buffer,
-              file.originalname,
               "products"
             );
 
             console.log(`✅ Cloudinary upload successful:`, {
               url: cloudinaryResult.url,
               publicId: cloudinaryResult.publicId,
+              imageHash: cloudinaryResult.imageHash,
             });
 
-            // Upload to IPFS (optional)
-            let ipfsHash = "";
-            try {
-              const ipfsResult = await ipfsService.uploadBuffer(
-                file.buffer,
-                file.originalname,
-                { productId: productId.toString() }
-              );
-              ipfsHash = ipfsResult.success ? ipfsResult.ipfsHash : "";
-              console.log(`✅ IPFS upload successful: ${ipfsHash}`);
-            } catch (ipfsError) {
-              console.warn(
-                "⚠️  IPFS upload failed (non-blocking):",
-                ipfsError.message
-              );
-            }
-
-            // Add new image to product
+            // Add new image to product with hash
             product.images.push({
               url: cloudinaryResult.url,
               publicId: cloudinaryResult.publicId,
-              ipfsHash: ipfsHash,
+              imageHash: cloudinaryResult.imageHash, // ✅ SHA-256 hash for blockchain
               isMain: false, // Will be set below
               viewType: this._getViewType(file.originalname, i),
             });
 
-            console.log(`✅ Image ${i + 1} added to product`);
+            console.log(`✅ Image ${i + 1} added to product with hash`);
           } catch (uploadError) {
             console.error(`❌ Failed to upload image ${i + 1}:`, uploadError);
             throw new Error(`Failed to upload image: ${uploadError.message}`);
@@ -1047,181 +918,13 @@ class ProductService {
 
       console.log(`✅ Cache invalidated for product: ${productId}`);
 
-      // Update IPFS with comprehensive metadata
-      console.log("📝 Updating product metadata on IPFS...");
-      try {
-        const ipfsMetadata = {
-          // Basic Info
-          productId: product._id.toString(),
-          name: product.name,
-          description: product.description || "",
-          category: product.category,
-          subcategory: product.subcategory || "",
-          brand: product.brand || "",
-          sku: product.sku || "",
+      // ❌ REMOVED: IPFS metadata upload on update
+      // IPFS should only store FILES (images, PDFs), not JSON metadata
+      // Product updates (price, quantity, status) are mutable and belong in MongoDB only
+      // Images are on Cloudinary ✅
+      // Certificates are on IPFS ✅
 
-          // Apparel Details (ALL fields)
-          apparelDetails: {
-            size: product.apparelDetails?.size || "",
-            fit: product.apparelDetails?.fit || "",
-            color: product.apparelDetails?.color || "",
-            pattern: product.apparelDetails?.pattern || "",
-            material: product.apparelDetails?.material || "",
-            fabricType: product.apparelDetails?.fabricType || "",
-            fabricWeight: product.apparelDetails?.fabricWeight || "",
-            fabricComposition: product.apparelDetails?.fabricComposition || "",
-            neckline: product.apparelDetails?.neckline || "",
-            sleeveLength: product.apparelDetails?.sleeveLength || "",
-            careInstructions: product.apparelDetails?.careInstructions || "",
-            washingTemperature:
-              product.apparelDetails?.washingTemperature || "",
-            ironingInstructions:
-              product.apparelDetails?.ironingInstructions || "",
-            dryCleanOnly: product.apparelDetails?.dryCleanOnly || false,
-            measurements: product.apparelDetails?.measurements || {},
-          },
-
-          // Seller Info
-          sellerId: product.sellerId?.toString() || "",
-          sellerName: product.sellerId?.name || "",
-          sellerWalletAddress: product.sellerId?.walletAddress || "",
-          sellerRole: product.sellerRole || "supplier",
-
-          // Pricing Details
-          price: product.price || 0,
-          originalPrice: product.originalPrice || 0,
-          currency: product.currency || "USD",
-          discount: product.discount || 0,
-          finalPrice: product.finalPrice || product.price || 0,
-
-          // Inventory
-          stockQuantity: product.stockQuantity || 0,
-          minStockLevel: product.minStockLevel || 0,
-          maxStockLevel: product.maxStockLevel || 0,
-          reorderPoint: product.reorderPoint || 0,
-          availableQuantity: product.availableQuantity || 0,
-
-          // Images
-          images: (product.images || []).map((img) => ({
-            url: img.url || "",
-            publicId: img.publicId || "",
-            caption: img.caption || "",
-            isMain: img.isMain || false,
-            order: img.order || 0,
-            ipfsHash: img.ipfsHash || "",
-          })),
-
-          // Certificates
-          certificates: (product.certificates || []).map((cert) => ({
-            name: cert.name || "",
-            type: cert.type || "",
-            certificateNumber: cert.certificateNumber || "",
-            issuingAuthority: cert.issuingAuthority || "",
-            issueDate: cert.issueDate || null,
-            expiryDate: cert.expiryDate || null,
-            ipfsHash: cert.ipfsHash || "",
-            certificateUrl: cert.certificateUrl || "",
-            verificationUrl: cert.verificationUrl || "",
-          })),
-
-          // Manufacturing Details
-          manufacturingDetails: {
-            manufacturerName:
-              product.manufacturingDetails?.manufacturerName || "",
-            manufactureDate:
-              product.manufacturingDetails?.manufactureDate || null,
-            expiryDate: product.manufacturingDetails?.expiryDate || null,
-            batchNumber: product.manufacturingDetails?.batchNumber || "",
-            productionCountry:
-              product.manufacturingDetails?.productionCountry || "",
-            productionFacility:
-              product.manufacturingDetails?.productionFacility || "",
-            productionLine: product.manufacturingDetails?.productionLine || "",
-          },
-
-          // Specifications
-          specifications: product.specifications || {},
-
-          // Sustainability
-          sustainability: {
-            isOrganic: product.sustainability?.isOrganic || false,
-            isFairTrade: product.sustainability?.isFairTrade || false,
-            isRecycled: product.sustainability?.isRecycled || false,
-            isCarbonNeutral: product.sustainability?.isCarbonNeutral || false,
-            isEcoFriendly: product.sustainability?.isEcoFriendly || false,
-            isVegan: product.sustainability?.isVegan || false,
-            carbonFootprint: product.sustainability?.carbonFootprint || 0,
-            sustainabilityScore:
-              product.sustainability?.sustainabilityScore || 0,
-            sustainabilityCertifications:
-              product.sustainability?.sustainabilityCertifications || [],
-          },
-
-          // Quality
-          qualityGrade: product.qualityGrade || "",
-          qualityScore: product.qualityScore || 0,
-          qualityChecks: product.qualityChecks || [],
-
-          // Supply Chain
-          supplyChainSummary: product.supplyChainSummary || "",
-          supplyChainStages: product.supplyChainStages || [],
-
-          // Location
-          currentLocation: {
-            facility: product.currentLocation?.facility || "",
-            address: product.currentLocation?.address || "",
-            city: product.currentLocation?.city || "",
-            state: product.currentLocation?.state || "",
-            country: product.currentLocation?.country || "",
-            postalCode: product.currentLocation?.postalCode || "",
-            coordinates: product.currentLocation?.coordinates || {},
-          },
-
-          // Status
-          status: product.status || "active",
-          isVerified: product.isVerified || false,
-          verifiedBy: product.verifiedBy || null,
-          verifiedAt: product.verifiedAt || null,
-          blockchainVerified: product.blockchainVerified || false,
-          isFeatured: product.isFeatured || false,
-          isPublished: product.isPublished || false,
-          publishedAt: product.publishedAt || null,
-
-          // SEO
-          seoTags: product.seoTags || [],
-          seoKeywords: product.seoKeywords || [],
-          metaDescription: product.metaDescription || "",
-
-          // Shipping
-          shippingDetails: {
-            weight: product.shippingDetails?.weight || 0,
-            dimensions: product.shippingDetails?.dimensions || {},
-            shippingClass: product.shippingDetails?.shippingClass || "",
-            handlingTime: product.shippingDetails?.handlingTime || 0,
-            freeShipping: product.shippingDetails?.freeShipping || false,
-          },
-
-          // Timestamps
-          createdAt: product.createdAt || null,
-          updatedAt: product.updatedAt || new Date(),
-        };
-
-        const ipfsResult = await ipfsService.uploadJSON(ipfsMetadata);
-        if (ipfsResult.success) {
-          product.ipfsHash = ipfsResult.ipfsHash;
-          await product.save();
-          console.log(`✅ IPFS metadata updated: ${ipfsResult.ipfsHash}`);
-        } else {
-          console.warn("⚠️  IPFS update failed (non-critical)");
-        }
-      } catch (ipfsError) {
-        console.warn(
-          "⚠️  IPFS update failed (non-critical):",
-          ipfsError.message
-        );
-      }
-
-      // Update blockchain (REQUIRED - synchronous)
+      // Update blockchain (DEPRECATED - product updates are mutable)
       console.log("📝 Updating product on blockchain...");
       await this.updateProductOnBlockchain(product);
       console.log("✅ Product updated on blockchain successfully");
@@ -1360,22 +1063,16 @@ class ProductService {
       for (let i = 0; i < images.length; i++) {
         const file = Array.isArray(images) ? images[i] : images;
 
+        // Upload to Cloudinary ONLY (generates SHA-256 hash)
         const cloudinaryResult = await cloudinaryService.uploadImage(
           file.buffer,
-          file.originalname,
           "products"
-        );
-
-        const ipfsResult = await ipfsService.uploadBuffer(
-          file.buffer,
-          file.originalname,
-          { productId: productId.toString() }
         );
 
         product.images.push({
           url: cloudinaryResult.url,
           publicId: cloudinaryResult.publicId,
-          ipfsHash: ipfsResult.success ? ipfsResult.ipfsHash : "",
+          imageHash: cloudinaryResult.imageHash, // ✅ SHA-256 hash for blockchain
           isMain: product.images.length === 0 && i === 0,
           viewType: this._getViewType(file.originalname, i),
         });
@@ -1397,7 +1094,7 @@ class ProductService {
           status: "success",
           data: {
             imageUrl: cloudinaryResult.url,
-            ipfsHash: ipfsResult.success ? ipfsResult.ipfsHash : "",
+            imageHash: cloudinaryResult.imageHash,
             fileName: file.originalname,
           },
           newState: product.toObject(),
@@ -1632,7 +1329,7 @@ class ProductService {
   /**
    * Record product on blockchain
    */
-  async recordProductOnBlockchain(product) {
+  async recordProductOnBlockchain(product, metadataHash = null) {
     try {
       console.log(`📝 Recording product on blockchain: ${product._id}`);
 
@@ -1700,10 +1397,10 @@ class ProductService {
         barcode: productObj.barcode || "",
         unit: productObj.unit || "piece",
 
-        // Images (URLs only)
+        // Images (Cloudinary URLs + SHA-256 hashes for verification)
         images: (productObj.images || []).map((img) => ({
           url: img.url || "",
-          ipfsHash: img.ipfsHash || "",
+          imageHash: img.imageHash || img.ipfsHash || "", // ✅ SHA-256 hash (backward compatible)
           isMain: img.isMain || false,
           viewType: img.viewType || "",
         })),
@@ -1788,6 +1485,9 @@ class ProductService {
 
         // IPFS Reference
         ipfsHash: productObj.ipfsHash || "",
+
+        // IPFS Metadata Hash (historical snapshot)
+        metadataHash: metadataHash || productObj.metadataIpfsHash || null,
       };
 
       console.log("📦 Blockchain data prepared:", {
@@ -1795,12 +1495,13 @@ class ProductService {
         name: blockchainData.name,
         category: blockchainData.category,
         sellerId: blockchainData.sellerId,
+        metadataHash: blockchainData.metadataHash,
       });
 
-      // Submit to blockchain
-      const result = await fabricService.createProduct(blockchainData);
+      // Submit to blockchain - use new event-based method
+      const result = await fabricService.recordProductCreation(blockchainData);
 
-      console.log("✅ Product recorded on blockchain:", result);
+      console.log("✅ Product creation event recorded on blockchain:", result);
 
       // Update MongoDB with blockchain reference
       await Product.findByIdAndUpdate(product._id, {
@@ -1828,194 +1529,15 @@ class ProductService {
 
   /**
    * Update product on blockchain
+   * @deprecated Product updates are mutable and should NOT be stored on blockchain
+   * Product details (price, stock, description) are mutable and belong in MongoDB only
+   * Only immutable events (creation, verification, ownership transfer) belong on blockchain
    */
   async updateProductOnBlockchain(product) {
-    try {
-      // Check if product exists on blockchain
-      if (!product.blockchainProductId) {
-        console.log(`⚠️ Product not on blockchain yet, skipping update`);
-        return; // Don't create during update - let the initial create finish
-      }
-
-      console.log(`📝 Updating product on blockchain: ${product._id}`);
-
-      await fabricService.connect();
-
-      const updateData = {
-        // Basic Info
-        name: product.name,
-        description: product.description || "",
-        category: product.category || "",
-        subcategory: product.subcategory || "",
-        brand: product.brand || "",
-
-        // Apparel Details (ALL fields)
-        apparelDetails: {
-          size: product.apparelDetails?.size || "",
-          fit: product.apparelDetails?.fit || "",
-          color: product.apparelDetails?.color || "",
-          pattern: product.apparelDetails?.pattern || "",
-          material: product.apparelDetails?.material || "",
-          fabricType: product.apparelDetails?.fabricType || "",
-          fabricWeight: product.apparelDetails?.fabricWeight || "",
-          fabricComposition: product.apparelDetails?.fabricComposition || "",
-          neckline: product.apparelDetails?.neckline || "",
-          sleeveLength: product.apparelDetails?.sleeveLength || "",
-          careInstructions: product.apparelDetails?.careInstructions || "",
-          washingTemperature: product.apparelDetails?.washingTemperature || "",
-          ironingInstructions:
-            product.apparelDetails?.ironingInstructions || "",
-          dryCleanOnly: product.apparelDetails?.dryCleanOnly || false,
-          measurements: product.apparelDetails?.measurements || {},
-        },
-
-        // Pricing
-        price: product.price || 0,
-        originalPrice: product.originalPrice || 0,
-        currency: product.currency || "USD",
-        discount: product.discount || 0,
-        finalPrice: product.finalPrice || product.price || 0,
-
-        // Inventory
-        stockQuantity: product.stockQuantity || 0,
-        minStockLevel: product.minStockLevel || 0,
-        maxStockLevel: product.maxStockLevel || 0,
-        reorderPoint: product.reorderPoint || 0,
-        availableQuantity: product.availableQuantity || 0,
-
-        // Images
-        images: (product.images || []).map((img) => ({
-          url: img.url || "",
-          caption: img.caption || "",
-          isMain: img.isMain || false,
-          order: img.order || 0,
-          ipfsHash: img.ipfsHash || "",
-        })),
-
-        // Manufacturing Details
-        manufacturingDetails: {
-          manufacturerName:
-            product.manufacturingDetails?.manufacturerName || "",
-          manufactureDate:
-            product.manufacturingDetails?.manufactureDate || null,
-          expiryDate: product.manufacturingDetails?.expiryDate || null,
-          batchNumber: product.manufacturingDetails?.batchNumber || "",
-          productionCountry:
-            product.manufacturingDetails?.productionCountry || "",
-          productionFacility:
-            product.manufacturingDetails?.productionFacility || "",
-          productionLine: product.manufacturingDetails?.productionLine || "",
-        },
-
-        // Certificates
-        certificates: (product.certificates || []).map((cert) => ({
-          name: cert.name || "",
-          type: cert.type || "",
-          certificateNumber: cert.certificateNumber || "",
-          issuingAuthority: cert.issuingAuthority || "",
-          issueDate: cert.issueDate || null,
-          expiryDate: cert.expiryDate || null,
-          ipfsHash: cert.ipfsHash || "",
-          certificateUrl: cert.certificateUrl || "",
-          verificationUrl: cert.verificationUrl || "",
-        })),
-
-        // Specifications
-        specifications: product.specifications || {},
-
-        // Sustainability
-        sustainability: {
-          isOrganic: product.sustainability?.isOrganic || false,
-          isFairTrade: product.sustainability?.isFairTrade || false,
-          isRecycled: product.sustainability?.isRecycled || false,
-          isCarbonNeutral: product.sustainability?.isCarbonNeutral || false,
-          isEcoFriendly: product.sustainability?.isEcoFriendly || false,
-          isVegan: product.sustainability?.isVegan || false,
-          carbonFootprint: product.sustainability?.carbonFootprint || 0,
-          sustainabilityScore: product.sustainability?.sustainabilityScore || 0,
-          sustainabilityCertifications:
-            product.sustainability?.sustainabilityCertifications || [],
-        },
-
-        // Quality
-        qualityGrade: product.qualityGrade || "",
-        qualityScore: product.qualityScore || 0,
-        qualityChecks: product.qualityChecks || [],
-
-        // Supply Chain
-        supplyChainSummary: product.supplyChainSummary || "",
-        supplyChainStages: product.supplyChainStages || [],
-
-        // Location
-        currentLocation: {
-          facility: product.currentLocation?.facility || "",
-          address: product.currentLocation?.address || "",
-          city: product.currentLocation?.city || "",
-          state: product.currentLocation?.state || "",
-          country: product.currentLocation?.country || "",
-          postalCode: product.currentLocation?.postalCode || "",
-          coordinates: product.currentLocation?.coordinates || {},
-        },
-
-        // Status
-        status: product.status || "active",
-        isVerified: Boolean(product.isVerified),
-        verifiedBy: product.verifiedBy || null,
-        verifiedAt: product.verifiedAt || null,
-        isFeatured: product.isFeatured || false,
-        isPublished: product.isPublished || false,
-        publishedAt: product.publishedAt || null,
-
-        // SEO
-        seoTags: product.seoTags || [],
-        seoKeywords: product.seoKeywords || [],
-        metaDescription: product.metaDescription || "",
-
-        // Shipping
-        shippingDetails: {
-          weight: product.shippingDetails?.weight || 0,
-          dimensions: product.shippingDetails?.dimensions || {},
-          shippingClass: product.shippingDetails?.shippingClass || "",
-          handlingTime: product.shippingDetails?.handlingTime || 0,
-          freeShipping: product.shippingDetails?.freeShipping || false,
-        },
-
-        // IPFS Hash
-        ipfsHash: product.ipfsHash || "",
-
-        // Update metadata
-        updatedBy: String(product.sellerId),
-        updatedByRole: product.sellerRole || "supplier",
-        supplyChainEvent: {
-          stage: "updated",
-          action: "Product information updated",
-          performedBy: String(product.sellerId),
-          performedByRole: product.sellerRole || "supplier",
-          location: product.currentLocation?.facility || "",
-          country: product.currentLocation?.country || "",
-          details: "Product details updated in system",
-        },
-      };
-
-      console.log(
-        "📦 Updating blockchain product:",
-        product.blockchainProductId
-      );
-
-      await fabricService.updateProduct(
-        product.blockchainProductId,
-        updateData
-      );
-
-      console.log(`✅ Product updated on blockchain: ${product._id}`);
-    } catch (error) {
-      console.error("❌ Blockchain update error:", error.message);
-      await fabricService.disconnect();
-      // Throw error to inform user that blockchain is required
-      throw new Error(
-        `Blockchain network error: ${error.message}. Please ensure Hyperledger Fabric is running.`
-      );
-    }
+    // ⚠️ DEPRECATED: Product updates are mutable data that should NOT be on blockchain
+    // Product updates are now tracked in MongoDB only
+    console.log(`ℹ️ Product update tracking moved to MongoDB only (not blockchain): ${product._id}`);
+    return;
   }
 
   /**
@@ -2040,12 +1562,12 @@ class ProductService {
         notes: "Product verified and authenticated",
       };
 
-      await fabricService.verifyProduct(
+      await fabricService.recordProductVerification(
         product.blockchainProductId,
-        JSON.stringify(verificationData)
+        verificationData
       );
 
-      console.log(`✅ Product verified on blockchain: ${product._id}`);
+      console.log(`✅ Product verification event recorded on blockchain: ${product._id}`);
     } catch (error) {
       console.error("❌ Blockchain verification error:", error);
       throw error;

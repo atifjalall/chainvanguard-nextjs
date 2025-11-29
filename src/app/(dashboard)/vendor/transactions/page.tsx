@@ -42,24 +42,21 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   ArrowDownTrayIcon,
-  ArrowPathIcon,
   ArrowTrendingUpIcon,
   CalendarIcon,
   EyeIcon,
   CheckCircleIcon,
   ClockIcon,
   XCircleIcon,
-  ExclamationCircleIcon,
-  ChartPieIcon,
   ShieldCheckIcon,
   BuildingOffice2Icon,
   CubeIcon,
-  DocumentDuplicateIcon,
   HashtagIcon,
   BanknotesIcon,
   ReceiptPercentIcon,
   ArrowTrendingDownIcon,
   CreditCardIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
@@ -77,9 +74,9 @@ import {
 import { usePageTitle } from "@/hooks/use-page-title";
 import {
   getMyRequests,
-  getRequestStats,
   getRequestById,
 } from "@/lib/api/vendor.request.api";
+import { invoiceApi } from "@/lib/api/invoice.api";
 
 const RsIcon = () => (
   <svg
@@ -152,6 +149,7 @@ export default function VendorTransactionsPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
   useEffect(() => {
     setIsVisible(true);
@@ -316,6 +314,44 @@ export default function VendorTransactionsPage() {
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${type} copied to clipboard`);
+    setCopiedHash(text);
+    setTimeout(() => setCopiedHash(null), 2000);
+  };
+
+  const handleDownloadInvoice = async (transactionId: string) => {
+    try {
+      toast.loading("Downloading invoice...");
+
+      // Get invoices for this vendor request
+      const response = await invoiceApi.getInvoicesByVendorRequest(transactionId);
+
+      if (response.success && response.data?.invoices?.length > 0) {
+        const invoice = response.data.invoices[0]; // Get the first invoice
+
+        // Download the invoice PDF
+        const downloadResponse = await invoiceApi.downloadInvoiceById(invoice._id);
+
+        if (downloadResponse.success && downloadResponse.data) {
+          // Trigger download
+          invoiceApi.triggerDownload(
+            downloadResponse.data,
+            `invoice-${invoice.invoiceNumber}.pdf`
+          );
+          toast.dismiss();
+          toast.success("Invoice downloaded successfully!");
+        } else {
+          toast.dismiss();
+          toast.error(downloadResponse.message || "Failed to download invoice");
+        }
+      } else {
+        toast.dismiss();
+        toast.error("No invoice found for this transaction");
+      }
+    } catch (error) {
+      console.error("Error downloading invoice:", error);
+      toast.dismiss();
+      toast.error("Failed to download invoice");
+    }
   };
 
   const exportToCSV = () => {
@@ -745,7 +781,12 @@ export default function VendorTransactionsPage() {
                           Blockchain
                         </TableHead>
                         <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[120px]`}
+                          className={`${colors.texts.primary} font-semibold min-w-[100px]`}
+                        >
+                          Invoice
+                        </TableHead>
+                        <TableHead
+                          className={`${colors.texts.primary} font-semibold min-w-[100px]`}
                         >
                           Actions
                         </TableHead>
@@ -881,32 +922,29 @@ export default function VendorTransactionsPage() {
                             </div>
                           </TableCell>
                           <TableCell className="px-2">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  handleViewDetails(transaction.id)
-                                }
-                                className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer !rounded-none`}
-                              >
-                                <EyeIcon className="h-3 w-3 mr-1" />
-                                View
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  copyToClipboard(
-                                    transaction.blockchainHash,
-                                    "Blockchain hash"
-                                  )
-                                }
-                                className={`h-8 w-8 p-0 ${colors.buttons.outline} cursor-pointer !rounded-none`}
-                              >
-                                <DocumentDuplicateIcon className="h-3 w-3" />
-                              </Button>
-                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                handleDownloadInvoice(transaction.id)
+                              }
+                              className={`h-8 w-8 p-0 ${colors.buttons.outline} cursor-pointer !rounded-none transition-all hover:border-black dark:hover:border-white`}
+                            >
+                              <ArrowDownTrayIcon className="h-3 w-3" />
+                            </Button>
+                          </TableCell>
+                          <TableCell className="px-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                handleViewDetails(transaction.id)
+                              }
+                              className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer !rounded-none transition-all hover:border-black dark:hover:border-white`}
+                            >
+                              <EyeIcon className="h-3 w-3 mr-1" />
+                              View
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1184,14 +1222,33 @@ export default function VendorTransactionsPage() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div>
-                        <p className={`text-xs ${colors.texts.muted}`}>
+                        <p className={`text-xs ${colors.texts.muted} mb-1`}>
                           Transaction Hash
                         </p>
-                        <code
-                          className={`text-xs font-mono ${colors.backgrounds.tertiary} px-2 py-1 rounded-none block break-all`}
-                        >
-                          {selectedRequest.blockchainTxId}
-                        </code>
+                        <div className="flex items-center gap-2">
+                          <code
+                            className={`text-xs font-mono ${colors.backgrounds.tertiary} px-2 py-1 rounded-none block break-all flex-1`}
+                          >
+                            {selectedRequest.blockchainTxId}
+                          </code>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              copyToClipboard(
+                                selectedRequest.blockchainTxId,
+                                "Transaction hash"
+                              )
+                            }
+                            className={`h-8 w-8 p-0 ${colors.buttons.outline} cursor-pointer !rounded-none transition-all hover:border-black dark:hover:border-white flex-shrink-0`}
+                          >
+                            {copiedHash === selectedRequest.blockchainTxId ? (
+                              <CheckIcon className="h-3 w-3" />
+                            ) : (
+                              <HashtagIcon className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                       <div>
                         <p className={`text-xs ${colors.texts.muted}`}>

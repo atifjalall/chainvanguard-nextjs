@@ -4,6 +4,8 @@ import User from "../models/User.js";
 import Cart from "../models/Cart.js";
 import mongoose from "mongoose";
 import fabricService from "./fabric.service.js";
+import dataSyncService from "./data.sync.service.js"; // ✅ NEW: Blockchain-first data sync
+import ipfsService from "./ipfs.service.js"; // ✅ NEW: IPFS storage
 import { buildPaginationResponse } from "../utils/helpers.js";
 import walletBalanceService from "./wallet.balance.service.js";
 import logger from "../utils/logger.js";
@@ -127,7 +129,7 @@ class OrderService {
             if (loyaltyResult.eligible) {
               loyaltyDiscount = loyaltyResult;
               console.log(
-                `🎁 Customer loyalty discount applied: ${loyaltyDiscount.discountPercentage}% off ($${loyaltyDiscount.discount})`
+                `🎁 Customer loyalty discount applied: ${loyaltyDiscount.discountPercentage}% off (CVT ${loyaltyDiscount.discount})`
               );
             }
           } catch (error) {
@@ -290,7 +292,7 @@ class OrderService {
         type: "order_placed",
         category: "order",
         title: "New Order Received",
-        message: `New order #${order.orderNumber} received from ${customer.name}. Total: $${order.total.toFixed(2)}`,
+        message: `New order #${order.orderNumber} received from ${customer.name}. Total: CVT ${order.total.toFixed(2)}`,
         orderId: order._id,
         priority: "high",
         actionType: "view_order",
@@ -364,6 +366,28 @@ class OrderService {
       console.log("📝 Recording order on blockchain...");
       await this.recordOrderOnBlockchain(order, validatedItems, customer);
       console.log("✅ Order recorded on blockchain successfully");
+
+      // 13. Generate invoice for paid orders and upload to IPFS
+      if (paymentStatus === "paid") {
+        try {
+          const invoiceService = (await import("./invoice.service.js")).default;
+          const seller = await User.findById(order.sellerId);
+
+          if (seller) {
+            const invoice = await invoiceService.generateOrderInvoice(order, customer, seller);
+            console.log(`✅ Invoice auto-generated for order: ${order.orderNumber} (IPFS: ${invoice.ipfsHash})`);
+
+            // Store invoice reference in order
+            order.invoiceId = invoice._id;
+            order.invoiceNumber = invoice.invoiceNumber;
+            order.invoiceIpfsHash = invoice.ipfsHash;
+            await order.save();
+          }
+        } catch (invoiceError) {
+          console.error("⚠️ Failed to generate invoice (non-critical):", invoiceError.message);
+          // Continue even if invoice generation fails - invoice can be generated later
+        }
+      }
 
       return {
         success: true,
@@ -576,47 +600,104 @@ class OrderService {
    */
   async recordOrderOnBlockchain(order) {
     try {
-      console.log(`📝 Recording order on blockchain: ${order.orderNumber}`);
+      console.log(`📝 Storing ALL order data on blockchain + IPFS: ${order.orderNumber}`);
 
       await fabricService.connect();
 
-      const blockchainData = {
+      // ✅ Prepare COMPLETE order data
+      const completeOrderData = {
         orderId: order._id.toString(),
         orderNumber: order.orderNumber,
         customerId: order.customerId.toString(),
         customerName: order.customerName,
-        customerWallet: order.customerWalletAddress,
+        customerWalletAddress: order.customerWalletAddress,
+        customerEmail: order.customerEmail || "",
+        customerPhone: order.customerPhone || "",
         sellerId: order.sellerId.toString(),
         sellerName: order.sellerName,
-        sellerWallet: order.sellerWalletAddress,
+        sellerWalletAddress: order.sellerWalletAddress,
+        sellerRole: order.sellerRole || "",
+
+        // Complete Items Info
         items: order.items.map((item) => ({
           productId: item.productId.toString(),
           productName: item.productName,
+          productSKU: item.productSKU || "",
           quantity: item.quantity,
           price: item.price,
           subtotal: item.subtotal,
+          imageUrl: item.imageUrl || "",
         })),
+
+        // Pricing Details
+        subtotal: order.subtotal || 0,
+        shippingCost: order.shippingCost || 0,
+        tax: order.tax || 0,
+        discount: order.discount || 0,
         total: order.total,
-        currency: order.currency,
+        currency: order.currency || "CVT",
+
+        // Status & Payment
         status: order.status,
+        paymentStatus: order.paymentStatus || "pending",
         paymentMethod: order.paymentMethod,
+        paidAt: order.paidAt || null,
+
+        // Shipping Info
         shippingAddress: order.shippingAddress,
-        timestamp: order.createdAt.toISOString(),
+        billingAddress: order.billingAddress || order.shippingAddress,
+        shippingMethod: order.shippingMethod || "",
+        trackingNumber: order.trackingNumber || "",
+        estimatedDelivery: order.estimatedDeliveryDate || null,
+
+        // Timestamps
+        createdAt: order.createdAt.toISOString(),
+        updatedAt: order.updatedAt.toISOString(),
       };
 
-      // Call blockchain (assuming you have createOrder method in chaincode)
-      const result = await fabricService.createOrder(blockchainData);
+      // ❌ REMOVED: Do not upload order data to IPFS
+      // Only invoices, KYC documents, product images, and inventory snapshots should go to IPFS
+      // Order data is stored in MongoDB and blockchain only
 
-      // Update order with blockchain info
+      // ✅ Store on Blockchain with data hash for integrity
+      const blockchainData = {
+        ...completeOrderData,
+        ipfsHash: "", // No IPFS upload for orders - only invoices go to IPFS
+        dataHash: dataSyncService.generateHash(completeOrderData), // ✅ Data integrity hash
+      };
+
+      // Call blockchain - Record order creation event
+      const result = await fabricService.recordOrderCreation(blockchainData);
+
+      // Update order with blockchain info (no IPFS hash for orders)
       await Order.findByIdAndUpdate(order._id, {
         blockchainOrderId: result.orderId || order._id.toString(),
         blockchainTxId: result.txId || "",
         blockchainVerified: true,
+        // ipfsHash removed - orders don't go to IPFS, only invoices do
       });
 
       console.log(`✅ Order recorded on blockchain: ${order.orderNumber}`);
+
+      // If order was paid during creation, record payment event
+      if (order.paymentStatus === "paid" && order.paidAt) {
+        try {
+          await fabricService.recordOrderPayment(order._id.toString(), {
+            paidBy: order.customerId.toString(),
+            amount: order.total,
+            currency: order.currency || "CVT",
+            paymentMethod: order.paymentMethod,
+            transactionHash: order.blockchainTxId || null,
+            notes: `Payment for order ${order.orderNumber}`,
+          });
+          console.log(`✅ Order payment event recorded on blockchain: ${order.orderNumber}`);
+        } catch (paymentError) {
+          console.error("⚠️ Failed to record payment event on blockchain:", paymentError.message);
+          // Continue even if blockchain fails
+        }
+      }
     } catch (error) {
-      console.error("❌ Blockchain recording error:", error);
+      console.error("❌ Blockchain + IPFS recording error:", error);
       await fabricService.disconnect();
       // Throw error to inform user that blockchain is required
       throw new Error(
@@ -1080,6 +1161,38 @@ class OrderService {
 
       await order.save();
 
+      // Record status change event on blockchain
+      try {
+        await fabricService.recordOrderStatusChange(orderId, {
+          oldStatus: oldStatus,
+          newStatus: newStatus,
+          changedBy: userId,
+          trackingNumber: order.trackingNumber || null,
+          notes: notes || `Status changed from ${oldStatus} to ${newStatus}`,
+        });
+        console.log(`✅ Order status change recorded on blockchain: ${orderId}`);
+      } catch (error) {
+        console.error("⚠️ Failed to record status change on blockchain:", error.message);
+        // Continue even if blockchain fails
+      }
+
+      // 🧾 AUTO-GENERATE INVOICE when order is delivered
+      if (newStatus === "delivered") {
+        try {
+          const invoiceService = (await import("./invoice.service.js")).default;
+          const customer = await User.findById(order.customerId);
+          const seller = await User.findById(order.sellerId);
+
+          if (customer && seller) {
+            await invoiceService.generateOrderInvoice(order, customer, seller);
+            console.log(`✅ Invoice auto-generated for delivered order: ${order.orderNumber}`);
+          }
+        } catch (invoiceError) {
+          console.error("⚠️ Failed to generate invoice (non-critical):", invoiceError.message);
+          // Continue even if invoice generation fails
+        }
+      }
+
       const statusMessages = {
         confirmed: {
           customer: `Your order #${order.orderNumber} has been confirmed`,
@@ -1484,6 +1597,30 @@ class OrderService {
 
       await order.save();
 
+      // Generate new invoice reflecting cancelled/refunded status
+      if (order.paymentStatus === "refunded") {
+        try {
+          const invoiceService = (await import("./invoice.service.js")).default;
+          const customer = await User.findById(order.customerId);
+          const seller = await User.findById(order.sellerId);
+
+          if (customer && seller) {
+            // Generate updated invoice with refund status
+            const updatedInvoice = await invoiceService.generateOrderInvoice(order, customer, seller);
+            console.log(`✅ Updated invoice generated for cancelled order: ${order.orderNumber} (IPFS: ${updatedInvoice.ipfsHash})`);
+
+            // Update order with new invoice reference
+            order.invoiceId = updatedInvoice._id;
+            order.invoiceNumber = updatedInvoice.invoiceNumber;
+            order.invoiceIpfsHash = updatedInvoice.ipfsHash;
+            await order.save();
+          }
+        } catch (invoiceError) {
+          console.error("⚠️ Failed to generate updated invoice (non-critical):", invoiceError.message);
+          // Continue even if invoice generation fails
+        }
+      }
+
       // Create notification with refund info if applicable
       const refundMessage =
         order.paymentStatus === "refunded"
@@ -1690,7 +1827,7 @@ class OrderService {
         "refunded",
         expertId,
         "expert",
-        `Refund processed: $${refundAmount} - ${refundReason}`
+        `Refund processed: CVT ${refundAmount} - ${refundReason}`
       );
 
       await order.save();
@@ -2160,7 +2297,7 @@ class OrderService {
           order.refundedAt = new Date();
           order.refundReason = "Order cancelled by customer";
 
-          console.log(`✅ Refunded $${order.total} to customer wallet`);
+          console.log(`✅ Refunded CVT ${order.total} to customer wallet`);
         } catch (refundError) {
           await session.abortTransaction();
           throw new Error(`Refund failed: ${refundError.message}`);
@@ -2177,7 +2314,7 @@ class OrderService {
       order.addSupplyChainEvent({
         stage: "cancelled",
         location: order.shippingAddress.city,
-        description: `Order cancelled by customer: ${reason}${refundProcessed ? ` - Refunded $${refundAmount}` : ""}`,
+        description: `Order cancelled by customer: ${reason}${refundProcessed ? ` - Refunded CVT ${refundAmount.toFixed(2)}` : ""}`,
         performedBy: userId,
       });
 
@@ -2192,7 +2329,7 @@ class OrderService {
       const user = await User.findById(userId);
       await logger.logOrder({
         type: "order_cancelled",
-        action: `Order cancelled: ${order.orderNumber}${refundProcessed ? ` - Refunded $${refundAmount}` : ""}`,
+        action: `Order cancelled: ${order.orderNumber}${refundProcessed ? ` - Refunded CVT ${refundAmount}` : ""}`,
         orderId: order._id,
         userId,
         userDetails: user
@@ -2215,7 +2352,7 @@ class OrderService {
       return {
         success: true,
         message: refundProcessed
-          ? `Order cancelled successfully. $${refundAmount} has been refunded to your wallet.`
+          ? `Order cancelled successfully. CVT ${refundAmount.toFixed(2)} has been refunded to your wallet.`
           : "Order cancelled successfully",
         order: {
           id: order._id,

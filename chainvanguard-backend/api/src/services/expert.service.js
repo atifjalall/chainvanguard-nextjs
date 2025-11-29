@@ -4,6 +4,7 @@ import Product from "../models/Product.js";
 import Order from "../models/Order.js";
 import BlockchainLog from "../models/BlockchainLog.js";
 import Wallet from "../models/Wallet.js";
+import fabricService from "./fabric.service.js";
 
 class ExpertService {
   /**
@@ -1412,27 +1413,42 @@ class ExpertService {
 
       await user.save();
 
-      // Log the action (use create() and make logging safe)
+      // Log the action to MongoDB (use create() and make logging safe)
+      const logData = {
+        transactionId: `security-disable-${Date.now()}`,
+        type: "security-event",
+        action: "user-disabled",
+        status: "success",
+        performedBy: expertId,
+        userId: expertId,
+        entityId: userId,
+        entityType: "user",
+        metadata: { reason, targetUser: user.email, targetName: user.name },
+        timestamp: new Date(),
+      };
+
       try {
-        await BlockchainLog.create({
-          transactionId: `security-disable-${Date.now()}`,
-          type: "security-event",
-          action: "user-disabled",
-          status: "success",
-          // record the actor and related entity
-          performedBy: expertId,
-          userId: expertId,
-          entityId: userId,
-          entityType: "user",
-          metadata: { reason },
-          timestamp: new Date(),
-        });
+        await BlockchainLog.create(logData);
       } catch (logErr) {
         console.warn(
-          "⚠️ Failed to persist security log for disable action:",
+          "⚠️ Failed to persist security log to DB for disable action:",
           logErr
         );
-        // Don't fail the main operation if logging fails
+      }
+
+      // Log to Fabric blockchain
+      try {
+        await fabricService.createBlockchainLog(
+          logData.transactionId,
+          logData
+        );
+        console.log("✅ User disable action logged to Fabric blockchain");
+      } catch (fabricErr) {
+        console.warn(
+          "⚠️ Failed to log disable action to Fabric blockchain:",
+          fabricErr.message
+        );
+        // Don't fail the main operation if blockchain logging fails
       }
 
       return {
@@ -1505,25 +1521,42 @@ class ExpertService {
         console.warn("⚠️ Failed to unfreeze wallet record:", walletErr);
       }
 
-      // Log the action (use create() and make logging safe)
+      // Log the action to MongoDB (use create() and make logging safe)
+      const logData = {
+        transactionId: `security-unfreeze-${Date.now()}`,
+        type: "security-event",
+        action: "user-unfrozen",
+        status: "success",
+        performedBy: expertId,
+        userId: expertId,
+        entityId: userId,
+        entityType: "user",
+        metadata: { reason, targetUser: user.email, targetName: user.name },
+        timestamp: new Date(),
+      };
+
       try {
-        await BlockchainLog.create({
-          transactionId: `security-unfreeze-${Date.now()}`,
-          type: "security-event",
-          action: "user-unfrozen",
-          status: "success",
-          performedBy: expertId,
-          userId: expertId,
-          entityId: userId,
-          entityType: "user",
-          metadata: { reason },
-          timestamp: new Date(),
-        });
+        await BlockchainLog.create(logData);
       } catch (logErr) {
         console.warn(
-          "⚠️ Failed to persist security log for unfreeze action:",
+          "⚠️ Failed to persist security log to DB for unfreeze action:",
           logErr
         );
+      }
+
+      // Log to Fabric blockchain
+      try {
+        await fabricService.createBlockchainLog(
+          logData.transactionId,
+          logData
+        );
+        console.log("✅ User unfreeze action logged to Fabric blockchain");
+      } catch (fabricErr) {
+        console.warn(
+          "⚠️ Failed to log unfreeze action to Fabric blockchain:",
+          fabricErr.message
+        );
+        // Don't fail the main operation if blockchain logging fails
       }
 
       return {

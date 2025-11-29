@@ -5,6 +5,8 @@ import Inventory from "../models/Inventory.js";
 import User from "../models/User.js";
 import fabricService from "./fabric.service.js";
 import notificationService from "./notification.service.js";
+import ipfsService from "./ipfs.service.js";
+import dataSyncService from "./data.sync.service.js";
 import logger from "../utils/logger.js";
 
 class VendorInventoryService {
@@ -146,35 +148,88 @@ class VendorInventoryService {
         );
       }
 
-      // Record on blockchain
-      // TODO: Implement fabricService.recordInventoryMovement function
-      /*
-      try {
-        for (const record of inventoryRecords) {
-          const txId = await fabricService.recordInventoryMovement({
-            inventoryId: record._id.toString(),
-            vendorId: vendorId.toString(),
-            supplierId: record.supplier.supplierId.toString(),
-            orderId: orderId.toString(),
-            itemName: record.inventoryItem.name,
-            quantity: record.quantity.received,
-            movementType: "received",
-            timestamp: new Date().toISOString(),
-            notes: `Received from order ${order.orderNumber}`,
-          });
+      // ========================================
+      // 📝 RECORD VENDOR INVENTORY CREATION ON BLOCKCHAIN
+      // ========================================
+      logger.info(
+        "📝 Recording vendor inventory creation events on blockchain..."
+      );
 
-          if (txId) {
-            record.blockchain.txId = txId;
+      for (const record of inventoryRecords) {
+        try {
+          // Prepare IMMUTABLE creation event for blockchain
+          const blockchainData = {
+            vendorInventoryId: record._id.toString(),
+            vendorId: record.vendorId.toString(),
+            vendorName: record.vendorName,
+            vendorRequestId: record.vendorRequestId
+              ? record.vendorRequestId.toString()
+              : null,
+            orderId: record.orderId.toString(),
+
+            // Supplier info (immutable)
+            supplierId: record.supplier.supplierId.toString(),
+            supplierName: record.supplier.supplierName,
+
+            // Source inventory info (immutable)
+            sourceInventoryId: record.inventoryItem.inventoryId.toString(),
+            name: record.inventoryItem.name,
+            sku: record.inventoryItem.sku,
+            category: record.inventoryItem.category,
+            subcategory: record.inventoryItem.subcategory,
+
+            // Immutable snapshot at creation
+            receivedQuantity: record.quantity.received,  // ✅ Quantity received (immutable)
+            unit: record.quantity.unit,
+            pricePerUnit: record.cost.perUnit,
+            totalCost: record.cost.totalCost,
+            currency: record.cost.currency,
+
+            // Dates (immutable)
+            receivedAt: record.dates.received
+              ? record.dates.received.toISOString()
+              : new Date().toISOString(),
+            createdAt: record.createdAt
+              ? record.createdAt.toISOString()
+              : new Date().toISOString(),
+          };
+
+          // ✅ Store on blockchain using event-based method
+          const blockchainResult = await fabricService.recordVendorInventoryCreation(blockchainData);
+
+          if (blockchainResult && blockchainResult.txId) {
+            record.blockchain.txId = blockchainResult.txId;
             record.blockchain.verified = true;
             record.blockchain.lastVerified = new Date();
             await record.save();
+            logger.info(
+              `✅ Vendor inventory ${record._id} stored on blockchain: ${blockchainResult.txId}`
+            );
           }
+        } catch (blockchainError) {
+          logger.error(
+            `Error recording vendor inventory ${record._id} on blockchain:`,
+            blockchainError
+          );
+          // Continue even if blockchain fails
         }
-      } catch (blockchainError) {
-        logger.error("Blockchain recording failed:", blockchainError);
-        // Continue even if blockchain fails
+
+        // 🧾 AUTO-GENERATE DELIVERY RECEIPT after inventory is received
+        try {
+          const invoiceService = (await import("./invoice.service.js")).default;
+
+          // Get supplier details
+          const supplier = await User.findById(record.supplier.supplierId);
+
+          if (vendor && supplier) {
+            await invoiceService.generateInventoryReceipt(record, vendor, supplier);
+            logger.info(`✅ Delivery receipt auto-generated for inventory: ${record._id}`);
+          }
+        } catch (invoiceError) {
+          logger.error("⚠️ Failed to generate delivery receipt (non-critical):", invoiceError.message);
+          // Continue even if invoice generation fails
+        }
       }
-      */
 
       // Send notification to vendor
       await notificationService.createNotification({
@@ -382,27 +437,8 @@ class VendorInventoryService {
 
       await inventory.adjustStock(quantityChange, reason, vendorId, notes);
 
-      // Record on blockchain
-      try {
-        const txId = await fabricService.recordInventoryMovement({
-          inventoryId: inventoryId.toString(),
-          vendorId: vendorId.toString(),
-          itemName: inventory.inventoryItem.name,
-          quantity: quantityChange,
-          movementType: "adjustment",
-          timestamp: new Date().toISOString(),
-          notes: `${reason}: ${notes}`,
-        });
-
-        if (txId) {
-          inventory.blockchain.txId = txId;
-          inventory.blockchain.verified = true;
-          inventory.blockchain.lastVerified = new Date();
-          await inventory.save();
-        }
-      } catch (blockchainError) {
-        logger.error("Blockchain recording failed:", blockchainError);
-      }
+      // ❌ REMOVED: Blockchain sync for updates
+      // Stock adjustments are mutable data - MongoDB only ✅
 
       logger.info(
         `Stock adjusted for inventory ${inventoryId}: ${quantityChange}`
@@ -489,28 +525,8 @@ class VendorInventoryService {
 
       await inventory.useInProduction(quantity, productId, productName, notes);
 
-      // Record on blockchain
-      try {
-        const txId = await fabricService.recordInventoryMovement({
-          inventoryId: inventoryId.toString(),
-          vendorId: vendorId.toString(),
-          itemName: inventory.inventoryItem.name,
-          quantity: -quantity,
-          movementType: "used",
-          productId: productId?.toString(),
-          timestamp: new Date().toISOString(),
-          notes: `Used in production: ${productName || "product"}`,
-        });
-
-        if (txId) {
-          inventory.blockchain.txId = txId;
-          inventory.blockchain.verified = true;
-          inventory.blockchain.lastVerified = new Date();
-          await inventory.save();
-        }
-      } catch (blockchainError) {
-        logger.error("Blockchain recording failed:", blockchainError);
-      }
+      // ❌ REMOVED: Blockchain sync for usage updates
+      // Inventory usage is mutable data - MongoDB only ✅
 
       logger.info(
         `Used ${quantity} units of inventory ${inventoryId} in production`
@@ -541,27 +557,8 @@ class VendorInventoryService {
 
       await inventory.markAsDamaged(quantity, reason, notes);
 
-      // Record on blockchain
-      try {
-        const txId = await fabricService.recordInventoryMovement({
-          inventoryId: inventoryId.toString(),
-          vendorId: vendorId.toString(),
-          itemName: inventory.inventoryItem.name,
-          quantity: -quantity,
-          movementType: "damaged",
-          timestamp: new Date().toISOString(),
-          notes: `Damaged: ${reason}`,
-        });
-
-        if (txId) {
-          inventory.blockchain.txId = txId;
-          inventory.blockchain.verified = true;
-          inventory.blockchain.lastVerified = new Date();
-          await inventory.save();
-        }
-      } catch (blockchainError) {
-        logger.error("Blockchain recording failed:", blockchainError);
-      }
+      // ❌ REMOVED: Blockchain sync for damage tracking
+      // Damaged quantity is mutable data - MongoDB only ✅
 
       logger.info(
         `Marked ${quantity} units as damaged for inventory ${inventoryId}`
@@ -648,6 +645,9 @@ class VendorInventoryService {
 
       await inventory.updateQualityStatus(status, notes);
 
+      // ❌ REMOVED: Blockchain sync for quality status
+      // Quality status is mutable data - MongoDB only ✅
+
       logger.info(
         `Updated quality status for inventory ${inventoryId}: ${status}`
       );
@@ -727,7 +727,7 @@ class VendorInventoryService {
   }
 
   // ========================================
-  // DELETE INVENTORY
+  // SOFT DELETE INVENTORY (Blockchain Compliant)
   // ========================================
   async deleteInventory(inventoryId, vendorId) {
     try {
@@ -752,7 +752,13 @@ class VendorInventoryService {
         throw new Error("Cannot delete inventory with reserved quantity");
       }
 
-      await VendorInventory.deleteOne({ _id: inventoryId });
+      // ⚠️ SOFT DELETE - Mark as inactive instead of deleting
+      // Nothing can be deleted from blockchain (immutable)
+      inventory.status = "inactive";
+      await inventory.save();
+
+      // ❌ REMOVED: Blockchain sync for soft delete
+      // Status changes are mutable - MongoDB only ✅
 
       // Send notification
       await notificationService.createNotification({
@@ -760,12 +766,14 @@ class VendorInventoryService {
         userRole: "vendor",
         type: "inventory_deleted",
         category: "inventory",
-        title: "Inventory Deleted",
-        message: `${inventory.inventoryItem.name} has been removed from your inventory`,
+        title: "Inventory Deactivated",
+        message: `${inventory.inventoryItem.name} has been marked as inactive`,
         priority: "medium",
       });
 
-      logger.info(`Deleted inventory ${inventoryId} for vendor ${vendorId}`);
+      logger.info(
+        `Soft deleted (marked inactive) inventory ${inventoryId} for vendor ${vendorId}`
+      );
 
       return { success: true };
     } catch (error) {
@@ -773,6 +781,18 @@ class VendorInventoryService {
       throw error;
     }
   }
+
+  // ========================================
+  // ❌ REMOVED: _syncVendorInventoryToBlockchain
+  // ========================================
+  // This method was uploading mutable inventory data (quantity, status, movements)
+  // to IPFS and blockchain on every update.
+  //
+  // ✅ NEW APPROACH:
+  // - Blockchain: Only creation event (receivedQuantity is immutable)
+  // - IPFS: Only files (images, certificates)
+  // - MongoDB: All data (mutable + immutable)
+  // ========================================
 }
 
 export default new VendorInventoryService();

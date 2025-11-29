@@ -161,8 +161,8 @@ const walletSchema = new mongoose.Schema(
 // INDEXES
 // ========================================
 
-walletSchema.index({ userId: 1 });
-walletSchema.index({ walletAddress: 1 });
+// userId has unique: true and index: true in schema
+// walletAddress has unique: true in schema
 walletSchema.index({ isActive: 1 });
 walletSchema.index({ isFrozen: 1 });
 walletSchema.index({ "transactions.timestamp": -1 });

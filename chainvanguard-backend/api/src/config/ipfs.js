@@ -30,6 +30,14 @@ class IPFSService {
 
   async uploadFile(filePath, fileName, metadata = {}) {
     try {
+      console.log(`📡 IPFS Config - Upload File Called:`, {
+        filePath,
+        fileName,
+        metadata,
+        hasJWT: !!this.pinataJWT,
+        jwtLength: this.pinataJWT?.length
+      });
+
       const formData = new FormData();
       formData.append("file", fs.createReadStream(filePath));
 
@@ -45,6 +53,7 @@ class IPFSService {
       formData.append("pinataOptions", pinataOptions);
 
       const url = `${this.pinataBaseUrl}/pinning/pinFileToIPFS`;
+      console.log(`📡 Making request to: ${url}`);
       const response = await axios.post(url, formData, {
         maxBodyLength: "Infinity",
         headers: {
@@ -52,6 +61,7 @@ class IPFSService {
           Authorization: `Bearer ${this.pinataJWT}`,
         },
       });
+      console.log(`✅ IPFS Config - Upload Success`);
 
       return {
         success: true,
@@ -108,7 +118,15 @@ class IPFSService {
   async getFile(ipfsHash) {
     try {
       const url = `${this.gatewayUrl}/${ipfsHash}`;
-      const response = await axios.get(url);
+      console.log(`📥 Fetching file from IPFS: ${url}`);
+
+      // Use arraybuffer to get raw binary data (important for PDFs)
+      const response = await axios.get(url, {
+        responseType: 'arraybuffer'
+      });
+
+      console.log(`✅ File retrieved from IPFS, size: ${response.data.byteLength} bytes`);
+
       return {
         success: true,
         data: response.data,

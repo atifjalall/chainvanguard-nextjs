@@ -1,8 +1,11 @@
 // api/src/services/auth.service.js
 import User from "../models/User.js";
+import BlockchainLog from "../models/BlockchainLog.js";
 import WalletService from "./wallet.service.js";
 import fabricService from "./fabric.service.js";
 import sessionService from "./session.service.js";
+import dataSyncService from "./data.sync.service.js"; // ✅ NEW: Blockchain-first data sync
+import ipfsService from "./ipfs.service.js"; // ✅ NEW: IPFS storage
 import pkg from "jsonwebtoken";
 const { sign } = pkg;
 import crypto from "crypto";
@@ -148,20 +151,24 @@ class AuthService {
 
   async registerOnBlockchain(user) {
     try {
+      console.log("📝 Recording user registration on blockchain...");
+
       await fabricService.connect();
 
+      // ❌ REMOVED: IPFS user metadata upload
+      // IPFS should only store FILES (KYC documents), not JSON user data
+      // User metadata (name, email, phone, address) is mutable and belongs in MongoDB only
+
+      // ✅ Prepare IMMUTABLE user registration data for blockchain
       const fabricUserData = {
-        walletAddress: user.walletAddress,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        organizationMSP: user.organizationMSP,
-        companyName: user.companyName || "",
-        businessAddress: user.businessAddress || "",
-        businessType: user.businessType || "",
+        userId: user._id.toString(),
+        walletAddress: user.walletAddress,  // ✅ Immutable
+        role: user.role,                    // ✅ Rarely changes (tracked separately if it does)
+        kycHash: user.kycHash || null,      // ✅ IPFS hash of KYC documents (if uploaded)
+        registeredAt: user.createdAt,
       };
 
-      const result = await fabricService.registerUser(fabricUserData);
+      const result = await fabricService.recordUserRegistration(fabricUserData);
 
       user.fabricRegistered = true;
       user.fabricUserId = user.walletAddress;
@@ -189,7 +196,7 @@ class AuthService {
         // Don't fail registration if token creation fails
       }
     } catch (error) {
-      console.error("❌ Blockchain registration error:", error);
+      console.error("❌ Blockchain + IPFS registration error:", error);
       throw error;
     } finally {
       // Always disconnect from Fabric after operation
@@ -237,7 +244,7 @@ class AuthService {
 
       await sessionService.createSession(user._id.toString(), user);
 
-      this.recordLoginOnBlockchain(user.walletAddress).catch((err) => {
+      this.recordLoginOnBlockchain(user._id.toString()).catch((err) => {
         console.warn("⚠️ Blockchain login recording failed:", err);
       });
 
@@ -273,17 +280,11 @@ class AuthService {
     }
   }
 
-  async recordLoginOnBlockchain(walletAddress) {
-    try {
-      // ✅ FIX #2: Changed from connectToNetwork() to connect()
-      await fabricService.connect();
-      await fabricService.recordLogin(walletAddress);
-      console.log(`✅ Login recorded on blockchain for: ${walletAddress}`);
-    } catch (error) {
-      console.error("❌ Failed to record login on blockchain:", error);
-    } finally {
-      await fabricService.disconnect();
-    }
+  async recordLoginOnBlockchain(userId) {
+    // ⚠️ DEPRECATED: Login tracking is mutable and should NOT be on blockchain
+    // Login events are now tracked in MongoDB only
+    console.log(`ℹ️ Login tracking moved to MongoDB only (not blockchain): ${userId}`);
+    return;
   }
 
   // ============================================
@@ -312,6 +313,45 @@ class AuthService {
           },
           status: "success",
         });
+
+        // Log logout to DB and Fabric blockchain
+        const logData = {
+          transactionId: `logout-${Date.now()}`,
+          type: "auth-event",
+          action: "user-logout",
+          status: "success",
+          performedBy: userId,
+          userId: userId,
+          entityId: userId,
+          entityType: "user",
+          metadata: {
+            walletAddress: user.walletAddress,
+            role: user.role,
+            name: user.name,
+            email: user.email,
+          },
+          timestamp: new Date(),
+        };
+
+        try {
+          await BlockchainLog.create(logData);
+          console.log("✅ Logout logged to DB");
+        } catch (logErr) {
+          console.warn("⚠️ Failed to log logout to DB:", logErr);
+        }
+
+        try {
+          await fabricService.createBlockchainLog(
+            logData.transactionId,
+            logData
+          );
+          console.log("✅ Logout logged to Fabric blockchain");
+        } catch (fabricErr) {
+          console.warn(
+            "⚠️ Failed to log logout to Fabric blockchain:",
+            fabricErr.message
+          );
+        }
       }
 
       return { success: true };

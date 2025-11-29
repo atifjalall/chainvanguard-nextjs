@@ -605,6 +605,16 @@ const productSchema = new Schema(
       index: true,
     },
 
+    // IPFS metadata snapshot (historical snapshot at creation)
+    metadataIpfsHash: {
+      type: String,
+      default: "",
+    },
+    metadataIpfsUrl: {
+      type: String,
+      default: "",
+    },
+
     // ========================================
     // SHIPPING
     // ========================================

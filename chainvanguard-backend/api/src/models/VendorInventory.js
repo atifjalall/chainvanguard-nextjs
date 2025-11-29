@@ -109,7 +109,7 @@ const vendorInventorySchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: "User",
         required: true,
-        index: true,
+        // No index: true to avoid compound duplicate with vendorId
       },
       supplierName: {
         type: String,
@@ -390,10 +390,10 @@ const vendorInventorySchema = new Schema(
 // INDEXES FOR PERFORMANCE
 // ========================================
 vendorInventorySchema.index({ vendorId: 1, status: 1 });
-vendorInventorySchema.index({ "supplier.supplierId": 1 });
-vendorInventorySchema.index({ "inventoryItem.inventoryId": 1 });
-vendorInventorySchema.index({ orderId: 1 });
-vendorInventorySchema.index({ "inventoryItem.category": 1 });
+// supplier.supplierId has index: true in schema
+// inventoryItem.inventoryId has index: true in schema
+// orderId has index: true in schema
+// inventoryItem.category has index: true in schema
 vendorInventorySchema.index({ "quantity.current": 1 });
 vendorInventorySchema.index({ "dates.received": -1 });
 vendorInventorySchema.index({ "inventoryItem.name": "text", notes: "text" });

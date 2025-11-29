@@ -187,7 +187,8 @@ export default function RegisterPage() {
   // Dropdown states
   const [showProvinceDropdown, setShowProvinceDropdown] = useState(false);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
-  const [showBusinessTypeDropdown, setShowBusinessTypeDropdown] = useState(false);
+  const [showBusinessTypeDropdown, setShowBusinessTypeDropdown] =
+    useState(false);
 
   useEffect(() => {
     setPasswordChecks({
@@ -411,7 +412,9 @@ export default function RegisterPage() {
             }
           );
           console.log("✅ Welcome email sent");
-          toast.success("Welcome email sent! Check your inbox for wallet details.");
+          toast.success(
+            "Welcome email sent! Check your inbox for wallet details."
+          );
         } catch (emailError) {
           console.error("Failed to send welcome email:", emailError);
           // Don't block the flow if email fails
@@ -1072,7 +1075,9 @@ export default function RegisterPage() {
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
+                                    onClick={() =>
+                                      setShowPassword(!showPassword)
+                                    }
                                     className="h-12 px-3 -mr-3 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                                   >
                                     {showPassword ? (
@@ -1167,7 +1172,9 @@ export default function RegisterPage() {
                                   <button
                                     type="button"
                                     onClick={() =>
-                                      setShowConfirmPassword(!showConfirmPassword)
+                                      setShowConfirmPassword(
+                                        !showConfirmPassword
+                                      )
                                     }
                                     className="h-12 px-3 -mr-3 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                                   >
@@ -1230,7 +1237,9 @@ export default function RegisterPage() {
                           {nameError && (
                             <div className="flex items-center gap-2">
                               <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
-                              <p className="text-xs text-red-500">{nameError}</p>
+                              <p className="text-xs text-red-500">
+                                {nameError}
+                              </p>
                             </div>
                           )}
                         </div>
@@ -1274,7 +1283,9 @@ export default function RegisterPage() {
                                       <ExclamationTriangleIcon className="h-3.5 w-3.5 text-red-500" />
                                     ) : email &&
                                       !emailExists &&
-                                      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? (
+                                      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                                        email
+                                      ) ? (
                                       <CheckIcon className="h-3.5 w-3.5 text-green-500" />
                                     ) : null}
                                   </div>
@@ -1326,11 +1337,15 @@ export default function RegisterPage() {
                                 type="tel"
                                 maxLength={15}
                                 minLength={15}
-                                value={phone.startsWith("+92 ") ? phone : "+92 "}
+                                value={
+                                  phone.startsWith("+92 ") ? phone : "+92 "
+                                }
                                 onChange={(e) => {
                                   let val = e.target.value;
                                   if (!val.startsWith("+92 ")) val = "+92 ";
-                                  let rest = val.slice(4).replace(/[^0-9 ]/g, "");
+                                  let rest = val
+                                    .slice(4)
+                                    .replace(/[^0-9 ]/g, "");
                                   rest = rest.replace(/ {2,}/g, " ");
                                   rest = rest
                                     .replace(/^(\d{3})\s?(\d{0,7})/, "$1 $2")
@@ -1436,7 +1451,9 @@ export default function RegisterPage() {
                                 <>
                                   <div
                                     className="fixed inset-0 z-10"
-                                    onClick={() => setShowProvinceDropdown(false)}
+                                    onClick={() =>
+                                      setShowProvinceDropdown(false)
+                                    }
                                   />
                                   <div className="absolute z-20 w-full mt-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 max-h-64 overflow-y-auto">
                                     {provinceOptions.map((p) => (
@@ -1484,7 +1501,8 @@ export default function RegisterPage() {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  province && setShowCityDropdown(!showCityDropdown)
+                                  province &&
+                                  setShowCityDropdown(!showCityDropdown)
                                 }
                                 disabled={!province}
                                 className={`w-full flex items-center justify-between border-b ${
@@ -1494,7 +1512,10 @@ export default function RegisterPage() {
                                 } pb-px ${!province ? "opacity-50 cursor-not-allowed" : ""}`}
                               >
                                 <span className="h-12 flex items-center text-sm text-gray-900 dark:text-white">
-                                  {city || (province ? "Select city" : "Select province first")}
+                                  {city ||
+                                    (province
+                                      ? "Select city"
+                                      : "Select province first")}
                                 </span>
                                 <ChevronDownIcon
                                   className={`h-4 w-4 text-gray-400 transition-transform ${
@@ -1696,7 +1717,9 @@ export default function RegisterPage() {
                                   <button
                                     type="button"
                                     onClick={() =>
-                                      setShowBusinessTypeDropdown(!showBusinessTypeDropdown)
+                                      setShowBusinessTypeDropdown(
+                                        !showBusinessTypeDropdown
+                                      )
                                     }
                                     className={`w-full flex items-center justify-between border-b ${
                                       businessTypeError
@@ -1705,11 +1728,18 @@ export default function RegisterPage() {
                                     } pb-px`}
                                   >
                                     <span className="h-12 flex items-center text-sm text-gray-900 dark:text-white">
-                                      {businessType ? businessType.charAt(0).toUpperCase() + businessType.slice(1).replace('-', ' ') : "Select type"}
+                                      {businessType
+                                        ? businessType.charAt(0).toUpperCase() +
+                                          businessType
+                                            .slice(1)
+                                            .replace("-", " ")
+                                        : "Select type"}
                                     </span>
                                     <ChevronDownIcon
                                       className={`h-4 w-4 text-gray-400 transition-transform ${
-                                        showBusinessTypeDropdown ? "rotate-180" : ""
+                                        showBusinessTypeDropdown
+                                          ? "rotate-180"
+                                          : ""
                                       }`}
                                     />
                                   </button>
@@ -1718,7 +1748,9 @@ export default function RegisterPage() {
                                     <>
                                       <div
                                         className="fixed inset-0 z-10"
-                                        onClick={() => setShowBusinessTypeDropdown(false)}
+                                        onClick={() =>
+                                          setShowBusinessTypeDropdown(false)
+                                        }
                                       />
                                       <div className="absolute z-20 w-full mt-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 max-h-64 overflow-y-auto">
                                         {selectedRole === "supplier" ? (
@@ -1728,7 +1760,9 @@ export default function RegisterPage() {
                                               onClick={() => {
                                                 setBusinessType("manufacturer");
                                                 setBusinessTypeError("");
-                                                setShowBusinessTypeDropdown(false);
+                                                setShowBusinessTypeDropdown(
+                                                  false
+                                                );
                                               }}
                                               className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-200 dark:border-gray-800"
                                             >
@@ -1741,7 +1775,9 @@ export default function RegisterPage() {
                                               onClick={() => {
                                                 setBusinessType("distributor");
                                                 setBusinessTypeError("");
-                                                setShowBusinessTypeDropdown(false);
+                                                setShowBusinessTypeDropdown(
+                                                  false
+                                                );
                                               }}
                                               className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-200 dark:border-gray-800"
                                             >
@@ -1754,7 +1790,9 @@ export default function RegisterPage() {
                                               onClick={() => {
                                                 setBusinessType("ministry");
                                                 setBusinessTypeError("");
-                                                setShowBusinessTypeDropdown(false);
+                                                setShowBusinessTypeDropdown(
+                                                  false
+                                                );
                                               }}
                                               className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors last:border-0"
                                             >
@@ -1770,7 +1808,9 @@ export default function RegisterPage() {
                                               onClick={() => {
                                                 setBusinessType("retailer");
                                                 setBusinessTypeError("");
-                                                setShowBusinessTypeDropdown(false);
+                                                setShowBusinessTypeDropdown(
+                                                  false
+                                                );
                                               }}
                                               className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-200 dark:border-gray-800"
                                             >
@@ -1783,7 +1823,9 @@ export default function RegisterPage() {
                                               onClick={() => {
                                                 setBusinessType("wholesaler");
                                                 setBusinessTypeError("");
-                                                setShowBusinessTypeDropdown(false);
+                                                setShowBusinessTypeDropdown(
+                                                  false
+                                                );
                                               }}
                                               className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-200 dark:border-gray-800"
                                             >
@@ -1796,7 +1838,9 @@ export default function RegisterPage() {
                                               onClick={() => {
                                                 setBusinessType("marketplace");
                                                 setBusinessTypeError("");
-                                                setShowBusinessTypeDropdown(false);
+                                                setShowBusinessTypeDropdown(
+                                                  false
+                                                );
                                               }}
                                               className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors last:border-0"
                                             >
@@ -2042,51 +2086,55 @@ export default function RegisterPage() {
                         </div>
                       </div>
 
-                      <div>
-                        <div className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            id="terms"
-                            checked={acceptedTerms}
-                            onChange={(e) => setAcceptedTerms(e.target.checked)}
-                            className="mt-1 cursor-pointer"
-                          />
-                          <div>
-                            <label
-                              htmlFor="terms"
-                              className="text-xs font-medium cursor-pointer text-gray-900 dark:text-white"
-                            >
-                              I accept the terms and conditions
-                            </label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              By creating an account, you agree to our{" "}
-                              <Link
-                                href="/terms"
-                                className="text-gray-900 dark:text-white hover:underline"
-                              >
-                                Terms of Service
-                              </Link>{" "}
-                              and{" "}
-                              <Link
-                                href="/privacy"
-                                className="text-gray-900 dark:text-white hover:underline"
-                              >
-                                Privacy Policy
-                              </Link>
-                            </p>
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-3 group">
+                          <div
+                            className={`w-5 h-5 border-2 flex items-center justify-center transition-colors mt-0.5 cursor-pointer ${
+                              acceptedTerms
+                                ? "bg-black dark:bg-white border-black dark:border-white"
+                                : "border-gray-300 dark:border-gray-700 group-hover:border-gray-400 dark:group-hover:border-gray-600"
+                            }`}
+                            onClick={() => setAcceptedTerms(!acceptedTerms)}
+                          >
+                            {acceptedTerms && (
+                              <CheckIcon className="h-3 w-3 text-white dark:text-black" />
+                            )}
                           </div>
+                          <span
+                            className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed cursor-pointer"
+                            onClick={() => setAcceptedTerms(!acceptedTerms)}
+                          >
+                            I agree to the{" "}
+                            <a
+                              href="/terms"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-900 dark:text-white hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              terms and conditions
+                            </a>{" "}
+                            and{" "}
+                            <a
+                              href="/privacy"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-900 dark:text-white hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              privacy policy
+                            </a>
+                          </span>
                         </div>
 
-                        <div className="h-4 mt-1">
-                          {acceptedTermsError && (
-                            <div className="flex items-center gap-2">
-                              <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
-                              <p className="text-xs text-red-500">
-                                {acceptedTermsError}
-                              </p>
-                            </div>
-                          )}
-                        </div>
+                        {acceptedTermsError && (
+                          <div className="flex items-center gap-2">
+                            <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                            <p className="text-xs text-red-500">
+                              {acceptedTermsError}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -2233,27 +2281,29 @@ export default function RegisterPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          id="backup-confirmed"
-                          checked={backupConfirmed}
-                          onChange={(e) => setBackupConfirmed(e.target.checked)}
-                          className="mt-1 cursor-pointer"
-                        />
-                        <div>
-                          <label
-                            htmlFor="backup-confirmed"
-                            className="text-xs font-medium cursor-pointer text-gray-900 dark:text-white"
-                          >
+                      <label className="flex items-start gap-3 cursor-pointer group">
+                        <div
+                          className={`w-5 h-5 border-2 flex items-center justify-center transition-colors mt-0.5 ${
+                            backupConfirmed
+                              ? "bg-black dark:bg-white border-black dark:border-white"
+                              : "border-gray-300 dark:border-gray-700 group-hover:border-gray-400 dark:group-hover:border-gray-600"
+                          }`}
+                          onClick={() => setBackupConfirmed(!backupConfirmed)}
+                        >
+                          {backupConfirmed && (
+                            <CheckIcon className="h-3 w-3 text-white dark:text-black" />
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed block">
                             I have safely backed up my recovery phrase
-                          </label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          </span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             Confirm that you have written down or securely
                             stored your 12-word recovery phrase.
                           </p>
                         </div>
-                      </div>
+                      </label>
                     </div>
                   )}
                 </motion.div>

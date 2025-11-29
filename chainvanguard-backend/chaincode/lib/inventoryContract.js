@@ -2,781 +2,554 @@
 const { Contract } = require("fabric-contract-api");
 
 /**
- * ============================================
- * INVENTORY SMART CONTRACT
- * Manages inventory items on blockchain
- * ============================================
+ * InventoryContract - Event-Based Supplier Inventory Management
+ *
+ * This contract uses event-sourcing for SUPPLIER inventory (raw materials/products).
+ * MongoDB stores current quantities, blockchain stores significant events only.
+ *
+ * Events Stored:
+ * - INVENTORY_ADDED: New inventory item added by supplier
+ * - INVENTORY_TRANSFERRED: Transfer to vendor (via vendor request)
+ * - QUALITY_CHECK: Quality inspection events
+ *
+ * NOT Stored on Blockchain:
+ * - Current quantity (changes constantly - MongoDB only)
+ * - Reserved quantity (changes frequently)
+ * - Used quantity (changes frequently)
+ * - Price updates (can change)
+ * - Stock levels (mutable)
+ *
+ * Note: For inventory, we only track SIGNIFICANT events, not quantity changes!
  */
 class InventoryContract extends Contract {
 
+  // ========================================
+  // INITIALIZATION
+  // ========================================
+
   /**
-   * Initialize the ledger with empty state
+   * Initialize inventory ledger
    */
   async initLedger(ctx) {
-    console.log("Inventory Contract initialized");
-    return JSON.stringify({ message: "Inventory ledger initialized" });
+    console.info("============= START : Initialize Inventory Ledger ===========");
+    console.info("Inventory ledger initialized for event-based storage");
+    console.info("============= END : Initialize Inventory Ledger ===========");
+    return JSON.stringify({
+      message: "Inventory ledger initialized successfully (event-based)",
+    });
+  }
+
+  // ========================================
+  // INVENTORY ADDED EVENT
+  // ========================================
+
+  /**
+   * Record inventory addition event (when supplier adds new inventory)
+   *
+   * Stores immutable data:
+   * - inventoryId, name, category
+   * - supplierId
+   * - Initial quantity at time of addition
+   * - Initial price per unit
+   * - createdAt timestamp
+   *
+   * Does NOT store:
+   * - Current quantity (changes constantly)
+   * - Current price (can be updated)
+   * - Stock levels (mutable)
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} eventDataJSON - Inventory addition event data
+   * @returns {string} Inventory addition event
+   */
+  async recordInventoryAddition(ctx, eventDataJSON) {
+    console.info("============= START : Record Inventory Addition ===========");
+
+    let eventData;
+    try {
+      eventData = JSON.parse(eventDataJSON);
+    } catch (error) {
+      throw new Error(`Invalid JSON format: ${error.message}`);
+    }
+
+    // Validate required fields
+    if (!eventData.inventoryId) {
+      throw new Error("inventoryId is required");
+    }
+    if (!eventData.name) {
+      throw new Error("Inventory name is required");
+    }
+    if (!eventData.supplierId) {
+      throw new Error("supplierId is required");
+    }
+
+    // Check if inventory already exists
+    const existingInventory = await this.getInventoryAdditionEvent(ctx, eventData.inventoryId);
+    if (existingInventory) {
+      throw new Error(`Inventory ${eventData.inventoryId} already exists on blockchain`);
+    }
+
+    // Get transaction metadata
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Create inventory addition event (IMMUTABLE SNAPSHOT)
+    const inventoryAdditionEvent = {
+      docType: "event",
+      eventType: "INVENTORY_ADDED",
+      eventId: `${eventData.inventoryId}_ADDED_${txTimestamp.seconds.low}`,
+
+      // Inventory identification
+      inventoryId: eventData.inventoryId,
+      name: eventData.name,
+      category: eventData.category || "",
+      subcategory: eventData.subcategory || "",
+
+      // Supplier information
+      supplierId: eventData.supplierId,
+      supplierName: eventData.supplierName || "",
+      supplierWalletAddress: eventData.supplierWalletAddress || "",
+
+      // Initial quantities (snapshot at creation)
+      initialQuantity: eventData.quantity || 0,
+      unit: eventData.unit || "",
+
+      // Initial pricing (snapshot at creation)
+      initialPricePerUnit: eventData.pricePerUnit || 0,
+      currency: eventData.currency || "CVT",
+
+      // Material/textile details (if applicable)
+      materialType: eventData.materialType || "",
+      textileDetails: eventData.textileDetails || {},
+
+      // Physical properties
+      weight: eventData.weight || 0,
+      dimensions: eventData.dimensions || "",
+
+      // IPFS metadata reference
+      metadataHash: eventData.metadataHash || null,  // ✅ IPFS metadata snapshot hash
+
+      // Blockchain metadata
+      timestamp: timestamp,
+      txId: txId,
+      createdAt: eventData.createdAt || timestamp,
+    };
+
+    // Store inventory addition event on ledger
+    await ctx.stub.putState(
+      inventoryAdditionEvent.eventId,
+      Buffer.from(JSON.stringify(inventoryAdditionEvent))
+    );
+
+    // Emit event
+    await ctx.stub.setEvent(
+      "InventoryAdded",
+      Buffer.from(
+        JSON.stringify({
+          inventoryId: eventData.inventoryId,
+          name: eventData.name,
+          supplierId: eventData.supplierId,
+          initialQuantity: eventData.quantity,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Inventory addition event recorded: ${eventData.inventoryId} - ${eventData.name} (Qty: ${eventData.quantity})`);
+    console.info("============= END : Record Inventory Addition ===========");
+
+    return JSON.stringify(inventoryAdditionEvent);
+  }
+
+  // ========================================
+  // INVENTORY TRANSFER EVENT
+  // ========================================
+
+  /**
+   * Record inventory transfer event (supplier → vendor)
+   *
+   * This is triggered when a vendor request is paid and inventory is transferred.
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} eventDataJSON - Transfer event data
+   * @returns {string} Transfer event
+   */
+  async recordInventoryTransfer(ctx, eventDataJSON) {
+    console.info("============= START : Record Inventory Transfer ===========");
+
+    let eventData;
+    try {
+      eventData = JSON.parse(eventDataJSON);
+    } catch (error) {
+      throw new Error(`Invalid JSON format: ${error.message}`);
+    }
+
+    // Validate required fields
+    if (!eventData.inventoryId) {
+      throw new Error("inventoryId is required");
+    }
+    if (!eventData.supplierId) {
+      throw new Error("supplierId is required");
+    }
+    if (!eventData.vendorId) {
+      throw new Error("vendorId is required");
+    }
+    if (!eventData.quantity) {
+      throw new Error("transfer quantity is required");
+    }
+    if (!eventData.orderId) {
+      throw new Error("orderId is required");
+    }
+
+    // Verify inventory exists
+    const inventoryExists = await this.getInventoryAdditionEvent(ctx, eventData.inventoryId);
+    if (!inventoryExists) {
+      throw new Error(`Inventory ${eventData.inventoryId} does not exist on blockchain`);
+    }
+
+    // Get transaction metadata
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Create inventory transfer event
+    const transferEvent = {
+      docType: "event",
+      eventType: "INVENTORY_TRANSFERRED",
+      eventId: `${eventData.inventoryId}_TRANSFER_${txTimestamp.seconds.low}`,
+
+      inventoryId: eventData.inventoryId,
+      inventoryName: eventData.inventoryName || "",
+
+      // Transfer details
+      fromSupplierId: eventData.supplierId,
+      toVendorId: eventData.vendorId,
+      quantity: eventData.quantity,
+      unit: eventData.unit || "",
+      pricePerUnit: eventData.pricePerUnit || 0,
+      totalCost: eventData.totalCost || 0,
+
+      // References
+      orderId: eventData.orderId,  // Order created for this transfer
+      vendorRequestId: eventData.vendorRequestId || "",  // Original vendor request
+      vendorInventoryId: eventData.vendorInventoryId || "",  // Created vendor inventory
+
+      // Blockchain metadata
+      timestamp: timestamp,
+      txId: txId,
+    };
+
+    // Store transfer event
+    await ctx.stub.putState(
+      transferEvent.eventId,
+      Buffer.from(JSON.stringify(transferEvent))
+    );
+
+    // Emit event
+    await ctx.stub.setEvent(
+      "InventoryTransferred",
+      Buffer.from(
+        JSON.stringify({
+          inventoryId: eventData.inventoryId,
+          fromSupplier: eventData.supplierId,
+          toVendor: eventData.vendorId,
+          quantity: eventData.quantity,
+          orderId: eventData.orderId,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Inventory transfer event recorded: ${eventData.inventoryId} (${eventData.quantity} ${eventData.unit} → Vendor ${eventData.vendorId})`);
+    console.info("============= END : Record Inventory Transfer ===========");
+
+    return JSON.stringify(transferEvent);
+  }
+
+  // ========================================
+  // QUALITY CHECK EVENT
+  // ========================================
+
+  /**
+   * Record quality check event
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} eventDataJSON - Quality check event data
+   * @returns {string} Quality check event
+   */
+  async recordQualityCheck(ctx, eventDataJSON) {
+    console.info("============= START : Record Quality Check ===========");
+
+    let eventData;
+    try {
+      eventData = JSON.parse(eventDataJSON);
+    } catch (error) {
+      throw new Error(`Invalid JSON format: ${error.message}`);
+    }
+
+    // Validate required fields
+    if (!eventData.inventoryId) {
+      throw new Error("inventoryId is required");
+    }
+    if (!eventData.checkedBy) {
+      throw new Error("checkedBy (inspector ID) is required");
+    }
+    if (!eventData.status) {
+      throw new Error("quality check status is required");
+    }
+
+    // Verify inventory exists
+    const inventoryExists = await this.getInventoryAdditionEvent(ctx, eventData.inventoryId);
+    if (!inventoryExists) {
+      throw new Error(`Inventory ${eventData.inventoryId} does not exist on blockchain`);
+    }
+
+    // Get transaction metadata
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Create quality check event
+    const qualityCheckEvent = {
+      docType: "event",
+      eventType: "QUALITY_CHECK",
+      eventId: `${eventData.inventoryId}_QC_${txTimestamp.seconds.low}`,
+
+      inventoryId: eventData.inventoryId,
+      checkedBy: eventData.checkedBy,
+      inspectorName: eventData.inspectorName || "",
+      status: eventData.status,  // passed, failed, conditional
+      rating: eventData.rating || null,
+      notes: eventData.notes || "",
+      certificateHash: eventData.certificateHash || null,  // IPFS hash
+
+      timestamp: timestamp,
+      txId: txId,
+    };
+
+    // Store quality check event
+    await ctx.stub.putState(
+      qualityCheckEvent.eventId,
+      Buffer.from(JSON.stringify(qualityCheckEvent))
+    );
+
+    // Emit event
+    await ctx.stub.setEvent(
+      "QualityCheckRecorded",
+      Buffer.from(
+        JSON.stringify({
+          inventoryId: eventData.inventoryId,
+          checkedBy: eventData.checkedBy,
+          status: eventData.status,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Quality check event recorded: ${eventData.inventoryId} (Status: ${eventData.status})`);
+    console.info("============= END : Record Quality Check ===========");
+
+    return JSON.stringify(qualityCheckEvent);
+  }
+
+  // ========================================
+  // QUERY FUNCTIONS
+  // ========================================
+
+  /**
+   * Get inventory addition event
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} inventoryId - Inventory ID
+   * @returns {object|null} Inventory addition event or null
+   */
+  async getInventoryAdditionEvent(ctx, inventoryId) {
+    const queryString = {
+      selector: {
+        docType: "event",
+        eventType: "INVENTORY_ADDED",
+        inventoryId: inventoryId,
+      },
+    };
+
+    const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+    const result = await iterator.next();
+
+    if (!result.done && result.value) {
+      const strValue = Buffer.from(result.value.value.toString()).toString("utf8");
+      await iterator.close();
+      return JSON.parse(strValue);
+    }
+
+    await iterator.close();
+    return null;
   }
 
   /**
-   * Create a new inventory item on blockchain
+   * Get complete inventory event history
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} inventoryId - Inventory ID
+   * @returns {string} Array of all inventory events
+   */
+  async getInventoryEventHistory(ctx, inventoryId) {
+    console.info(`============= START : Get Inventory Event History for ${inventoryId} ===========`);
+
+    const queryString = {
+      selector: {
+        docType: "event",
+        inventoryId: inventoryId,
+      },
+      sort: [{ timestamp: "asc" }],
+    };
+
+    const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+    const allResults = [];
+
+    let result = await iterator.next();
+    while (!result.done) {
+      const strValue = Buffer.from(result.value.value.toString()).toString("utf8");
+      try {
+        const record = JSON.parse(strValue);
+        allResults.push(record);
+      } catch (err) {
+        console.error("Error parsing event:", err);
+      }
+      result = await iterator.next();
+    }
+
+    await iterator.close();
+
+    console.info(`✅ Retrieved ${allResults.length} events for inventory ${inventoryId}`);
+    console.info("============= END : Get Inventory Event History ===========");
+
+    return JSON.stringify(allResults);
+  }
+
+  /**
+   * Query inventory by supplier
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} supplierId - Supplier ID
+   * @returns {string} Array of inventory addition events
+   */
+  async queryInventoryBySupplier(ctx, supplierId) {
+    console.info(`============= START : Query Inventory By Supplier ${supplierId} ===========`);
+
+    const queryString = {
+      selector: {
+        docType: "event",
+        eventType: "INVENTORY_ADDED",
+        supplierId: supplierId,
+      },
+    };
+
+    const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+    const allResults = [];
+
+    let result = await iterator.next();
+    while (!result.done) {
+      const strValue = Buffer.from(result.value.value.toString()).toString("utf8");
+      try {
+        const record = JSON.parse(strValue);
+        allResults.push(record);
+      } catch (err) {
+        console.error("Error parsing event:", err);
+      }
+      result = await iterator.next();
+    }
+
+    await iterator.close();
+
+    console.info(`✅ Found ${allResults.length} inventory items for supplier ${supplierId}`);
+    console.info("============= END : Query Inventory By Supplier ===========");
+
+    return JSON.stringify(allResults);
+  }
+
+  /**
+   * Get transfer history for inventory
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} inventoryId - Inventory ID
+   * @returns {string} Array of transfer events
+   */
+  async getInventoryTransferHistory(ctx, inventoryId) {
+    console.info(`============= START : Get Inventory Transfer History for ${inventoryId} ===========`);
+
+    const queryString = {
+      selector: {
+        docType: "event",
+        eventType: "INVENTORY_TRANSFERRED",
+        inventoryId: inventoryId,
+      },
+      sort: [{ timestamp: "asc" }],
+    };
+
+    const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+    const allResults = [];
+
+    let result = await iterator.next();
+    while (!result.done) {
+      const strValue = Buffer.from(result.value.value.toString()).toString("utf8");
+      try {
+        const record = JSON.parse(strValue);
+        allResults.push(record);
+      } catch (err) {
+        console.error("Error parsing event:", err);
+      }
+      result = await iterator.next();
+    }
+
+    await iterator.close();
+
+    console.info(`✅ Retrieved ${allResults.length} transfer events for inventory ${inventoryId}`);
+    console.info("============= END : Get Inventory Transfer History ===========");
+
+    return JSON.stringify(allResults);
+  }
+
+  /**
+   * Check if inventory exists
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} inventoryId - Inventory ID
+   * @returns {boolean} True if inventory exists
+   */
+  async inventoryExists(ctx, inventoryId) {
+    const additionEvent = await this.getInventoryAdditionEvent(ctx, inventoryId);
+    return additionEvent !== null;
+  }
+
+  // ========================================
+  // DEPRECATED METHODS (for backward compatibility)
+  // ========================================
+
+  /**
+   * @deprecated Use recordInventoryAddition instead
    */
   async createInventoryItem(ctx, inventoryDataJson) {
-    try {
-      const inventoryData = JSON.parse(inventoryDataJson);
-
-      // Validate required fields
-      if (
-        !inventoryData.inventoryId ||
-        !inventoryData.name ||
-        !inventoryData.supplierId
-      ) {
-        throw new Error("Missing required inventory fields");
-      }
-
-      // Check if inventory already exists
-      const existingData = await ctx.stub.getState(inventoryData.inventoryId);
-      if (existingData && existingData.length > 0) {
-        throw new Error(
-          `Inventory item ${inventoryData.inventoryId} already exists`
-        );
-      }
-
-      // Create inventory record - STORE ALL DATA
-      const inventory = {
-        // Basic Info
-        inventoryId: inventoryData.inventoryId,
-        name: inventoryData.name,
-        description: inventoryData.description || "",
-        category: inventoryData.category || "",
-        subcategory: inventoryData.subcategory || "",
-        materialType: inventoryData.materialType || "",
-        brand: inventoryData.brand || "",
-
-        // Textile Details
-        textileDetails: inventoryData.textileDetails || {},
-
-        // Pricing & Quantity
-        pricePerUnit: inventoryData.pricePerUnit || 0,
-        costPrice: inventoryData.costPrice || 0,
-        originalPrice: inventoryData.originalPrice || 0,
-        discount: inventoryData.discount || 0,
-        quantity: inventoryData.quantity || 0,
-        reservedQuantity: inventoryData.reservedQuantity || 0,
-        committedQuantity: inventoryData.committedQuantity || 0,
-        damagedQuantity: inventoryData.damagedQuantity || 0,
-
-        // Stock Management
-        minStockLevel: inventoryData.minStockLevel || 0,
-        reorderLevel: inventoryData.reorderLevel || 0,
-        reorderQuantity: inventoryData.reorderQuantity || 0,
-        maximumQuantity: inventoryData.maximumQuantity || 0,
-        safetyStockLevel: inventoryData.safetyStockLevel || 0,
-        unit: inventoryData.unit || "",
-        sku: inventoryData.sku || "",
-
-        // Media & Documents
-        images: inventoryData.images || [],
-        documents: inventoryData.documents || [],
-
-        // Physical Properties
-        weight: inventoryData.weight || 0,
-        dimensions: inventoryData.dimensions || "",
-
-        // Metadata
-        tags: inventoryData.tags || [],
-        season: inventoryData.season || "",
-        countryOfOrigin: inventoryData.countryOfOrigin || "",
-        manufacturer: inventoryData.manufacturer || "",
-
-        // Supplier Info
-        supplierId: inventoryData.supplierId,
-        supplierName: inventoryData.supplierName || "",
-        supplierWalletAddress: inventoryData.supplierWalletAddress || "",
-        supplierContact: inventoryData.supplierContact || {},
-
-        // Status & Verification
-        status: inventoryData.status || "active",
-        isVerified: inventoryData.isVerified || false,
-        isFeatured: inventoryData.isFeatured || false,
-
-        // Sustainability & Compliance
-        isSustainable: inventoryData.isSustainable || false,
-        certifications: inventoryData.certifications || [],
-        sustainabilityCertifications: inventoryData.sustainabilityCertifications || [],
-        complianceStandards: inventoryData.complianceStandards || [],
-        qualityGrade: inventoryData.qualityGrade || "",
-        carbonFootprint: inventoryData.carbonFootprint || 0,
-        recycledContent: inventoryData.recycledContent || 0,
-
-        // Delivery & Storage
-        leadTime: inventoryData.leadTime || 0,
-        estimatedDeliveryDays: inventoryData.estimatedDeliveryDays || 0,
-        shelfLife: inventoryData.shelfLife || 0,
-        storageLocations: inventoryData.storageLocations || [],
-        primaryLocation: inventoryData.primaryLocation || "",
-
-        // Additional Info
-        notes: inventoryData.notes || "",
-        internalCode: inventoryData.internalCode || "",
-        barcode: inventoryData.barcode || "",
-        autoReorderEnabled: inventoryData.autoReorderEnabled || false,
-
-        // Batch Tracking
-        isBatchTracked: inventoryData.isBatchTracked || false,
-        batches: inventoryData.batches || [],
-
-        // Specifications & Suitability
-        specifications: inventoryData.specifications || {},
-        suitableFor: inventoryData.suitableFor || [],
-
-        // IPFS Reference
-        ipfsHash: inventoryData.ipfsHash || "",
-
-        // Blockchain specific
-        movements: [],
-        transfers: [],
-        qualityChecks: [],
-        createdAt: inventoryData.timestamp || new Date().toISOString(),
-        updatedAt: inventoryData.timestamp || new Date().toISOString(),
-        docType: "inventory",
-      };
-
-      // Store on ledger
-      await ctx.stub.putState(
-        inventoryData.inventoryId,
-        Buffer.from(JSON.stringify(inventory))
-      );
-
-      // Create composite key for querying by supplier
-      const supplierIndexKey = ctx.stub.createCompositeKey(
-        "supplier~inventory",
-        [inventoryData.supplierId, inventoryData.inventoryId]
-      );
-      await ctx.stub.putState(supplierIndexKey, Buffer.from("\u0000"));
-
-      // Emit event
-      ctx.stub.setEvent("InventoryCreated", Buffer.from(inventoryDataJson));
-
-      console.log(
-        `Inventory item created: ${inventoryData.inventoryId} by ${inventoryData.supplierId}`
-      );
-
-      return JSON.stringify({
-        success: true,
-        message: "Inventory item created on blockchain",
-        inventoryId: inventoryData.inventoryId,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error creating inventory item:", error);
-      throw new Error(`Failed to create inventory item: ${error.message}`);
-    }
+    throw new Error("createInventoryItem() is deprecated. Use recordInventoryAddition() instead.");
   }
 
   /**
-   * Update an existing inventory item
+   * @deprecated Quantity updates are mutable, should be in MongoDB only
    */
-  async updateInventoryItem(ctx, inventoryDataJson) {
-    try {
-      const updateData = JSON.parse(inventoryDataJson);
-
-      if (!updateData.inventoryId) {
-        throw new Error("Inventory ID is required");
-      }
-
-      // Get existing inventory
-      const inventoryBytes = await ctx.stub.getState(updateData.inventoryId);
-      if (!inventoryBytes || inventoryBytes.length === 0) {
-        throw new Error(`Inventory item ${updateData.inventoryId} not found`);
-      }
-
-      const inventory = JSON.parse(inventoryBytes.toString());
-
-      // Update ALL fields
-      // Basic Info
-      if (updateData.name !== undefined) inventory.name = updateData.name;
-      if (updateData.description !== undefined) inventory.description = updateData.description;
-      if (updateData.category !== undefined) inventory.category = updateData.category;
-      if (updateData.subcategory !== undefined) inventory.subcategory = updateData.subcategory;
-      if (updateData.materialType !== undefined) inventory.materialType = updateData.materialType;
-      if (updateData.brand !== undefined) inventory.brand = updateData.brand;
-
-      // Textile Details
-      if (updateData.textileDetails !== undefined) inventory.textileDetails = updateData.textileDetails;
-
-      // Pricing & Quantity
-      if (updateData.pricePerUnit !== undefined) inventory.pricePerUnit = updateData.pricePerUnit;
-      if (updateData.costPrice !== undefined) inventory.costPrice = updateData.costPrice;
-      if (updateData.originalPrice !== undefined) inventory.originalPrice = updateData.originalPrice;
-      if (updateData.discount !== undefined) inventory.discount = updateData.discount;
-      if (updateData.quantity !== undefined) inventory.quantity = updateData.quantity;
-      if (updateData.reservedQuantity !== undefined) inventory.reservedQuantity = updateData.reservedQuantity;
-      if (updateData.committedQuantity !== undefined) inventory.committedQuantity = updateData.committedQuantity;
-      if (updateData.damagedQuantity !== undefined) inventory.damagedQuantity = updateData.damagedQuantity;
-
-      // Stock Management
-      if (updateData.minStockLevel !== undefined) inventory.minStockLevel = updateData.minStockLevel;
-      if (updateData.reorderLevel !== undefined) inventory.reorderLevel = updateData.reorderLevel;
-      if (updateData.reorderQuantity !== undefined) inventory.reorderQuantity = updateData.reorderQuantity;
-      if (updateData.maximumQuantity !== undefined) inventory.maximumQuantity = updateData.maximumQuantity;
-      if (updateData.safetyStockLevel !== undefined) inventory.safetyStockLevel = updateData.safetyStockLevel;
-      if (updateData.unit !== undefined) inventory.unit = updateData.unit;
-      if (updateData.sku !== undefined) inventory.sku = updateData.sku;
-
-      // Media & Documents
-      if (updateData.images !== undefined) inventory.images = updateData.images;
-      if (updateData.documents !== undefined) inventory.documents = updateData.documents;
-
-      // Physical Properties
-      if (updateData.weight !== undefined) inventory.weight = updateData.weight;
-      if (updateData.dimensions !== undefined) inventory.dimensions = updateData.dimensions;
-
-      // Metadata
-      if (updateData.tags !== undefined) inventory.tags = updateData.tags;
-      if (updateData.season !== undefined) inventory.season = updateData.season;
-      if (updateData.countryOfOrigin !== undefined) inventory.countryOfOrigin = updateData.countryOfOrigin;
-      if (updateData.manufacturer !== undefined) inventory.manufacturer = updateData.manufacturer;
-
-      // Supplier Info
-      if (updateData.supplierName !== undefined) inventory.supplierName = updateData.supplierName;
-      if (updateData.supplierWalletAddress !== undefined) inventory.supplierWalletAddress = updateData.supplierWalletAddress;
-      if (updateData.supplierContact !== undefined) inventory.supplierContact = updateData.supplierContact;
-
-      // Status & Verification
-      if (updateData.status !== undefined) inventory.status = updateData.status;
-      if (updateData.isVerified !== undefined) inventory.isVerified = updateData.isVerified;
-      if (updateData.isFeatured !== undefined) inventory.isFeatured = updateData.isFeatured;
-
-      // Sustainability & Compliance
-      if (updateData.isSustainable !== undefined) inventory.isSustainable = updateData.isSustainable;
-      if (updateData.certifications !== undefined) inventory.certifications = updateData.certifications;
-      if (updateData.sustainabilityCertifications !== undefined) inventory.sustainabilityCertifications = updateData.sustainabilityCertifications;
-      if (updateData.complianceStandards !== undefined) inventory.complianceStandards = updateData.complianceStandards;
-      if (updateData.qualityGrade !== undefined) inventory.qualityGrade = updateData.qualityGrade;
-      if (updateData.carbonFootprint !== undefined) inventory.carbonFootprint = updateData.carbonFootprint;
-      if (updateData.recycledContent !== undefined) inventory.recycledContent = updateData.recycledContent;
-
-      // Delivery & Storage
-      if (updateData.leadTime !== undefined) inventory.leadTime = updateData.leadTime;
-      if (updateData.estimatedDeliveryDays !== undefined) inventory.estimatedDeliveryDays = updateData.estimatedDeliveryDays;
-      if (updateData.shelfLife !== undefined) inventory.shelfLife = updateData.shelfLife;
-      if (updateData.storageLocations !== undefined) inventory.storageLocations = updateData.storageLocations;
-      if (updateData.primaryLocation !== undefined) inventory.primaryLocation = updateData.primaryLocation;
-
-      // Additional Info
-      if (updateData.notes !== undefined) inventory.notes = updateData.notes;
-      if (updateData.internalCode !== undefined) inventory.internalCode = updateData.internalCode;
-      if (updateData.barcode !== undefined) inventory.barcode = updateData.barcode;
-      if (updateData.autoReorderEnabled !== undefined) inventory.autoReorderEnabled = updateData.autoReorderEnabled;
-
-      // Batch Tracking
-      if (updateData.isBatchTracked !== undefined) inventory.isBatchTracked = updateData.isBatchTracked;
-      if (updateData.batches !== undefined) inventory.batches = updateData.batches;
-
-      // Specifications & Suitability
-      if (updateData.specifications !== undefined) inventory.specifications = updateData.specifications;
-      if (updateData.suitableFor !== undefined) inventory.suitableFor = updateData.suitableFor;
-
-      // IPFS Reference
-      if (updateData.ipfsHash !== undefined) inventory.ipfsHash = updateData.ipfsHash;
-
-      inventory.updatedAt = updateData.updatedAt || new Date().toISOString();
-
-      // Store updated inventory
-      await ctx.stub.putState(
-        updateData.inventoryId,
-        Buffer.from(JSON.stringify(inventory))
-      );
-
-      // Emit event
-      ctx.stub.setEvent("InventoryUpdated", Buffer.from(inventoryDataJson));
-
-      return JSON.stringify({
-        success: true,
-        message: "Inventory item updated on blockchain",
-        inventoryId: updateData.inventoryId,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error updating inventory item:", error);
-      throw new Error(`Failed to update inventory item: ${error.message}`);
-    }
+  async updateInventoryQuantity(ctx, inventoryId, newQuantity) {
+    throw new Error("updateInventoryQuantity() is deprecated. Quantity updates are mutable and should only be in MongoDB. Use recordInventoryTransfer() for transfers.");
   }
 
   /**
-   * Add stock to inventory
+   * @deprecated Use getInventoryEventHistory instead
    */
-  async addStock(ctx, inventoryId, quantityStr, notes) {
-    try {
-      const quantity = parseInt(quantityStr);
-
-      if (quantity <= 0) {
-        throw new Error("Quantity must be positive");
-      }
-
-      // Get inventory
-      const inventoryBytes = await ctx.stub.getState(inventoryId);
-      if (!inventoryBytes || inventoryBytes.length === 0) {
-        throw new Error(`Inventory item ${inventoryId} not found`);
-      }
-
-      const inventory = JSON.parse(inventoryBytes.toString());
-
-      const previousQuantity = inventory.quantity;
-      inventory.quantity = previousQuantity + quantity;
-
-      // Get deterministic transaction timestamp
-      const txTimestamp = ctx.stub.getTxTimestamp();
-      const timestampStr = new Date(
-        txTimestamp.seconds.low * 1000
-      ).toISOString();
-
-      // Add movement record
-      const movement = {
-        type: "restock",
-        quantity: quantity,
-        previousQuantity: previousQuantity,
-        newQuantity: inventory.quantity,
-        notes: notes || "",
-        timestamp: timestampStr,
-        txId: ctx.stub.getTxID(),
-      };
-
-      if (!inventory.movements) inventory.movements = [];
-      inventory.movements.push(movement);
-
-      inventory.updatedAt = timestampStr;
-
-      // Store updated inventory
-      await ctx.stub.putState(
-        inventoryId,
-        Buffer.from(JSON.stringify(inventory))
-      );
-
-      // Emit event
-      ctx.stub.setEvent(
-        "StockAdded",
-        Buffer.from(
-          JSON.stringify({
-            inventoryId,
-            quantity,
-            newTotal: inventory.quantity,
-          })
-        )
-      );
-
-      return JSON.stringify({
-        success: true,
-        message: "Stock added successfully",
-        previousQuantity: previousQuantity,
-        addedQuantity: quantity,
-        newQuantity: inventory.quantity,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error adding stock:", error);
-      throw new Error(`Failed to add stock: ${error.message}`);
+  async getInventoryItem(ctx, inventoryId) {
+    console.warn("⚠️ getInventoryItem() is deprecated. Use getInventoryEventHistory() instead.");
+    const additionEvent = await this.getInventoryAdditionEvent(ctx, inventoryId);
+    if (!additionEvent) {
+      throw new Error(`Inventory ${inventoryId} does not exist`);
     }
-  }
-
-  /**
-   * Reduce stock from inventory
-   */
-  async reduceStock(ctx, inventoryId, quantityStr, reason) {
-    try {
-      const quantity = parseInt(quantityStr);
-
-      if (quantity <= 0) {
-        throw new Error("Quantity must be positive");
-      }
-
-      // Get inventory
-      const inventoryBytes = await ctx.stub.getState(inventoryId);
-      if (!inventoryBytes || inventoryBytes.length === 0) {
-        throw new Error(`Inventory item ${inventoryId} not found`);
-      }
-
-      const inventory = JSON.parse(inventoryBytes.toString());
-
-      if (inventory.quantity < quantity) {
-        throw new Error(
-          `Insufficient stock. Available: ${inventory.quantity}, Requested: ${quantity}`
-        );
-      }
-
-      const previousQuantity = inventory.quantity;
-      inventory.quantity = previousQuantity - quantity;
-
-      // Get deterministic transaction timestamp
-      const txTimestamp = ctx.stub.getTxTimestamp();
-      const timestampStr = new Date(
-        txTimestamp.seconds.low * 1000
-      ).toISOString();
-
-      // Add movement record
-      const movement = {
-        type: reason || "sale",
-        quantity: -quantity,
-        previousQuantity: previousQuantity,
-        newQuantity: inventory.quantity,
-        timestamp: timestampStr,
-        txId: ctx.stub.getTxID(),
-      };
-
-      if (!inventory.movements) inventory.movements = [];
-      inventory.movements.push(movement);
-
-      inventory.updatedAt = timestampStr;
-
-      // Store updated inventory
-      await ctx.stub.putState(
-        inventoryId,
-        Buffer.from(JSON.stringify(inventory))
-      );
-
-      // Emit event
-      ctx.stub.setEvent(
-        "StockReduced",
-        Buffer.from(
-          JSON.stringify({
-            inventoryId,
-            quantity,
-            reason,
-            newTotal: inventory.quantity,
-          })
-        )
-      );
-
-      return JSON.stringify({
-        success: true,
-        message: "Stock reduced successfully",
-        previousQuantity: previousQuantity,
-        reducedQuantity: quantity,
-        newQuantity: inventory.quantity,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error reducing stock:", error);
-      throw new Error(`Failed to reduce stock: ${error.message}`);
-    }
-  }
-
-  /**
-   * Transfer inventory from supplier to vendor
-   */
-  async transferInventory(ctx, transferDataJson) {
-    try {
-      const transferData = JSON.parse(transferDataJson);
-
-      // Validate required fields
-      if (
-        !transferData.inventoryId ||
-        !transferData.fromId ||
-        !transferData.toId ||
-        !transferData.quantity
-      ) {
-        throw new Error("Missing required transfer fields");
-      }
-
-      // Get inventory
-      const inventoryBytes = await ctx.stub.getState(transferData.inventoryId);
-      if (!inventoryBytes || inventoryBytes.length === 0) {
-        throw new Error(`Inventory item ${transferData.inventoryId} not found`);
-      }
-
-      const inventory = JSON.parse(inventoryBytes.toString());
-
-      // Verify ownership
-      if (inventory.supplierId !== transferData.fromId) {
-        throw new Error("Only the supplier can transfer this inventory");
-      }
-
-      // Check quantity
-      if (inventory.quantity < transferData.quantity) {
-        throw new Error("Insufficient quantity for transfer");
-      }
-
-      // Get deterministic transaction timestamp
-      const txTimestamp = ctx.stub.getTxTimestamp();
-      const timestampStr = new Date(
-        txTimestamp.seconds.low * 1000
-      ).toISOString();
-
-      // Create transfer record
-      const transfer = {
-        fromId: transferData.fromId,
-        fromRole: transferData.fromRole || "supplier",
-        toId: transferData.toId,
-        toRole: transferData.toRole || "vendor",
-        quantity: transferData.quantity,
-        price: transferData.price || 0,
-        totalAmount: transferData.totalAmount || 0,
-        timestamp: transferData.timestamp || timestampStr,
-        txId: ctx.stub.getTxID(),
-        status: "completed",
-      };
-
-      if (!inventory.transfers) inventory.transfers = [];
-      inventory.transfers.push(transfer);
-
-      // Add movement record
-      const movement = {
-        type: "transfer",
-        quantity: -transferData.quantity,
-        previousQuantity: inventory.quantity,
-        newQuantity: inventory.quantity - transferData.quantity,
-        notes: `Transferred to vendor ${transferData.toId}`,
-        timestamp: timestampStr,
-        txId: ctx.stub.getTxID(),
-      };
-
-      if (!inventory.movements) inventory.movements = [];
-      inventory.movements.push(movement);
-
-      // Reduce quantity
-      inventory.quantity -= transferData.quantity;
-      inventory.updatedAt = timestampStr;
-
-      // Store updated inventory
-      await ctx.stub.putState(
-        transferData.inventoryId,
-        Buffer.from(JSON.stringify(inventory))
-      );
-
-      // Emit event
-      ctx.stub.setEvent("InventoryTransferred", Buffer.from(transferDataJson));
-
-      return JSON.stringify({
-        success: true,
-        message: "Inventory transferred successfully",
-        transfer: transfer,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error transferring inventory:", error);
-      throw new Error(`Failed to transfer inventory: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get inventory item by ID
-   */
-  async getInventory(ctx, inventoryId) {
-    try {
-      const inventoryBytes = await ctx.stub.getState(inventoryId);
-      if (!inventoryBytes || inventoryBytes.length === 0) {
-        throw new Error(`Inventory item ${inventoryId} not found`);
-      }
-
-      return inventoryBytes.toString();
-    } catch (error) {
-      console.error("Error getting inventory:", error);
-      throw new Error(`Failed to get inventory: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get all inventory items by supplier
-   */
-  async getInventoryBySupplier(ctx, supplierId) {
-    try {
-      const iterator = await ctx.stub.getStateByPartialCompositeKey(
-        "supplier~inventory",
-        [supplierId]
-      );
-
-      const inventoryList = [];
-
-      let result = await iterator.next();
-      while (!result.done) {
-        const compositeKey = result.value.key;
-        const splitKey = ctx.stub.splitCompositeKey(compositeKey);
-        const inventoryId = splitKey.attributes[1];
-
-        // Get the actual inventory data
-        const inventoryBytes = await ctx.stub.getState(inventoryId);
-        if (inventoryBytes && inventoryBytes.length > 0) {
-          const inventory = JSON.parse(inventoryBytes.toString());
-          inventoryList.push(inventory);
-        }
-
-        result = await iterator.next();
-      }
-
-      await iterator.close();
-
-      return JSON.stringify(inventoryList);
-    } catch (error) {
-      console.error("Error getting inventory by supplier:", error);
-      throw new Error(`Failed to get inventory by supplier: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get inventory history (all changes)
-   */
-  async getInventoryHistory(ctx, inventoryId) {
-    try {
-      const iterator = await ctx.stub.getHistoryForKey(inventoryId);
-
-      const history = [];
-
-      let result = await iterator.next();
-      while (!result.done) {
-        const record = {
-          txId: result.value.txId,
-          timestamp: result.value.timestamp,
-          isDelete: result.value.isDelete,
-        };
-
-        if (!result.value.isDelete && result.value.value) {
-          record.value = JSON.parse(result.value.value.toString());
-        }
-
-        history.push(record);
-        result = await iterator.next();
-      }
-
-      await iterator.close();
-
-      return JSON.stringify(history);
-    } catch (error) {
-      console.error("Error getting inventory history:", error);
-      throw new Error(`Failed to get inventory history: ${error.message}`);
-    }
-  }
-
-  /**
-   * Delete (discontinue) inventory item
-   */
-  async deleteInventoryItem(ctx, inventoryId) {
-    try {
-      const inventoryBytes = await ctx.stub.getState(inventoryId);
-      if (!inventoryBytes || inventoryBytes.length === 0) {
-        throw new Error(`Inventory item ${inventoryId} not found`);
-      }
-
-      const inventory = JSON.parse(inventoryBytes.toString());
-
-      // Get deterministic transaction timestamp
-      const txTimestamp = ctx.stub.getTxTimestamp();
-      const timestampStr = new Date(
-        txTimestamp.seconds.low * 1000
-      ).toISOString();
-
-      inventory.status = "discontinued";
-      inventory.updatedAt = timestampStr;
-
-      // Store updated (soft deleted) inventory
-      await ctx.stub.putState(
-        inventoryId,
-        Buffer.from(JSON.stringify(inventory))
-      );
-
-      // Emit event
-      ctx.stub.setEvent(
-        "InventoryDeleted",
-        Buffer.from(JSON.stringify({ inventoryId }))
-      );
-
-      return JSON.stringify({
-        success: true,
-        message: "Inventory item discontinued",
-        inventoryId: inventoryId,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error deleting inventory item:", error);
-      throw new Error(`Failed to delete inventory item: ${error.message}`);
-    }
-  }
-
-  /**
-   * Query all inventory items
-   * LevelDB-compatible version using getStateByRange
-   */
-  async queryAllInventory(ctx) {
-    try {
-      const inventoryList = [];
-
-      // Use getStateByRange to iterate through all keys (LevelDB compatible)
-      const iterator = await ctx.stub.getStateByRange("", "");
-
-      let result = await iterator.next();
-      while (!result.done) {
-        if (result.value && result.value.value) {
-          try {
-            const strValue = Buffer.from(result.value.value).toString("utf8");
-            const record = JSON.parse(strValue);
-
-            // Only include records with docType = "inventory"
-            if (record.docType === "inventory") {
-              inventoryList.push(record);
-            }
-          } catch (err) {
-            // Skip non-JSON or invalid records
-            console.log(`Skipping invalid record at key ${result.value.key}`);
-          }
-        }
-        result = await iterator.next();
-      }
-
-      await iterator.close();
-
-      return JSON.stringify(inventoryList);
-    } catch (error) {
-      console.error("Error querying all inventory:", error);
-      throw new Error(`Failed to query all inventory: ${error.message}`);
-    }
-  }
-
-  /**
-   * Add quality check record
-   */
-  async addQualityCheck(ctx, inventoryId, qualityCheckJson) {
-    try {
-      const qualityCheck = JSON.parse(qualityCheckJson);
-
-      const inventoryBytes = await ctx.stub.getState(inventoryId);
-      if (!inventoryBytes || inventoryBytes.length === 0) {
-        throw new Error(`Inventory item ${inventoryId} not found`);
-      }
-
-      const inventory = JSON.parse(inventoryBytes.toString());
-
-      // Get deterministic transaction timestamp
-      const txTimestamp = ctx.stub.getTxTimestamp();
-      const timestampStr = new Date(
-        txTimestamp.seconds.low * 1000
-      ).toISOString();
-
-      qualityCheck.timestamp = timestampStr;
-      qualityCheck.txId = ctx.stub.getTxID();
-
-      if (!inventory.qualityChecks) inventory.qualityChecks = [];
-      inventory.qualityChecks.push(qualityCheck);
-
-      inventory.updatedAt = timestampStr;
-
-      await ctx.stub.putState(
-        inventoryId,
-        Buffer.from(JSON.stringify(inventory))
-      );
-
-      ctx.stub.setEvent(
-        "QualityCheckAdded",
-        Buffer.from(JSON.stringify({ inventoryId, qualityCheck }))
-      );
-
-      return JSON.stringify({
-        success: true,
-        message: "Quality check added",
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error adding quality check:", error);
-      throw new Error(`Failed to add quality check: ${error.message}`);
-    }
+    return JSON.stringify(additionEvent);
   }
 }
 

@@ -549,6 +549,7 @@ router.post(
     try {
       const { userId } = req.params;
       const { reason } = req.body;
+      const performedBy = req.userId; // Get the admin/expert who is performing this action
 
       if (!reason) {
         return res.status(400).json({
@@ -557,7 +558,7 @@ router.post(
         });
       }
 
-      const result = await walletBalanceService.freezeWallet(userId, reason);
+      const result = await walletBalanceService.freezeWallet(userId, reason, performedBy);
       res.json(result);
     } catch (error) {
       console.error("❌ Freeze wallet failed:", error);
@@ -579,7 +580,10 @@ router.post(
   async (req, res) => {
     try {
       const { userId } = req.params;
-      const result = await walletBalanceService.unfreezeWallet(userId);
+      const { reason } = req.body; // Optional reason for unfreezing
+      const performedBy = req.userId; // Get the admin/expert who is performing this action
+
+      const result = await walletBalanceService.unfreezeWallet(userId, reason, performedBy);
       res.json(result);
     } catch (error) {
       console.error("❌ Unfreeze wallet failed:", error);

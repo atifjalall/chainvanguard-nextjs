@@ -1332,14 +1332,18 @@ export default function VendorMyProductsPage() {
                     : "We couldn't find any products matching your filters. Try adjusting your search criteria."}
                 </p>
                 {totalProducts === 0 ? (
-                  <Link href="/vendor/add-product">
-                    <button
-                      className={`flex items-center gap-2 px-4 py-2 text-xs text-white font-medium transition-colors cursor-pointer ${colors.buttons.primary}`}
-                    >
-                      <PlusIcon className="h-3 w-3" />
-                      Add Your First Product
-                    </button>
-                  </Link>
+                  <div className="flex justify-center">
+                    {" "}
+                    {/* Center the button */}
+                    <Link href="/vendor/add-product">
+                      <button
+                        className={`flex items-center gap-2 px-4 py-2 text-xs text-white font-medium transition-colors cursor-pointer ${colors.buttons.primary}`}
+                      >
+                        <PlusIcon className="h-3 w-3" />
+                        Add Your First Product
+                      </button>
+                    </Link>
+                  </div>
                 ) : (
                   <button
                     onClick={() => {

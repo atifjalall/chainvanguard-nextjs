@@ -511,7 +511,7 @@ const inventorySchema = new Schema(
       color: {
         type: String,
         required: true,
-        index: true,
+        // Index defined as schema.index() below for textileDetails.color
       },
       colorCode: {
         type: String,
@@ -922,6 +922,16 @@ const inventorySchema = new Schema(
       index: true,
     },
     originTransactionHash: {
+      type: String,
+      default: "",
+    },
+
+    // IPFS metadata snapshot (historical snapshot at creation)
+    metadataIpfsHash: {
+      type: String,
+      default: "",
+    },
+    metadataIpfsUrl: {
       type: String,
       default: "",
     },

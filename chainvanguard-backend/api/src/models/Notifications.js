@@ -198,7 +198,7 @@ const notificationSchema = new Schema(
       },
       entityId: {
         type: Schema.Types.ObjectId,
-        index: true,
+        // Index defined as schema.index() below for relatedEntity.entityId
       },
       entityData: {
         type: Schema.Types.Mixed,
@@ -378,7 +378,7 @@ const notificationSchema = new Schema(
     },
     expiresAt: {
       type: Date,
-      index: true,
+      // TTL index defined in schema.index() below
     },
 
     // ========================================

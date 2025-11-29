@@ -29,6 +29,7 @@ import {
   CheckIcon,
   ChartBarIcon,
   CalendarIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import { orderApi } from "@/lib/api/vendor.order.api";
 import { Order, OrderStatus } from "@/types";
@@ -43,6 +44,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Calendar } from "@/components/ui/calendar";
+import { invoiceApi } from "@/lib/api/invoice.api";
 import {
   Popover,
   PopoverContent,
@@ -180,6 +182,42 @@ export default function VendorOrderEditPage() {
       router.push("/vendor/orders");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    try {
+      toast.loading("Downloading invoice...");
+
+      // Get invoices for this order
+      const response = await invoiceApi.getInvoicesByOrder(orderId);
+
+      if (response.success && response.data?.invoices?.length > 0) {
+        const invoice = response.data.invoices[0]; // Get the first invoice
+
+        // Download the invoice PDF
+        const downloadResponse = await invoiceApi.downloadInvoiceById(invoice._id);
+
+        if (downloadResponse.success && downloadResponse.data) {
+          // Trigger download
+          invoiceApi.triggerDownload(
+            downloadResponse.data,
+            `invoice-${invoice.invoiceNumber}.pdf`
+          );
+          toast.dismiss();
+          toast.success("Invoice downloaded successfully!");
+        } else {
+          toast.dismiss();
+          toast.error(downloadResponse.message || "Failed to download invoice");
+        }
+      } else {
+        toast.dismiss();
+        toast.error("No invoice found for this order");
+      }
+    } catch (error) {
+      console.error("Error downloading invoice:", error);
+      toast.dismiss();
+      toast.error("Failed to download invoice");
     }
   };
 
@@ -574,6 +612,15 @@ export default function VendorOrderEditPage() {
                 className="rounded-none text-xs"
               >
                 Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDownloadInvoice}
+                disabled={isSaving}
+                className="rounded-none text-xs"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                Download Invoice
               </Button>
             </div>
           </div>

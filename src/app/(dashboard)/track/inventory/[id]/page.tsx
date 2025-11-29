@@ -149,8 +149,11 @@ const TrackingPage = () => {
         setLoading(true);
         setError(null);
 
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-        const baseUrl = apiBaseUrl.endsWith("/api") ? apiBaseUrl : `${apiBaseUrl}/api`;
+        const apiBaseUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const baseUrl = apiBaseUrl.endsWith("/api")
+          ? apiBaseUrl
+          : `${apiBaseUrl}/api`;
 
         const isInventoryQR = qrCode.includes("INVENTORY");
         const isProductQR = qrCode.includes("PRODUCT");
@@ -160,10 +163,14 @@ const TrackingPage = () => {
         if (isInventoryQR) {
           response = await fetch(`${baseUrl}/qr/track/inventory/${qrCode}`);
           if (!response.ok && !isProductQR) {
-            response = await fetch(`${baseUrl}/qr/track/product/${qrCode}/enhanced`);
+            response = await fetch(
+              `${baseUrl}/qr/track/product/${qrCode}/enhanced`
+            );
           }
         } else {
-          response = await fetch(`${baseUrl}/qr/track/product/${qrCode}/enhanced`);
+          response = await fetch(
+            `${baseUrl}/qr/track/product/${qrCode}/enhanced`
+          );
           if (!response.ok) {
             response = await fetch(`${baseUrl}/qr/track/inventory/${qrCode}`);
           }
@@ -185,7 +192,11 @@ const TrackingPage = () => {
         setTimeout(() => setIsVisible(true), 100);
       } catch (err) {
         console.error("Error fetching tracking data:", err);
-        setError(err instanceof Error ? err.message : "An error occurred while fetching data");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "An error occurred while fetching data"
+        );
       } finally {
         setLoading(false);
       }
@@ -212,7 +223,9 @@ const TrackingPage = () => {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <ArrowPathIcon className="h-12 w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
-          <p className={`text-sm ${colors.texts.secondary}`}>Loading tracking data...</p>
+          <p className={`text-sm ${colors.texts.secondary}`}>
+            Loading tracking data...
+          </p>
         </div>
       </div>
     );
@@ -221,11 +234,15 @@ const TrackingPage = () => {
   if (error || !data) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-        <Card className={`${colors.cards.base} max-w-md mx-auto rounded-none shadow-none`}>
+        <Card
+          className={`${colors.cards.base} max-w-md mx-auto rounded-none shadow-none`}
+        >
           <CardHeader>
             <div className="flex items-center gap-3">
               <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
-              <CardTitle className={colors.texts.primary}>Tracking Error</CardTitle>
+              <CardTitle className={colors.texts.primary}>
+                Tracking Error
+              </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -245,7 +262,8 @@ const TrackingPage = () => {
   }
 
   const entity = data.type === "inventory" ? data.inventory! : data.product!;
-  const mainImage = entity.images?.find((img) => img.isMain)?.url || entity.images?.[0]?.url;
+  const mainImage =
+    entity.images?.find((img) => img.isMain)?.url || entity.images?.[0]?.url;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -259,7 +277,9 @@ const TrackingPage = () => {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="space-y-2">
               <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
-                {data.type === "inventory" ? "Inventory Tracking" : "Product Tracking"}
+                {data.type === "inventory"
+                  ? "Inventory Tracking"
+                  : "Product Tracking"}
               </h1>
               <p className={`text-sm ${colors.texts.secondary}`}>
                 QR Code: <span className="font-mono">{data.qrInfo.code}</span>
@@ -268,8 +288,12 @@ const TrackingPage = () => {
                 <Badge
                   className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
                 >
-                  <ShieldCheckIcon className={`h-3 w-3 ${badgeColors.cyan.icon}`} />
-                  {entity.blockchainVerified ? "Blockchain Verified" : "Verification Pending"}
+                  <ShieldCheckIcon
+                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                  />
+                  {entity.blockchainVerified
+                    ? "Blockchain Verified"
+                    : "Verification Pending"}
                 </Badge>
                 <Badge
                   className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
@@ -296,7 +320,12 @@ const TrackingPage = () => {
                   <div className="flex items-start gap-4">
                     {mainImage && (
                       <div className="relative w-24 h-24 rounded-none overflow-hidden shrink-0">
-                        <Image src={mainImage} alt={entity.name} fill className="object-cover" />
+                        <Image
+                          src={mainImage}
+                          alt={entity.name}
+                          fill
+                          className="object-cover"
+                        />
                       </div>
                     )}
                     <div className="flex-1">
@@ -338,52 +367,76 @@ const TrackingPage = () => {
                     {data.type === "inventory" ? (
                       <>
                         <div className="space-y-1">
-                          <p className={`text-xs ${colors.texts.secondary}`}>Supplier</p>
+                          <p className={`text-xs ${colors.texts.secondary}`}>
+                            Supplier
+                          </p>
                           <p className={`font-medium ${colors.texts.primary}`}>
                             {data.inventory!.supplier.name}
                           </p>
                         </div>
                         <div className="space-y-1">
-                          <p className={`text-xs ${colors.texts.secondary}`}>Price per Unit</p>
+                          <p className={`text-xs ${colors.texts.secondary}`}>
+                            Price per Unit
+                          </p>
                           <p className={`font-medium ${colors.texts.primary}`}>
                             {data.inventory!.pricePerUnit} CVT
                           </p>
                         </div>
                         <div className="space-y-1">
-                          <p className={`text-xs ${colors.texts.secondary}`}>Total Quantity</p>
+                          <p className={`text-xs ${colors.texts.secondary}`}>
+                            Total Quantity
+                          </p>
                           <p className={`font-medium ${colors.texts.primary}`}>
-                            {data.inventory!.totalQuantity} {data.inventory!.unit}
+                            {data.inventory!.totalQuantity}{" "}
+                            {data.inventory!.unit}
                           </p>
                         </div>
                         <div className="space-y-1">
-                          <p className={`text-xs ${colors.texts.secondary}`}>Current Quantity</p>
-                          <p className={`font-medium text-lg ${colors.texts.primary}`}>
-                            {data.inventory!.currentQuantity} {data.inventory!.unit}
+                          <p className={`text-xs ${colors.texts.secondary}`}>
+                            Current Quantity
+                          </p>
+                          <p
+                            className={`font-medium text-lg ${colors.texts.primary}`}
+                          >
+                            {data.inventory!.currentQuantity}{" "}
+                            {data.inventory!.unit}
                           </p>
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="space-y-1">
-                          <p className={`text-xs ${colors.texts.secondary}`}>Vendor</p>
+                          <p className={`text-xs ${colors.texts.secondary}`}>
+                            Vendor
+                          </p>
                           <p className={`font-medium ${colors.texts.primary}`}>
                             {data.product!.vendor.name}
                           </p>
                         </div>
                         <div className="space-y-1">
-                          <p className={`text-xs ${colors.texts.secondary}`}>Price</p>
-                          <p className={`font-medium text-lg ${colors.texts.primary}`}>
+                          <p className={`text-xs ${colors.texts.secondary}`}>
+                            Price
+                          </p>
+                          <p
+                            className={`font-medium text-lg ${colors.texts.primary}`}
+                          >
                             {data.product!.price} CVT
                           </p>
                         </div>
                         <div className="space-y-1">
-                          <p className={`text-xs ${colors.texts.secondary}`}>Manufactured</p>
+                          <p className={`text-xs ${colors.texts.secondary}`}>
+                            Manufactured
+                          </p>
                           <p className={`font-medium ${colors.texts.primary}`}>
-                            {new Date(data.product!.manufacturedDate).toLocaleDateString()}
+                            {new Date(
+                              data.product!.manufacturedDate
+                            ).toLocaleDateString()}
                           </p>
                         </div>
                         <div className="space-y-1">
-                          <p className={`text-xs ${colors.texts.secondary}`}>Total Sold</p>
+                          <p className={`text-xs ${colors.texts.secondary}`}>
+                            Total Sold
+                          </p>
                           <p className={`font-medium ${colors.texts.primary}`}>
                             {data.product!.totalSold} units
                           </p>
@@ -397,10 +450,14 @@ const TrackingPage = () => {
                     <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-none">
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                          <p
+                            className={`text-xs ${colors.texts.secondary} mb-1`}
+                          >
                             Blockchain ID
                           </p>
-                          <code className={`text-xs font-mono ${colors.texts.primary}`}>
+                          <code
+                            className={`text-xs font-mono ${colors.texts.primary}`}
+                          >
                             {data.inventory?.blockchainInventoryId ||
                               data.product?.blockchainProductId}
                           </code>
@@ -431,10 +488,16 @@ const TrackingPage = () => {
 
               {/* Transfer History */}
               {data.transfers && data.transfers.length > 0 && (
-                <Card className={`${colors.cards.base} rounded-none shadow-none`}>
+                <Card
+                  className={`${colors.cards.base} rounded-none shadow-none`}
+                >
                   <CardHeader className="px-6 pb-0">
-                    <CardTitle className={`flex items-center gap-3 text-base ${colors.texts.primary}`}>
-                      <ArrowPathIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                    <CardTitle
+                      className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                    >
+                      <ArrowPathIcon
+                        className={`h-5 w-5 ${colors.icons.primary}`}
+                      />
                       Transfer History
                     </CardTitle>
                   </CardHeader>
@@ -443,65 +506,87 @@ const TrackingPage = () => {
                     <div className="space-y-4">
                       {data.transfers.map((transfer, index) => {
                         // Fallback logic for 'from' field
-                        const fromName = transfer.from ||
-                          (data.type === "inventory" && data.inventory?.supplier.name) ||
-                          (data.type === "product" && data.product?.vendor.name) ||
+                        const fromName =
+                          transfer.from ||
+                          (data.type === "inventory" &&
+                            data.inventory?.supplier.name) ||
+                          (data.type === "product" &&
+                            data.product?.vendor.name) ||
                           "Unknown";
 
                         return (
-                        <div
-                          key={index}
-                          className={`flex items-start gap-3 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.borders.primary}`}
-                        >
                           <div
-                            className={`mt-1 p-2 rounded-none ${
-                              transfer.type === "used_in_production"
-                                ? "bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400"
-                                : transfer.verified
-                                ? "bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400"
-                                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                            }`}
+                            key={index}
+                            className={`flex items-start gap-3 p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.borders.primary}`}
                           >
-                            <ArrowRightIcon className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs ${colors.texts.secondary}`}>From:</span>
-                                <span className={`text-xs ${colors.texts.primary}`}>
-                                  {fromName}
-                                </span>
-                                <ArrowRightIcon className="h-4 w-4 text-gray-400 mx-1" />
-                                <span className={`text-xs ${colors.texts.secondary}`}>To:</span>
-                                <span className={`text-xs ${colors.texts.primary}`}>
-                                  {transfer.to}
-                                </span>
-                              </div>
-                              <Badge
-                                className={`${
-                                  transfer.verified
-                                    ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text}`
-                                    : `${badgeColors.grey.bg} ${badgeColors.grey.border} ${badgeColors.grey.text}`
-                                } text-xs rounded-none`}
-                              >
-                                {transfer.verified ? "Verified" : "Pending"}
-                              </Badge>
+                            <div
+                              className={`mt-1 p-2 rounded-none ${
+                                transfer.type === "used_in_production"
+                                  ? "bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400"
+                                  : transfer.verified
+                                    ? "bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400"
+                                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                              }`}
+                            >
+                              <ArrowRightIcon className="h-4 w-4" />
                             </div>
-                            <p className={`text-sm ${colors.texts.secondary} mt-1`}>
-                              {transfer.quantity} {transfer.unit}
-                              {transfer.type === "used_in_production" &&
-                                " used in production"}
-                            </p>
-                            <p className={`text-xs ${colors.texts.muted} mt-1`}>
-                              {new Date(transfer.date).toLocaleString()}
-                            </p>
-                            {transfer.blockchainTx && (
-                              <p className={`text-xs font-mono ${colors.texts.muted} mt-1`}>
-                                TX: {transfer.blockchainTx.substring(0, 16)}...
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`text-xs ${colors.texts.secondary}`}
+                                  >
+                                    From:
+                                  </span>
+                                  <span
+                                    className={`text-xs ${colors.texts.primary}`}
+                                  >
+                                    {fromName}
+                                  </span>
+                                  <ArrowRightIcon className="h-4 w-4 text-gray-400 mx-1" />
+                                  <span
+                                    className={`text-xs ${colors.texts.secondary}`}
+                                  >
+                                    To:
+                                  </span>
+                                  <span
+                                    className={`text-xs ${colors.texts.primary}`}
+                                  >
+                                    {transfer.to}
+                                  </span>
+                                </div>
+                                <Badge
+                                  className={`${
+                                    transfer.verified
+                                      ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text}`
+                                      : `${badgeColors.grey.bg} ${badgeColors.grey.border} ${badgeColors.grey.text}`
+                                  } text-xs rounded-none`}
+                                >
+                                  {transfer.verified ? "Verified" : "Pending"}
+                                </Badge>
+                              </div>
+                              <p
+                                className={`text-sm ${colors.texts.secondary} mt-1`}
+                              >
+                                {transfer.quantity} {transfer.unit}
+                                {transfer.type === "used_in_production" &&
+                                  " used in production"}
                               </p>
-                            )}
+                              <p
+                                className={`text-xs ${colors.texts.muted} mt-1`}
+                              >
+                                {new Date(transfer.date).toLocaleString()}
+                              </p>
+                              {transfer.blockchainTx && (
+                                <p
+                                  className={`text-xs font-mono ${colors.texts.muted} mt-1`}
+                                >
+                                  TX: {transfer.blockchainTx.substring(0, 16)}
+                                  ...
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
                         );
                       })}
                     </div>
@@ -511,9 +596,13 @@ const TrackingPage = () => {
 
               {/* Materials Used (Product only) */}
               {data.materialsUsed && data.materialsUsed.length > 0 && (
-                <Card className={`${colors.cards.base} rounded-none shadow-none`}>
+                <Card
+                  className={`${colors.cards.base} rounded-none shadow-none`}
+                >
                   <CardHeader className="px-6 pb-0">
-                    <CardTitle className={`flex items-center gap-3 text-base ${colors.texts.primary}`}>
+                    <CardTitle
+                      className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                    >
                       <CubeIcon className={`h-5 w-5 ${colors.icons.primary}`} />
                       Materials Used
                     </CardTitle>
@@ -527,7 +616,9 @@ const TrackingPage = () => {
                           className={`flex items-center justify-between p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.borders.primary}`}
                         >
                           <div className="flex-1">
-                            <p className={`font-medium ${colors.texts.primary}`}>
+                            <p
+                              className={`font-medium ${colors.texts.primary}`}
+                            >
                               {material.materialName}
                             </p>
                             <p className={`text-sm ${colors.texts.secondary}`}>
@@ -537,18 +628,21 @@ const TrackingPage = () => {
                               Quantity: {material.quantityUsed} {material.unit}
                             </p>
                           </div>
-                          {material.canScanInventoryQR && material.inventoryQRCode && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                router.push(`/track/inventory/${material.inventoryQRCode}`)
-                              }
-                              className={`text-xs cursor-pointer h-8 ${colors.borders.primary} rounded-none`}
-                            >
-                              View Source
-                            </Button>
-                          )}
+                          {material.canScanInventoryQR &&
+                            material.inventoryQRCode && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  router.push(
+                                    `/track/inventory/${material.inventoryQRCode}`
+                                  )
+                                }
+                                className={`text-xs cursor-pointer h-8 ${colors.borders.primary} rounded-none`}
+                              >
+                                View Source
+                              </Button>
+                            )}
                         </div>
                       ))}
                     </div>
@@ -558,10 +652,16 @@ const TrackingPage = () => {
 
               {/* Sales History (Product only) */}
               {data.salesHistory && data.salesHistory.length > 0 && (
-                <Card className={`${colors.cards.base} rounded-none shadow-none`}>
+                <Card
+                  className={`${colors.cards.base} rounded-none shadow-none`}
+                >
                   <CardHeader className="px-6 pb-0">
-                    <CardTitle className={`flex items-center gap-3 text-base ${colors.texts.primary}`}>
-                      <ShoppingCartIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                    <CardTitle
+                      className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                    >
+                      <ShoppingCartIcon
+                        className={`h-5 w-5 ${colors.icons.primary}`}
+                      />
                       Sales History
                     </CardTitle>
                   </CardHeader>
@@ -574,7 +674,9 @@ const TrackingPage = () => {
                           className={`flex items-center justify-between p-4 ${colors.backgrounds.tertiary} rounded-none ${colors.borders.primary}`}
                         >
                           <div>
-                            <p className={`font-medium ${colors.texts.primary}`}>
+                            <p
+                              className={`font-medium ${colors.texts.primary}`}
+                            >
                               Order #{sale.orderNumber}
                             </p>
                             <p className={`text-sm ${colors.texts.secondary}`}>
@@ -585,7 +687,9 @@ const TrackingPage = () => {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className={`font-medium ${colors.texts.primary}`}>
+                            <p
+                              className={`font-medium ${colors.texts.primary}`}
+                            >
                               {sale.amount} CVT
                             </p>
                             <p className={`text-sm ${colors.texts.secondary}`}>
@@ -606,10 +710,16 @@ const TrackingPage = () => {
 
               {/* Blockchain History */}
               {data.blockchainHistory && data.blockchainHistory.length > 0 && (
-                <Card className={`${colors.cards.base} rounded-none shadow-none`}>
+                <Card
+                  className={`${colors.cards.base} rounded-none shadow-none`}
+                >
                   <CardHeader className="px-6 pb-0">
-                    <CardTitle className={`flex items-center gap-3 text-base ${colors.texts.primary}`}>
-                      <ShieldCheckIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                    <CardTitle
+                      className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                    >
+                      <ShieldCheckIcon
+                        className={`h-5 w-5 ${colors.icons.primary}`}
+                      />
                       Blockchain History
                     </CardTitle>
                   </CardHeader>
@@ -626,8 +736,8 @@ const TrackingPage = () => {
                               log.status === "success"
                                 ? "bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400"
                                 : log.status === "failed"
-                                ? "bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400"
-                                : "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400"
+                                  ? "bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400"
+                                  : "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400"
                             }`}
                           >
                             {log.status === "success" ? (
@@ -639,7 +749,9 @@ const TrackingPage = () => {
                             )}
                           </div>
                           <div className="flex-1">
-                            <p className={`text-sm font-medium ${colors.texts.primary}`}>
+                            <p
+                              className={`text-sm font-medium ${colors.texts.primary}`}
+                            >
                               {log.action}
                             </p>
                             <p className={`text-xs ${colors.texts.secondary}`}>
@@ -647,7 +759,9 @@ const TrackingPage = () => {
                               {new Date(log.date).toLocaleString()}
                             </p>
                             {log.txHash && (
-                              <p className={`text-xs font-mono ${colors.texts.muted} mt-1`}>
+                              <p
+                                className={`text-xs font-mono ${colors.texts.muted} mt-1`}
+                              >
                                 {log.txHash.substring(0, 20)}...
                               </p>
                             )}
@@ -664,10 +778,16 @@ const TrackingPage = () => {
             <div className="space-y-6">
               {/* Current Owners */}
               {data.currentOwners && data.currentOwners.length > 0 && (
-                <Card className={`${colors.cards.base} rounded-none shadow-none`}>
+                <Card
+                  className={`${colors.cards.base} rounded-none shadow-none`}
+                >
                   <CardHeader className="px-6 pb-0">
-                    <CardTitle className={`flex items-center gap-3 text-base ${colors.texts.primary}`}>
-                      <UserGroupIcon className={`h-5 w-5 ${colors.icons.primary}`} />
+                    <CardTitle
+                      className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                    >
+                      <UserGroupIcon
+                        className={`h-5 w-5 ${colors.icons.primary}`}
+                      />
                       Current Owners
                     </CardTitle>
                   </CardHeader>
@@ -680,7 +800,9 @@ const TrackingPage = () => {
                           className={`p-3 ${colors.backgrounds.tertiary} rounded-none ${colors.borders.primary}`}
                         >
                           <div className="flex items-center justify-between mb-1">
-                            <p className={`font-medium ${colors.texts.primary}`}>
+                            <p
+                              className={`font-medium ${colors.texts.primary}`}
+                            >
                               {owner.owner}
                             </p>
                             <Badge
@@ -721,25 +843,33 @@ const TrackingPage = () => {
                   {data.type === "inventory" && data.inventory && (
                     <>
                       <div className="flex justify-between">
-                        <span className={`text-sm ${colors.texts.secondary}`}>Available Value</span>
+                        <span className={`text-sm ${colors.texts.secondary}`}>
+                          Available Value
+                        </span>
                         <span className={`font-medium ${colors.texts.primary}`}>
                           {(
-                            data.inventory.currentQuantity * data.inventory.pricePerUnit
+                            data.inventory.currentQuantity *
+                            data.inventory.pricePerUnit
                           ).toFixed(2)}{" "}
                           CVT
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className={`text-sm ${colors.texts.secondary}`}>Total Value</span>
+                        <span className={`text-sm ${colors.texts.secondary}`}>
+                          Total Value
+                        </span>
                         <span className={`font-medium ${colors.texts.primary}`}>
                           {(
-                            data.inventory.totalQuantity * data.inventory.pricePerUnit
+                            data.inventory.totalQuantity *
+                            data.inventory.pricePerUnit
                           ).toFixed(2)}{" "}
                           CVT
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className={`text-sm ${colors.texts.secondary}`}>Distributed</span>
+                        <span className={`text-sm ${colors.texts.secondary}`}>
+                          Distributed
+                        </span>
                         <span className={`font-medium ${colors.texts.primary}`}>
                           {data.currentOwners && data.currentOwners.length > 1
                             ? `${data.currentOwners.length - 1} vendors`
@@ -751,13 +881,20 @@ const TrackingPage = () => {
                   {data.type === "product" && data.product && (
                     <>
                       <div className="flex justify-between">
-                        <span className={`text-sm ${colors.texts.secondary}`}>Total Revenue</span>
+                        <span className={`text-sm ${colors.texts.secondary}`}>
+                          Total Revenue
+                        </span>
                         <span className={`font-medium ${colors.texts.primary}`}>
-                          {(data.product.totalSold * data.product.price).toFixed(2)} CVT
+                          {(
+                            data.product.totalSold * data.product.price
+                          ).toFixed(2)}{" "}
+                          CVT
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className={`text-sm ${colors.texts.secondary}`}>Sales Count</span>
+                        <span className={`text-sm ${colors.texts.secondary}`}>
+                          Sales Count
+                        </span>
                         <span className={`font-medium ${colors.texts.primary}`}>
                           {data.salesHistory?.length || 0}
                         </span>
@@ -766,7 +903,9 @@ const TrackingPage = () => {
                   )}
                   <Separator />
                   <div className="flex justify-between">
-                    <span className={`text-sm ${colors.texts.secondary}`}>Transfers</span>
+                    <span className={`text-sm ${colors.texts.secondary}`}>
+                      Transfers
+                    </span>
                     <span className={`font-medium ${colors.texts.primary}`}>
                       {data.transfers?.length || 0}
                     </span>

@@ -150,7 +150,7 @@ const cartSchema = new Schema(
     // Cart expiry for guest users (7 days default)
     expiresAt: {
       type: Date,
-      index: true,
+      // TTL index defined in schema.index() below
     },
 
     // Device info
@@ -204,7 +204,7 @@ const cartSchema = new Schema(
 cartSchema.index({ userId: 1, status: 1 });
 cartSchema.index({ sessionId: 1, status: 1 });
 cartSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index for auto-deletion
-cartSchema.index({ lastActivityAt: 1 });
+// lastActivityAt has index: true in schema
 cartSchema.index({ status: 1, lastActivityAt: 1 });
 cartSchema.index({ "items.productId": 1 });
 
