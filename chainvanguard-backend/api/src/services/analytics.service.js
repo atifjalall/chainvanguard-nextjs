@@ -875,7 +875,7 @@ class AnalyticsService {
       const topItems = await Order.aggregate([
         {
           $match: {
-            sellerId: mongoose.Types.ObjectId(supplierId),
+            sellerId: new mongoose.Types.ObjectId(supplierId),
             status: { $in: ["delivered", "completed"] },
             createdAt: dateFilter,
           },

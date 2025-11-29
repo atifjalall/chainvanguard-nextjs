@@ -5,6 +5,8 @@ import notificationService from "./notification.service.js";
 import logger from "../utils/logger.js";
 import mongoose from "mongoose";
 import fabricService from "./fabric.service.js";
+import ipfsService from "./ipfs.service.js"; // ✅ NEW: IPFS storage
+import dataSyncService from "./data.sync.service.js"; // ✅ NEW: Data sync
 import walletBalanceService from "./wallet.balance.service.js";
 import inventoryService from "./inventory.service.js";
 class VendorRequestService {
@@ -107,36 +109,41 @@ class VendorRequestService {
 
       await request.save();
 
-      // ✅ Record to blockchain (REQUIRED - synchronous)
-      console.log("📝 Recording vendor request on blockchain...");
+      // ❌ REMOVED: IPFS metadata upload
+      // IPFS should only store FILES (documents, contracts), not JSON metadata
+      // Vendor request data (items, prices, status, notes) is mutable and belongs in MongoDB
+
+      // ✅ Record IMMUTABLE creation event on blockchain
+      console.log("📝 Recording vendor request creation on blockchain...");
+
       const blockchainData = {
         requestId: request._id.toString(),
         requestNumber: request.requestNumber,
         vendorId: vendorId.toString(),
         vendorName: vendor.name || vendor.email || vendor.companyName || "",
+        vendorWalletAddress: vendor.walletAddress || "",
         supplierId: supplierId.toString(),
-        supplierName:
-          supplier.name || supplier.email || supplier.companyName || "",
+        supplierName: supplier.name || supplier.email || supplier.companyName || "",
+        supplierWalletAddress: supplier.walletAddress || "",
+
+        // Immutable snapshot at creation
         items: request.items.map((item) => ({
           inventoryId: item.inventoryId.toString(),
-          inventoryName: "",
           quantity: item.quantity,
           pricePerUnit: item.pricePerUnit,
-          inventoryId: item.inventoryId,
           subtotal: item.subtotal,
         })),
         subtotal: request.subtotal,
         tax: request.tax,
         total: request.total,
-        status: request.status,
-        vendorNotes: request.vendorNotes || "",
-        supplierNotes: request.supplierNotes || "",
-        autoApproved: request.autoApproved || false,
-        timestamp: new Date().toISOString(),
+        currency: request.currency || "CVT",
+
+        initialStatus: request.status,  // Status at creation
+        createdAt: request.createdAt.toISOString(),
       };
 
       const blockchainResult =
-        await fabricService.createVendorRequest(blockchainData);
+        await fabricService.recordVendorRequestCreation(blockchainData);
 
       // Update MongoDB with blockchain confirmation
       request.blockchainVerified = true;
@@ -331,7 +338,7 @@ class VendorRequestService {
 
       // ✅ ADD: Record approval to blockchain
       try {
-        const blockchainResult = await fabricService.approveVendorRequest(
+        const blockchainResult = await fabricService.recordVendorRequestApproval(
           requestId,
           supplierId.toString(),
           new Date().toISOString(),
@@ -431,7 +438,7 @@ class VendorRequestService {
 
       // ✅ ADD: Record rejection to blockchain
       try {
-        const blockchainResult = await fabricService.rejectVendorRequest(
+        const blockchainResult = await fabricService.recordVendorRequestRejection(
           requestId,
           supplierId.toString(),
           new Date().toISOString(),
@@ -529,7 +536,7 @@ class VendorRequestService {
 
       // ✅ ADD: Record cancellation to blockchain
       try {
-        const blockchainResult = await fabricService.cancelVendorRequest(
+        const blockchainResult = await fabricService.recordVendorRequestCancellation(
           requestId,
           vendorId.toString(),
           new Date().toISOString(),
@@ -965,31 +972,8 @@ class VendorRequestService {
 
     await request.save();
 
-    // ✅ ADD: Record status update to blockchain
-    try {
-      const blockchainResult = await fabricService.updateVendorRequestStatus(
-        requestId,
-        newStatus,
-        supplierId.toString(),
-        new Date().toISOString(),
-        notes || ""
-      );
-
-      if (!request.blockchainVerified) {
-        request.blockchainVerified = true;
-      }
-      if (blockchainResult.txId) {
-        request.blockchainTxId = blockchainResult.txId;
-      }
-      await request.save();
-
-      console.log("✅ Status update recorded on blockchain:", blockchainResult);
-    } catch (blockchainError) {
-      console.error(
-        "⚠️ Blockchain status update recording failed:",
-        blockchainError
-      );
-    }
+    // ✅ Sync to IPFS + Blockchain
+    await this._syncRequestToBlockchain(request);
 
     return {
       success: true,
@@ -1544,6 +1528,52 @@ class VendorRequestService {
 
       await session.commitTransaction();
 
+      // ✅ CRITICAL: Record vendor payment event on blockchain
+      try {
+        await fabricService.recordVendorRequestPayment(vendorRequest._id.toString(), {
+          vendorId: vendorId.toString(),
+          amount: vendorRequest.total,
+          currency: "CVT",
+          paymentMethod: "wallet",
+          transactionHash: null,
+          orderId: order._id.toString(),
+          vendorInventoryId: null, // Vendor inventory IDs created above
+        });
+        logger.info(`✅ Vendor payment event recorded on blockchain: ${vendorRequest.requestNumber}`);
+      } catch (blockchainError) {
+        logger.error("⚠️ Failed to record vendor payment on blockchain:", blockchainError.message);
+        // Continue even if blockchain fails - payment already processed
+      }
+
+      // 🧾 AUTO-GENERATE PURCHASE INVOICE after payment
+      logger.info(`🧾 Starting invoice generation for vendor request: ${vendorRequest.requestNumber}`);
+      try {
+        const invoiceService = (await import("./invoice.service.js")).default;
+
+        // Populate vendor and supplier if not already populated
+        await vendorRequest.populate([
+          { path: "vendorId", select: "name email companyName phone address city state country postalCode walletAddress" },
+          { path: "supplierId", select: "name email companyName phone businessAddress address city state country postalCode walletAddress" }
+        ]);
+
+        logger.info(`📋 Vendor: ${vendorRequest.vendorId?.name || 'N/A'}, Supplier: ${vendorRequest.supplierId?.name || 'N/A'}`);
+
+        const invoice = await invoiceService.generateVendorRequestInvoice(
+          vendorRequest,
+          vendorRequest.vendorId,
+          vendorRequest.supplierId
+        );
+
+        logger.info(`✅ Purchase invoice auto-generated: ${invoice.invoiceNumber} | IPFS: ${invoice.ipfsHash || 'PENDING'}`);
+      } catch (invoiceError) {
+        logger.error("❌ Failed to generate purchase invoice:", {
+          error: invoiceError.message,
+          stack: invoiceError.stack,
+          requestNumber: vendorRequest.requestNumber
+        });
+        // Continue even if invoice generation fails
+      }
+
       return {
         success: true,
         message:
@@ -1753,6 +1783,91 @@ class VendorRequestService {
     } catch (error) {
       console.error("❌ Get request history error:", error);
       throw error;
+    }
+  }
+  /**
+   * Helper: Update vendor request on IPFS + Blockchain
+   * Called whenever request data changes
+   */
+  async _syncRequestToBlockchain(request) {
+    try {
+      console.log("📝 Syncing vendor request to blockchain + IPFS...");
+
+      // Get populated data
+      await request.populate([
+        { path: "vendorId", select: "name email companyName walletAddress" },
+        { path: "supplierId", select: "name email companyName walletAddress" },
+      ]);
+
+      // Prepare complete request data
+      const completeRequestData = {
+        requestId: request._id.toString(),
+        requestNumber: request.requestNumber,
+        vendorId: request.vendorId._id.toString(),
+        vendorName: request.vendorId.name || request.vendorId.email || request.vendorId.companyName || "",
+        vendorWalletAddress: request.vendorId.walletAddress || "",
+        supplierId: request.supplierId._id.toString(),
+        supplierName: request.supplierId.name || request.supplierId.email || request.supplierId.companyName || "",
+        supplierWalletAddress: request.supplierId.walletAddress || "",
+        items: request.items.map((item) => ({
+          inventoryId: item.inventoryId.toString(),
+          quantity: item.quantity,
+          pricePerUnit: item.pricePerUnit,
+          subtotal: item.subtotal,
+        })),
+        subtotal: request.subtotal,
+        tax: request.tax,
+        total: request.total,
+        currency: request.currency || "CVT",
+        status: request.status,
+        vendorNotes: request.vendorNotes || "",
+        supplierNotes: request.supplierNotes || "",
+        autoApproved: request.autoApproved || false,
+        reviewedAt: request.reviewedAt || null,
+        reviewedBy: request.reviewedBy || null,
+        isCompleted: request.isCompleted || false,
+        completedAt: request.completedAt || null,
+        createdAt: request.createdAt.toISOString(),
+        updatedAt: request.updatedAt.toISOString(),
+      };
+
+      // 1. Upload to IPFS
+      let ipfsHash = "";
+      try {
+        const ipfsResult = await ipfsService.uploadEntityData(
+          "vendor-request",
+          completeRequestData,
+          request._id.toString()
+        );
+
+        if (ipfsResult.success) {
+          console.log(`✅ Updated vendor request data on IPFS: ${ipfsResult.ipfsHash}`);
+          ipfsHash = ipfsResult.ipfsHash;
+          request.ipfsHash = ipfsHash;
+        }
+      } catch (ipfsError) {
+        console.error("❌ IPFS upload error:", ipfsError);
+      }
+
+      // 2. Update on Blockchain with IPFS hash
+      const blockchainData = {
+        ...completeRequestData,
+        ipfsHash: ipfsHash,
+        dataHash: dataSyncService.generateHash(completeRequestData),
+      };
+
+      // Use existing blockchain update method
+      await fabricService.updateVendorRequestStatus(
+        request._id.toString(),
+        request.status,
+        request.supplierId._id.toString(),
+        new Date().toISOString(),
+        request.supplierNotes || ""
+      );
+
+      console.log("✅ Vendor request synced to blockchain + IPFS");
+    } catch (error) {
+      console.error("❌ Sync to blockchain error:", error);
     }
   }
 }

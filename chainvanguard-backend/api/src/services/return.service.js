@@ -7,6 +7,9 @@ import { getDateFilter } from "../utils/helpers.js";
 import notificationService from "./notification.service.js";
 import walletBalanceService from "./wallet.balance.service.js";
 import mongoose from "mongoose";
+import fabricService from "./fabric.service.js";
+import BlockchainLog from "../models/BlockchainLog.js";
+import logger from "../utils/logger.js";
 
 /**
  * ========================================
@@ -159,6 +162,47 @@ class ReturnService {
           },
         },
       });
+
+      // Log return creation to DB and blockchain
+      const logData = {
+        transactionId: `return-create-${Date.now()}`,
+        type: "return-event",
+        action: "return-created",
+        status: "success",
+        performedBy: userId,
+        userId: userId,
+        entityId: returnRequest._id,
+        entityType: "return",
+        metadata: {
+          returnNumber: returnRequest.returnNumber,
+          orderId: returnRequest.orderId,
+          orderNumber: returnRequest.orderNumber,
+          returnAmount: returnRequest.returnAmount,
+          reason: reason,
+          itemCount: returnItems.length,
+        },
+        timestamp: new Date(),
+      };
+
+      try {
+        await BlockchainLog.create(logData);
+        console.log("✅ Return creation logged to DB");
+      } catch (logErr) {
+        console.warn("⚠️ Failed to log return creation to DB:", logErr);
+      }
+
+      try {
+        await fabricService.createBlockchainLog(
+          logData.transactionId,
+          logData
+        );
+        console.log("✅ Return creation logged to Fabric blockchain");
+      } catch (fabricErr) {
+        console.warn(
+          "⚠️ Failed to log return creation to Fabric blockchain:",
+          fabricErr.message
+        );
+      }
 
       return {
         success: true,
@@ -375,6 +419,47 @@ class ReturnService {
         returnStatus: "approved",
       });
 
+      // Log return approval to DB and blockchain
+      const logData = {
+        transactionId: `return-approve-${Date.now()}`,
+        type: "return-event",
+        action: "return-approved",
+        status: "success",
+        performedBy: userId,
+        userId: returnRequest.customerId,
+        entityId: returnId,
+        entityType: "return",
+        metadata: {
+          returnNumber: returnRequest.returnNumber,
+          orderId: returnRequest.orderId,
+          refundAmount: returnRequest.refundAmount,
+          restockingFee: finalRestockingFee,
+          shippingRefund: finalShippingRefund,
+          reviewNotes: reviewNotes,
+        },
+        timestamp: new Date(),
+      };
+
+      try {
+        await BlockchainLog.create(logData);
+        console.log("✅ Return approval logged to DB");
+      } catch (logErr) {
+        console.warn("⚠️ Failed to log return approval to DB:", logErr);
+      }
+
+      try {
+        await fabricService.createBlockchainLog(
+          logData.transactionId,
+          logData
+        );
+        console.log("✅ Return approval logged to Fabric blockchain");
+      } catch (fabricErr) {
+        console.warn(
+          "⚠️ Failed to log return approval to Fabric blockchain:",
+          fabricErr.message
+        );
+      }
+
       // Send notification directly
       await notificationService.createNotification({
         userId: returnRequest.customerId,
@@ -450,6 +535,44 @@ class ReturnService {
       await Order.findByIdAndUpdate(returnRequest.orderId, {
         returnStatus: "rejected",
       });
+
+      // Log return rejection to DB and blockchain
+      const logData = {
+        transactionId: `return-reject-${Date.now()}`,
+        type: "return-event",
+        action: "return-rejected",
+        status: "success",
+        performedBy: userId,
+        userId: returnRequest.customerId,
+        entityId: returnId,
+        entityType: "return",
+        metadata: {
+          returnNumber: returnRequest.returnNumber,
+          orderId: returnRequest.orderId,
+          rejectionReason: rejectionReason,
+        },
+        timestamp: new Date(),
+      };
+
+      try {
+        await BlockchainLog.create(logData);
+        console.log("✅ Return rejection logged to DB");
+      } catch (logErr) {
+        console.warn("⚠️ Failed to log return rejection to DB:", logErr);
+      }
+
+      try {
+        await fabricService.createBlockchainLog(
+          logData.transactionId,
+          logData
+        );
+        console.log("✅ Return rejection logged to Fabric blockchain");
+      } catch (fabricErr) {
+        console.warn(
+          "⚠️ Failed to log return rejection to Fabric blockchain:",
+          fabricErr.message
+        );
+      }
 
       // Send notification directly
       await notificationService.createNotification({

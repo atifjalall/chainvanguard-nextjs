@@ -353,7 +353,7 @@ class EmailService {
               <p>You can now login to your account and start using ChainVanguard's blockchain-based supply chain management platform.</p>
 
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.FRONTEND_URL || "http://localhost:3001"}/login"
+                <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}/login"
                    style="display: inline-block; background: #000; color: #fff; padding: 12px 30px; text-decoration: none; text-transform: uppercase; letter-spacing: 2px; font-size: 11px;">
                   Login to Dashboard
                 </a>

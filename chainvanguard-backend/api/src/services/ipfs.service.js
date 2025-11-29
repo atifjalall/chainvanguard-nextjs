@@ -41,24 +41,30 @@ class IPFSService {
   // Upload buffer to IPFS (from memory)
   async uploadBuffer(buffer, fileName, metadata = {}) {
     try {
+      console.log(`📦 Preparing buffer upload to IPFS: ${fileName}, size: ${buffer.length} bytes`);
+
       // Write buffer to temp file
       const tempDir = path.join(__dirname, "../../../temp");
       await fs.mkdir(tempDir, { recursive: true });
 
       const tempFilePath = path.join(tempDir, fileName);
+      console.log(`💾 Writing buffer to temp file: ${tempFilePath}`);
       await fs.writeFile(tempFilePath, buffer);
 
       // Upload to IPFS
-      const result = await this.uploadFile(tempFilePath, metadata);
+      console.log(`🚀 Uploading temp file to IPFS...`);
+      const result = await this.ipfs.uploadFile(tempFilePath, fileName, metadata);
 
       // Clean up temp file
       await fs
         .unlink(tempFilePath)
         .catch((err) => console.error("Temp file cleanup error:", err));
 
+      console.log(`🧹 Temp file cleaned up`);
       return result;
     } catch (error) {
-      console.error("IPFS buffer upload error:", error.message);
+      console.error("❌ IPFS buffer upload error:", error.message);
+      console.error("Stack:", error.stack);
       return {
         success: false,
         error: error.message,
@@ -66,13 +72,33 @@ class IPFSService {
     }
   }
 
-  // Upload JSON data to IPFS
-  async uploadJSON(jsonData, fileName) {
+  /**
+   * Upload JSON data to IPFS with enhanced metadata
+   * Used for storing complete entity data (users, products, orders, etc.)
+   * @param {Object} jsonData - Complete data object
+   * @param {String} fileName - File name for IPFS
+   * @param {Object} additionalMetadata - Extra metadata to include
+   * @returns {Object} {success, ipfsHash, ipfsUrl, pinSize, timestamp}
+   */
+  async uploadJSON(jsonData, fileName, additionalMetadata = {}) {
     try {
-      const result = await this.ipfs.uploadJSON(jsonData, fileName);
+      // Enrich data with metadata if not already present
+      const enrichedData = {
+        ...jsonData,
+        _ipfsMetadata: {
+          uploadedAt: new Date().toISOString(),
+          fileName: fileName,
+          ...additionalMetadata,
+          ...(jsonData._ipfsMetadata || {}),
+        },
+      };
+
+      const result = await this.ipfs.uploadJSON(enrichedData, fileName);
 
       if (result.success) {
-        console.log(`✅ JSON uploaded to IPFS: ${result.ipfsHash}`);
+        console.log(
+          `✅ JSON uploaded to IPFS: ${result.ipfsHash} (${fileName})`
+        );
         return {
           success: true,
           ipfsHash: result.ipfsHash,
@@ -90,6 +116,21 @@ class IPFSService {
         error: error.message,
       };
     }
+  }
+
+  /**
+   * Upload entity data to IPFS (users, products, orders, etc.)
+   * Wrapper method with entity-specific handling
+   */
+  async uploadEntityData(entityType, entityData, entityId) {
+    const fileName = `${entityType}-${entityId}-${Date.now()}.json`;
+    const metadata = {
+      entityType: entityType,
+      entityId: entityId,
+      version: "1.0",
+    };
+
+    return this.uploadJSON(entityData, fileName, metadata);
   }
 
   // Upload product certificate

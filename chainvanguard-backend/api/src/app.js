@@ -1,8 +1,11 @@
+// ⚠️ CRITICAL: Load dotenv FIRST before any other imports that might use env variables
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import dotenv from "dotenv";
 import { connectMongoDB, redisClient } from "./config/database.js";
 import { testCloudinaryConnection } from "./config/cloudinary.js";
 import ipfsService from "./config/ipfs.js";
@@ -34,19 +37,38 @@ import vendorTransactionRoutes from "./routes/vendor.transaction.routes.js";
 import customerBrowseRoutes from "./routes/customer.browse.routes.js";
 import supplierRatingRoutes from "./routes/supplier.rating.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
-
-dotenv.config();
+import invoiceRoutes from "./routes/invoice.routes.js";
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 4000;
 
 /**
  * Middleware
  */
 app.use(helmet());
+const allowedOrigins = process.env.CORS_ORIGINS?.split(",") || [
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
-    origin: '*',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // SSR or Postman
+
+      // Allow localhost ports 3000-3099 for frontend
+      const localhostPattern = /^http:\/\/localhost:(30[0-9]{2})$/;
+      if (localhostPattern.test(origin)) {
+        const port = parseInt(origin.match(/:(\d+)$/)[1]);
+        if (port >= 3000 && port <= 3099) {
+          return callback(null, true);
+        }
+      }
+
+      // Check allowed origins list
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      return callback(new Error("Blocked by CORS: " + origin));
+    },
     credentials: true,
   })
 );
@@ -185,6 +207,7 @@ app.use("/api/vendor/inventory", vendorInventoryRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/vendor", vendorTransactionRoutes);
 app.use("/api/suppliers", supplierRatingRoutes);
+app.use("/api/invoices", invoiceRoutes);
 
 /**
  * API Info Endpoint

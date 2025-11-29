@@ -63,7 +63,7 @@ const wishlistSchema = new mongoose.Schema(
 );
 
 // Indexes for performance
-wishlistSchema.index({ userId: 1 });
+// userId has unique: true and index: true in schema
 wishlistSchema.index({ "items.productId": 1 });
 wishlistSchema.index({ "items.addedAt": -1 });
 

@@ -24,6 +24,7 @@ import {
 } from "@/lib/api/customer.orders.api";
 import type { Order } from "@/types";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { invoiceApi } from "@/lib/api/invoice.api";
 
 const STATUS_CONFIG: Record<
   string,
@@ -150,7 +151,39 @@ export default function OrderDetailPage() {
   };
 
   const handleDownloadInvoice = async () => {
-    toast.success("Invoice download feature coming soon");
+    try {
+      toast.loading("Downloading invoice...");
+
+      // Get invoices for this order
+      const response = await invoiceApi.getInvoicesByOrder(orderId);
+
+      if (response.success && response.data?.invoices?.length > 0) {
+        const invoice = response.data.invoices[0]; // Get the first invoice
+
+        // Download the invoice PDF
+        const downloadResponse = await invoiceApi.downloadInvoiceById(invoice._id);
+
+        if (downloadResponse.success && downloadResponse.data) {
+          // Trigger download
+          invoiceApi.triggerDownload(
+            downloadResponse.data,
+            `invoice-${invoice.invoiceNumber}.pdf`
+          );
+          toast.dismiss();
+          toast.success("Invoice downloaded successfully!");
+        } else {
+          toast.dismiss();
+          toast.error(downloadResponse.message || "Failed to download invoice");
+        }
+      } else {
+        toast.dismiss();
+        toast.error("No invoice found for this order");
+      }
+    } catch (error) {
+      console.error("Error downloading invoice:", error);
+      toast.dismiss();
+      toast.error("Failed to download invoice");
+    }
   };
 
   const handleCancelOrder = async () => {

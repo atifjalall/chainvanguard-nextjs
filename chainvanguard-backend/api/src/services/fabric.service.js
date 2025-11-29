@@ -16,7 +16,9 @@ class FabricService {
     this.productContract = null;
     this.orderContract = null;
     this.inventoryContract = null;
-    this.tokenContract = null; // ✅ ADD THIS
+    this.vendorInventoryContract = null;
+    this.vendorRequestContract = null;
+    this.tokenContract = null;
     this.client = null;
   }
 
@@ -121,6 +123,10 @@ class FabricService {
         chaincodeName,
         "InventoryContract"
       );
+      this.vendorInventoryContract = this.network.getContract(
+        chaincodeName,
+        "VendorInventoryContract"
+      );
       this.vendorRequestContract = this.network.getContract(
         chaincodeName,
         "VendorRequestContract"
@@ -136,7 +142,7 @@ class FabricService {
       console.log(`   Channel: ${channelName}`);
       console.log(`   Chaincode: ${chaincodeName}`);
       console.log(
-        `   Contracts: UserContract, ProductContract, OrderContract, InventoryContract, VendorRequestContract, TokenContract`
+        `   Contracts: UserContract, ProductContract, OrderContract, InventoryContract, VendorInventoryContract, VendorRequestContract, TokenContract`
       );
 
       return true;
@@ -229,60 +235,55 @@ class FabricService {
     }
   }
 
-  async registerUser(userData) {
+  // ========================================
+  // 🆕 EVENT-BASED USER METHODS
+  // ========================================
+
+  /**
+   * Record user registration event (IMMUTABLE IDENTITY ONLY)
+   * @param {Object} userData - User data
+   * @returns {Promise<Object>} Registration event
+   */
+  async recordUserRegistration(userData) {
     try {
-      console.log(`📝 Registering user on blockchain: ${userData.name}`);
+      console.log(`📝 Recording user registration on blockchain: ${userData.name || userData.walletAddress}`);
 
       if (!this.userContract) {
         throw new Error("Not connected to Fabric network");
       }
 
-      const walletAddress = String(userData.walletAddress || "");
-      const name = String(userData.name || "");
-      const email = String(userData.email || "");
-      const role = String(userData.role || "");
-      const organizationMSP = String(userData.organizationMSP || "Org1MSP");
-      const companyName = String(userData.companyName || "");
-      const businessAddress = String(userData.businessAddress || "");
-      const businessType = String(userData.businessType || "");
-
-      if (!walletAddress || !name || !email || !role) {
-        throw new Error(
-          "Missing required user fields for blockchain registration"
-        );
+      // Validate required fields
+      if (!userData.walletAddress || !userData.role) {
+        throw new Error("Missing required fields: walletAddress and role");
       }
 
-      console.log("📦 Blockchain registration data:", {
-        walletAddress,
-        name,
-        email,
-        role,
-        organizationMSP,
-        companyName,
-        businessAddress,
-        businessType,
+      // Only send IMMUTABLE fields
+      const registrationEvent = {
+        userId: userData.userId || userData._id?.toString() || userData.walletAddress,
+        walletAddress: userData.walletAddress,
+        role: userData.role,
+        kycHash: userData.kycHash || null,
+        registeredAt: userData.createdAt || new Date().toISOString(),
+      };
+
+      console.log("📦 Registration event:", {
+        userId: registrationEvent.userId,
+        walletAddress: registrationEvent.walletAddress,
+        role: registrationEvent.role,
       });
 
       const result = await this.retryOperation(
         async () => {
           return await this.userContract.submitTransaction(
-            "registerUser",
-            walletAddress,
-            name,
-            email,
-            role,
-            organizationMSP,
-            walletAddress,
-            companyName,
-            businessAddress,
-            businessType
+            "recordUserRegistration",  // ✅ NEW METHOD
+            JSON.stringify(registrationEvent)
           );
         },
         3,
         2000
       );
 
-      console.log("✅ User registered on blockchain");
+      console.log("✅ User registration event recorded on blockchain");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -291,28 +292,112 @@ class FabricService {
         resultStr = result.toString();
       }
 
-      console.log("📦 Blockchain response:", resultStr);
-
       if (!resultStr || resultStr.trim() === "") {
-        console.log("⚠️ Empty response from chaincode, user likely created");
-        return { success: true, userId: walletAddress };
+        return { success: true, userId: registrationEvent.userId };
       }
 
       return JSON.parse(resultStr);
     } catch (error) {
-      console.error("❌ Failed to register user on blockchain:", error);
+      console.error("❌ Failed to record user registration:", error);
       throw error;
     }
   }
 
-  async getUser(userId) {
+  /**
+   * @deprecated Use recordUserRegistration() instead
+   */
+  async registerUser(userData) {
+    console.warn("⚠️ registerUser() is deprecated. Use recordUserRegistration() instead.");
+    return this.recordUserRegistration(userData);
+  }
+
+  /**
+   * Record user role change event
+   */
+  async recordUserRoleChange(userId, oldRole, newRole, changedBy, reason = "") {
+    try {
+      if (!this.userContract) {
+        throw new Error("Not connected to Fabric network");
+      }
+
+      const event = {
+        userId: userId.toString(),
+        oldRole,
+        newRole,
+        changedBy: changedBy.toString(),
+        reason,
+        timestamp: new Date().toISOString(),
+      };
+
+      const result = await this.userContract.submitTransaction(
+        "recordRoleChange",
+        JSON.stringify(event)
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      console.log("✅ User role change event recorded");
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Failed to record role change:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Record KYC verification event
+   */
+  async recordKYCVerification(userId, kycHash, verifiedBy, verificationLevel = "basic") {
+    try {
+      if (!this.userContract) {
+        throw new Error("Not connected to Fabric network");
+      }
+
+      const event = {
+        userId: userId.toString(),
+        kycHash,
+        verifiedBy: verifiedBy.toString(),
+        verificationLevel,
+        notes: "",
+        timestamp: new Date().toISOString(),
+      };
+
+      const result = await this.userContract.submitTransaction(
+        "recordKYCVerification",
+        JSON.stringify(event)
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      console.log("✅ KYC verification event recorded");
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Failed to record KYC verification:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user event history from blockchain
+   */
+  async getUserEventHistory(userId) {
     try {
       if (!this.userContract) {
         throw new Error("Not connected to Fabric network");
       }
 
       const result = await this.userContract.evaluateTransaction(
-        "getUser",
+        "getUserEventHistory",
         userId
       );
 
@@ -325,40 +410,27 @@ class FabricService {
 
       return JSON.parse(resultStr);
     } catch (error) {
-      console.error("❌ Failed to get user from blockchain:", error);
+      console.error("❌ Failed to get user event history:", error);
       throw error;
     }
   }
 
+  /**
+   * @deprecated Use getUserEventHistory() instead
+   */
+  async getUser(userId) {
+    console.warn("⚠️ getUser() is deprecated. Use getUserEventHistory() instead.");
+    return this.getUserEventHistory(userId);
+  }
+
+  /**
+   * @deprecated User updates are mutable - use specific event methods instead
+   */
   async updateUser(userId, updateData) {
-    try {
-      if (!this.userContract) {
-        throw new Error("Not connected to Fabric network");
-      }
-
-      const result = await this.userContract.submitTransaction(
-        "updateUser",
-        userId,
-        updateData.name || "",
-        updateData.email || "",
-        updateData.companyName || "",
-        updateData.businessAddress || ""
-      );
-
-      console.log("✅ User updated on blockchain");
-
-      let resultStr;
-      if (result instanceof Uint8Array) {
-        resultStr = Buffer.from(result).toString("utf8");
-      } else {
-        resultStr = result.toString();
-      }
-
-      return JSON.parse(resultStr);
-    } catch (error) {
-      console.error("❌ Failed to update user on blockchain:", error);
-      throw error;
-    }
+    throw new Error(
+      "updateUser() is deprecated. User data like email/phone/name is mutable and should only be in MongoDB. " +
+      "For immutable events, use: recordUserRoleChange(), recordKYCVerification(), recordUserDeactivation()"
+    );
   }
 
   async getAllUsers() {
@@ -434,20 +506,12 @@ class FabricService {
     }
   }
 
+  /**
+   * @deprecated Login tracking is mutable and should NOT be on blockchain
+   */
   async recordLogin(userId) {
-    try {
-      if (!this.userContract) {
-        throw new Error("Not connected to Fabric network");
-      }
-
-      await this.userContract.submitTransaction(
-        "recordLogin",
-        userId
-      );
-      console.log(`✅ Login recorded on blockchain for: ${userId}`);
-    } catch (error) {
-      console.warn("⚠️ Failed to record login on blockchain:", error.message);
-    }
+    console.warn("⚠️ recordLogin() is deprecated. Login tracking is mutable and should only be in MongoDB, not blockchain.");
+    return;
   }
 
   async incrementUserTransactionCount(userId) {
@@ -547,9 +611,18 @@ class FabricService {
 
       return parsed;
     } catch (error) {
-      // Account might already exist
-      if (error.message.includes("already exists")) {
-        console.log("⚠️ Token account already exists");
+      // Account might already exist - check both error message and details
+      const errorMessage = error.message || "";
+      const errorDetails = error.details
+        ? JSON.stringify(error.details)
+        : "";
+      const fullErrorText = errorMessage + errorDetails;
+
+      if (
+        fullErrorText.includes("already exists") ||
+        fullErrorText.includes("Account already exists")
+      ) {
+        console.log("⚠️ Token account already exists (race condition handled)");
         return { success: true, message: "Account already exists" };
       }
       console.error("❌ Create token account failed:", error);
@@ -778,12 +851,15 @@ class FabricService {
   }
 
   // ========================================
-  // PRODUCT METHODS (keep existing)
+  // 🆕 EVENT-BASED PRODUCT METHODS
   // ========================================
 
-  async createProduct(productData) {
+  /**
+   * Record product creation event (IMMUTABLE SNAPSHOT)
+   */
+  async recordProductCreation(productData) {
     try {
-      console.log("📝 Creating product on blockchain...");
+      console.log("📝 Recording product creation on blockchain...");
 
       if (!this.productContract) {
         throw new Error("Product contract not initialized");
@@ -793,18 +869,36 @@ class FabricService {
         throw new Error("Product data missing productId");
       }
 
-      console.log("📦 Sending to blockchain:", {
+      // Only send IMMUTABLE fields
+      const creationEvent = {
         productId: productData.productId,
         name: productData.name,
         category: productData.category,
+        subcategory: productData.subcategory || "",
+        sellerId: productData.sellerId || productData.vendorId,
+        sellerName: productData.sellerName || "",
+        sellerRole: productData.sellerRole || "vendor",
+        originalPrice: productData.price,  // Price at creation
+        currency: productData.currency || "CVT",
+        imageHash: productData.ipfsImageHash || null,  // IPFS hash
+        certificateHash: productData.certificateHash || null,
+        metadataHash: productData.metadataHash || null,  // ✅ IPFS metadata snapshot hash
+        createdAt: productData.createdAt || new Date().toISOString(),
+      };
+
+      console.log("📦 Product creation event:", {
+        productId: creationEvent.productId,
+        name: creationEvent.name,
+        category: creationEvent.category,
+        metadataHash: creationEvent.metadataHash,
       });
 
       const result = await this.productContract.submitTransaction(
-        "createProduct",
-        JSON.stringify(productData)
+        "recordProductCreation",  // ✅ NEW METHOD
+        JSON.stringify(creationEvent)
       );
 
-      console.log("✅ Product created on blockchain");
+      console.log("✅ Product creation event recorded on blockchain");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -815,25 +909,30 @@ class FabricService {
 
       return JSON.parse(resultStr);
     } catch (error) {
-      console.error("❌ Blockchain createProduct error:", error);
-      console.error("Error details:", {
-        message: error.message,
-        details: error.details,
-      });
+      console.error("❌ Failed to record product creation:", error);
       throw error;
     }
   }
 
-  async getProduct(productId) {
-    try {
-      console.log(`📝 Getting product from blockchain: ${productId}`);
+  /**
+   * @deprecated Use recordProductCreation() instead
+   */
+  async createProduct(productData) {
+    console.warn("⚠️ createProduct() is deprecated. Use recordProductCreation() instead.");
+    return this.recordProductCreation(productData);
+  }
 
+  /**
+   * Get product event history from blockchain
+   */
+  async getProductEventHistory(productId) {
+    try {
       if (!this.productContract) {
         throw new Error("Product contract not initialized");
       }
 
       const result = await this.productContract.evaluateTransaction(
-        "readProduct",
+        "getProductEventHistory",
         productId
       );
 
@@ -846,9 +945,17 @@ class FabricService {
 
       return JSON.parse(resultStr);
     } catch (error) {
-      console.error("❌ Blockchain getProduct error:", error);
+      console.error("❌ Failed to get product event history:", error);
       throw error;
     }
+  }
+
+  /**
+   * @deprecated Use getProductEventHistory() instead
+   */
+  async getProduct(productId) {
+    console.warn("⚠️ getProduct() is deprecated. Use getProductEventHistory() instead.");
+    return this.getProductEventHistory(productId);
   }
 
   async getAllProducts() {
@@ -877,39 +984,14 @@ class FabricService {
     }
   }
 
+  /**
+   * @deprecated Product updates (price, quantity, status) are mutable - MongoDB only
+   */
   async updateProduct(productId, updateData) {
-    try {
-      console.log(`📝 Updating product on blockchain: ${productId}`);
-
-      if (!this.productContract) {
-        throw new Error("Product contract not initialized");
-      }
-
-      const data =
-        typeof updateData === "string"
-          ? updateData
-          : JSON.stringify(updateData);
-
-      const result = await this.productContract.submitTransaction(
-        "updateProduct",
-        productId,
-        data
-      );
-
-      console.log("✅ Product updated on blockchain");
-
-      let resultStr;
-      if (result instanceof Uint8Array) {
-        resultStr = Buffer.from(result).toString("utf8");
-      } else {
-        resultStr = result.toString();
-      }
-
-      return JSON.parse(resultStr);
-    } catch (error) {
-      console.error("❌ Blockchain updateProduct error:", error);
-      throw error;
-    }
+    throw new Error(
+      "updateProduct() is deprecated. Price/quantity/status updates are mutable and should only be in MongoDB. " +
+      "For immutable events, use: recordProductVerification(), recordOwnershipTransfer()"
+    );
   }
 
   async getProductHistory(productId) {
@@ -1019,21 +1101,85 @@ class FabricService {
     }
   }
 
+  /**
+   * Record product verification event
+   */
+  async recordProductVerification(productId, verificationData) {
+    try {
+      if (!this.productContract) {
+        throw new Error("Product contract not initialized");
+      }
+
+      const event = {
+        productId,
+        verifiedBy: verificationData.expertId || verificationData.verifiedBy,
+        verifiedByName: verificationData.expertName || "",
+        certificateHash: verificationData.certificateHash || null,
+        notes: verificationData.notes || "",
+        verificationLevel: verificationData.verificationLevel || "standard",
+        timestamp: new Date().toISOString(),
+      };
+
+      const result = await this.productContract.submitTransaction(
+        "recordProductVerification",  // ✅ NEW METHOD
+        JSON.stringify(event)
+      );
+
+      console.log("✅ Product verification event recorded");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Failed to record product verification:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Use recordProductVerification() instead
+   */
   async verifyProduct(productId, verificationData) {
+    console.warn("⚠️ verifyProduct() is deprecated. Use recordProductVerification() instead.");
+    return this.recordProductVerification(productId, verificationData);
+  }
+
+  /**
+   * Record product ownership transfer event
+   * @param {string} productId - Product ID
+   * @param {object} transferData - Transfer details (fromOwner, toOwner, etc.)
+   * @returns {object} Ownership transfer event
+   */
+  async recordOwnershipTransfer(productId, transferData) {
     try {
-      console.log(`📝 Verifying product: ${productId}`);
+      console.log(`📝 Recording ownership transfer for product: ${productId}`);
 
       if (!this.productContract) {
         throw new Error("Product contract not initialized");
       }
 
-      const result = await this.productContract.submitTransaction(
-        "verifyProduct",
+      const event = {
         productId,
-        JSON.stringify(verificationData)
+        fromOwner: transferData.fromOwner || transferData.fromOwnerId,
+        toOwner: transferData.toOwner || transferData.toOwnerId,
+        transferPrice: transferData.transferPrice || null,
+        transferReason: transferData.transferReason || "sale",
+        orderId: transferData.orderId || null,
+        notes: transferData.notes || "",
+        timestamp: new Date().toISOString(),
+      };
+
+      const result = await this.productContract.submitTransaction(
+        "recordOwnershipTransfer",
+        JSON.stringify(event)
       );
 
-      console.log("✅ Product verified on blockchain");
+      console.log("✅ Product ownership transfer event recorded");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -1044,26 +1190,45 @@ class FabricService {
 
       return JSON.parse(resultStr);
     } catch (error) {
-      console.error("❌ Blockchain verifyProduct error:", error);
+      console.error("❌ Blockchain recordOwnershipTransfer error:", error);
       throw error;
     }
   }
 
+  /**
+   * @deprecated Use recordOwnershipTransfer instead
+   */
   async transferProduct(productId, transferData) {
+    throw new Error("transferProduct() is deprecated. Use recordOwnershipTransfer() instead.");
+  }
+
+  /**
+   * Record product archival/deletion event
+   * @param {string} productId - Product ID
+   * @param {string} deletedBy - User ID who deleted the product
+   * @returns {object} Archival event
+   */
+  async recordProductArchival(productId, deletedBy) {
     try {
-      console.log(`📝 Transferring product: ${productId}`);
+      console.log(`📝 Recording product archival: ${productId}`);
 
       if (!this.productContract) {
         throw new Error("Product contract not initialized");
       }
 
-      const result = await this.productContract.submitTransaction(
-        "transferProduct",
+      const event = {
         productId,
-        JSON.stringify(transferData)
+        deletedBy,
+        reason: "archived",
+        timestamp: new Date().toISOString(),
+      };
+
+      const result = await this.productContract.submitTransaction(
+        "recordProductArchival",
+        JSON.stringify(event)
       );
 
-      console.log("✅ Product transferred on blockchain");
+      console.log("✅ Product archival event recorded");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -1074,39 +1239,16 @@ class FabricService {
 
       return JSON.parse(resultStr);
     } catch (error) {
-      console.error("❌ Blockchain transferProduct error:", error);
+      console.error("❌ Blockchain recordProductArchival error:", error);
       throw error;
     }
   }
 
+  /**
+   * @deprecated Use recordProductArchival instead
+   */
   async archiveProduct(productId, deletedBy) {
-    try {
-      console.log(`📝 Archiving product: ${productId}`);
-
-      if (!this.productContract) {
-        throw new Error("Product contract not initialized");
-      }
-
-      const result = await this.productContract.submitTransaction(
-        "archiveProduct",
-        productId,
-        deletedBy
-      );
-
-      console.log("✅ Product archived on blockchain");
-
-      let resultStr;
-      if (result instanceof Uint8Array) {
-        resultStr = Buffer.from(result).toString("utf8");
-      } else {
-        resultStr = result.toString();
-      }
-
-      return JSON.parse(resultStr);
-    } catch (error) {
-      console.error("❌ Blockchain archiveProduct error:", error);
-      throw error;
-    }
+    throw new Error("archiveProduct() is deprecated. Use recordProductArchival() instead.");
   }
 
   async productExists(productId) {
@@ -1148,20 +1290,66 @@ class FabricService {
     console.log("✅ Order contract initialized");
   }
 
-  async createOrder(orderData) {
+  /**
+   * Record order creation event
+   * @param {object} orderData - Order data (immutable fields only)
+   * @returns {object} Order creation event
+   */
+  async recordOrderCreation(orderData) {
     try {
-      console.log("📝 Creating order on blockchain...");
+      console.log("📝 Recording order creation on blockchain...");
 
       if (!this.orderContract) {
         await this.initOrderContract();
       }
 
+      // Only send immutable fields to blockchain
+      const event = {
+        orderId: orderData.orderId,
+        orderNumber: orderData.orderNumber, // Required by chaincode
+        customerId: orderData.customerId,
+        customerName: orderData.customerName || "",
+        customerWalletAddress: orderData.customerWalletAddress || "",
+
+        // Seller/Vendor information (required by chaincode)
+        sellerId: orderData.sellerId || orderData.vendorId,
+        sellerName: orderData.sellerName || orderData.vendorName || "",
+        sellerWalletAddress: orderData.sellerWalletAddress || orderData.vendorWalletAddress || "",
+        sellerRole: orderData.sellerRole || "vendor",
+
+        // Items snapshot (immutable at creation)
+        items: orderData.items || [],
+
+        // Pricing at creation (immutable snapshot)
+        subtotal: orderData.subtotal || 0,
+        shippingCost: orderData.shippingCost || 0,
+        tax: orderData.tax || 0,
+        total: orderData.total || orderData.totalAmount || 0,
+        currency: orderData.currency || "CVT",
+
+        // Initial payment method
+        paymentMethod: orderData.paymentMethod || "",
+
+        // Shipping address snapshot (immutable at creation)
+        shippingAddress: orderData.shippingAddress || {},
+
+        // Initial status
+        initialStatus: orderData.status || "pending",
+
+        // References
+        transactionHash: orderData.transactionHash || null,
+        ipfsHash: orderData.ipfsHash || null,
+
+        timestamp: new Date().toISOString(),
+        createdAt: orderData.createdAt || new Date().toISOString(),
+      };
+
       const result = await this.orderContract.submitTransaction(
-        "createOrder",
-        JSON.stringify(orderData)
+        "recordOrderCreation",
+        JSON.stringify(event)
       );
 
-      console.log("✅ Order created on blockchain");
+      console.log("✅ Order creation event recorded on blockchain");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -1172,21 +1360,33 @@ class FabricService {
 
       return JSON.parse(resultStr);
     } catch (error) {
-      console.error("❌ Blockchain createOrder error:", error);
+      console.error("❌ Blockchain recordOrderCreation error:", error);
       throw error;
     }
   }
 
-  async getOrder(orderId) {
+  /**
+   * @deprecated Use recordOrderCreation instead
+   */
+  async createOrder(orderData) {
+    throw new Error("createOrder() is deprecated. Use recordOrderCreation() instead.");
+  }
+
+  /**
+   * Get order event history
+   * @param {string} orderId - Order ID
+   * @returns {object[]} Array of all order events (creation, payments, status changes)
+   */
+  async getOrderEventHistory(orderId) {
     try {
-      console.log(`📝 Getting order from blockchain: ${orderId}`);
+      console.log(`📝 Getting order event history from blockchain: ${orderId}`);
 
       if (!this.orderContract) {
         await this.initOrderContract();
       }
 
       const result = await this.orderContract.evaluateTransaction(
-        "readOrder",
+        "getOrderEventHistory",
         orderId
       );
 
@@ -1199,26 +1399,53 @@ class FabricService {
 
       return JSON.parse(resultStr);
     } catch (error) {
-      console.error("❌ Blockchain getOrder error:", error);
+      console.error("❌ Blockchain getOrderEventHistory error:", error);
       throw error;
     }
   }
 
-  async updateOrderStatus(orderId, updateData) {
+  /**
+   * @deprecated Use getOrderEventHistory instead
+   */
+  async getOrder(orderId) {
+    console.warn("⚠️ getOrder() is deprecated. Use getOrderEventHistory() instead.");
+    return this.getOrderEventHistory(orderId);
+  }
+
+  /**
+   * Record order status change event
+   * THIS ANSWERS THE USER'S QUESTION: "if order status changes we will store a new copy?"
+   * Answer: YES, but we store small STATUS CHANGE EVENTS (~350 bytes), NOT full order copies (~5KB)
+   *
+   * @param {string} orderId - Order ID
+   * @param {object} updateData - Status change data
+   * @returns {object} Status change event
+   */
+  async recordOrderStatusChange(orderId, updateData) {
     try {
-      console.log(`📝 Updating order status: ${orderId}`);
+      console.log(`📝 Recording order status change: ${orderId}`);
 
       if (!this.orderContract) {
         await this.initOrderContract();
       }
 
-      const result = await this.orderContract.submitTransaction(
-        "updateOrderStatus",
+      // Only send status change details (small event!)
+      const event = {
         orderId,
-        JSON.stringify(updateData)
+        oldStatus: updateData.oldStatus || updateData.previousStatus || "",
+        newStatus: updateData.newStatus || updateData.status,
+        changedBy: updateData.changedBy || updateData.updatedBy || "",
+        trackingNumber: updateData.trackingNumber || null,
+        notes: updateData.notes || "",
+        timestamp: new Date().toISOString(),
+      };
+
+      const result = await this.orderContract.submitTransaction(
+        "recordOrderStatusChange",
+        JSON.stringify(event)
       );
 
-      console.log("✅ Order status updated on blockchain");
+      console.log("✅ Order status change event recorded on blockchain");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -1229,7 +1456,105 @@ class FabricService {
 
       return JSON.parse(resultStr);
     } catch (error) {
-      console.error("❌ Blockchain updateOrderStatus error:", error);
+      console.error("❌ Blockchain recordOrderStatusChange error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Use recordOrderStatusChange instead
+   */
+  async updateOrderStatus(orderId, updateData) {
+    throw new Error("updateOrderStatus() is deprecated. Use recordOrderStatusChange() instead.");
+  }
+
+  /**
+   * Record order payment event
+   * NEW METHOD for recording when customer pays for an order
+   *
+   * @param {string} orderId - Order ID
+   * @param {object} paymentData - Payment details
+   * @returns {object} Payment event
+   */
+  async recordOrderPayment(orderId, paymentData) {
+    try {
+      console.log(`📝 Recording order payment: ${orderId}`);
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const event = {
+        orderId,
+        paidBy: paymentData.paidBy || paymentData.customerId,
+        amount: paymentData.amount || paymentData.totalAmount,
+        currency: paymentData.currency || "CVT",
+        paymentMethod: paymentData.paymentMethod || "",
+        transactionHash: paymentData.transactionHash || null,
+        notes: paymentData.notes || "",
+        timestamp: new Date().toISOString(),
+      };
+
+      const result = await this.orderContract.submitTransaction(
+        "recordOrderPayment",
+        JSON.stringify(event)
+      );
+
+      console.log("✅ Order payment event recorded on blockchain");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain recordOrderPayment error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Record order cancellation event
+   * @param {string} orderId - Order ID
+   * @param {object} cancellationData - Cancellation details
+   * @returns {object} Cancellation event
+   */
+  async recordOrderCancellation(orderId, cancellationData) {
+    try {
+      console.log(`📝 Recording order cancellation: ${orderId}`);
+
+      if (!this.orderContract) {
+        await this.initOrderContract();
+      }
+
+      const event = {
+        orderId,
+        cancelledBy: cancellationData.cancelledBy || cancellationData.userId,
+        reason: cancellationData.reason || "",
+        refundAmount: cancellationData.refundAmount || null,
+        timestamp: new Date().toISOString(),
+      };
+
+      const result = await this.orderContract.submitTransaction(
+        "recordOrderCancellation",
+        JSON.stringify(event)
+      );
+
+      console.log("✅ Order cancellation event recorded on blockchain");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain recordOrderCancellation error:", error);
       throw error;
     }
   }
@@ -1544,6 +1869,16 @@ class FabricService {
           console.log("✅ InventoryContract contract initialized");
         }
         break;
+      case "vendorinventory":
+      case "vendor-inventory":
+        if (!this.vendorInventoryContract) {
+          this.vendorInventoryContract = this.network.getContract(
+            chaincodeName,
+            "VendorInventoryContract"
+          );
+          console.log("✅ VendorInventoryContract initialized");
+        }
+        break;
       case "vendorrequest":
       case "vendor-request":
         if (!this.vendorRequestContract) {
@@ -1614,6 +1949,16 @@ class FabricService {
             );
           }
           contract = this.inventoryContract;
+          break;
+        case "vendorinventory":
+        case "vendor-inventory":
+          if (!this.vendorInventoryContract) {
+            this.vendorInventoryContract = this.network.getContract(
+              "chainvanguard",
+              "VendorInventoryContract"
+            );
+          }
+          contract = this.vendorInventoryContract;
           break;
         case "vendorrequest":
         case "vendor-request":
@@ -1802,19 +2147,51 @@ class FabricService {
     }
   }
 
-  async createVendorRequest(requestData) {
+  /**
+   * Record vendor request creation event
+   * @param {object} requestData - Vendor request data
+   * @returns {object} Vendor request creation event
+   */
+  async recordVendorRequestCreation(requestData) {
     try {
       console.log(
-        `📝 Creating vendor request on blockchain: ${requestData.requestNumber}`
+        `📝 Recording vendor request creation on blockchain: ${requestData.requestNumber}`
       );
 
       if (!this.vendorRequestContract) {
         await this.initVendorRequestContract();
       }
 
+      // Only send immutable fields to blockchain
+      const event = {
+        requestId: requestData.requestId,
+        requestNumber: requestData.requestNumber,
+        vendorId: requestData.vendorId,
+        vendorName: requestData.vendorName || "",
+        vendorWalletAddress: requestData.vendorWalletAddress || "",
+
+        supplierId: requestData.supplierId,
+        supplierName: requestData.supplierName || "",
+        supplierWalletAddress: requestData.supplierWalletAddress || "",
+
+        // Multi-item support (immutable snapshot)
+        items: requestData.items || [],
+        subtotal: requestData.subtotal || 0,
+        tax: requestData.tax || 0,
+        total: requestData.total || 0,
+        currency: requestData.currency || "CVT",
+
+        // Initial status
+        initialStatus: requestData.initialStatus || requestData.status || "pending",
+
+        // Timestamps
+        createdAt: requestData.createdAt || new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+      };
+
       const result = await this.vendorRequestContract.submitTransaction(
-        "createVendorRequest",
-        JSON.stringify(requestData)
+        "recordVendorRequestCreation",
+        JSON.stringify(event)
       );
 
       let resultStr;
@@ -1827,28 +2204,48 @@ class FabricService {
       }
 
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor request created on blockchain:", parsedResult);
+      console.log("✅ Vendor request creation event recorded on blockchain:", parsedResult);
 
       return parsedResult;
     } catch (error) {
-      console.error("❌ Blockchain createVendorRequest error:", error);
+      console.error("❌ Blockchain recordVendorRequestCreation error:", error);
       throw error;
     }
   }
 
-  async approveVendorRequest(requestId, approverId, timestamp, notes = "") {
+  /**
+   * @deprecated Use recordVendorRequestCreation instead
+   */
+  async createVendorRequest(requestData) {
+    throw new Error("createVendorRequest() is deprecated. Use recordVendorRequestCreation() instead.");
+  }
+
+  /**
+   * Record vendor request approval event
+   * @param {string} requestId - Request ID
+   * @param {string} approverId - Supplier ID who approved
+   * @param {string} timestamp - Approval timestamp
+   * @param {string} notes - Approval notes
+   * @returns {object} Approval event
+   */
+  async recordVendorRequestApproval(requestId, approverId, timestamp, notes = "") {
     try {
-      console.log(`✅ Approving vendor request ${requestId} on blockchain`);
+      console.log(`✅ Recording vendor request approval ${requestId} on blockchain`);
 
       if (!this.vendorRequestContract) {
         await this.initVendorRequestContract();
       }
 
-      const result = await this.vendorRequestContract.submitTransaction(
-        "approveVendorRequest",
+      const event = {
         requestId,
-        approverId,
-        timestamp || new Date().toISOString()
+        approvedBy: approverId,
+        notes: notes || "",
+        timestamp: timestamp || new Date().toISOString(),
+      };
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "recordVendorRequestApproval",
+        JSON.stringify(event)
       );
 
       let resultStr;
@@ -1861,18 +2258,33 @@ class FabricService {
       }
 
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor request approved on blockchain:", parsedResult);
+      console.log("✅ Vendor request approval event recorded on blockchain:", parsedResult);
 
       return parsedResult;
     } catch (error) {
-      console.error("❌ Blockchain approveVendorRequest error:", error);
+      console.error("❌ Blockchain recordVendorRequestApproval error:", error);
       throw error;
     }
   }
 
-  async rejectVendorRequest(requestId, rejecterId, timestamp, reason) {
+  /**
+   * @deprecated Use recordVendorRequestApproval instead
+   */
+  async approveVendorRequest(requestId, approverId, timestamp, notes = "") {
+    throw new Error("approveVendorRequest() is deprecated. Use recordVendorRequestApproval() instead.");
+  }
+
+  /**
+   * Record vendor request rejection event
+   * @param {string} requestId - Request ID
+   * @param {string} rejecterId - Supplier ID who rejected
+   * @param {string} timestamp - Rejection timestamp
+   * @param {string} reason - Rejection reason
+   * @returns {object} Rejection event
+   */
+  async recordVendorRequestRejection(requestId, rejecterId, timestamp, reason) {
     try {
-      console.log(`❌ Rejecting vendor request ${requestId} on blockchain`);
+      console.log(`❌ Recording vendor request rejection ${requestId} on blockchain`);
 
       if (!this.vendorRequestContract) {
         await this.initVendorRequestContract();
@@ -1882,11 +2294,16 @@ class FabricService {
         throw new Error("Rejection reason is required");
       }
 
-      const result = await this.vendorRequestContract.submitTransaction(
-        "rejectVendorRequest",
+      const event = {
         requestId,
-        rejecterId,
-        timestamp || new Date().toISOString()
+        rejectedBy: rejecterId,
+        reason: reason,
+        timestamp: timestamp || new Date().toISOString(),
+      };
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "recordVendorRequestRejection",
+        JSON.stringify(event)
       );
 
       let resultStr;
@@ -1899,28 +2316,54 @@ class FabricService {
       }
 
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor request rejected on blockchain:", parsedResult);
+      console.log("✅ Vendor request rejection event recorded on blockchain:", parsedResult);
 
       return parsedResult;
     } catch (error) {
-      console.error("❌ Blockchain rejectVendorRequest error:", error);
+      console.error("❌ Blockchain recordVendorRequestRejection error:", error);
       throw error;
     }
   }
 
-  async cancelVendorRequest(requestId, vendorId, timestamp, notes = "") {
+  /**
+   * @deprecated Use recordVendorRequestRejection instead
+   */
+  async rejectVendorRequest(requestId, rejecterId, timestamp, reason) {
+    throw new Error("rejectVendorRequest() is deprecated. Use recordVendorRequestRejection() instead.");
+  }
+
+  /**
+   * THIS ANSWERS THE USER'S SECOND QUESTION: "when vendor pays for inventory will that also be recorded?"
+   * Answer: YES! This is a CRITICAL event for the financial audit trail.
+   *
+   * Record vendor request payment event (when vendor pays supplier)
+   * @param {string} requestId - Request ID
+   * @param {object} paymentData - Payment details
+   * @returns {object} Payment event
+   */
+  async recordVendorRequestPayment(requestId, paymentData) {
     try {
-      console.log(`🚫 Cancelling vendor request ${requestId} on blockchain`);
+      console.log(`💰 Recording vendor request payment ${requestId} on blockchain`);
 
       if (!this.vendorRequestContract) {
         await this.initVendorRequestContract();
       }
 
-      const result = await this.vendorRequestContract.submitTransaction(
-        "cancelVendorRequest",
+      const event = {
         requestId,
-        vendorId,
-        timestamp || new Date().toISOString()
+        paidBy: paymentData.vendorId || paymentData.paidBy,
+        amount: paymentData.amount || paymentData.totalCost,
+        currency: paymentData.currency || "CVT",
+        paymentMethod: paymentData.paymentMethod || "",
+        transactionHash: paymentData.transactionHash || null,
+        orderId: paymentData.orderId || null, // Created order
+        vendorInventoryId: paymentData.vendorInventoryId || null, // Created vendor inventory
+        timestamp: new Date().toISOString(),
+      };
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "recordVendorRequestPayment",
+        JSON.stringify(event)
       );
 
       let resultStr;
@@ -1933,15 +2376,77 @@ class FabricService {
       }
 
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor request cancelled on blockchain:", parsedResult);
+      console.log("✅ Vendor request payment event recorded on blockchain:", parsedResult);
 
       return parsedResult;
     } catch (error) {
-      console.error("❌ Blockchain cancelVendorRequest error:", error);
+      console.error("❌ Blockchain recordVendorRequestPayment error:", error);
       throw error;
     }
   }
 
+  /**
+   * Record vendor request cancellation event
+   * @param {string} requestId - Request ID
+   * @param {string} vendorId - Vendor ID who cancelled
+   * @param {string} timestamp - Cancellation timestamp
+   * @param {string} notes - Cancellation notes
+   * @returns {object} Cancellation event
+   */
+  async recordVendorRequestCancellation(requestId, vendorId, timestamp, notes = "") {
+    try {
+      console.log(`🚫 Recording vendor request cancellation ${requestId} on blockchain`);
+
+      if (!this.vendorRequestContract) {
+        await this.initVendorRequestContract();
+      }
+
+      const event = {
+        requestId,
+        cancelledBy: vendorId,
+        notes: notes || "",
+        timestamp: timestamp || new Date().toISOString(),
+      };
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "recordVendorRequestCancellation",
+        JSON.stringify(event)
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const parsedResult = JSON.parse(resultStr);
+      console.log("✅ Vendor request cancellation event recorded on blockchain:", parsedResult);
+
+      return parsedResult;
+    } catch (error) {
+      console.error("❌ Blockchain recordVendorRequestCancellation error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Use recordVendorRequestCancellation instead
+   */
+  async cancelVendorRequest(requestId, vendorId, timestamp, notes = "") {
+    throw new Error("cancelVendorRequest() is deprecated. Use recordVendorRequestCancellation() instead.");
+  }
+
+  /**
+   * @deprecated Status updates are mutable. Use specific event methods:
+   * - recordVendorRequestApproval()
+   * - recordVendorRequestRejection()
+   * - recordVendorRequestPayment()
+   * - recordVendorRequestCancellation()
+   * - recordVendorRequestCompletion()
+   */
   async updateVendorRequestStatus(
     requestId,
     newStatus,
@@ -1949,21 +2454,37 @@ class FabricService {
     timestamp,
     notes = ""
   ) {
+    throw new Error("updateVendorRequestStatus() is deprecated. Use specific event methods: recordVendorRequestApproval(), recordVendorRequestPayment(), etc.");
+  }
+
+  /**
+   * Record vendor request completion event
+   * @param {string} requestId - Request ID
+   * @param {string} completedBy - Who completed the request
+   * @param {string} timestamp - Completion timestamp
+   * @param {string} notes - Completion notes
+   * @returns {object} Completion event
+   */
+  async recordVendorRequestCompletion(requestId, completedBy, timestamp, notes = "") {
     try {
       console.log(
-        `🔄 Updating vendor request ${requestId} status to ${newStatus} on blockchain`
+        `🔒 Recording vendor request completion ${requestId} on blockchain`
       );
 
       if (!this.vendorRequestContract) {
         await this.initVendorRequestContract();
       }
 
-      const result = await this.vendorRequestContract.submitTransaction(
-        "updateVendorRequestStatus",
+      const event = {
         requestId,
-        newStatus,
-        updatedBy,
-        timestamp || new Date().toISOString()
+        completedBy,
+        notes: notes || "",
+        timestamp: timestamp || new Date().toISOString(),
+      };
+
+      const result = await this.vendorRequestContract.submitTransaction(
+        "recordVendorRequestCompletion",
+        JSON.stringify(event)
       );
 
       let resultStr;
@@ -1977,17 +2498,20 @@ class FabricService {
 
       const parsedResult = JSON.parse(resultStr);
       console.log(
-        "✅ Vendor request status updated on blockchain:",
+        "✅ Vendor request completion event recorded on blockchain:",
         parsedResult
       );
 
       return parsedResult;
     } catch (error) {
-      console.error("❌ Blockchain updateVendorRequestStatus error:", error);
+      console.error("❌ Blockchain recordVendorRequestCompletion error:", error);
       throw error;
     }
   }
 
+  /**
+   * @deprecated Use recordVendorRequestCompletion instead
+   */
   async completeVendorRequest(requestId, completedBy, timestamp, notes = "") {
     try {
       console.log(
@@ -2198,6 +2722,305 @@ class FabricService {
       return requests;
     } catch (error) {
       console.error("❌ Blockchain queryVendorRequestsByStatus error:", error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // VENDOR INVENTORY CONTRACT METHODS
+  // ========================================
+
+  /**
+   * Create vendor inventory on blockchain
+   */
+  // ========================================
+  // VENDOR INVENTORY METHODS (event-based)
+  // ========================================
+
+  /**
+   * Record vendor inventory creation event
+   * This is triggered when vendor pays for and receives inventory from supplier
+   *
+   * @param {object} vendorInventoryData - Vendor inventory data
+   * @returns {object} Vendor inventory creation event
+   */
+  async recordVendorInventoryCreation(vendorInventoryData) {
+    try {
+      console.log(
+        `📦 Recording vendor inventory creation on blockchain: ${vendorInventoryData.vendorInventoryId}`
+      );
+
+      if (!this.vendorInventoryContract) {
+        await this.ensureContract("vendorinventory");
+      }
+
+      // Only send immutable fields
+      const event = {
+        vendorInventoryId: vendorInventoryData.vendorInventoryId,
+        name: vendorInventoryData.name,
+        category: vendorInventoryData.category || "",
+        subcategory: vendorInventoryData.subcategory || "",
+
+        vendorId: vendorInventoryData.vendorId,
+        vendorName: vendorInventoryData.vendorName || "",
+        vendorWalletAddress: vendorInventoryData.vendorWalletAddress || "",
+
+        supplierId: vendorInventoryData.supplierId,
+        supplierName: vendorInventoryData.supplierName || "",
+        supplierWalletAddress: vendorInventoryData.supplierWalletAddress || "",
+
+        sourceInventoryId: vendorInventoryData.sourceInventoryId,
+
+        // Received quantity (immutable snapshot at creation)
+        quantity: vendorInventoryData.quantity || vendorInventoryData.receivedQuantity,
+        unit: vendorInventoryData.unit || "",
+
+        // Purchase details (immutable)
+        pricePerUnit: vendorInventoryData.pricePerUnit || 0,
+        totalCost: vendorInventoryData.totalCost || 0,
+        currency: vendorInventoryData.currency || "CVT",
+
+        orderId: vendorInventoryData.orderId,
+        vendorRequestId: vendorInventoryData.vendorRequestId || "",
+
+        materialType: vendorInventoryData.materialType || "",
+        textileDetails: vendorInventoryData.textileDetails || {},
+        weight: vendorInventoryData.weight || 0,
+        dimensions: vendorInventoryData.dimensions || "",
+
+        createdAt: vendorInventoryData.createdAt || new Date().toISOString(),
+      };
+
+      const result = await this.vendorInventoryContract.submitTransaction(
+        "recordVendorInventoryCreation",
+        JSON.stringify(event)
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const parsedResult = JSON.parse(resultStr);
+      console.log("✅ Vendor inventory creation event recorded on blockchain:", parsedResult);
+
+      return parsedResult;
+    } catch (error) {
+      console.error("❌ Blockchain recordVendorInventoryCreation error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Use recordVendorInventoryCreation instead
+   */
+  async createVendorInventory(vendorInventoryData) {
+    throw new Error("createVendorInventory() is deprecated. Use recordVendorInventoryCreation() instead.");
+  }
+
+  /**
+   * Record vendor inventory usage event
+   * @param {string} vendorInventoryId - Vendor inventory ID
+   * @param {object} usageData - Usage details
+   * @returns {object} Usage event
+   */
+  async recordVendorInventoryUsage(vendorInventoryId, usageData) {
+    try {
+      console.log(
+        `📦 Recording vendor inventory usage on blockchain: ${vendorInventoryId}`
+      );
+
+      if (!this.vendorInventoryContract) {
+        await this.ensureContract("vendorinventory");
+      }
+
+      const event = {
+        vendorInventoryId,
+        usedBy: usageData.usedBy || usageData.vendorId,
+        usedQuantity: usageData.usedQuantity || usageData.quantity,
+        unit: usageData.unit || "",
+        purpose: usageData.purpose, // product_creation, order_fulfillment, etc.
+        productId: usageData.productId || null,
+        orderId: usageData.orderId || null,
+        notes: usageData.notes || "",
+      };
+
+      const result = await this.vendorInventoryContract.submitTransaction(
+        "recordVendorInventoryUsage",
+        JSON.stringify(event)
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const parsedResult = JSON.parse(resultStr);
+      console.log("✅ Vendor inventory usage event recorded on blockchain:", parsedResult);
+
+      return parsedResult;
+    } catch (error) {
+      console.error("❌ Blockchain recordVendorInventoryUsage error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Quantity updates are mutable. Use recordVendorInventoryUsage instead
+   */
+  async updateVendorInventory(vendorInventoryData) {
+    throw new Error("updateVendorInventory() is deprecated. Quantity updates are mutable. Use recordVendorInventoryUsage() to track usage.");
+  }
+
+  /**
+   * Get vendor inventory event history
+   * @param {string} vendorInventoryId - Vendor inventory ID
+   * @returns {object[]} Array of all vendor inventory events
+   */
+  async getVendorInventoryEventHistory(vendorInventoryId) {
+    try {
+      if (!this.vendorInventoryContract) {
+        await this.ensureContract("vendorinventory");
+      }
+
+      const result = await this.vendorInventoryContract.evaluateTransaction(
+        "getVendorInventoryEventHistory",
+        vendorInventoryId
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      return JSON.parse(resultStr);
+    } catch (error) {
+      console.error("❌ Blockchain getVendorInventoryEventHistory error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Use getVendorInventoryEventHistory instead
+   */
+  async getVendorInventory(vendorInventoryId) {
+    console.warn("⚠️ getVendorInventory() is deprecated. Use getVendorInventoryEventHistory() instead.");
+    return this.getVendorInventoryEventHistory(vendorInventoryId);
+  }
+
+  /**
+   * Query vendor inventory creation events by vendor
+   * @param {string} vendorId - Vendor ID
+   * @returns {object[]} Array of vendor inventory creation events
+   */
+  async queryVendorInventoryByVendor(vendorId) {
+    try {
+      console.log(
+        `🔍 Querying vendor inventory for vendor ${vendorId} from blockchain`
+      );
+
+      if (!this.vendorInventoryContract) {
+        await this.ensureContract("vendorinventory");
+      }
+
+      const result = await this.vendorInventoryContract.evaluateTransaction(
+        "queryVendorInventoryByVendor",
+        vendorId
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else if (Buffer.isBuffer(result)) {
+        resultStr = result.toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const inventory = JSON.parse(resultStr);
+      console.log(
+        `✅ Found ${inventory.length} vendor inventory items from blockchain`
+      );
+
+      return inventory;
+    } catch (error) {
+      console.error("❌ Blockchain queryVendorInventoryByVendor error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Use queryVendorInventoryByVendor instead
+   */
+  async getVendorInventoryByVendor(vendorId) {
+    console.warn("⚠️ getVendorInventoryByVendor() is deprecated. Use queryVendorInventoryByVendor() instead.");
+    return this.queryVendorInventoryByVendor(vendorId);
+  }
+
+  // ========================================
+  // INVOICE METHODS
+  // ========================================
+
+  /**
+   * Record invoice issuance event on blockchain
+   * @param {object} invoiceData - Invoice details
+   * @returns {object} Blockchain transaction result
+   */
+  async recordInvoiceIssued(invoiceData) {
+    try {
+      console.log(`📄 Recording invoice issuance on blockchain: ${invoiceData.invoiceNumber}`);
+
+      // For now, we'll use the order contract for invoice events
+      // In production, you might want a dedicated InvoiceContract
+      if (!this.orderContract) {
+        await this.ensureContract("order");
+      }
+
+      // Create invoice event for blockchain
+      const event = {
+        docType: "event",
+        eventType: "INVOICE_ISSUED",
+        invoiceId: invoiceData.invoiceId,
+        invoiceNumber: invoiceData.invoiceNumber,
+        invoiceType: invoiceData.type,
+        fromUserId: invoiceData.fromUserId,
+        toUserId: invoiceData.toUserId,
+        total: invoiceData.total,
+        currency: invoiceData.currency || "CVT",
+        ipfsHash: invoiceData.ipfsHash,
+        issueDate: invoiceData.issueDate,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Use createLog method to record on blockchain
+      const txId = `INVOICE_${invoiceData.invoiceNumber}_${Date.now()}`;
+      const result = await this.orderContract.submitTransaction(
+        "createLog",
+        txId,
+        JSON.stringify(event)
+      );
+
+      console.log(`✅ Invoice recorded on blockchain: ${invoiceData.invoiceNumber}`);
+
+      return {
+        success: true,
+        txId: txId,
+        invoiceNumber: invoiceData.invoiceNumber,
+      };
+    } catch (error) {
+      console.error("❌ Blockchain recordInvoiceIssued error:", error);
       throw error;
     }
   }

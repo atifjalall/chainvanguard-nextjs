@@ -21,6 +21,7 @@ import {
   DocumentTextIcon,
   ShieldCheckIcon,
   ChartBarIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import { orderApi } from "@/lib/api/vendor.order.api";
 import { Order, OrderStatus } from "@/types";
@@ -35,6 +36,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { invoiceApi } from "@/lib/api/invoice.api";
 
 export default function VendorOrderViewPage() {
   usePageTitle("Order Details");
@@ -156,6 +158,42 @@ export default function VendorOrderViewPage() {
     return `${address.addressLine1 || ""}${address.addressLine2 ? ", " + address.addressLine2 : ""}, ${address.city}, ${address.state} ${address.postalCode}, ${address.country}`;
   };
 
+  const handleDownloadInvoice = async () => {
+    try {
+      toast.loading("Downloading invoice...");
+
+      // Get invoices for this order
+      const response = await invoiceApi.getInvoicesByOrder(orderId);
+
+      if (response.success && response.data?.invoices?.length > 0) {
+        const invoice = response.data.invoices[0]; // Get the first invoice
+
+        // Download the invoice PDF
+        const downloadResponse = await invoiceApi.downloadInvoiceById(invoice._id);
+
+        if (downloadResponse.success && downloadResponse.data) {
+          // Trigger download
+          invoiceApi.triggerDownload(
+            downloadResponse.data,
+            `invoice-${invoice.invoiceNumber}.pdf`
+          );
+          toast.dismiss();
+          toast.success("Invoice downloaded successfully!");
+        } else {
+          toast.dismiss();
+          toast.error(downloadResponse.message || "Failed to download invoice");
+        }
+      } else {
+        toast.dismiss();
+        toast.error("No invoice found for this order");
+      }
+    } catch (error) {
+      console.error("Error downloading invoice:", error);
+      toast.dismiss();
+      toast.error("Failed to download invoice");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -252,6 +290,14 @@ export default function VendorOrderViewPage() {
                     Edit Order
                   </Button>
                 )}
+              <Button
+                variant="outline"
+                onClick={handleDownloadInvoice}
+                className="rounded-none text-xs"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                Download Invoice
+              </Button>
             </div>
           </div>
         </div>

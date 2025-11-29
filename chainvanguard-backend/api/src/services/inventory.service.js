@@ -324,165 +324,89 @@ class InventoryService {
         inventoryId: inventory._id,
       });
 
-      // IPFS upload - ALL crucial data
+      // ========================================
+      // 📦 CREATE IPFS METADATA SNAPSHOT
+      // ========================================
+      let ipfsMetadataHash = null;
       try {
-        const ipfsMetadata = {
-          // Basic Info
+        logger.info("📦 Creating IPFS metadata snapshot...");
+
+        const inventorySnapshot = {
           inventoryId: inventory._id.toString(),
           name: inventory.name,
-          description: inventory.description,
           category: inventory.category,
           subcategory: inventory.subcategory,
-          materialType: inventory.materialType,
-          brand: inventory.brand,
 
-          // Textile Details (ALL fields)
-          textileDetails: {
-            fabricType: inventory.textileDetails?.fabricType || "",
-            composition: inventory.textileDetails?.composition || "",
-            gsm: inventory.textileDetails?.gsm,
-            width: inventory.textileDetails?.width,
-            fabricWeight: inventory.textileDetails?.fabricWeight || "",
-            color: inventory.textileDetails?.color || "",
-            colorCode: inventory.textileDetails?.colorCode || "",
-            pattern: inventory.textileDetails?.pattern || "",
-            finish: inventory.textileDetails?.finish || "",
-            careInstructions: inventory.textileDetails?.careInstructions || "",
-            shrinkage: inventory.textileDetails?.shrinkage || "",
-            washability: inventory.textileDetails?.washability || "",
+          // Quantity/Price at addition (snapshot)
+          initialQuantity: inventory.quantity,
+          initialPricePerUnit: inventory.pricePerUnit,
+          initialCostPrice: inventory.costPrice,
+          unit: inventory.unit,
+          currency: "CVT",
+
+          // Supplier info (never changes for this inventory)
+          supplier: {
+            supplierId: inventory.supplierId.toString(),
+            supplierName: inventory.supplierName,
+            supplierWalletAddress: inventory.supplierWalletAddress,
+            supplierContact: inventory.supplierContact
           },
 
-          // Pricing & Quantity
-          pricePerUnit: inventory.pricePerUnit,
-          costPrice: inventory.costPrice,
-          originalPrice: inventory.originalPrice,
-          discount: inventory.discount,
-          quantity: inventory.quantity,
-          reservedQuantity: inventory.reservedQuantity,
-          committedQuantity: inventory.committedQuantity,
-          damagedQuantity: inventory.damagedQuantity,
-
-          // Stock Management
-          minStockLevel: inventory.minStockLevel,
-          reorderLevel: inventory.reorderLevel,
-          reorderQuantity: inventory.reorderQuantity,
-          maximumQuantity: inventory.maximumQuantity,
-          safetyStockLevel: inventory.safetyStockLevel,
-          unit: inventory.unit,
-          sku: inventory.sku,
-
-          // Media & Documents
-          images: inventory.images.map(img => ({
-            url: img.url,
-            isMain: img.isMain,
-            viewType: img.viewType
-          })),
-          documents: inventory.documents.map(doc => ({
-            name: doc.name,
-            url: doc.url,
-            type: doc.type,
-            uploadedAt: doc.uploadedAt
-          })),
-
-          // Physical Properties
+          // Material specifications (physical properties don't change)
+          materialType: inventory.materialType,
+          textileDetails: inventory.textileDetails,
           weight: inventory.weight,
           dimensions: inventory.dimensions,
 
-          // Metadata
-          tags: inventory.tags,
-          season: inventory.season,
-          countryOfOrigin: inventory.countryOfOrigin,
-          manufacturer: inventory.manufacturer,
-
-          // Supplier Info
-          supplierId: inventory.supplierId.toString(),
-          supplierName: inventory.supplierName,
-          supplierWalletAddress: inventory.supplierWalletAddress,
-          supplierContact: {
-            phone: inventory.supplierContact?.phone || "",
-            email: inventory.supplierContact?.email || "",
-            address: inventory.supplierContact?.address || "",
-          },
-
-          // Status & Verification
-          status: inventory.status,
-          isVerified: inventory.isVerified,
-          isFeatured: inventory.isFeatured,
-
-          // Sustainability & Compliance
-          isSustainable: inventory.isSustainable,
+          // Quality/Certifications at addition
           certifications: inventory.certifications || [],
           sustainabilityCertifications: inventory.sustainabilityCertifications || [],
           complianceStandards: inventory.complianceStandards || [],
           qualityGrade: inventory.qualityGrade,
-          carbonFootprint: inventory.carbonFootprint,
-          recycledContent: inventory.recycledContent,
 
-          // Delivery & Storage
-          leadTime: inventory.leadTime,
-          estimatedDeliveryDays: inventory.estimatedDeliveryDays,
-          shelfLife: inventory.shelfLife,
-          storageLocations: inventory.storageLocations.map(loc => ({
-            warehouse: loc.warehouse,
-            zone: loc.zone,
-            aisle: loc.aisle,
-            rack: loc.rack,
-            bin: loc.bin,
-            quantityAtLocation: loc.quantityAtLocation,
-            lastUpdated: loc.lastUpdated
-          })),
-          primaryLocation: inventory.primaryLocation,
+          // Image hashes for verification
+          imageHashes: inventory.images.map(img => img.imageHash || img.ipfsHash || ""),
 
-          // Additional Info
-          notes: inventory.notes,
-          internalCode: inventory.internalCode,
-          barcode: inventory.barcode,
-          autoReorderEnabled: inventory.autoReorderEnabled,
+          // Origin info (never changes)
+          countryOfOrigin: inventory.countryOfOrigin,
+          manufacturer: inventory.manufacturer,
 
-          // Batch Tracking
-          isBatchTracked: inventory.isBatchTracked,
-          batches: inventory.batches.map(batch => ({
-            batchNumber: batch.batchNumber,
-            quantity: batch.quantity,
-            manufactureDate: batch.manufactureDate,
-            expiryDate: batch.expiryDate,
-            receivedDate: batch.receivedDate,
-            supplierName: batch.supplierName,
-            costPerUnit: batch.costPerUnit,
-            status: batch.status
-          })),
-
-          // Specifications & Suitability
-          specifications: inventory.specifications,
-          suitableFor: inventory.suitableFor,
+          // Batch info at creation (if tracked)
+          batches: inventory.batches || [],
 
           // Timestamps
-          createdAt: inventory.createdAt,
-          updatedAt: inventory.updatedAt
+          addedAt: inventory.createdAt.toISOString()
         };
 
-        const ipfsFileName = `inventory-metadata-${inventory._id.toString()}.json`;
         const ipfsResult = await ipfsService.uploadJSON(
-          ipfsMetadata,
-          ipfsFileName
+          inventorySnapshot,
+          `inventory-metadata-${inventory._id.toString()}.json`,
+          {
+            entityType: 'inventory',
+            entityId: inventory._id.toString()
+          }
         );
 
         if (ipfsResult.success) {
-          inventory.ipfsHash = ipfsResult.ipfsHash;
-          logger.info("✅ ALL inventory data uploaded to IPFS", { ipfsHash: ipfsResult.ipfsHash });
+          ipfsMetadataHash = ipfsResult.ipfsHash;
+          inventory.metadataIpfsHash = ipfsResult.ipfsHash;
+          inventory.metadataIpfsUrl = ipfsResult.ipfsUrl;
+          await inventory.save();
+          logger.info("✅ IPFS snapshot uploaded", {
+            ipfsHash: ipfsResult.ipfsHash,
+          });
         }
       } catch (ipfsError) {
-        logger.error("❌ IPFS upload error:", ipfsError);
-        inventory.ipfsHash = "";
+        logger.warn("⚠️ IPFS metadata upload failed (non-critical):", ipfsError.message);
+        // Continue without IPFS - blockchain will still have basic data
       }
 
-      // Blockchain storage - ALL crucial data
+      // Blockchain storage - basic immutable data with metadataHash
       try {
         const blockchainData = {
           // Basic Info
           inventoryId: inventory._id.toString(),
           name: inventory.name,
-          description: inventory.description,
           category: inventory.category,
           subcategory: inventory.subcategory,
           materialType: inventory.materialType,
@@ -524,11 +448,11 @@ class InventoryService {
           sku: inventory.sku,
 
           // Media URLs (storing URLs, not full data)
-          images: inventory.images.map(img => img.url),
-          documents: inventory.documents.map(doc => ({
+          images: inventory.images.map((img) => img.url),
+          documents: inventory.documents.map((doc) => ({
             name: doc.name,
             url: doc.url,
-            type: doc.type
+            type: doc.type,
           })),
 
           // Physical Properties
@@ -559,7 +483,8 @@ class InventoryService {
           // Sustainability & Compliance
           isSustainable: inventory.isSustainable,
           certifications: inventory.certifications || [],
-          sustainabilityCertifications: inventory.sustainabilityCertifications || [],
+          sustainabilityCertifications:
+            inventory.sustainabilityCertifications || [],
           complianceStandards: inventory.complianceStandards || [],
           qualityGrade: inventory.qualityGrade,
           carbonFootprint: inventory.carbonFootprint,
@@ -569,13 +494,13 @@ class InventoryService {
           leadTime: inventory.leadTime,
           estimatedDeliveryDays: inventory.estimatedDeliveryDays,
           shelfLife: inventory.shelfLife,
-          storageLocations: inventory.storageLocations.map(loc => ({
+          storageLocations: inventory.storageLocations.map((loc) => ({
             warehouse: loc.warehouse,
             zone: loc.zone,
             aisle: loc.aisle,
             rack: loc.rack,
             bin: loc.bin,
-            quantityAtLocation: loc.quantityAtLocation
+            quantityAtLocation: loc.quantityAtLocation,
           })),
           primaryLocation: inventory.primaryLocation,
 
@@ -587,14 +512,14 @@ class InventoryService {
 
           // Batch Tracking
           isBatchTracked: inventory.isBatchTracked,
-          batches: inventory.batches.map(batch => ({
+          batches: inventory.batches.map((batch) => ({
             batchNumber: batch.batchNumber,
             quantity: batch.quantity,
             manufactureDate: batch.manufactureDate,
             expiryDate: batch.expiryDate,
             supplierName: batch.supplierName,
             costPerUnit: batch.costPerUnit,
-            status: batch.status
+            status: batch.status,
           })),
 
           // Specifications & Suitability
@@ -603,12 +528,24 @@ class InventoryService {
 
           // IPFS Reference & Timestamp
           ipfsHash: inventory.ipfsHash || "",
+
+          // IPFS Metadata Hash (historical snapshot)
+          metadataHash: ipfsMetadataHash || inventory.metadataIpfsHash || null,
+
           timestamp: new Date().toISOString(),
         };
 
+        logger.info("📦 Blockchain data prepared:", {
+          inventoryId: blockchainData.inventoryId,
+          name: blockchainData.name,
+          category: blockchainData.category,
+          supplierId: blockchainData.supplierId,
+          metadataHash: blockchainData.metadataHash,
+        });
+
         const blockchainResult = await fabricService.invoke(
-          "inventory",
-          "createInventoryItem",
+          "InventoryContract",
+          "recordInventoryAddition",
           JSON.stringify(blockchainData)
         );
 
@@ -624,7 +561,7 @@ class InventoryService {
         await inventory.save();
         logger.info("✅ ALL inventory data stored on blockchain", {
           txId: inventory.fabricTransactionId,
-          ipfsHash: inventory.ipfsHash
+          ipfsHash: inventory.ipfsHash,
         });
       } catch (blockchainError) {
         logger.warn("⚠️ Blockchain storage failed", {
@@ -1032,16 +969,16 @@ class InventoryService {
           sku: inventory.sku,
 
           // Media & Documents
-          images: inventory.images.map(img => ({
+          images: inventory.images.map((img) => ({
             url: img.url,
             isMain: img.isMain,
-            viewType: img.viewType
+            viewType: img.viewType,
           })),
-          documents: inventory.documents.map(doc => ({
+          documents: inventory.documents.map((doc) => ({
             name: doc.name,
             url: doc.url,
             type: doc.type,
-            uploadedAt: doc.uploadedAt
+            uploadedAt: doc.uploadedAt,
           })),
 
           // Physical Properties
@@ -1072,7 +1009,8 @@ class InventoryService {
           // Sustainability & Compliance
           isSustainable: inventory.isSustainable,
           certifications: inventory.certifications || [],
-          sustainabilityCertifications: inventory.sustainabilityCertifications || [],
+          sustainabilityCertifications:
+            inventory.sustainabilityCertifications || [],
           complianceStandards: inventory.complianceStandards || [],
           qualityGrade: inventory.qualityGrade,
           carbonFootprint: inventory.carbonFootprint,
@@ -1082,14 +1020,14 @@ class InventoryService {
           leadTime: inventory.leadTime,
           estimatedDeliveryDays: inventory.estimatedDeliveryDays,
           shelfLife: inventory.shelfLife,
-          storageLocations: inventory.storageLocations.map(loc => ({
+          storageLocations: inventory.storageLocations.map((loc) => ({
             warehouse: loc.warehouse,
             zone: loc.zone,
             aisle: loc.aisle,
             rack: loc.rack,
             bin: loc.bin,
             quantityAtLocation: loc.quantityAtLocation,
-            lastUpdated: loc.lastUpdated
+            lastUpdated: loc.lastUpdated,
           })),
           primaryLocation: inventory.primaryLocation,
 
@@ -1101,7 +1039,7 @@ class InventoryService {
 
           // Batch Tracking
           isBatchTracked: inventory.isBatchTracked,
-          batches: inventory.batches.map(batch => ({
+          batches: inventory.batches.map((batch) => ({
             batchNumber: batch.batchNumber,
             quantity: batch.quantity,
             manufactureDate: batch.manufactureDate,
@@ -1109,7 +1047,7 @@ class InventoryService {
             receivedDate: batch.receivedDate,
             supplierName: batch.supplierName,
             costPerUnit: batch.costPerUnit,
-            status: batch.status
+            status: batch.status,
           })),
 
           // Specifications & Suitability
@@ -1118,7 +1056,7 @@ class InventoryService {
 
           // Timestamps
           createdAt: inventory.createdAt,
-          updatedAt: inventory.updatedAt
+          updatedAt: inventory.updatedAt,
         };
 
         const ipfsFileName = `inventory-metadata-${inventory._id.toString()}.json`;
@@ -1130,7 +1068,9 @@ class InventoryService {
         if (ipfsResult.success) {
           inventory.ipfsHash = ipfsResult.ipfsHash;
           await inventory.save();
-          logger.info("✅ ALL inventory data updated on IPFS", { ipfsHash: ipfsResult.ipfsHash });
+          logger.info("✅ ALL inventory data updated on IPFS", {
+            ipfsHash: ipfsResult.ipfsHash,
+          });
         }
       } catch (ipfsError) {
         logger.error("❌ IPFS update error:", ipfsError);
@@ -1141,7 +1081,6 @@ class InventoryService {
         // Basic Info
         inventoryId: inventory._id.toString(),
         name: inventory.name,
-        description: inventory.description,
         category: inventory.category,
         subcategory: inventory.subcategory,
         materialType: inventory.materialType,
@@ -1183,11 +1122,11 @@ class InventoryService {
         sku: inventory.sku,
 
         // Media & Documents
-        images: inventory.images.map(img => img.url),
-        documents: inventory.documents.map(doc => ({
+        images: inventory.images.map((img) => img.url),
+        documents: inventory.documents.map((doc) => ({
           name: doc.name,
           url: doc.url,
-          type: doc.type
+          type: doc.type,
         })),
 
         // Physical Properties
@@ -1218,7 +1157,8 @@ class InventoryService {
         // Sustainability & Compliance
         isSustainable: inventory.isSustainable,
         certifications: inventory.certifications || [],
-        sustainabilityCertifications: inventory.sustainabilityCertifications || [],
+        sustainabilityCertifications:
+          inventory.sustainabilityCertifications || [],
         complianceStandards: inventory.complianceStandards || [],
         qualityGrade: inventory.qualityGrade,
         carbonFootprint: inventory.carbonFootprint,
@@ -1228,13 +1168,13 @@ class InventoryService {
         leadTime: inventory.leadTime,
         estimatedDeliveryDays: inventory.estimatedDeliveryDays,
         shelfLife: inventory.shelfLife,
-        storageLocations: inventory.storageLocations.map(loc => ({
+        storageLocations: inventory.storageLocations.map((loc) => ({
           warehouse: loc.warehouse,
           zone: loc.zone,
           aisle: loc.aisle,
           rack: loc.rack,
           bin: loc.bin,
-          quantityAtLocation: loc.quantityAtLocation
+          quantityAtLocation: loc.quantityAtLocation,
         })),
         primaryLocation: inventory.primaryLocation,
 
@@ -1246,14 +1186,14 @@ class InventoryService {
 
         // Batch Tracking
         isBatchTracked: inventory.isBatchTracked,
-        batches: inventory.batches.map(batch => ({
+        batches: inventory.batches.map((batch) => ({
           batchNumber: batch.batchNumber,
           quantity: batch.quantity,
           manufactureDate: batch.manufactureDate,
           expiryDate: batch.expiryDate,
           supplierName: batch.supplierName,
           costPerUnit: batch.costPerUnit,
-          status: batch.status
+          status: batch.status,
         })),
 
         // Specifications & Suitability
@@ -1265,11 +1205,11 @@ class InventoryService {
         updatedAt: new Date().toISOString(),
       };
 
-      await fabricService.invoke(
-        "inventory",
-        "updateInventoryItem",
-        JSON.stringify(blockchainData)
-      );
+      // await fabricService.invoke(
+      //   "InventoryContract",
+      //   "recordInventoryAddition",
+      //   JSON.stringify(blockchainData)
+      // );
 
       // ✅ CRITICAL: Invalidate caches AFTER successful update
       await this.invalidateInventoryCaches(userId, inventoryId);
@@ -1288,7 +1228,10 @@ class InventoryService {
   // ========================================
   async deleteInventoryItem(inventoryId, userId) {
     try {
-      logger.info("🗑️  Starting delete inventory item", { inventoryId, userId });
+      logger.info("🗑️  Starting delete inventory item", {
+        inventoryId,
+        userId,
+      });
 
       const inventory = await Inventory.findById(inventoryId);
       if (!inventory) {
@@ -1330,13 +1273,6 @@ class InventoryService {
         isActive: verifyInventory.isActive,
       });
 
-      // Update blockchain
-      await fabricService.invoke(
-        "inventory",
-        "deleteInventoryItem",
-        inventoryId
-      );
-
       // ✅ CRITICAL: Invalidate caches AFTER successful deletion
       await this.invalidateInventoryCaches(userId, inventoryId);
 
@@ -1375,14 +1311,6 @@ class InventoryService {
 
       inventory.addStock(quantity, userId, "supplier", notes);
       await inventory.save();
-
-      await fabricService.invoke(
-        "inventory",
-        "addStock",
-        inventoryId,
-        quantity.toString(),
-        notes
-      );
 
       await this.createNotification({
         userId,
@@ -1431,14 +1359,6 @@ class InventoryService {
 
       inventory.reduceStock(quantity, userId, "supplier", reason);
       await inventory.save();
-
-      await fabricService.invoke(
-        "inventory",
-        "reduceStock",
-        inventoryId,
-        quantity.toString(),
-        reason
-      );
 
       if (inventory.needsReorder()) {
         await this.createLowStockAlert(inventory);
@@ -1563,8 +1483,8 @@ class InventoryService {
       };
 
       await fabricService.invoke(
-        "inventory",
-        "transferInventory",
+        "InventoryContract",
+        "recordInventoryTransfer",
         JSON.stringify(txData)
       );
 
@@ -1975,7 +1895,7 @@ class InventoryService {
 
       // Create tracking URL
       const trackingUrl = `${
-        process.env.FRONTEND_URL || "http://localhost:3001"
+        process.env.FRONTEND_URL || "http://localhost:3000"
       }/track/inventory/${qrCodeString}`;
 
       // Generate QR image

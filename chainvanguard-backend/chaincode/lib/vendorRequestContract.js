@@ -2,688 +2,877 @@
 const { Contract } = require("fabric-contract-api");
 
 /**
- * ============================================
- * VENDOR REQUEST SMART CONTRACT
- * Manages vendor requests/transactions on blockchain
- * ============================================
+ * VendorRequestContract - Event-Based Vendor Request Management
+ *
+ * This contract uses event-sourcing pattern for B2B vendor-supplier transactions.
+ * MongoDB stores current state, blockchain stores complete workflow history.
+ *
+ * Events Stored:
+ * - REQUEST_CREATED: Vendor creates purchase request to supplier
+ * - REQUEST_APPROVED: Supplier approves the request
+ * - REQUEST_REJECTED: Supplier rejects the request
+ * - REQUEST_PAID: Vendor pays for the approved request (IMPORTANT!)
+ * - REQUEST_COMPLETED: Request fulfilled and locked
+ * - REQUEST_CANCELLED: Request cancelled
+ *
+ * NOT Stored on Blockchain:
+ * - Internal notes updates (mutable)
+ * - Estimated delivery dates (can change)
  */
 class VendorRequestContract extends Contract {
 
+  // ========================================
+  // INITIALIZATION
+  // ========================================
+
   /**
-   * Initialize the ledger with empty state
+   * Initialize vendor request ledger
    */
   async initLedger(ctx) {
-    console.log("Vendor Request Contract initialized");
-    return JSON.stringify({ message: "Vendor Request ledger initialized" });
+    console.info("============= START : Initialize Vendor Request Ledger ===========");
+    console.info("Vendor Request ledger initialized for event-based storage");
+    console.info("============= END : Initialize Vendor Request Ledger ===========");
+    return JSON.stringify({
+      message: "Vendor Request ledger initialized successfully (event-based)",
+    });
+  }
+
+  // ========================================
+  // REQUEST CREATION EVENT
+  // ========================================
+
+  /**
+   * Record vendor request creation event (IMMUTABLE SNAPSHOT)
+   *
+   * Stores immutable data:
+   * - requestId, requestNumber
+   * - vendorId, supplierId
+   * - items (snapshot at request time)
+   * - pricing (subtotal, tax, total)
+   * - createdAt timestamp
+   *
+   * Does NOT store:
+   * - Current status (mutable - tracked via events)
+   * - Notes updates (mutable)
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} eventDataJSON - Request creation event data
+   * @returns {string} Request creation event
+   */
+  async recordVendorRequestCreation(ctx, eventDataJSON) {
+    console.info("============= START : Record Vendor Request Creation ===========");
+
+    let eventData;
+    try {
+      eventData = JSON.parse(eventDataJSON);
+    } catch (error) {
+      throw new Error(`Invalid JSON format: ${error.message}`);
+    }
+
+    // Validate required fields
+    if (!eventData.requestId) {
+      throw new Error("requestId is required");
+    }
+    if (!eventData.requestNumber) {
+      throw new Error("requestNumber is required");
+    }
+    if (!eventData.vendorId) {
+      throw new Error("vendorId is required");
+    }
+    if (!eventData.supplierId) {
+      throw new Error("supplierId is required");
+    }
+    if (!eventData.items || eventData.items.length === 0) {
+      throw new Error("Request must contain at least one item");
+    }
+
+    // Check if request already exists
+    const existingRequest = await this.getRequestCreationEvent(ctx, eventData.requestId);
+    if (existingRequest) {
+      throw new Error(`Vendor request ${eventData.requestId} already exists on blockchain`);
+    }
+
+    // Get transaction metadata
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Create request creation event (IMMUTABLE SNAPSHOT)
+    const requestCreationEvent = {
+      docType: "event",
+      eventType: "REQUEST_CREATED",
+      eventId: `${eventData.requestId}_CREATED_${txTimestamp.seconds.low}`,
+
+      // Request identification
+      requestId: eventData.requestId,
+      requestNumber: eventData.requestNumber,
+
+      // Parties involved
+      vendorId: eventData.vendorId,
+      vendorName: eventData.vendorName || "",
+      vendorWalletAddress: eventData.vendorWalletAddress || "",
+
+      supplierId: eventData.supplierId,
+      supplierName: eventData.supplierName || "",
+      supplierWalletAddress: eventData.supplierWalletAddress || "",
+
+      // Items snapshot (immutable)
+      items: eventData.items.map(item => ({
+        inventoryId: item.inventoryId,
+        quantity: item.quantity,
+        pricePerUnit: item.pricePerUnit,
+        subtotal: item.subtotal,
+      })),
+
+      // Pricing (immutable)
+      subtotal: eventData.subtotal,
+      tax: eventData.tax || 0,
+      total: eventData.total,
+      currency: eventData.currency || "CVT",
+
+      // Initial status
+      initialStatus: eventData.status || "pending",
+      autoApproved: eventData.autoApproved || false,
+
+      // Blockchain metadata
+      timestamp: timestamp,
+      txId: txId,
+      createdAt: eventData.createdAt || timestamp,
+    };
+
+    // Store request creation event on ledger
+    await ctx.stub.putState(
+      requestCreationEvent.eventId,
+      Buffer.from(JSON.stringify(requestCreationEvent))
+    );
+
+    // Emit event
+    await ctx.stub.setEvent(
+      "VendorRequestCreated",
+      Buffer.from(
+        JSON.stringify({
+          requestId: eventData.requestId,
+          requestNumber: eventData.requestNumber,
+          vendorId: eventData.vendorId,
+          supplierId: eventData.supplierId,
+          total: eventData.total,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Vendor request creation event recorded: ${eventData.requestNumber} (Total: ${eventData.total} ${requestCreationEvent.currency})`);
+    console.info("============= END : Record Vendor Request Creation ===========");
+
+    return JSON.stringify(requestCreationEvent);
+  }
+
+  // ========================================
+  // REQUEST APPROVAL EVENT
+  // ========================================
+
+  /**
+   * Record vendor request approval event (by supplier)
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} eventDataJSON - Approval event data
+   * @returns {string} Approval event
+   */
+  async recordVendorRequestApproval(ctx, eventDataJSON) {
+    console.info("============= START : Record Vendor Request Approval ===========");
+
+    let eventData;
+    try {
+      eventData = JSON.parse(eventDataJSON);
+    } catch (error) {
+      throw new Error(`Invalid JSON format: ${error.message}`);
+    }
+
+    // Validate required fields
+    if (!eventData.requestId) {
+      throw new Error("requestId is required");
+    }
+    if (!eventData.approvedBy) {
+      throw new Error("approvedBy (supplier ID) is required");
+    }
+
+    // Verify request exists
+    const requestExists = await this.getRequestCreationEvent(ctx, eventData.requestId);
+    if (!requestExists) {
+      throw new Error(`Vendor request ${eventData.requestId} does not exist on blockchain`);
+    }
+
+    // Get transaction metadata
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Create approval event
+    const approvalEvent = {
+      docType: "event",
+      eventType: "REQUEST_APPROVED",
+      eventId: `${eventData.requestId}_APPROVED_${txTimestamp.seconds.low}`,
+
+      requestId: eventData.requestId,
+      approvedBy: eventData.approvedBy,
+      supplierNotes: eventData.supplierNotes || "",
+      autoApproved: eventData.autoApproved || false,
+
+      timestamp: timestamp,
+      txId: txId,
+    };
+
+    // Store approval event
+    await ctx.stub.putState(
+      approvalEvent.eventId,
+      Buffer.from(JSON.stringify(approvalEvent))
+    );
+
+    // Emit event
+    await ctx.stub.setEvent(
+      "VendorRequestApproved",
+      Buffer.from(
+        JSON.stringify({
+          requestId: eventData.requestId,
+          approvedBy: eventData.approvedBy,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Vendor request approval event recorded: ${eventData.requestId}`);
+    console.info("============= END : Record Vendor Request Approval ===========");
+
+    return JSON.stringify(approvalEvent);
+  }
+
+  // ========================================
+  // REQUEST REJECTION EVENT
+  // ========================================
+
+  /**
+   * Record vendor request rejection event (by supplier)
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} eventDataJSON - Rejection event data
+   * @returns {string} Rejection event
+   */
+  async recordVendorRequestRejection(ctx, eventDataJSON) {
+    console.info("============= START : Record Vendor Request Rejection ===========");
+
+    let eventData;
+    try {
+      eventData = JSON.parse(eventDataJSON);
+    } catch (error) {
+      throw new Error(`Invalid JSON format: ${error.message}`);
+    }
+
+    // Validate required fields
+    if (!eventData.requestId) {
+      throw new Error("requestId is required");
+    }
+    if (!eventData.rejectedBy) {
+      throw new Error("rejectedBy (supplier ID) is required");
+    }
+    if (!eventData.reason) {
+      throw new Error("rejection reason is required");
+    }
+
+    // Verify request exists
+    const requestExists = await this.getRequestCreationEvent(ctx, eventData.requestId);
+    if (!requestExists) {
+      throw new Error(`Vendor request ${eventData.requestId} does not exist on blockchain`);
+    }
+
+    // Get transaction metadata
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Create rejection event
+    const rejectionEvent = {
+      docType: "event",
+      eventType: "REQUEST_REJECTED",
+      eventId: `${eventData.requestId}_REJECTED_${txTimestamp.seconds.low}`,
+
+      requestId: eventData.requestId,
+      rejectedBy: eventData.rejectedBy,
+      reason: eventData.reason,
+
+      timestamp: timestamp,
+      txId: txId,
+    };
+
+    // Store rejection event
+    await ctx.stub.putState(
+      rejectionEvent.eventId,
+      Buffer.from(JSON.stringify(rejectionEvent))
+    );
+
+    // Emit event
+    await ctx.stub.setEvent(
+      "VendorRequestRejected",
+      Buffer.from(
+        JSON.stringify({
+          requestId: eventData.requestId,
+          rejectedBy: eventData.rejectedBy,
+          reason: eventData.reason,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Vendor request rejection event recorded: ${eventData.requestId} (Reason: ${eventData.reason})`);
+    console.info("============= END : Record Vendor Request Rejection ===========");
+
+    return JSON.stringify(rejectionEvent);
+  }
+
+  // ========================================
+  // REQUEST PAYMENT EVENT (CRITICAL!)
+  // ========================================
+
+  /**
+   * Record vendor request payment event
+   *
+   * THIS IS THE CRITICAL EVENT THAT ANSWERS YOUR QUESTION!
+   *
+   * When vendor pays for an approved request:
+   * - Records payment amount
+   * - Links to created order
+   * - Captures payment method
+   * - Timestamps the payment
+   *
+   * This creates an immutable financial audit trail.
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} eventDataJSON - Payment event data
+   * @returns {string} Payment event
+   */
+  async recordVendorRequestPayment(ctx, eventDataJSON) {
+    console.info("============= START : Record Vendor Request Payment ===========");
+
+    let eventData;
+    try {
+      eventData = JSON.parse(eventDataJSON);
+    } catch (error) {
+      throw new Error(`Invalid JSON format: ${error.message}`);
+    }
+
+    // Validate required fields
+    if (!eventData.requestId) {
+      throw new Error("requestId is required");
+    }
+    if (!eventData.vendorId) {
+      throw new Error("vendorId is required");
+    }
+    if (!eventData.amount) {
+      throw new Error("payment amount is required");
+    }
+    if (!eventData.orderId) {
+      throw new Error("orderId (created from payment) is required");
+    }
+
+    // Verify request exists
+    const requestExists = await this.getRequestCreationEvent(ctx, eventData.requestId);
+    if (!requestExists) {
+      throw new Error(`Vendor request ${eventData.requestId} does not exist on blockchain`);
+    }
+
+    // Get transaction metadata
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Create payment event (IMMUTABLE FINANCIAL RECORD)
+    const paymentEvent = {
+      docType: "event",
+      eventType: "REQUEST_PAID",
+      eventId: `${eventData.requestId}_PAID_${txTimestamp.seconds.low}`,
+
+      // Request and payment details
+      requestId: eventData.requestId,
+      vendorId: eventData.vendorId,
+      supplierId: eventData.supplierId,
+
+      // Payment information
+      amount: eventData.amount,
+      paymentMethod: eventData.paymentMethod || "wallet",
+      orderId: eventData.orderId,  // Link to created order
+
+      // Optional payment metadata
+      transactionRef: eventData.transactionRef || "",
+      walletTxId: eventData.walletTxId || "",
+
+      // Blockchain metadata
+      timestamp: timestamp,
+      txId: txId,
+    };
+
+    // Store payment event
+    await ctx.stub.putState(
+      paymentEvent.eventId,
+      Buffer.from(JSON.stringify(paymentEvent))
+    );
+
+    // Emit event
+    await ctx.stub.setEvent(
+      "VendorRequestPaid",
+      Buffer.from(
+        JSON.stringify({
+          requestId: eventData.requestId,
+          vendorId: eventData.vendorId,
+          amount: eventData.amount,
+          orderId: eventData.orderId,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Vendor request payment event recorded: ${eventData.requestId} (Amount: ${eventData.amount}, Order: ${eventData.orderId})`);
+    console.info("============= END : Record Vendor Request Payment ===========");
+
+    return JSON.stringify(paymentEvent);
+  }
+
+  // ========================================
+  // REQUEST COMPLETION EVENT
+  // ========================================
+
+  /**
+   * Record vendor request completion event (locks the request)
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} eventDataJSON - Completion event data
+   * @returns {string} Completion event
+   */
+  async recordVendorRequestCompletion(ctx, eventDataJSON) {
+    console.info("============= START : Record Vendor Request Completion ===========");
+
+    let eventData;
+    try {
+      eventData = JSON.parse(eventDataJSON);
+    } catch (error) {
+      throw new Error(`Invalid JSON format: ${error.message}`);
+    }
+
+    // Validate required fields
+    if (!eventData.requestId) {
+      throw new Error("requestId is required");
+    }
+    if (!eventData.completedBy) {
+      throw new Error("completedBy (supplier ID) is required");
+    }
+
+    // Verify request exists
+    const requestExists = await this.getRequestCreationEvent(ctx, eventData.requestId);
+    if (!requestExists) {
+      throw new Error(`Vendor request ${eventData.requestId} does not exist on blockchain`);
+    }
+
+    // Get transaction metadata
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Create completion event (FINAL EVENT - LOCKS REQUEST)
+    const completionEvent = {
+      docType: "event",
+      eventType: "REQUEST_COMPLETED",
+      eventId: `${eventData.requestId}_COMPLETED_${txTimestamp.seconds.low}`,
+
+      requestId: eventData.requestId,
+      completedBy: eventData.completedBy,
+      notes: eventData.notes || "",
+      locked: true,  // Marks request as immutable
+
+      timestamp: timestamp,
+      txId: txId,
+    };
+
+    // Store completion event
+    await ctx.stub.putState(
+      completionEvent.eventId,
+      Buffer.from(JSON.stringify(completionEvent))
+    );
+
+    // Emit event
+    await ctx.stub.setEvent(
+      "VendorRequestCompleted",
+      Buffer.from(
+        JSON.stringify({
+          requestId: eventData.requestId,
+          completedBy: eventData.completedBy,
+          locked: true,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Vendor request completion event recorded: ${eventData.requestId} (LOCKED)`);
+    console.info("============= END : Record Vendor Request Completion ===========");
+
+    return JSON.stringify(completionEvent);
+  }
+
+  // ========================================
+  // REQUEST CANCELLATION EVENT
+  // ========================================
+
+  /**
+   * Record vendor request cancellation event
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} eventDataJSON - Cancellation event data
+   * @returns {string} Cancellation event
+   */
+  async recordVendorRequestCancellation(ctx, eventDataJSON) {
+    console.info("============= START : Record Vendor Request Cancellation ===========");
+
+    let eventData;
+    try {
+      eventData = JSON.parse(eventDataJSON);
+    } catch (error) {
+      throw new Error(`Invalid JSON format: ${error.message}`);
+    }
+
+    // Validate required fields
+    if (!eventData.requestId) {
+      throw new Error("requestId is required");
+    }
+    if (!eventData.cancelledBy) {
+      throw new Error("cancelledBy is required");
+    }
+    if (!eventData.reason) {
+      throw new Error("cancellation reason is required");
+    }
+
+    // Verify request exists
+    const requestExists = await this.getRequestCreationEvent(ctx, eventData.requestId);
+    if (!requestExists) {
+      throw new Error(`Vendor request ${eventData.requestId} does not exist on blockchain`);
+    }
+
+    // Get transaction metadata
+    const txTimestamp = ctx.stub.getTxTimestamp();
+    const timestamp = new Date(txTimestamp.seconds.low * 1000).toISOString();
+    const txId = ctx.stub.getTxID();
+
+    // Create cancellation event
+    const cancellationEvent = {
+      docType: "event",
+      eventType: "REQUEST_CANCELLED",
+      eventId: `${eventData.requestId}_CANCELLED_${txTimestamp.seconds.low}`,
+
+      requestId: eventData.requestId,
+      cancelledBy: eventData.cancelledBy,
+      cancelledByRole: eventData.cancelledByRole || "vendor",
+      reason: eventData.reason,
+
+      timestamp: timestamp,
+      txId: txId,
+    };
+
+    // Store cancellation event
+    await ctx.stub.putState(
+      cancellationEvent.eventId,
+      Buffer.from(JSON.stringify(cancellationEvent))
+    );
+
+    // Emit event
+    await ctx.stub.setEvent(
+      "VendorRequestCancelled",
+      Buffer.from(
+        JSON.stringify({
+          requestId: eventData.requestId,
+          cancelledBy: eventData.cancelledBy,
+          reason: eventData.reason,
+          timestamp: timestamp,
+        })
+      )
+    );
+
+    console.info(`✅ Vendor request cancellation event recorded: ${eventData.requestId} (Reason: ${eventData.reason})`);
+    console.info("============= END : Record Vendor Request Cancellation ===========");
+
+    return JSON.stringify(cancellationEvent);
+  }
+
+  // ========================================
+  // QUERY FUNCTIONS
+  // ========================================
+
+  /**
+   * Get request creation event
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} requestId - Request ID
+   * @returns {object|null} Request creation event or null
+   */
+  async getRequestCreationEvent(ctx, requestId) {
+    const queryString = {
+      selector: {
+        docType: "event",
+        eventType: "REQUEST_CREATED",
+        requestId: requestId,
+      },
+    };
+
+    const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+    const result = await iterator.next();
+
+    if (!result.done && result.value) {
+      const strValue = Buffer.from(result.value.value.toString()).toString("utf8");
+      await iterator.close();
+      return JSON.parse(strValue);
+    }
+
+    await iterator.close();
+    return null;
   }
 
   /**
-   * Create a new vendor request on blockchain
+   * Get complete request event history (ALL EVENTS)
+   *
+   * Returns creation, approval, payment, completion, etc.
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} requestId - Request ID
+   * @returns {string} Array of all request events in chronological order
+   */
+  async getRequestEventHistory(ctx, requestId) {
+    console.info(`============= START : Get Request Event History for ${requestId} ===========`);
+
+    const queryString = {
+      selector: {
+        docType: "event",
+        requestId: requestId,
+      },
+      sort: [{ timestamp: "asc" }],
+    };
+
+    const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+    const allResults = [];
+
+    let result = await iterator.next();
+    while (!result.done) {
+      const strValue = Buffer.from(result.value.value.toString()).toString("utf8");
+      try {
+        const record = JSON.parse(strValue);
+        allResults.push(record);
+      } catch (err) {
+        console.error("Error parsing event:", err);
+      }
+      result = await iterator.next();
+    }
+
+    await iterator.close();
+
+    console.info(`✅ Retrieved ${allResults.length} events for request ${requestId}`);
+    console.info("============= END : Get Request Event History ===========");
+
+    return JSON.stringify(allResults);
+  }
+
+  /**
+   * Query requests by vendor
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} vendorId - Vendor ID
+   * @returns {string} Array of request creation events
+   */
+  async queryRequestsByVendor(ctx, vendorId) {
+    console.info(`============= START : Query Requests By Vendor ${vendorId} ===========`);
+
+    const queryString = {
+      selector: {
+        docType: "event",
+        eventType: "REQUEST_CREATED",
+        vendorId: vendorId,
+      },
+      sort: [{ timestamp: "desc" }],
+    };
+
+    const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+    const allResults = [];
+
+    let result = await iterator.next();
+    while (!result.done) {
+      const strValue = Buffer.from(result.value.value.toString()).toString("utf8");
+      try {
+        const record = JSON.parse(strValue);
+        allResults.push(record);
+      } catch (err) {
+        console.error("Error parsing event:", err);
+      }
+      result = await iterator.next();
+    }
+
+    await iterator.close();
+
+    console.info(`✅ Found ${allResults.length} requests for vendor ${vendorId}`);
+    console.info("============= END : Query Requests By Vendor ===========");
+
+    return JSON.stringify(allResults);
+  }
+
+  /**
+   * Query requests by supplier
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} supplierId - Supplier ID
+   * @returns {string} Array of request creation events
+   */
+  async queryRequestsBySupplier(ctx, supplierId) {
+    console.info(`============= START : Query Requests By Supplier ${supplierId} ===========`);
+
+    const queryString = {
+      selector: {
+        docType: "event",
+        eventType: "REQUEST_CREATED",
+        supplierId: supplierId,
+      },
+      sort: [{ timestamp: "desc" }],
+    };
+
+    const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+    const allResults = [];
+
+    let result = await iterator.next();
+    while (!result.done) {
+      const strValue = Buffer.from(result.value.value.toString()).toString("utf8");
+      try {
+        const record = JSON.parse(strValue);
+        allResults.push(record);
+      } catch (err) {
+        console.error("Error parsing event:", err);
+      }
+      result = await iterator.next();
+    }
+
+    await iterator.close();
+
+    console.info(`✅ Found ${allResults.length} requests for supplier ${supplierId}`);
+    console.info("============= END : Query Requests By Supplier ===========");
+
+    return JSON.stringify(allResults);
+  }
+
+  /**
+   * Get all requests (creation events)
+   *
+   * @param {Context} ctx - Transaction context
+   * @returns {string} Array of all request creation events
+   */
+  async getAllRequests(ctx) {
+    console.info("============= START : Get All Requests ===========");
+
+    const queryString = {
+      selector: {
+        docType: "event",
+        eventType: "REQUEST_CREATED",
+      },
+    };
+
+    const iterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+    const allResults = [];
+
+    let result = await iterator.next();
+    while (!result.done) {
+      const strValue = Buffer.from(result.value.value.toString()).toString("utf8");
+      try {
+        const record = JSON.parse(strValue);
+        allResults.push(record);
+      } catch (err) {
+        console.error("Error parsing event:", err);
+      }
+      result = await iterator.next();
+    }
+
+    await iterator.close();
+
+    console.info(`✅ Retrieved ${allResults.length} requests`);
+    console.info("============= END : Get All Requests ===========");
+
+    return JSON.stringify(allResults);
+  }
+
+  /**
+   * Check if request exists
+   *
+   * @param {Context} ctx - Transaction context
+   * @param {string} requestId - Request ID
+   * @returns {boolean} True if request exists
+   */
+  async requestExists(ctx, requestId) {
+    const creationEvent = await this.getRequestCreationEvent(ctx, requestId);
+    return creationEvent !== null;
+  }
+
+  // ========================================
+  // DEPRECATED METHODS (for backward compatibility)
+  // ========================================
+
+  /**
+   * @deprecated Use recordVendorRequestCreation instead
    */
   async createVendorRequest(ctx, vendorRequestDataJson) {
-    try {
-      const requestData = JSON.parse(vendorRequestDataJson);
-
-      // Validate required fields
-      if (
-        !requestData.requestId ||
-        !requestData.requestNumber ||
-        !requestData.vendorId ||
-        !requestData.supplierId
-      ) {
-        throw new Error("Missing required vendor request fields");
-      }
-
-      // Check if request already exists
-      const existingData = await ctx.stub.getState(requestData.requestId);
-      if (existingData && existingData.length > 0) {
-        throw new Error(
-          `Vendor request ${requestData.requestId} already exists`
-        );
-      }
-
-      // Create vendor request record
-      const vendorRequest = {
-        requestId: requestData.requestId,
-        requestNumber: requestData.requestNumber,
-        vendorId: requestData.vendorId,
-        vendorName: requestData.vendorName || "",
-        supplierId: requestData.supplierId,
-        supplierName: requestData.supplierName || "",
-        items: requestData.items || [],
-        subtotal: requestData.subtotal || 0,
-        tax: requestData.tax || 0,
-        total: requestData.total || 0,
-        status: requestData.status || "pending",
-        vendorNotes: requestData.vendorNotes || "",
-        supplierNotes: requestData.supplierNotes || "",
-        autoApproved: requestData.autoApproved || false,
-        statusHistory: [
-          {
-            status: requestData.status || "pending",
-            timestamp: requestData.timestamp || new Date().toISOString(),
-            changedBy: requestData.vendorId,
-            notes: "Request created",
-          },
-        ],
-        createdAt: requestData.timestamp || new Date().toISOString(),
-        updatedAt: requestData.timestamp || new Date().toISOString(),
-        reviewedAt: requestData.reviewedAt || null,
-        isCompleted: false,
-        isLocked: false,
-        docType: "vendorRequest",
-      };
-
-      // Store on ledger
-      await ctx.stub.putState(
-        requestData.requestId,
-        Buffer.from(JSON.stringify(vendorRequest))
-      );
-
-      // Create composite key for querying by supplier
-      const supplierIndexKey = ctx.stub.createCompositeKey(
-        "supplier~vendorRequest",
-        [requestData.supplierId, requestData.requestId]
-      );
-      await ctx.stub.putState(supplierIndexKey, Buffer.from("\u0000"));
-
-      // Create composite key for querying by vendor
-      const vendorIndexKey = ctx.stub.createCompositeKey(
-        "vendor~vendorRequest",
-        [requestData.vendorId, requestData.requestId]
-      );
-      await ctx.stub.putState(vendorIndexKey, Buffer.from("\u0000"));
-
-      // Emit event
-      ctx.stub.setEvent(
-        "VendorRequestCreated",
-        Buffer.from(vendorRequestDataJson)
-      );
-
-      console.log(
-        `Vendor request created: ${requestData.requestId} by vendor ${requestData.vendorId}`
-      );
-
-      return JSON.stringify({
-        success: true,
-        message: "Vendor request created on blockchain",
-        requestId: requestData.requestId,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error creating vendor request:", error);
-      throw new Error(`Failed to create vendor request: ${error.message}`);
-    }
+    throw new Error("createVendorRequest() is deprecated. Use recordVendorRequestCreation() instead.");
   }
 
   /**
-   * Approve a vendor request
+   * @deprecated Use recordVendorRequestApproval instead
    */
-  async approveVendorRequest(ctx, requestId, approverId, timestamp) {
-    const notes = ""; // Notes handled internally
-    try {
-      // Get existing request
-      const requestBytes = await ctx.stub.getState(requestId);
-      if (!requestBytes || requestBytes.length === 0) {
-        throw new Error(`Vendor request ${requestId} not found`);
-      }
-
-      const request = JSON.parse(requestBytes.toString());
-
-      // Check if locked
-      if (request.isLocked) {
-        throw new Error("Cannot modify locked request");
-      }
-
-      // Check current status
-      if (request.status !== "pending") {
-        throw new Error(
-          `Cannot approve request with status: ${request.status}`
-        );
-      }
-
-      // Update request
-      request.status = "approved";
-      request.reviewedAt = timestamp || new Date().toISOString();
-      request.reviewedBy = approverId;
-      request.supplierNotes = notes;
-      request.updatedAt = timestamp || new Date().toISOString();
-
-      // Add to status history
-      request.statusHistory.push({
-        status: "approved",
-        timestamp: timestamp || new Date().toISOString(),
-        changedBy: approverId,
-        notes: notes || "Request approved",
-      });
-
-      // Save updated request
-      await ctx.stub.putState(requestId, Buffer.from(JSON.stringify(request)));
-
-      // Emit event
-      ctx.stub.setEvent(
-        "VendorRequestApproved",
-        Buffer.from(
-          JSON.stringify({
-            requestId: requestId,
-            approvedBy: approverId,
-            timestamp: timestamp,
-          })
-        )
-      );
-
-      console.log(`Vendor request ${requestId} approved by ${approverId}`);
-
-      return JSON.stringify({
-        success: true,
-        message: "Vendor request approved",
-        requestId: requestId,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error approving vendor request:", error);
-      throw new Error(`Failed to approve vendor request: ${error.message}`);
-    }
+  async approveVendorRequest(ctx, requestId, supplierId, timestamp, notes) {
+    throw new Error("approveVendorRequest() is deprecated. Use recordVendorRequestApproval() instead.");
   }
 
   /**
-   * Reject a vendor request
+   * @deprecated Use recordVendorRequestRejection instead
    */
-  async rejectVendorRequest(ctx, requestId, rejecterId, timestamp) {
-    const reason = ""; // Reason handled internally
-    try {
-      // Get existing request
-      const requestBytes = await ctx.stub.getState(requestId);
-      if (!requestBytes || requestBytes.length === 0) {
-        throw new Error(`Vendor request ${requestId} not found`);
-      }
-
-      const request = JSON.parse(requestBytes.toString());
-
-      // Check if locked
-      if (request.isLocked) {
-        throw new Error("Cannot modify locked request");
-      }
-
-      // Check current status
-      if (request.status !== "pending") {
-        throw new Error(`Cannot reject request with status: ${request.status}`);
-      }
-
-      if (!reason || reason.trim() === "") {
-        throw new Error("Rejection reason is required");
-      }
-
-      // Update request
-      request.status = "rejected";
-      request.reviewedAt = timestamp || new Date().toISOString();
-      request.reviewedBy = rejecterId;
-      request.supplierNotes = reason;
-      request.rejectionReason = reason;
-      request.updatedAt = timestamp || new Date().toISOString();
-
-      // Add to status history
-      request.statusHistory.push({
-        status: "rejected",
-        timestamp: timestamp || new Date().toISOString(),
-        changedBy: rejecterId,
-        notes: reason,
-      });
-
-      // Save updated request
-      await ctx.stub.putState(requestId, Buffer.from(JSON.stringify(request)));
-
-      // Emit event
-      ctx.stub.setEvent(
-        "VendorRequestRejected",
-        Buffer.from(
-          JSON.stringify({
-            requestId: requestId,
-            rejectedBy: rejecterId,
-            timestamp: timestamp,
-            reason: reason,
-          })
-        )
-      );
-
-      console.log(`Vendor request ${requestId} rejected by ${rejecterId}`);
-
-      return JSON.stringify({
-        success: true,
-        message: "Vendor request rejected",
-        requestId: requestId,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error rejecting vendor request:", error);
-      throw new Error(`Failed to reject vendor request: ${error.message}`);
-    }
+  async rejectVendorRequest(ctx, requestId, supplierId, timestamp, reason) {
+    throw new Error("rejectVendorRequest() is deprecated. Use recordVendorRequestRejection() instead.");
   }
 
   /**
-   * Cancel a vendor request (by vendor)
+   * @deprecated Use recordVendorRequestCancellation instead
    */
-  async cancelVendorRequest(ctx, requestId, vendorId, timestamp) {
-    const notes = ""; // Notes handled internally
-    try {
-      // Get existing request
-      const requestBytes = await ctx.stub.getState(requestId);
-      if (!requestBytes || requestBytes.length === 0) {
-        throw new Error(`Vendor request ${requestId} not found`);
-      }
-
-      const request = JSON.parse(requestBytes.toString());
-
-      // Check if locked
-      if (request.isLocked) {
-        throw new Error("Cannot modify locked request");
-      }
-
-      // Check if vendor owns this request
-      if (request.vendorId !== vendorId) {
-        throw new Error("Unauthorized - only vendor can cancel their request");
-      }
-
-      // Check current status
-      if (request.status !== "pending") {
-        throw new Error(`Cannot cancel request with status: ${request.status}`);
-      }
-
-      // Update request
-      request.status = "cancelled";
-      request.updatedAt = timestamp || new Date().toISOString();
-      if (notes) {
-        request.vendorNotes = notes;
-      }
-
-      // Add to status history
-      request.statusHistory.push({
-        status: "cancelled",
-        timestamp: timestamp || new Date().toISOString(),
-        changedBy: vendorId,
-        notes: notes || "Request cancelled by vendor",
-      });
-
-      // Save updated request
-      await ctx.stub.putState(requestId, Buffer.from(JSON.stringify(request)));
-
-      // Emit event
-      ctx.stub.setEvent(
-        "VendorRequestCancelled",
-        Buffer.from(
-          JSON.stringify({
-            requestId: requestId,
-            cancelledBy: vendorId,
-            timestamp: timestamp,
-          })
-        )
-      );
-
-      console.log(`Vendor request ${requestId} cancelled by ${vendorId}`);
-
-      return JSON.stringify({
-        success: true,
-        message: "Vendor request cancelled",
-        requestId: requestId,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error cancelling vendor request:", error);
-      throw new Error(`Failed to cancel vendor request: ${error.message}`);
-    }
+  async cancelVendorRequest(ctx, requestId, vendorId, timestamp, reason) {
+    throw new Error("cancelVendorRequest() is deprecated. Use recordVendorRequestCancellation() instead.");
   }
 
   /**
-   * Update request status
+   * @deprecated Use recordVendorRequestCompletion instead
    */
-  async updateVendorRequestStatus(
-    ctx,
-    requestId,
-    newStatus,
-    updatedBy,
-    timestamp,
-    notes = ""
-  ) {
-    try {
-      // Get existing request
-      const requestBytes = await ctx.stub.getState(requestId);
-      if (!requestBytes || requestBytes.length === 0) {
-        throw new Error(`Vendor request ${requestId} not found`);
-      }
-
-      const request = JSON.parse(requestBytes.toString());
-
-      // Check if locked
-      if (request.isLocked) {
-        throw new Error("Cannot modify locked request");
-      }
-
-      // Validate status
-      const validStatuses = [
-        "pending",
-        "approved",
-        "rejected",
-        "cancelled",
-        "completed",
-      ];
-      if (!validStatuses.includes(newStatus)) {
-        throw new Error(`Invalid status: ${newStatus}`);
-      }
-
-      // Update request
-      request.status = newStatus;
-      request.updatedAt = timestamp || new Date().toISOString();
-      if (notes) {
-        request.supplierNotes = notes;
-      }
-
-      // Add to status history
-      request.statusHistory.push({
-        status: newStatus,
-        timestamp: timestamp || new Date().toISOString(),
-        changedBy: updatedBy,
-        notes: notes || `Status updated to ${newStatus}`,
-      });
-
-      // Save updated request
-      await ctx.stub.putState(requestId, Buffer.from(JSON.stringify(request)));
-
-      // Emit event
-      ctx.stub.setEvent(
-        "VendorRequestStatusUpdated",
-        Buffer.from(
-          JSON.stringify({
-            requestId: requestId,
-            newStatus: newStatus,
-            updatedBy: updatedBy,
-            timestamp: timestamp,
-          })
-        )
-      );
-
-      console.log(
-        `Vendor request ${requestId} status updated to ${newStatus} by ${updatedBy}`
-      );
-
-      return JSON.stringify({
-        success: true,
-        message: "Vendor request status updated",
-        requestId: requestId,
-        newStatus: newStatus,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error updating vendor request status:", error);
-      throw new Error(
-        `Failed to update vendor request status: ${error.message}`
-      );
-    }
+  async completeVendorRequest(ctx, requestId, supplierId, timestamp, notes) {
+    throw new Error("completeVendorRequest() is deprecated. Use recordVendorRequestCompletion() instead.");
   }
 
   /**
-   * Complete and lock vendor request
-   */
-  async completeVendorRequest(
-    ctx,
-    requestId,
-    completedBy,
-    timestamp,
-    notes = ""
-  ) {
-    try {
-      // Get existing request
-      const requestBytes = await ctx.stub.getState(requestId);
-      if (!requestBytes || requestBytes.length === 0) {
-        throw new Error(`Vendor request ${requestId} not found`);
-      }
-
-      const request = JSON.parse(requestBytes.toString());
-
-      // Check if already locked
-      if (request.isLocked) {
-        throw new Error("Request is already locked");
-      }
-
-      // Update request
-      request.status = "completed";
-      request.completedAt = timestamp || new Date().toISOString();
-      request.isCompleted = true;
-      request.isLocked = true; // Lock from further modifications
-      request.updatedAt = timestamp || new Date().toISOString();
-      if (notes) {
-        request.supplierNotes = notes;
-      }
-
-      // Add to status history
-      request.statusHistory.push({
-        status: "completed",
-        timestamp: timestamp || new Date().toISOString(),
-        changedBy: completedBy,
-        notes: notes || "Request completed and locked",
-      });
-
-      // Save updated request
-      await ctx.stub.putState(requestId, Buffer.from(JSON.stringify(request)));
-
-      // Emit event
-      ctx.stub.setEvent(
-        "VendorRequestCompleted",
-        Buffer.from(
-          JSON.stringify({
-            requestId: requestId,
-            completedBy: completedBy,
-            timestamp: timestamp,
-            isLocked: true,
-          })
-        )
-      );
-
-      console.log(
-        `Vendor request ${requestId} completed and locked by ${completedBy}`
-      );
-
-      return JSON.stringify({
-        success: true,
-        message: "Vendor request completed and locked",
-        requestId: requestId,
-        isLocked: true,
-        txId: ctx.stub.getTxID(),
-      });
-    } catch (error) {
-      console.error("Error completing vendor request:", error);
-      throw new Error(`Failed to complete vendor request: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get vendor request by ID
+   * @deprecated Use getRequestEventHistory instead
    */
   async getVendorRequest(ctx, requestId) {
-    try {
-      const requestBytes = await ctx.stub.getState(requestId);
-      if (!requestBytes || requestBytes.length === 0) {
-        throw new Error(`Vendor request ${requestId} not found`);
-      }
-
-      return requestBytes.toString();
-    } catch (error) {
-      console.error("Error getting vendor request:", error);
-      throw new Error(`Failed to get vendor request: ${error.message}`);
+    console.warn("⚠️ getVendorRequest() is deprecated. Use getRequestEventHistory() instead.");
+    const creationEvent = await this.getRequestCreationEvent(ctx, requestId);
+    if (!creationEvent) {
+      throw new Error(`Vendor request ${requestId} does not exist`);
     }
+    return JSON.stringify(creationEvent);
   }
 
   /**
-   * Get all vendor requests by supplier
-   */
-  async getVendorRequestsBySupplier(ctx, supplierId) {
-    try {
-      const iterator = await ctx.stub.getStateByPartialCompositeKey(
-        "supplier~vendorRequest",
-        [supplierId]
-      );
-
-      const requestList = [];
-
-      let result = await iterator.next();
-      while (!result.done) {
-        const compositeKey = result.value.key;
-        const splitKey = ctx.stub.splitCompositeKey(compositeKey);
-        const requestId = splitKey.attributes[1];
-
-        // Get the actual request data
-        const requestBytes = await ctx.stub.getState(requestId);
-        if (requestBytes && requestBytes.length > 0) {
-          const request = JSON.parse(requestBytes.toString());
-          requestList.push(request);
-        }
-
-        result = await iterator.next();
-      }
-
-      await iterator.close();
-
-      return JSON.stringify(requestList);
-    } catch (error) {
-      console.error("Error getting vendor requests by supplier:", error);
-      throw new Error(
-        `Failed to get vendor requests by supplier: ${error.message}`
-      );
-    }
-  }
-
-  /**
-   * Get all vendor requests by vendor
-   */
-  async getVendorRequestsByVendor(ctx, vendorId) {
-    try {
-      const iterator = await ctx.stub.getStateByPartialCompositeKey(
-        "vendor~vendorRequest",
-        [vendorId]
-      );
-
-      const requestList = [];
-
-      let result = await iterator.next();
-      while (!result.done) {
-        const compositeKey = result.value.key;
-        const splitKey = ctx.stub.splitCompositeKey(compositeKey);
-        const requestId = splitKey.attributes[1];
-
-        // Get the actual request data
-        const requestBytes = await ctx.stub.getState(requestId);
-        if (requestBytes && requestBytes.length > 0) {
-          const request = JSON.parse(requestBytes.toString());
-          requestList.push(request);
-        }
-
-        result = await iterator.next();
-      }
-
-      await iterator.close();
-
-      return JSON.stringify(requestList);
-    } catch (error) {
-      console.error("Error getting vendor requests by vendor:", error);
-      throw new Error(
-        `Failed to get vendor requests by vendor: ${error.message}`
-      );
-    }
-  }
-
-  /**
-   * Get vendor request history (all changes)
+   * @deprecated Use getRequestEventHistory instead
    */
   async getVendorRequestHistory(ctx, requestId) {
-    try {
-      const iterator = await ctx.stub.getHistoryForKey(requestId);
-
-      const history = [];
-
-      let result = await iterator.next();
-      while (!result.done) {
-        const record = {
-          txId: result.value.txId,
-          timestamp: result.value.timestamp,
-          isDelete: result.value.isDelete,
-          value: result.value.value.toString(),
-        };
-        history.push(record);
-        result = await iterator.next();
-      }
-
-      await iterator.close();
-
-      return JSON.stringify(history);
-    } catch (error) {
-      console.error("Error getting vendor request history:", error);
-      throw new Error(`Failed to get vendor request history: ${error.message}`);
-    }
+    console.warn("⚠️ getVendorRequestHistory() is deprecated. Use getRequestEventHistory() instead.");
+    return await this.getRequestEventHistory(ctx, requestId);
   }
 
   /**
-   * Query vendor requests by status
+   * @deprecated Status updates are now separate events
    */
-  async getVendorRequestsByStatus(ctx, supplierId, status) {
-    try {
-      const query = {
-        selector: {
-          supplierId: supplierId,
-          status: status,
-          docType: "vendorRequest",
-        },
-      };
-
-      const iterator = await ctx.stub.getQueryResult(JSON.stringify(query));
-
-      const requestList = [];
-
-      let result = await iterator.next();
-      while (!result.done) {
-        const request = JSON.parse(result.value.value.toString());
-        requestList.push(request);
-        result = await iterator.next();
-      }
-
-      await iterator.close();
-
-      return JSON.stringify(requestList);
-    } catch (error) {
-      console.error("Error getting vendor requests by status:", error);
-      throw new Error(
-        `Failed to get vendor requests by status: ${error.message}`
-      );
-    }
-  }
-
-  /**
-   * Query all vendor requests (for admin/debugging)
-   */
-  async queryAllVendorRequests(ctx) {
-    try {
-      const query = {
-        selector: {
-          docType: "vendorRequest",
-        },
-      };
-
-      const iterator = await ctx.stub.getQueryResult(JSON.stringify(query));
-
-      const allRequests = [];
-
-      let result = await iterator.next();
-      while (!result.done) {
-        const request = JSON.parse(result.value.value.toString());
-        allRequests.push(request);
-        result = await iterator.next();
-      }
-
-      await iterator.close();
-
-      return JSON.stringify(allRequests);
-    } catch (error) {
-      console.error("Error querying all vendor requests:", error);
-      throw new Error(`Failed to query all vendor requests: ${error.message}`);
-    }
+  async updateVendorRequestStatus(ctx, requestId, status, supplierId, timestamp, notes) {
+    throw new Error("updateVendorRequestStatus() is deprecated. Use specific event methods: recordVendorRequestApproval(), recordVendorRequestRejection(), etc.");
   }
 }
 

@@ -206,12 +206,12 @@ const vendorRequestSchema = new mongoose.Schema(
 // Indexes for performance
 vendorRequestSchema.index({ vendorId: 1, status: 1 });
 vendorRequestSchema.index({ supplierId: 1, status: 1 });
-vendorRequestSchema.index({ requestNumber: 1 });
+// requestNumber has unique: true which creates an index
 vendorRequestSchema.index({ createdAt: -1 });
 vendorRequestSchema.index({ status: 1, createdAt: -1 });
 
 vendorRequestSchema.index({ blockchainVerified: 1, status: 1 });
-vendorRequestSchema.index({ blockchainTxId: 1 }, { sparse: true });
+// blockchainTxId has index: true in schema
 vendorRequestSchema.index({ vendorId: 1, blockchainVerified: 1 });
 vendorRequestSchema.index({ supplierId: 1, blockchainVerified: 1 });
 

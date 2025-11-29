@@ -629,9 +629,9 @@ export default function CheckoutPage() {
 
                   {/* Terms & Conditions */}
                   <div className="space-y-4">
-                    <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="flex items-start gap-3 group">
                       <div
-                        className={`w-5 h-5 border-2 flex items-center justify-center transition-colors mt-0.5 ${
+                        className={`w-5 h-5 border-2 flex items-center justify-center transition-colors mt-0.5 cursor-pointer ${
                           agreedToTerms
                             ? "bg-black dark:bg-white border-black dark:border-white"
                             : "border-gray-300 dark:border-gray-700 group-hover:border-gray-400 dark:group-hover:border-gray-600"
@@ -642,17 +642,32 @@ export default function CheckoutPage() {
                           <CheckIcon className="h-3 w-3 text-white dark:text-black" />
                         )}
                       </div>
-                      <span className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                      <span
+                        className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed cursor-pointer"
+                        onClick={() => setAgreedToTerms(!agreedToTerms)}
+                      >
                         I agree to the{" "}
-                        <button className="text-gray-900 dark:text-white hover:underline">
+                        <a
+                          href="/terms"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-900 dark:text-white hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           terms and conditions
-                        </button>{" "}
+                        </a>{" "}
                         and{" "}
-                        <button className="text-gray-900 dark:text-white hover:underline">
+                        <a
+                          href="/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-900 dark:text-white hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           privacy policy
-                        </button>
+                        </a>
                       </span>
-                    </label>
+                    </div>
                   </div>
 
                   {/* Action Buttons */}

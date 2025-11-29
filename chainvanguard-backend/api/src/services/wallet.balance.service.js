@@ -25,21 +25,26 @@ class WalletBalanceService {
 
         // ✅ CREATE BLOCKCHAIN TOKEN ACCOUNT FIRST
         try {
-          await fabricService.createTokenAccount(
+          const result = await fabricService.createTokenAccount(
             userId.toString(),
             user.walletAddress,
             0
           );
-          console.log(
-            `✅ Blockchain token account created for: ${user.walletAddress}`
-          );
-        } catch (blockchainError) {
-          if (!blockchainError.message.includes("already exists")) {
-            console.warn(
-              "⚠️ Blockchain account creation failed:",
-              blockchainError.message
+          if (result.message === "Account already exists") {
+            console.log(
+              `ℹ️ Blockchain token account already exists for: ${user.walletAddress}`
+            );
+          } else {
+            console.log(
+              `✅ Blockchain token account created for: ${user.walletAddress}`
             );
           }
+        } catch (blockchainError) {
+          console.warn(
+            "⚠️ Blockchain account creation failed:",
+            blockchainError.message
+          );
+          // Continue anyway - MongoDB wallet will still be created
         }
 
         // Create MongoDB wallet (cache & history)
@@ -52,23 +57,36 @@ class WalletBalanceService {
           isFrozen: false,
         });
 
-        await wallet.save();
+        try {
+          await wallet.save();
+          console.log(`✅ Wallet auto-created for user: ${userId}`);
 
-        console.log(`✅ Wallet auto-created for user: ${userId}`);
-
-        // Log wallet creation
-        await logger.logWallet({
-          type: "wallet_created",
-          action: "Wallet automatically created with blockchain token account",
-          walletId: wallet._id,
-          userId,
-          userDetails: {
-            walletAddress: user.walletAddress,
-            role: user.role,
-            name: user.name,
-          },
-          status: "success",
-        });
+          // Log wallet creation
+          await logger.logWallet({
+            type: "wallet_created",
+            action: "Wallet automatically created with blockchain token account",
+            walletId: wallet._id,
+            userId,
+            userDetails: {
+              walletAddress: user.walletAddress,
+              role: user.role,
+              name: user.name,
+            },
+            status: "success",
+          });
+        } catch (saveError) {
+          // Handle duplicate key error (E11000) - wallet was created by another request
+          if (saveError.code === 11000 && saveError.message.includes("userId")) {
+            console.log(`ℹ️ Wallet already exists for user: ${userId} (race condition handled)`);
+            // Fetch the existing wallet created by the other request
+            wallet = await Wallet.findOne({ userId });
+            if (!wallet) {
+              throw new Error("Wallet creation failed - please try again");
+            }
+          } else {
+            throw saveError;
+          }
+        }
       }
 
       return wallet;
@@ -949,9 +967,9 @@ class WalletBalanceService {
   /**
    * 🔒 Freeze Wallet (Admin/Expert only)
    */
-  async freezeWallet(userId, reason) {
+  async freezeWallet(userId, reason, performedBy = null) {
     try {
-      const wallet = await Wallet.findOne({ userId });
+      const wallet = await Wallet.findOne({ userId }).populate("userId", "name email");
 
       if (!wallet) {
         throw new Error("Wallet not found");
@@ -959,6 +977,61 @@ class WalletBalanceService {
 
       wallet.freeze(reason);
       await wallet.save();
+
+      // Log to DB
+      const logData = {
+        transactionId: `wallet-freeze-${Date.now()}`,
+        type: "security-event",
+        action: "wallet-frozen",
+        status: "success",
+        performedBy: performedBy,
+        userId: performedBy,
+        entityId: userId,
+        entityType: "wallet",
+        metadata: {
+          reason,
+          targetUser: wallet.userId?.email || userId,
+          targetName: wallet.userId?.name || "Unknown",
+          walletAddress: wallet.walletAddress,
+        },
+        timestamp: new Date(),
+      };
+
+      try {
+        await BlockchainLog.create(logData);
+        console.log("✅ Wallet freeze logged to DB");
+      } catch (logErr) {
+        console.warn("⚠️ Failed to log wallet freeze to DB:", logErr);
+      }
+
+      // Log to Fabric blockchain
+      try {
+        await fabricService.createBlockchainLog(
+          logData.transactionId,
+          logData
+        );
+        console.log("✅ Wallet freeze logged to Fabric blockchain");
+      } catch (fabricErr) {
+        console.warn(
+          "⚠️ Failed to log wallet freeze to Fabric blockchain:",
+          fabricErr.message
+        );
+      }
+
+      // Log using logger utility
+      try {
+        await logger.logWallet({
+          type: "wallet-frozen",
+          userId: userId,
+          performedBy: performedBy,
+          data: {
+            reason,
+            walletAddress: wallet.walletAddress,
+          },
+        });
+      } catch (loggerErr) {
+        console.warn("⚠️ Logger failed for wallet freeze:", loggerErr);
+      }
 
       return {
         success: true,
@@ -973,9 +1046,9 @@ class WalletBalanceService {
   /**
    * 🔓 Unfreeze Wallet (Admin/Expert only)
    */
-  async unfreezeWallet(userId) {
+  async unfreezeWallet(userId, reason = "Admin action", performedBy = null) {
     try {
-      const wallet = await Wallet.findOne({ userId });
+      const wallet = await Wallet.findOne({ userId }).populate("userId", "name email");
 
       if (!wallet) {
         throw new Error("Wallet not found");
@@ -983,6 +1056,61 @@ class WalletBalanceService {
 
       wallet.unfreeze();
       await wallet.save();
+
+      // Log to DB
+      const logData = {
+        transactionId: `wallet-unfreeze-${Date.now()}`,
+        type: "security-event",
+        action: "wallet-unfrozen",
+        status: "success",
+        performedBy: performedBy,
+        userId: performedBy,
+        entityId: userId,
+        entityType: "wallet",
+        metadata: {
+          reason,
+          targetUser: wallet.userId?.email || userId,
+          targetName: wallet.userId?.name || "Unknown",
+          walletAddress: wallet.walletAddress,
+        },
+        timestamp: new Date(),
+      };
+
+      try {
+        await BlockchainLog.create(logData);
+        console.log("✅ Wallet unfreeze logged to DB");
+      } catch (logErr) {
+        console.warn("⚠️ Failed to log wallet unfreeze to DB:", logErr);
+      }
+
+      // Log to Fabric blockchain
+      try {
+        await fabricService.createBlockchainLog(
+          logData.transactionId,
+          logData
+        );
+        console.log("✅ Wallet unfreeze logged to Fabric blockchain");
+      } catch (fabricErr) {
+        console.warn(
+          "⚠️ Failed to log wallet unfreeze to Fabric blockchain:",
+          fabricErr.message
+        );
+      }
+
+      // Log using logger utility
+      try {
+        await logger.logWallet({
+          type: "wallet-unfrozen",
+          userId: userId,
+          performedBy: performedBy,
+          data: {
+            reason,
+            walletAddress: wallet.walletAddress,
+          },
+        });
+      } catch (loggerErr) {
+        console.warn("⚠️ Logger failed for wallet unfreeze:", loggerErr);
+      }
 
       return {
         success: true,

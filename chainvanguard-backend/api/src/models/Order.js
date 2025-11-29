@@ -403,6 +403,17 @@ const orderSchema = new Schema(
     ],
 
     // ========================================
+    // INVOICE REFERENCE (IPFS)
+    // ========================================
+    invoiceId: {
+      type: Schema.Types.ObjectId,
+      ref: "Invoice",
+      index: true,
+    },
+    invoiceNumber: { type: String, default: "" },
+    invoiceIpfsHash: { type: String, default: "" }, // Invoice stored on IPFS
+
+    // ========================================
     // ORDER TRACKING & SUPPLY CHAIN
     // ========================================
     supplyChainEvents: [supplyChainEventSchema],
@@ -471,8 +482,7 @@ orderSchema.index({ sellerId: 1, status: 1 });
 orderSchema.index({ "items.sellerId": 1 });
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ status: 1, createdAt: -1 });
-orderSchema.index({ orderNumber: 1 });
-orderSchema.index({ paymentStatus: 1 });
+// orderNumber and paymentStatus already have index: true in schema
 orderSchema.index({ trackingNumber: 1 });
 
 // ========================================
