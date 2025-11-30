@@ -774,37 +774,49 @@ export default function WalletPage() {
               >
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle
-                      className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
-                    >
-                      <ClockIcon
-                        className={`h-5 w-5 ${colors.icons.primary}`}
-                      />
-                      Transaction History
-                    </CardTitle>
-                    <Select
-                      value={selectedFilter}
-                      onValueChange={setSelectedFilter}
-                    >
-                      <SelectTrigger
-                        className={`w-32 h-10 ${colors.backgrounds.tertiary} rounded-none ${colors.borders.primary} text-xs`}
+                    <div>
+                      <CardTitle
+                        className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
                       >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-none">
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="deposit">Deposits</SelectItem>
-                        <SelectItem value="payment">Payments</SelectItem>
-                        <SelectItem value="received">Received</SelectItem>
-                        <SelectItem value="withdrawal">Withdrawals</SelectItem>
-                      </SelectContent>
-                    </Select>
+                        <ClockIcon
+                          className={`h-5 w-5 ${colors.icons.primary}`}
+                        />
+                        Transaction History
+                      </CardTitle>
+                      <CardDescription
+                        className={`text-xs ${colors.texts.secondary} mt-2`}
+                      >
+                        Your recent wallet transactions
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Select
+                        value={selectedFilter}
+                        onValueChange={setSelectedFilter}
+                      >
+                        <SelectTrigger
+                          className={`w-32 h-10 ${colors.backgrounds.tertiary} rounded-none ${colors.borders.primary} text-xs`}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-none">
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="deposit">Deposits</SelectItem>
+                          <SelectItem value="payment">Payments</SelectItem>
+                          <SelectItem value="received">Received</SelectItem>
+                          <SelectItem value="withdrawal">Withdrawals</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => (window.location.href = '/wallet/transactions')}
+                        className={`flex items-center gap-2 px-4 h-10 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all hover:border-black dark:hover:border-white text-xs`}
+                      >
+                        View All
+                      </Button>
+                    </div>
                   </div>
-                  <CardDescription
-                    className={`text-xs ${colors.texts.secondary}`}
-                  >
-                    Your recent wallet transactions
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {filteredTransactions.length === 0 ? (

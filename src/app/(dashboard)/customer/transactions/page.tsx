@@ -172,14 +172,34 @@ export default function TransactionsPage() {
     const displayType = getTransactionDisplayType(tx.type);
 
     if (displayType === "credit") {
-      // Money coming in
-      const from = tx.metadata?.senderName || tx.metadata?.buyerName || "External";
+      // Money coming in (refunds, sales, transfers)
+      let from = "External Source";
+
+      if (tx.type === "refund") {
+        from = tx.metadata?.storeName || tx.metadata?.vendorName || "Store";
+      } else if (tx.type === "sale") {
+        from = tx.metadata?.buyerName || tx.metadata?.customerName || "Customer";
+      } else if (tx.type === "transfer_in") {
+        from = tx.metadata?.senderName || "User";
+      } else if (tx.type === "deposit") {
+        from = tx.metadata?.paymentMethod || "Payment Source";
+      }
+
       const to = "Your Wallet";
       return { from, to };
     } else {
-      // Money going out
+      // Money going out (payments, withdrawals, transfers)
       const from = "Your Wallet";
-      const to = tx.metadata?.recipientName || tx.metadata?.sellerName || "External";
+      let to = "External Recipient";
+
+      if (tx.type === "payment") {
+        to = tx.metadata?.storeName || tx.metadata?.vendorName || tx.metadata?.sellerName || "Store";
+      } else if (tx.type === "withdrawal") {
+        to = tx.metadata?.withdrawalMethod || "Bank Account";
+      } else if (tx.type === "transfer_out") {
+        to = tx.metadata?.recipientName || "User";
+      }
+
       return { from, to };
     }
   };
@@ -261,7 +281,7 @@ export default function TransactionsPage() {
                 Total Received
               </p>
               <p className="text-3xl font-extralight text-green-600 dark:text-green-400">
-                ${totalCredit.toFixed(2)}
+                {formatCVT(totalCredit)}
               </p>
             </div>
             <div className="space-y-3">
@@ -269,7 +289,7 @@ export default function TransactionsPage() {
                 Total Spent
               </p>
               <p className="text-3xl font-extralight text-gray-900 dark:text-white">
-                ${totalDebit.toFixed(2)}
+                {formatCVT(totalDebit)}
               </p>
             </div>
             <div className="space-y-3">

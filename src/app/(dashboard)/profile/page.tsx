@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -32,8 +33,27 @@ import {
   updateProfile,
   getProfileStats,
   ProfileStats,
+  // Added OTP helpers & types
+  sendEmailOtp,
+  verifyEmailOtp,
+  UpdateProfileData,
 } from "@/lib/api/profile.api";
-import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useWallet } from "@/components/providers/wallet-provider";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
 
 // Province-City mapping (reuse from register page)
 const provinceCityMap: Record<string, string[]> = {
@@ -92,6 +112,7 @@ const businessTypes = [
 export default function ProfilePage() {
   usePageTitle("Profile");
   const { user, updateProfile: updateAuthProfile } = useAuth();
+  const { currentWallet } = useWallet();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -114,6 +135,16 @@ export default function ProfilePage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // OTP related states
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [isOtpLoading, setIsOtpLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [pendingSaveData, setPendingSaveData] =
+    useState<UpdateProfileData | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string>("");
 
   useEffect(() => {
     setIsVisible(true);
@@ -148,6 +179,21 @@ export default function ProfilePage() {
       fetchStats();
     }
   }, [user]);
+
+  // Countdown for Resend button
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -192,9 +238,71 @@ export default function ProfilePage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  /**
+   * Send OTP (returns success)
+   */
+  const sendOtpToEmail = async (targetEmail: string) => {
+    try {
+      const resp = await sendEmailOtp(targetEmail);
+      if (resp.success) {
+        setResendTimer(30); // 30 second cooldown
+        return { success: true, message: resp.message };
+      }
+      return { success: false, error: resp.error || "Failed to send OTP" };
+    } catch (error: any) {
+      return { success: false, error: error.message || "Failed to send OTP" };
+    }
+  };
+
   const handleSave = async () => {
     if (!validateForm()) {
       toast.error("Please fix the errors before saving");
+      return;
+    }
+
+    // If the email address is being changed, start OTP flow instead of saving immediately
+    const emailChanged = user?.email && formData.email !== user.email;
+
+    if (emailChanged) {
+      // Check wallet presence first
+      if (!currentWallet) {
+        toast.error("Please connect your wallet before changing your email");
+        return;
+      }
+
+      // send OTP and open modal
+      setIsLoading(true);
+      try {
+        const sendResp = await sendOtpToEmail(formData.email);
+        if (!sendResp.success) {
+          toast.error(sendResp.error || "Failed to send OTP to new email");
+          return;
+        }
+
+        // keep the pending save data to use after OTP verification
+        const saveData: UpdateProfileData = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.province,
+          postalCode: formData.postalCode,
+          companyName: formData.companyName,
+          businessAddress: formData.businessAddress,
+          businessType: formData.businessType,
+          registrationNumber: formData.registrationNumber,
+        };
+
+        setPendingSaveData(saveData);
+        setPendingEmail(formData.email);
+        setIsOtpModalOpen(true);
+        toast.success("Verification code sent to new email");
+      } catch (error) {
+        toast.error("Failed to send OTP");
+      } finally {
+        setIsLoading(false);
+      }
       return;
     }
 
@@ -226,6 +334,73 @@ export default function ProfilePage() {
       toast.error("Failed to update profile");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // OTP Modal verification handler
+  const handleVerifyOtp = async () => {
+    // local validation
+    if (otp.trim().length !== 6) {
+      setOtpError("Please enter the 6 digit code");
+      return;
+    }
+
+    if (!pendingSaveData || !pendingEmail) {
+      setOtpError("No pending changes found");
+      return;
+    }
+
+    setIsOtpLoading(true);
+    setOtpError("");
+    try {
+      const verifyResp = await verifyEmailOtp(pendingEmail, otp.trim());
+      if (!verifyResp.success) {
+        setOtpError(verifyResp.error || "Invalid or expired code");
+        setIsOtpLoading(false);
+        return;
+      }
+
+      // Verified — apply pending save data
+      const result = await updateProfile(pendingSaveData);
+
+      if (result.success && result.user) {
+        updateAuthProfile(result.user);
+        toast.success("Profile updated successfully");
+        setIsEditing(false);
+        // clear pending
+        setPendingSaveData(null);
+        setPendingEmail("");
+        setOtp("");
+        setIsOtpModalOpen(false);
+      } else {
+        toast.error(
+          result.error || "Failed to update profile after verification"
+        );
+      }
+    } catch (error: any) {
+      console.error("OTP verification or update failed:", error);
+      toast.error("Failed to verify OTP or update profile");
+    } finally {
+      setIsOtpLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0) return;
+    if (!pendingEmail) return;
+    setIsOtpLoading(true);
+    try {
+      const resp = await sendOtpToEmail(pendingEmail);
+      if (resp.success) {
+        toast.success("OTP resent");
+      } else {
+        toast.error(resp.error || "Failed to resend OTP");
+      }
+    } catch (error) {
+      toast.error("Failed to resend OTP");
+    } finally {
+      setIsOtpLoading(false);
     }
   };
 
@@ -738,6 +913,111 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* OTP Verification Modal (same size as the wallet modal for consistent sizing) */}
+      <Dialog
+        open={isOtpModalOpen}
+        onOpenChange={(open) => setIsOtpModalOpen(open)}
+      >
+        <DialogContent
+          style={{ width: "100%", maxWidth: "900px" }}
+          className={`w-full max-w-[900px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none p-0 !shadow-none hover:!shadow-none`}
+        >
+          <div className="p-6">
+            <DialogHeader>
+              <DialogTitle
+                className={`flex items-center gap-3 text-xl font-bold ${colors.texts.primary}`}
+              >
+                Verify Your Email
+              </DialogTitle>
+              <DialogDescription
+                className={`text-base ${colors.texts.secondary} mt-2`}
+              >
+                A 6-digit verification code has been sent to{" "}
+                <span className="font-medium">{pendingEmail}</span>. Enter it
+                below to confirm your email change.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-6">
+            <div className="space-y-4">
+              <div>
+                <Label className={`text-sm ${colors.texts.secondary}`}>
+                  Verification Code
+                </Label>
+                <Input
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => {
+                    const digitsOnly = e.target.value.replace(/\D/g, "");
+                    setOtp(digitsOnly.slice(0, 6));
+                    if (otpError) setOtpError("");
+                  }}
+                  placeholder="123456"
+                  className="rounded-none text-sm w-full h-10"
+                />
+                {otpError && (
+                  <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                    <ExclamationTriangleIcon className="h-3 w-3" />
+                    {otpError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Didn&apos;t receive the code?
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResendOtp}
+                    disabled={resendTimer > 0 || isOtpLoading}
+                    className="rounded-none text-xs"
+                  >
+                    {resendTimer > 0
+                      ? `Resend in ${resendTimer}s`
+                      : "Resend Code"}
+                  </Button>
+                  <Button
+                    onClick={handleVerifyOtp}
+                    disabled={isOtpLoading}
+                    className={`${colors.buttons.primary} rounded-none text-xs`}
+                  >
+                    {isOtpLoading ? "Verifying..." : "Verify & Update"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div
+            className={`p-6 border-t ${colors.borders.primary} flex items-center justify-between`}
+          >
+            <div className={`text-xs ${colors.texts.secondary}`}>
+              <p>Need help? Contact support@chainvanguard.com</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setIsOtpModalOpen(false);
+                setPendingSaveData(null);
+                setPendingEmail("");
+                setOtp("");
+                setOtpError("");
+              }}
+              disabled={isOtpLoading}
+              className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

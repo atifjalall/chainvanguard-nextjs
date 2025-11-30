@@ -57,6 +57,7 @@ import {
   ArrowTrendingDownIcon,
   CreditCardIcon,
   CheckIcon,
+  DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
@@ -915,7 +916,7 @@ export default function VendorTransactionsPage() {
                           </TableCell>
                           <TableCell className="px-2">
                             <div className="flex items-center gap-2">
-                              <HashtagIcon className="h-3 w-3 text-gray-500" />
+                              <HashtagIcon className="h-2.5 w-2.5 text-gray-500" />
                               <code className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-none block">
                                 {transaction.blockchainHash.substring(0, 16)}...
                               </code>
@@ -1245,7 +1246,7 @@ export default function VendorTransactionsPage() {
                             {copiedHash === selectedRequest.blockchainTxId ? (
                               <CheckIcon className="h-3 w-3" />
                             ) : (
-                              <HashtagIcon className="h-3 w-3" />
+                              <DocumentDuplicateIcon className="h-3 w-3" />
                             )}
                           </Button>
                         </div>

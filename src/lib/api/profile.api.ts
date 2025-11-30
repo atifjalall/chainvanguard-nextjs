@@ -40,9 +40,10 @@ export const getProfileStats = async (): Promise<{
   error?: string;
 }> => {
   try {
-    const result = await apiClient.get<{ success: boolean; data: ProfileStats }>(
-      "/auth/profile/stats"
-    );
+    const result = await apiClient.get<{
+      success: boolean;
+      data: ProfileStats;
+    }>("/auth/profile/stats");
 
     return {
       success: true,
@@ -165,4 +166,57 @@ export const updateProfileField = async (
   updateData[field] = value;
 
   return updateProfile(updateData);
+};
+
+/**
+ * Send OTP to user's email
+ */
+export const sendEmailOtp = async (
+  email: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> => {
+  try {
+    const result = await apiClient.post<{ success: boolean; message?: string }>(
+      "/auth/send-otp",
+      { email }
+    );
+    return { success: true, message: result.message || "OTP sent" } as any;
+  } catch (error: any) {
+    console.error("Send OTP error:", error);
+    return {
+      success: false,
+      error:
+        error.response?.data?.error || error.message || "Failed to send OTP",
+    };
+  }
+};
+
+/**
+ * Verify OTP for email change
+ */
+export const verifyEmailOtp = async (
+  email: string,
+  otp: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> => {
+  try {
+    const result = await apiClient.post<{ success: boolean; message?: string }>(
+      "/auth/verify-otp",
+      { email, otp }
+    );
+    return { success: true, message: result.message || "OTP verified" } as any;
+  } catch (error: any) {
+    console.error("Verify OTP error:", error);
+    return {
+      success: false,
+      error:
+        error.response?.data?.error || error.message || "Failed to verify OTP",
+    };
+  }
 };

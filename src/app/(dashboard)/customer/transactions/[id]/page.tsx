@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   ChevronRightIcon,
@@ -10,82 +10,112 @@ import {
   ClockIcon,
   XCircleIcon,
   DocumentDuplicateIcon,
-  ArrowTopRightOnSquareIcon,
-  ArrowDownTrayIcon,
-  CalendarIcon,
   CubeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { usePageTitle } from "@/hooks/use-page-title";
-
-// Mock transaction detail - in real app, fetch by ID
-const MOCK_TRANSACTION = {
-  id: "TX002",
-  type: "debit",
-  amount: 89.99,
-  description: "Purchase - Classic Denim Jacket",
-  category: "Purchase",
-  date: "2024-01-14T15:45:00",
-  status: "completed",
-  txHash: "0x2345678901bcdef2345678901bcdef23456789012345678901bcdef234567890",
-  blockNumber: 1234567,
-  confirmations: 24,
-  gasUsed: "0.00012 ETH",
-  from: {
-    name: "Your Wallet",
-    address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
-  },
-  to: {
-    name: "Vendor: Fashion Store",
-    address: "0x89abcdef0123456789abcdef0123456789abcdef",
-  },
-  product: {
-    name: "Classic Denim Jacket",
-    sku: "DENIM-001",
-    quantity: 1,
-    price: 89.99,
-  },
-  timeline: [
-    {
-      status: "initiated",
-      label: "Transaction Initiated",
-      timestamp: "2024-01-14T15:45:00",
-      completed: true,
-    },
-    {
-      status: "pending",
-      label: "Pending Confirmation",
-      timestamp: "2024-01-14T15:45:30",
-      completed: true,
-    },
-    {
-      status: "confirmed",
-      label: "Blockchain Confirmed",
-      timestamp: "2024-01-14T15:46:00",
-      completed: true,
-    },
-    {
-      status: "completed",
-      label: "Transaction Completed",
-      timestamp: "2024-01-14T15:46:30",
-      completed: true,
-    },
-  ],
-  metadata: {
-    network: "Hyperledger Fabric",
-    channel: "supply-chain",
-    chaincode: "payment-contract",
-    endorsers: 3,
-  },
-};
+import { getTransactionById, BackendTransaction } from "@/lib/api/wallet.api";
+import { formatCVT } from "@/utils/currency";
 
 export default function TransactionDetailPage() {
   usePageTitle("Transaction Details");
   const router = useRouter();
   const params = useParams();
-  const transactionId = params?.id || "TX002";
+  const transactionId = (params?.id as string) || "";
 
-  const [transaction] = useState(MOCK_TRANSACTION);
+  const [transaction, setTransaction] = useState<BackendTransaction | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Load transaction data
+  useEffect(() => {
+    const loadTransaction = async () => {
+      try {
+        setLoading(true);
+        const response = await getTransactionById(transactionId);
+
+        if (response.success && response.data) {
+          setTransaction(response.data);
+        } else {
+          toast.error("Failed to load transaction details");
+          router.push("/customer/transactions");
+        }
+      } catch (error) {
+        console.error("Error loading transaction:", error);
+        toast.error("Failed to load transaction details");
+        router.push("/customer/transactions");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (transactionId) {
+      loadTransaction();
+    }
+  }, [transactionId, router]);
+
+  // Helper functions
+  const getTransactionDisplayType = (type: string): "credit" | "debit" => {
+    const creditTypes = ["deposit", "transfer_in", "refund", "sale"];
+    return creditTypes.includes(type) ? "credit" : "debit";
+  };
+
+  const getTransactionParties = (tx: BackendTransaction) => {
+    const displayType = getTransactionDisplayType(tx.type);
+
+    if (displayType === "credit") {
+      // Money coming in (refunds, sales, transfers)
+      let from = "External Source";
+      let fromAddress = "N/A";
+
+      if (tx.type === "refund") {
+        from = tx.metadata?.storeName || tx.metadata?.vendorName || "Store";
+        fromAddress = tx.metadata?.vendorWallet || "N/A";
+      } else if (tx.type === "sale") {
+        from = tx.metadata?.buyerName || tx.metadata?.customerName || "Customer";
+        fromAddress = tx.metadata?.buyerWallet || tx.metadata?.buyerWalletAddress || "N/A";
+      } else if (tx.type === "transfer_in") {
+        from = tx.metadata?.senderName || "User";
+        fromAddress = tx.metadata?.senderWallet || "N/A";
+      } else if (tx.type === "deposit") {
+        from = tx.metadata?.paymentMethod
+          ? `Payment via ${tx.metadata.paymentMethod}${tx.metadata.cardLast4 ? ` (****${tx.metadata.cardLast4})` : ''}`
+          : "Payment Source";
+        fromAddress = "N/A";
+      }
+
+      const to = "Your Wallet";
+      const toAddress = "Your Account";
+      return { from, fromAddress, to, toAddress };
+    } else {
+      // Money going out (payments, withdrawals, transfers)
+      const from = "Your Wallet";
+      const fromAddress = "Your Account";
+      let to = "External Recipient";
+      let toAddress = "N/A";
+
+      if (tx.type === "payment") {
+        to = tx.metadata?.storeName || tx.metadata?.vendorName || tx.metadata?.sellerName || "Store";
+        toAddress = tx.metadata?.vendorWallet || tx.metadata?.sellerWalletAddress || "N/A";
+
+        // Add product name if available
+        if (tx.metadata?.productName) {
+          to = `${to} (${tx.metadata.productName})`;
+        }
+      } else if (tx.type === "withdrawal") {
+        const method = tx.metadata?.withdrawalMethod || "Bank Account";
+        const account = tx.metadata?.accountNumber
+          ? ` (****${String(tx.metadata.accountNumber).slice(-4)})`
+          : "";
+        to = `${method}${account}`;
+        toAddress = "N/A";
+      } else if (tx.type === "transfer_out") {
+        to = tx.metadata?.recipientName || "User";
+        toAddress = tx.metadata?.recipientWallet || "N/A";
+      }
+
+      return { from, fromAddress, to, toAddress };
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -106,6 +136,8 @@ export default function TransactionDetailPage() {
   };
 
   const formatAddress = (address: string) => {
+    if (!address || address === "N/A") return address;
+    if (address.length < 18) return address;
     return `${address.slice(0, 10)}...${address.slice(-8)}`;
   };
 
@@ -114,16 +146,8 @@ export default function TransactionDetailPage() {
     toast.success(`${label} copied to clipboard`);
   };
 
-  const handleDownloadReceipt = () => {
-    toast.success("Downloading receipt...");
-  };
-
-  const handleViewOnBlockchain = () => {
-    toast.success("Opening blockchain explorer...");
-  };
-
-  const getStatusIcon = () => {
-    switch (transaction.status) {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
       case "completed":
         return (
           <CheckCircleIcon className="h-8 w-8 text-green-600 dark:text-green-400" />
@@ -141,8 +165,8 @@ export default function TransactionDetailPage() {
     }
   };
 
-  const getStatusColor = () => {
-    switch (transaction.status) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
       case "completed":
         return "text-green-600 dark:text-green-400";
       case "pending":
@@ -153,6 +177,35 @@ export default function TransactionDetailPage() {
         return "text-gray-600 dark:text-gray-400";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Loading transaction details...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!transaction) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Transaction not found
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const displayType = getTransactionDisplayType(transaction.type);
+  const parties = getTransactionParties(transaction);
+  const category = transaction.metadata?.category || transaction.type.replace(/_/g, " ");
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -175,7 +228,7 @@ export default function TransactionDetailPage() {
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <span className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white">
-              {transaction.id}
+              {transaction._id.slice(0, 8)}
             </span>
           </div>
         </div>
@@ -196,12 +249,12 @@ export default function TransactionDetailPage() {
               <div className="flex items-center gap-6">
                 <div
                   className={`h-16 w-16 flex items-center justify-center ${
-                    transaction.type === "credit"
+                    displayType === "credit"
                       ? "bg-green-50 dark:bg-green-900/20"
                       : "bg-gray-100 dark:bg-gray-900"
                   }`}
                 >
-                  {transaction.type === "credit" ? (
+                  {displayType === "credit" ? (
                     <ArrowDownIcon className="h-8 w-8 text-green-600 dark:text-green-400" />
                   ) : (
                     <ArrowUpIcon className="h-8 w-8 text-gray-900 dark:text-white" />
@@ -210,12 +263,12 @@ export default function TransactionDetailPage() {
 
                 <div>
                   <h1 className="text-4xl font-extralight text-gray-900 dark:text-white tracking-tight mb-2">
-                    {transaction.type === "credit" ? "+" : "-"}$
-                    {transaction.amount.toFixed(2)}
+                    {displayType === "credit" ? "+" : "-"}
+                    {formatCVT(transaction.amount)}
                   </h1>
                   <div className="flex items-center gap-2">
-                    {getStatusIcon()}
-                    <span className={`text-sm capitalize ${getStatusColor()}`}>
+                    {getStatusIcon(transaction.status)}
+                    <span className={`text-sm capitalize ${getStatusColor(transaction.status)}`}>
                       {transaction.status}
                     </span>
                   </div>
@@ -223,22 +276,6 @@ export default function TransactionDetailPage() {
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={handleDownloadReceipt}
-                className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2"
-              >
-                <ArrowDownTrayIcon className="h-4 w-4" />
-                Receipt
-              </button>
-              <button
-                onClick={handleViewOnBlockchain}
-                className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2"
-              >
-                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-                View on Blockchain
-              </button>
-            </div>
           </div>
         </div>
       </section>
@@ -262,7 +299,7 @@ export default function TransactionDetailPage() {
                         Transaction ID
                       </p>
                       <p className="text-sm text-gray-900 dark:text-white font-mono">
-                        {transaction.id}
+                        {transaction._id}
                       </p>
                     </div>
 
@@ -270,8 +307,8 @@ export default function TransactionDetailPage() {
                       <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-3">
                         Category
                       </p>
-                      <p className="text-sm text-gray-900 dark:text-white">
-                        {transaction.category}
+                      <p className="text-sm text-gray-900 dark:text-white capitalize">
+                        {category}
                       </p>
                     </div>
 
@@ -280,7 +317,7 @@ export default function TransactionDetailPage() {
                         Date
                       </p>
                       <p className="text-sm text-gray-900 dark:text-white">
-                        {formatDate(transaction.date)}
+                        {formatDate(transaction.timestamp)}
                       </p>
                     </div>
 
@@ -289,14 +326,27 @@ export default function TransactionDetailPage() {
                         Time
                       </p>
                       <p className="text-sm text-gray-900 dark:text-white">
-                        {formatTime(transaction.date)}
+                        {formatTime(transaction.timestamp)}
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* From/To Addresses */}
+              {/* Description */}
+              <div>
+                <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
+                  Description
+                </h2>
+
+                <div className="border border-gray-200 dark:border-gray-800 p-8">
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    {transaction.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* From/To */}
               <div>
                 <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
                   Transaction Flow
@@ -306,25 +356,29 @@ export default function TransactionDetailPage() {
                   {/* From */}
                   <div className="border border-gray-200 dark:border-gray-800 p-8">
                     <div className="flex items-start justify-between">
-                      <div className="space-y-3">
+                      <div className="space-y-3 flex-1">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
                           From
                         </p>
                         <p className="text-lg font-normal text-gray-900 dark:text-white">
-                          {transaction.from.name}
+                          {parties.from}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                          {transaction.from.address}
-                        </p>
+                        {parties.fromAddress !== "N/A" && parties.fromAddress !== "Your Account" && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono break-all">
+                            {parties.fromAddress}
+                          </p>
+                        )}
                       </div>
-                      <button
-                        onClick={() =>
-                          copyToClipboard(transaction.from.address, "Address")
-                        }
-                        className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors"
-                      >
-                        <DocumentDuplicateIcon className="h-4 w-4 text-gray-900 dark:text-white" />
-                      </button>
+                      {parties.fromAddress !== "N/A" && parties.fromAddress !== "Your Account" && (
+                        <button
+                          onClick={() =>
+                            copyToClipboard(parties.fromAddress, "Address")
+                          }
+                          className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors ml-4 shrink-0"
+                        >
+                          <DocumentDuplicateIcon className="h-4 w-4 text-gray-900 dark:text-white" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -338,121 +392,94 @@ export default function TransactionDetailPage() {
                   {/* To */}
                   <div className="border border-gray-200 dark:border-gray-800 p-8">
                     <div className="flex items-start justify-between">
-                      <div className="space-y-3">
+                      <div className="space-y-3 flex-1">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
                           To
                         </p>
                         <p className="text-lg font-normal text-gray-900 dark:text-white">
-                          {transaction.to.name}
+                          {parties.to}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                          {transaction.to.address}
-                        </p>
+                        {parties.toAddress !== "N/A" && parties.toAddress !== "Your Account" && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono break-all">
+                            {parties.toAddress}
+                          </p>
+                        )}
                       </div>
-                      <button
-                        onClick={() =>
-                          copyToClipboard(transaction.to.address, "Address")
-                        }
-                        className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors"
-                      >
-                        <DocumentDuplicateIcon className="h-4 w-4 text-gray-900 dark:text-white" />
-                      </button>
+                      {parties.toAddress !== "N/A" && parties.toAddress !== "Your Account" && (
+                        <button
+                          onClick={() =>
+                            copyToClipboard(parties.toAddress, "Address")
+                          }
+                          className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors ml-4 shrink-0"
+                        >
+                          <DocumentDuplicateIcon className="h-4 w-4 text-gray-900 dark:text-white" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Product Details (if purchase) */}
-              {transaction.product && (
+              {/* Order Reference */}
+              {transaction.relatedOrderId && (
                 <div>
                   <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
-                    Purchase Details
+                    Related Order
                   </h2>
 
                   <div className="border border-gray-200 dark:border-gray-800 p-8">
-                    <div className="space-y-6">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                            {transaction.product.name}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            SKU: {transaction.product.sku}
-                          </p>
-                        </div>
-                        <p className="text-sm text-gray-900 dark:text-white">
-                          ${transaction.product.price.toFixed(2)}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          Order Reference
+                        </p>
+                        <p className="text-sm text-gray-900 dark:text-white font-mono">
+                          {transaction.metadata?.orderReference || transaction.relatedOrderId}
                         </p>
                       </div>
-
-                      <div className="pt-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          Quantity
-                        </span>
-                        <span className="text-sm text-gray-900 dark:text-white">
-                          {transaction.product.quantity}
-                        </span>
-                      </div>
-
-                      <div className="pt-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          Total
-                        </span>
-                        <span className="text-lg font-medium text-gray-900 dark:text-white">
-                          ${transaction.amount.toFixed(2)}
-                        </span>
-                      </div>
+                      <button
+                        onClick={() => router.push(`/customer/orders/${transaction.relatedOrderId}`)}
+                        className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                      >
+                        View Order
+                      </button>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Transaction Timeline */}
+              {/* Balance Change */}
               <div>
                 <h2 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-8">
-                  Transaction Timeline
+                  Balance Impact
                 </h2>
 
                 <div className="border border-gray-200 dark:border-gray-800 p-8">
-                  <div className="space-y-8">
-                    {transaction.timeline.map((step, index) => (
-                      <div key={step.status} className="flex items-start gap-6">
-                        <div className="flex flex-col items-center">
-                          <div
-                            className={`h-8 w-8 flex items-center justify-center ${
-                              step.completed
-                                ? "bg-green-50 dark:bg-green-900/20"
-                                : "bg-gray-100 dark:bg-gray-900"
-                            }`}
-                          >
-                            {step.completed ? (
-                              <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-                            ) : (
-                              <div className="h-2 w-2 bg-gray-400 dark:bg-gray-600 rounded-full" />
-                            )}
-                          </div>
-                          {index !== transaction.timeline.length - 1 && (
-                            <div
-                              className={`w-px h-12 ${
-                                step.completed
-                                  ? "bg-green-600 dark:bg-green-400"
-                                  : "bg-gray-200 dark:bg-gray-800"
-                              }`}
-                            />
-                          )}
-                        </div>
-
-                        <div className="flex-1 pb-8">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                            {step.label}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatDate(step.timestamp)} at{" "}
-                            {formatTime(step.timestamp)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Balance Before
+                      </span>
+                      <span className="text-sm text-gray-900 dark:text-white">
+                        {formatCVT(transaction.balanceBefore)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Transaction Amount
+                      </span>
+                      <span className={`text-sm font-medium ${displayType === "credit" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                        {displayType === "credit" ? "+" : "-"}{formatCVT(transaction.amount)}
+                      </span>
+                    </div>
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-800 flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        Balance After
+                      </span>
+                      <span className="text-lg font-medium text-gray-900 dark:text-white">
+                        {formatCVT(transaction.balanceAfter)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -461,67 +488,42 @@ export default function TransactionDetailPage() {
             {/* Sidebar */}
             <div className="lg:col-span-1 space-y-8">
               {/* Blockchain Details */}
-              <div className="border border-gray-200 dark:border-gray-800 p-8">
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3">
-                    <CubeIcon className="h-5 w-5 text-gray-900 dark:text-white opacity-70" />
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
-                      Blockchain Details
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        Transaction Hash
+              {transaction.metadata?.blockchainTxId && (
+                <div className="border border-gray-200 dark:border-gray-800 p-8">
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <CubeIcon className="h-5 w-5 text-gray-900 dark:text-white opacity-70" />
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+                        Blockchain Details
                       </p>
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-xs text-gray-900 dark:text-white font-mono break-all">
-                          {formatAddress(transaction.txHash)}
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          Transaction Hash
                         </p>
-                        <button
-                          onClick={() =>
-                            copyToClipboard(
-                              transaction.txHash,
-                              "Transaction hash"
-                            )
-                          }
-                          className="flex-shrink-0"
-                        >
-                          <DocumentDuplicateIcon className="h-4 w-4 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
-                        </button>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs text-gray-900 dark:text-white font-mono break-all">
+                            {formatAddress(transaction.metadata.blockchainTxId)}
+                          </p>
+                          <button
+                            onClick={() =>
+                              copyToClipboard(
+                                transaction.metadata?.blockchainTxId || "",
+                                "Transaction hash"
+                              )
+                            }
+                            className="shrink-0"
+                          >
+                            <DocumentDuplicateIcon className="h-4 w-4 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        Block Number
-                      </p>
-                      <p className="text-xs text-gray-900 dark:text-white font-mono">
-                        #{transaction.blockNumber}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        Confirmations
-                      </p>
-                      <p className="text-xs text-gray-900 dark:text-white">
-                        {transaction.confirmations}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        Gas Used
-                      </p>
-                      <p className="text-xs text-gray-900 dark:text-white">
-                        {transaction.gasUsed}
-                      </p>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Network Information */}
               <div className="border border-gray-200 dark:border-gray-800 p-8">
@@ -536,54 +538,51 @@ export default function TransactionDetailPage() {
                         Network
                       </span>
                       <span className="text-xs text-gray-900 dark:text-white">
-                        {transaction.metadata.network}
+                        Hyperledger Fabric
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Channel
+                        Status
                       </span>
-                      <span className="text-xs text-gray-900 dark:text-white">
-                        {transaction.metadata.channel}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Chaincode
-                      </span>
-                      <span className="text-xs text-gray-900 dark:text-white font-mono">
-                        {transaction.metadata.chaincode}
+                      <span className={`text-xs capitalize ${getStatusColor(transaction.status)}`}>
+                        {transaction.status}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Endorsers
-                      </span>
-                      <span className="text-xs text-gray-900 dark:text-white">
-                        {transaction.metadata.endorsers}
-                      </span>
-                    </div>
+                    {transaction.metadata?.txHash && (
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          Internal TX Hash
+                        </p>
+                        <p className="text-xs text-gray-900 dark:text-white font-mono break-all">
+                          {formatAddress(transaction.metadata.txHash)}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Network Status */}
-              <div className="border border-gray-200 dark:border-gray-800 p-8 bg-gray-50 dark:bg-gray-900">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-medium text-gray-900 dark:text-white mb-1">
-                        Blockchain Verified
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                        This transaction has been verified and recorded on the
-                        Hyperledger Fabric blockchain
-                      </p>
+              {transaction.status === "completed" && (
+                <div className="border border-gray-200 dark:border-gray-800 p-8 bg-gray-50 dark:bg-gray-900">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-900 dark:text-white mb-1">
+                          Blockchain Verified
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                          This transaction has been verified and recorded on the
+                          Hyperledger Fabric blockchain
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+
             </div>
           </div>
         </div>

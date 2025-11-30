@@ -178,3 +178,52 @@ export const confirmPayment = async (
     amount,
   });
 };
+
+// Get single transaction by ID
+// Since the backend doesn't have a single transaction endpoint,
+// we fetch all transactions and find the one with matching ID
+export const getTransactionById = async (
+  transactionId: string
+): Promise<{
+  success: boolean;
+  data: BackendTransaction;
+  message?: string;
+}> => {
+  try {
+    // Fetch all transactions with a large limit to ensure we get the one we need
+    const response: {
+      success: boolean;
+      data: BackendTransaction[];
+      message?: string;
+    } = await apiClient.get(`/wallet/transactions?limit=1000`);
+
+    if (response.success && response.data) {
+      const transaction = response.data.find((tx: BackendTransaction) => tx._id === transactionId);
+
+      if (transaction) {
+        return {
+          success: true,
+          data: transaction,
+        };
+      } else {
+        return {
+          success: false,
+          data: {} as BackendTransaction,
+          message: "Transaction not found",
+        };
+      }
+    }
+
+    return {
+      success: false,
+      data: {} as BackendTransaction,
+      message: response.message || "Failed to fetch transactions",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      data: {} as BackendTransaction,
+      message: error instanceof Error ? error.message : "Failed to fetch transaction",
+    };
+  }
+};
