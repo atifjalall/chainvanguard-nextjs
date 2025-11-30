@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -8,6 +9,7 @@ import {
   EyeIcon,
   EyeSlashIcon,
   ExclamationTriangleIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
@@ -18,6 +20,8 @@ import {
   updateProfile,
   getProfileStats,
   ProfileStats,
+  sendEmailOtp,
+  verifyEmailOtp,
 } from "@/lib/api/profile.api";
 
 export default function CustomerProfilePage() {
@@ -26,6 +30,9 @@ export default function CustomerProfilePage() {
   const { user, updateProfile: updateAuthProfile } = useAuth();
   const { currentWallet, balance } = useWallet();
   const [stats, setStats] = useState<ProfileStats | null>(null);
+
+  // OTP resend interval (keeps parity with register page)
+  const OTP_RESEND_SECONDS = 60;
 
   // Personal Information
   const [personalInfo, setPersonalInfo] = useState({
@@ -62,6 +69,22 @@ export default function CustomerProfilePage() {
   const [isLoadingPersonal, setIsLoadingPersonal] = useState(false);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
+
+  // Email change + OTP modal states
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [pendingPersonalUpdate, setPendingPersonalUpdate] = useState<{
+    name?: string;
+    email?: string;
+    phone?: string;
+  } | null>(null);
+
+  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
+  const [otpError, setOtpError] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   // Fetch profile stats on mount
   useEffect(() => {
@@ -101,6 +124,13 @@ export default function CustomerProfilePage() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString("en-US", {
       month: "long",
@@ -108,12 +138,200 @@ export default function CustomerProfilePage() {
     });
   };
 
+  // Send OTP to confirm updated email
+  const sendOtpForEmail = async (emailToVerify?: string) => {
+    try {
+      setIsSendingOtp(true);
+      const targetEmail = emailToVerify || personalInfo.email;
+      const resp = await sendEmailOtp(targetEmail);
+      if (!resp.success) throw new Error(resp.error || "Failed to send code");
+      setOtpSent(true);
+      setResendTimer(OTP_RESEND_SECONDS);
+      setOtp(["", "", "", "", "", ""]);
+      setOtpError(false);
+      toast.success("Verification code sent to your email!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send verification code");
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const verifyEmailOtpHandler = async (otpArray?: string[]) => {
+    const otpToVerify = otpArray || otp;
+    const otpValue = otpToVerify.join("");
+
+    if (otpValue.length !== 6) {
+      setOtpError(true);
+      toast.error("Please enter all 6 digits");
+      return;
+    }
+
+    try {
+      setIsVerifyingOtp(true);
+      const targetEmail = pendingPersonalUpdate?.email || personalInfo.email;
+      const resp = await verifyEmailOtp(targetEmail, otpValue);
+
+      if (!resp.success) {
+        throw new Error(resp.error || "Invalid verification code");
+      }
+
+      setOtpVerified(true);
+      toast.success("Email verified successfully!");
+
+      // Now perform profile update including the new email
+      // Use pendingPersonalUpdate if present, fallback to current personalInfo
+      const finalUpdate = {
+        name: pendingPersonalUpdate?.name ?? personalInfo.name,
+        email: pendingPersonalUpdate?.email ?? personalInfo.email,
+        phone: pendingPersonalUpdate?.phone ?? personalInfo.phone,
+      };
+
+      const result = await updateProfile({
+        name: finalUpdate.name,
+        email: finalUpdate.email,
+        phone: finalUpdate.phone,
+      });
+
+      if (result.success && result.user) {
+        updateAuthProfile(result.user);
+        toast.success("Email updated successfully");
+      } else {
+        throw new Error(result.error || "Failed to update profile");
+      }
+
+      // Clean up
+      setIsEmailModalOpen(false);
+      setOtp(["", "", "", "", "", ""]);
+      setOtpSent(false);
+      setOtpVerified(true);
+      setPendingPersonalUpdate(null);
+    } catch (error: any) {
+      setOtpError(true);
+      setOtp(["", "", "", "", "", ""]);
+      document.getElementById("email-otp-0")?.focus();
+      toast.error(error.message || "Invalid verification code");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
+    setOtpError(false);
+
+    if (value && index < 5) {
+      document.getElementById(`email-otp-${index + 1}`)?.focus();
+    }
+
+    if (newOtp.every((digit) => digit !== "")) {
+      verifyEmailOtpHandler(newOtp);
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
+
+    const newOtp = [...otp];
+    for (let i = 0; i < 6; i++) {
+      newOtp[i] = pastedData[i] || "";
+    }
+    setOtp(newOtp);
+    setOtpError(false);
+
+    const lastFilledIndex = pastedData.length - 1;
+    if (lastFilledIndex >= 0 && lastFilledIndex < 6) {
+      document.getElementById(`email-otp-${lastFilledIndex}`)?.focus();
+    }
+
+    if (newOtp.every((d) => d !== "")) {
+      verifyEmailOtpHandler(newOtp);
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      document.getElementById(`email-otp-${index - 1}`)?.focus();
+    }
+  };
+
+  // Update form data when user changes
+  useEffect(() => {
+    if (user) {
+      setPersonalInfo({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      });
+      setAddressInfo({
+        address: user.address || "",
+        city: user.city || "",
+        province: user.state || "",
+        postalCode: user.postalCode || "",
+      });
+    }
+  }, [user]);
+
+  // Modify handlePersonalInfoSubmit to send OTP if email changed
   const handlePersonalInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoadingPersonal(true);
     setErrors({ ...errors, personalInfo: "" });
 
     try {
+      // If email changed, we want to verify email before applying it
+      const emailChanged =
+        personalInfo.email && personalInfo.email !== user?.email;
+
+      if (emailChanged) {
+        // Update non-email fields immediately (name, phone). Keep email pending until OTP verified.
+        try {
+          const dbResult = await updateProfile({
+            name: personalInfo.name,
+            phone: personalInfo.phone,
+          });
+
+          if (dbResult.success && dbResult.user) {
+            updateAuthProfile(dbResult.user);
+            toast.success(
+              "Personal information updated (email pending verification)"
+            );
+          } else {
+            throw new Error(dbResult.error || "Failed to update personal info");
+          }
+        } catch (error: any) {
+          toast.error(error.message || "Failed to update personal information");
+          setErrors({
+            ...errors,
+            personalInfo: error.message || "Failed to update information",
+          });
+          setIsLoadingPersonal(false);
+          return;
+        }
+
+        // Save pending update and open email OTP modal
+        setPendingPersonalUpdate({
+          name: personalInfo.name,
+          email: personalInfo.email,
+          phone: personalInfo.phone,
+        });
+
+        setIsEmailModalOpen(true);
+        // send OTP to the new email for verification
+        await sendOtpForEmail(personalInfo.email);
+        setIsLoadingPersonal(false);
+        return;
+      }
+
+      // no email change -> regular update
       const result = await updateProfile({
         name: personalInfo.name,
         email: personalInfo.email,
@@ -346,6 +564,12 @@ export default function CustomerProfilePage() {
                   className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mt-4 block"
                 >
                   My Returns
+                </Link>
+                <Link
+                  href="/customer/transactions"
+                  className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mt-4 block"
+                >
+                  My Transactions
                 </Link>
               </div>
             </div>
@@ -733,6 +957,124 @@ export default function CustomerProfilePage() {
           </div>
         </div>
       </section>
+
+      {/* Email OTP Modal (same max width as PaymentModal) */}
+      {isEmailModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-[10000]"
+            onClick={() => {
+              if (!isVerifyingOtp) {
+                setIsEmailModalOpen(false);
+                setPendingPersonalUpdate(null);
+              }
+            }}
+          />
+          <div className="fixed inset-0 flex items-center justify-center z-[10001] p-4">
+            <div className="bg-white w-full max-w-3xl flex flex-col max-h-[90vh]">
+              <div className="border-b border-gray-100 p-6">
+                <h3 className="text-xl font-light text-gray-900 tracking-tight mb-1">
+                  Verify Email Change
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Enter the 6-digit verification code sent to{" "}
+                  <span className="font-medium">
+                    {pendingPersonalUpdate?.email || personalInfo.email}
+                  </span>
+                </p>
+              </div>
+
+              <div className="overflow-y-auto flex-1 p-6">
+                <div className="space-y-4 text-center">
+                  <div className="flex justify-center gap-2">
+                    {otp.map((digit, index) => (
+                      <input
+                        key={index}
+                        id={`email-otp-${index}`}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(index, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                        onPaste={index === 0 ? handleOtpPaste : undefined}
+                        aria-label={`OTP digit ${index + 1}`}
+                        className={`w-12 h-12 text-center text-lg font-medium border ${
+                          otpError
+                            ? "border-red-500"
+                            : digit
+                              ? "border-gray-900 dark:border-white"
+                              : "border-gray-200 dark:border-gray-800"
+                        } bg-transparent text-gray-900 dark:text-white focus:outline-none focus:border-gray-900 dark:focus:border-white transition-all`}
+                      />
+                    ))}
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Didn&apos;t receive the code?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        sendOtpForEmail(pendingPersonalUpdate?.email)
+                      }
+                      disabled={resendTimer > 0 || isSendingOtp}
+                      className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50"
+                    >
+                      {resendTimer > 0
+                        ? `Resend in ${resendTimer}s`
+                        : "Resend Code"}
+                    </button>
+                  </div>
+
+                  <div className="border border-gray-200 dark:border-gray-800 p-4">
+                    <div className="flex items-start gap-3">
+                      <ExclamationTriangleIcon className="h-4 w-4 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-gray-900 dark:text-white">
+                        For your security, this code will expire in 10 minutes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 p-6 flex justify-between items-center bg-gray-50">
+                <div />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (!isVerifyingOtp) {
+                        setIsEmailModalOpen(false);
+                        setPendingPersonalUpdate(null);
+                      }
+                    }}
+                    disabled={isVerifyingOtp}
+                    className="border border-gray-300 text-gray-900 px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    onClick={() => verifyEmailOtpHandler()}
+                    disabled={isVerifyingOtp || otp.some((d) => !d)}
+                    className="bg-black dark:bg-white text-white dark:text-black px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isVerifyingOtp ? (
+                      <>
+                        <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      "Verify Email"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
