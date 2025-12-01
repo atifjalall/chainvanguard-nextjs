@@ -78,7 +78,7 @@ function ProductCard({
   return (
     <div className="group relative w-full">
       <div className="relative bg-gray-100 dark:bg-gray-900 w-full overflow-hidden">
-        <a href={`/customer/product/${id}`} className="block">
+        <a href={`/customer/product/${id}`} className="block cursor-pointer">
           <div
             className="relative w-full aspect-[3/4]"
             onMouseEnter={handleMouseEnter}
@@ -121,7 +121,10 @@ function ProductCard({
 
       <div className="pt-1 pb-1">
         <div className="flex items-center justify-between mb-0">
-          <a href={`/customer/product/${id}`} className="block flex-1">
+          <a
+            href={`/customer/product/${id}`}
+            className="block flex-1 cursor-pointer"
+          >
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               {name}
             </h3>
@@ -192,7 +195,7 @@ function CartItemComponent({
             <div className="space-y-1">
               <button
                 onClick={() => router.push(`/customer/product/${productId}`)}
-                className="text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-left"
+                className="text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-left cursor-pointer"
               >
                 {productName}
               </button>
@@ -204,7 +207,7 @@ function CartItemComponent({
             </div>
             <button
               onClick={() => onRemove(item._id)}
-              className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               <XMarkIcon className="h-4 w-4" />
             </button>
@@ -232,7 +235,7 @@ function CartItemComponent({
               onClick={() =>
                 onUpdateQuantity(item._id, Math.max(1, item.quantity - 1))
               }
-              className="w-8 h-9 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50"
+              className="w-8 h-9 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 cursor-pointer"
               disabled={item.quantity <= 1}
             >
               <MinusIcon className="h-3 w-3" />
@@ -242,7 +245,7 @@ function CartItemComponent({
             </div>
             <button
               onClick={() => onUpdateQuantity(item._id, item.quantity + 1)}
-              className="w-8 h-9 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+              className="w-8 h-9 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
             >
               <PlusIcon className="h-3 w-3" />
             </button>
@@ -252,7 +255,7 @@ function CartItemComponent({
             {!isInWishlist && (
               <button
                 onClick={() => onMoveToWishlist(item._id, productId)}
-                className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 Save
               </button>
@@ -327,11 +330,7 @@ export default function CartPage() {
   const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
     if (!cart) return;
 
-    // Find the current item to calculate the difference
-    const currentItem = cart.items.find((item) => item._id === itemId);
-    const oldQuantity = currentItem?.quantity || 0;
-    const quantityDiff = newQuantity - oldQuantity;
-
+    // ✅ Don't update cart count on quantity change - only on add/remove
     // Optimistic UI update
     const updatedItems = cart.items.map((item) => {
       if (item._id === itemId) {
@@ -354,20 +353,11 @@ export default function CartPage() {
       totalQuantity: updatedItems.reduce((sum, item) => sum + item.quantity, 0),
     });
 
-    // Immediately update cart badge based on quantity change
-    if (quantityDiff > 0) {
-      incrementCartCount(quantityDiff);
-    } else if (quantityDiff < 0) {
-      decrementCartCount(Math.abs(quantityDiff));
-    }
-
     try {
       const response = await updateCartItem(itemId, { quantity: newQuantity });
       if (response.success && response.data) {
         setCart(response.data);
         toast.success("Cart updated");
-        // Refresh in background for accuracy
-        refreshCartCount();
       }
     } catch (error) {
       console.error("Error updating quantity:", error);
@@ -386,7 +376,7 @@ export default function CartPage() {
       totalItems: updatedItems.length,
     });
 
-    // Immediately decrement cart badge for instant feedback
+    // ✅ Decrement by 1 (removing one unique item)
     decrementCartCount(1);
 
     try {
@@ -395,7 +385,7 @@ export default function CartPage() {
         setCart(response.data);
         toast.success("Item removed from cart");
         // Refresh in background for accuracy
-        refreshCartCount();
+        await refreshCartCount();
       }
     } catch (error) {
       console.error("Error removing item:", error);
@@ -419,9 +409,8 @@ export default function CartPage() {
 
       const response = await removeCartItem(itemId);
       if (response.success && response.data) {
-        // Immediately refresh cart count to update badge
+        // ✅ Immediately refresh cart count to update badge
         await refreshCartCount();
-        console.log("[CART] Cart count refreshed after moving to wishlist");
         setCart(response.data);
       }
 
@@ -435,6 +424,8 @@ export default function CartPage() {
         const response = await removeCartItem(itemId);
         if (response.success && response.data) {
           setCart(response.data);
+          // ✅ Refresh count after removal
+          await refreshCartCount();
         }
         toast.success("Item already in wishlist, removed from cart");
       } else {
@@ -547,7 +538,7 @@ export default function CartPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/customer")}
-                className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 Home
               </button>
@@ -576,7 +567,7 @@ export default function CartPage() {
             </div>
             <button
               onClick={() => router.push("/customer/browse")}
-              className="bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors"
+              className="bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors cursor-pointer"
             >
               Continue Shopping
             </button>
@@ -593,7 +584,7 @@ export default function CartPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               Home
             </button>
@@ -704,14 +695,14 @@ export default function CartPage() {
                 <div className="space-y-3">
                   <button
                     onClick={() => router.push("/customer/checkout")}
-                    className="w-full bg-black dark:bg-white text-white dark:text-black h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors"
+                    className="w-full bg-black dark:bg-white text-white dark:text-black h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors cursor-pointer"
                   >
                     Proceed to Checkout
                   </button>
 
                   <button
                     onClick={() => router.push("/customer/browse")}
-                    className="w-full border border-black dark:border-white text-black dark:text-white h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                    className="w-full border border-black dark:border-white text-black dark:text-white h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
                   >
                     Continue Shopping
                   </button>

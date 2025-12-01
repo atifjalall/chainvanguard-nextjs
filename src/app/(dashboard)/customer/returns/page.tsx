@@ -292,12 +292,12 @@ export default function ReturnsPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Breadcrumb */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
+      <div>
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="cursor-pointer text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               Home
             </button>
@@ -332,7 +332,7 @@ export default function ReturnsPage() {
           <div className="flex gap-0 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setActiveTab("submit")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 activeTab === "submit"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -342,7 +342,7 @@ export default function ReturnsPage() {
             </button>
             <button
               onClick={() => setActiveTab("requested")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 activeTab === "requested"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -352,7 +352,7 @@ export default function ReturnsPage() {
             </button>
             <button
               onClick={() => setActiveTab("approved")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 activeTab === "approved"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -362,7 +362,7 @@ export default function ReturnsPage() {
             </button>
             <button
               onClick={() => setActiveTab("rejected")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 activeTab === "rejected"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -372,7 +372,7 @@ export default function ReturnsPage() {
             </button>
             <button
               onClick={() => setActiveTab("refunded")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 activeTab === "refunded"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -423,7 +423,7 @@ export default function ReturnsPage() {
                           key={order._id || order.id}
                           type="button"
                           onClick={() => setSelectedOrder(order)}
-                          className={`p-6 text-left border transition-colors ${
+                          className={`cursor-pointer p-6 text-left border transition-colors ${
                             selectedOrder?._id === order._id ||
                             selectedOrder?.id === order.id
                               ? "border-black dark:border-white bg-gray-50 dark:bg-gray-900"
@@ -476,7 +476,7 @@ export default function ReturnsPage() {
                           key={reason.value}
                           type="button"
                           onClick={() => setSelectedReason(reason.value)}
-                          className={`p-6 text-left border transition-colors ${
+                          className={`cursor-pointer p-6 text-left border transition-colors ${
                             selectedReason === reason.value
                               ? "border-black dark:border-white bg-gray-50 dark:bg-gray-900"
                               : "border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600"
@@ -576,7 +576,7 @@ export default function ReturnsPage() {
                                 type="button"
                                 onClick={() => removeImage(index)}
                                 disabled={uploading || isSubmitting}
-                                className="absolute top-2 right-2 h-6 w-6 bg-white dark:bg-gray-950 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                                className="cursor-pointer disabled:cursor-not-allowed absolute top-2 right-2 h-6 w-6 bg-white dark:bg-gray-950 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
                               >
                                 <XMarkIcon className="h-4 w-4 text-gray-900 dark:text-white" />
                               </button>
@@ -592,7 +592,7 @@ export default function ReturnsPage() {
                     <button
                       type="submit"
                       disabled={isSubmitting || uploading}
-                      className="bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="cursor-pointer bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isSubmitting || uploading ? (
                         <>
@@ -643,7 +643,7 @@ export default function ReturnsPage() {
                           onClick={() =>
                             router.push(`/customer/returns/${returnItem._id}`)
                           }
-                          className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors"
+                          className="cursor-pointer border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors"
                         >
                           View Details
                         </button>
@@ -788,6 +788,12 @@ export default function ReturnsPage() {
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+
+        /* Ensure buttons & links use pointer cursor consistently */
+        button,
+        a {
+          cursor: pointer;
         }
       `}</style>
     </div>

@@ -93,7 +93,7 @@ export default function RegisterPage() {
       const formData = JSON.parse(savedDraft);
       const draftAge =
         new Date().getTime() - new Date(formData.timestamp).getTime();
-      const maxAge = 5 * 60 * 1000; // 5 minutes
+      const maxAge = 15 * 60 * 1000;
 
       if (draftAge < maxAge) {
         return formData;
@@ -183,6 +183,7 @@ export default function RegisterPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [otpFocused, setOtpFocused] = useState(false);
 
   // Dropdown states
   const [showProvinceDropdown, setShowProvinceDropdown] = useState(false);
@@ -215,7 +216,15 @@ export default function RegisterPage() {
   }, [savedData]);
 
   useEffect(() => {
-    if (currentStep === 0 || currentStep === 6) return;
+    // Clear form data only after OTP is verified (step 7)
+    if (currentStep === 7) {
+      localStorage.removeItem("chainvanguard_signup_draft");
+    }
+  }, [currentStep]);
+
+  useEffect(() => {
+    // Don't save draft for step 7 (Recovery Phrase) only
+    if (currentStep === 0 || currentStep === 7) return;
 
     const formData = {
       currentStep,
@@ -319,7 +328,8 @@ export default function RegisterPage() {
   };
 
   const prevStep = () => {
-    if (currentStep > 1) {
+    // Don't allow going back from step 7 (Recovery Phrase)
+    if (currentStep > 1 && currentStep !== 7) {
       setSlideDirection("right");
       setIsVisible(false);
       setTimeout(() => {
@@ -370,7 +380,9 @@ export default function RegisterPage() {
 
     try {
       setIsVerifyingOtp(true);
-      const response = await fetch(
+
+      // First verify OTP
+      const otpResponse = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/auth/verify-otp`,
         {
           method: "POST",
@@ -379,46 +391,130 @@ export default function RegisterPage() {
         }
       );
 
-      const data = await response.json();
+      const otpData = await otpResponse.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Invalid verification code");
+      if (!otpResponse.ok || !otpData.success) {
+        throw new Error(otpData.error || "Invalid verification code");
       }
 
       toast.success("Email verified successfully!");
       setOtpVerified(true);
 
+      // NOW create the wallet and account after OTP verification
+      const registerPayload: RegisterPayload = {
+        walletName: walletName.trim(),
+        password: password,
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        role: selectedRole as UserRole,
+        address: address.trim(),
+        city: city.trim(),
+        state: province.trim(),
+        country: "Pakistan",
+        postalCode: postalCode.trim(),
+        companyName: requiresBusinessInfo ? companyName.trim() : undefined,
+        businessType: requiresBusinessInfo ? businessType.trim() : undefined,
+        businessAddress: requiresBusinessInfo
+          ? businessAddress.trim()
+          : undefined,
+        registrationNumber: requiresBusinessInfo
+          ? registrationNumber.trim()
+          : undefined,
+        taxId: undefined,
+        acceptedTerms: true,
+      };
+
+      const response = await authAPI.register(registerPayload);
+
+      const userData = {
+        id: response.data.user._id || response.data.user.id,
+        _id: response.data.user._id,
+        name: response.data.user.name,
+        email: response.data.user.email,
+        phone: response.data.user.phone,
+        role: response.data.user.role,
+        walletAddress: response.data.wallet.address,
+        walletName: walletName.trim(),
+        address: response.data.user.address,
+        city: response.data.user.city,
+        state: response.data.user.state,
+        country: response.data.user.country || "Pakistan",
+        postalCode: response.data.user.postalCode,
+        companyName: response.data.user.companyName,
+        businessType: response.data.user.businessType,
+        businessAddress: response.data.user.businessAddress,
+        registrationNumber: response.data.user.registrationNumber,
+        networkType: "hyperledger-fabric" as const,
+        organizationMSP: response.data.user.organizationMSP,
+        isAuthenticated: false,
+        createdAt: response.data.user.createdAt || new Date().toISOString(),
+        updatedAt: response.data.user.updatedAt || new Date().toISOString(),
+      };
+
+      localStorage.setItem("chainvanguard_auth_user", JSON.stringify(userData));
+
+      const savedWallet = saveWalletToLocalStorage({
+        address: response.data.wallet.address,
+        mnemonic: response.data.wallet.mnemonic,
+        name: walletName.trim(),
+        password: password,
+      });
+
+      setRecoveryPhrase(response.data.wallet.mnemonic);
+      setCreatedWalletId(savedWallet.id);
+
+      const walletMetadata = {
+        createdAt: new Date().toISOString(),
+        networkType: "hyperledger-fabric",
+        organizationMSP:
+          selectedRole === "supplier"
+            ? "SupplierMSP"
+            : selectedRole === "vendor"
+              ? "VendorMSP"
+              : selectedRole === "customer"
+                ? "CustomerMSP"
+                : "AdminMSP",
+        channelName: "supply-chain-channel",
+      };
+      localStorage.setItem(
+        `wallet_${savedWallet.id}_metadata`,
+        JSON.stringify(walletMetadata)
+      );
+
       // Send welcome email with wallet details
-      const userData = localStorage.getItem("chainvanguard_auth_user");
-      if (userData && recoveryPhrase) {
-        try {
-          const user = JSON.parse(userData);
-          await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/auth/send-welcome-email`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                email: user.email,
-                name: user.name,
-                walletAddress: user.walletAddress,
-                walletName: walletName,
-                mnemonic: recoveryPhrase,
-                role: user.role,
-                city: user.city,
-                state: user.state,
-                country: user.country,
-              }),
-            }
-          );
-          console.log("✅ Welcome email sent");
-          toast.success(
-            "Welcome email sent! Check your inbox for wallet details."
-          );
-        } catch (emailError) {
-          console.error("Failed to send welcome email:", emailError);
-          // Don't block the flow if email fails
-        }
+      try {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/auth/send-welcome-email`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: userData.email,
+              name: userData.name,
+              walletAddress: userData.walletAddress,
+              walletName: walletName,
+              mnemonic: response.data.wallet.mnemonic,
+              role: userData.role,
+              city: userData.city,
+              state: userData.state,
+              country: userData.country,
+            }),
+          }
+        );
+        console.log("✅ Welcome email sent");
+        toast.success(
+          "Welcome email sent! Check your inbox for wallet details."
+        );
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+        // Don't block the flow if email fails
+      }
+
+      toast.success(response.message || "Account created successfully!");
+
+      if (response.warning) {
+        toast.warning(response.warning, { duration: 5000 });
       }
 
       nextStep();
@@ -428,6 +524,7 @@ export default function RegisterPage() {
       setOtpError(false);
       document.getElementById("otp-0")?.focus();
       toast.error(error.message || "Invalid verification code");
+      localStorage.removeItem("chainvanguard_auth_user");
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -475,6 +572,18 @@ export default function RegisterPage() {
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       document.getElementById(`otp-${index - 1}`)?.focus();
+    }
+  };
+
+  const handleOtpFocus = (index: number) => {
+    // Only allow focus if all previous fields are filled
+    if (index > 0) {
+      for (let i = 0; i < index; i++) {
+        if (!otp[i]) {
+          document.getElementById(`otp-${i}`)?.focus();
+          return;
+        }
+      }
     }
   };
 
@@ -631,6 +740,8 @@ export default function RegisterPage() {
       else if (currentStep === 3) toast.success("Address information saved!");
       else if (currentStep === 4) toast.success("Role selection completed!");
       else if (currentStep === 5) toast.success("Review completed!");
+      else if (currentStep === 6) toast.success("OTP sent! Check your email.");
+      else if (currentStep === 7) toast.success("Recovery phrase displayed!");
       nextStep();
     }
   };
@@ -677,93 +788,7 @@ export default function RegisterPage() {
           throw new Error("Please select your business type");
       }
 
-      const registerPayload: RegisterPayload = {
-        walletName: walletName.trim(),
-        password: password,
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        role: selectedRole as UserRole,
-        address: address.trim(),
-        city: city.trim(),
-        state: province.trim(),
-        country: "Pakistan",
-        postalCode: postalCode.trim(),
-        companyName: requiresBusinessInfo ? companyName.trim() : undefined,
-        businessType: requiresBusinessInfo ? businessType.trim() : undefined,
-        businessAddress: requiresBusinessInfo
-          ? businessAddress.trim()
-          : undefined,
-        registrationNumber: requiresBusinessInfo
-          ? registrationNumber.trim()
-          : undefined,
-        taxId: undefined,
-        acceptedTerms: true,
-      };
-
-      const response = await authAPI.register(registerPayload);
-
-      const userData = {
-        id: response.data.user._id || response.data.user.id,
-        _id: response.data.user._id,
-        name: response.data.user.name,
-        email: response.data.user.email,
-        phone: response.data.user.phone,
-        role: response.data.user.role,
-        walletAddress: response.data.wallet.address,
-        walletName: walletName.trim(),
-        address: response.data.user.address,
-        city: response.data.user.city,
-        state: response.data.user.state,
-        country: response.data.user.country || "Pakistan",
-        postalCode: response.data.user.postalCode,
-        companyName: response.data.user.companyName,
-        businessType: response.data.user.businessType,
-        businessAddress: response.data.user.businessAddress,
-        registrationNumber: response.data.user.registrationNumber,
-        networkType: "hyperledger-fabric" as const,
-        organizationMSP: response.data.user.organizationMSP,
-        isAuthenticated: false,
-        createdAt: response.data.user.createdAt || new Date().toISOString(),
-        updatedAt: response.data.user.updatedAt || new Date().toISOString(),
-      };
-
-      localStorage.setItem("chainvanguard_auth_user", JSON.stringify(userData));
-
-      const savedWallet = saveWalletToLocalStorage({
-        address: response.data.wallet.address,
-        mnemonic: response.data.wallet.mnemonic,
-        name: walletName.trim(),
-        password: password,
-      });
-
-      setRecoveryPhrase(response.data.wallet.mnemonic);
-      setCreatedWalletId(savedWallet.id);
-
-      const walletMetadata = {
-        createdAt: new Date().toISOString(),
-        networkType: "hyperledger-fabric",
-        organizationMSP:
-          selectedRole === "supplier"
-            ? "SupplierMSP"
-            : selectedRole === "vendor"
-              ? "VendorMSP"
-              : selectedRole === "customer"
-                ? "CustomerMSP"
-                : "AdminMSP",
-        channelName: "supply-chain-channel",
-      };
-      localStorage.setItem(
-        `wallet_${savedWallet.id}_metadata`,
-        JSON.stringify(walletMetadata)
-      );
-
-      toast.success(response.message || "Account created successfully!");
-
-      if (response.warning) {
-        toast.warning(response.warning, { duration: 5000 });
-      }
-
+      // Just send OTP, don't create wallet yet
       setIsLoading(false);
       await sendOtpEmail();
       nextStep();
@@ -772,9 +797,8 @@ export default function RegisterPage() {
       const errorMessage =
         error.response?.data?.error ||
         error.message ||
-        "Registration failed. Please try again.";
+        "Validation failed. Please check your information.";
       toast.error(errorMessage);
-      localStorage.removeItem("chainvanguard_auth_user");
     }
   };
 
@@ -918,13 +942,13 @@ export default function RegisterPage() {
         <header className=" border-gray-200 dark:border-gray-800">
           <div className="max-w-[1600px] mx-auto px-12 lg:px-16 h-16 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3">
-              <span className="text-lg font-light text-gray-900 dark:text-white tracking-wide">
+              <span className="text-lg font-light text-gray-900 dark:text-white tracking-wide cursor-pointer">
                 ChainVanguard
               </span>
             </Link>
 
             <Link href="/login">
-              <button className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+              <button className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer">
                 Login
               </button>
             </Link>
@@ -1225,6 +1249,7 @@ export default function RegisterPage() {
                               id="full-name"
                               placeholder="Enter your full name"
                               value={name}
+                              maxLength={30}
                               onChange={(e) => {
                                 setName(e.target.value);
                                 if (nameError) setNameError("");
@@ -2162,6 +2187,7 @@ export default function RegisterPage() {
                               handleOtpChange(index, e.target.value)
                             }
                             onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                            onFocus={() => handleOtpFocus(index)}
                             onPaste={index === 0 ? handleOtpPaste : undefined}
                             aria-label={`OTP digit ${index + 1}`}
                             className={`w-12 h-12 text-center text-lg font-medium border ${
@@ -2170,7 +2196,7 @@ export default function RegisterPage() {
                                 : digit
                                   ? "border-gray-900 dark:border-white"
                                   : "border-gray-200 dark:border-gray-800"
-                            } bg-transparent text-gray-900 dark:text-white focus:outline-none focus:border-gray-900 dark:focus:border-white transition-all`}
+                            } bg-transparent text-gray-900 dark:text-white focus:outline-none focus:border-gray-900 dark:focus:border-white transition-all cursor-text`}
                           />
                         ))}
                       </div>
@@ -2183,7 +2209,7 @@ export default function RegisterPage() {
                           type="button"
                           onClick={sendOtpEmail}
                           disabled={resendTimer > 0 || isLoading}
-                          className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50"
+                          className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                         >
                           {resendTimer > 0
                             ? `Resend in ${resendTimer}s`
@@ -2238,7 +2264,7 @@ export default function RegisterPage() {
                           <button
                             type="button"
                             onClick={() => copyToClipboard(recoveryPhrase)}
-                            className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2"
+                            className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2 cursor-pointer"
                           >
                             <ClipboardDocumentIcon className="h-3.5 w-3.5" />
                             Copy
@@ -2246,7 +2272,7 @@ export default function RegisterPage() {
                           <button
                             type="button"
                             onClick={downloadRecoveryPhrase}
-                            className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2"
+                            className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2 cursor-pointer"
                           >
                             <ArrowDownTrayIcon className="h-3.5 w-3.5" />
                             Download
@@ -2283,26 +2309,31 @@ export default function RegisterPage() {
 
                       <label className="flex items-start gap-3 cursor-pointer group">
                         <div
-                          className={`w-5 h-5 border-2 flex items-center justify-center transition-colors mt-0.5 ${
+                          className={`w-5 h-5 border-2 flex items-center justify-center transition-colors mt-0.5 cursor-pointer ${
                             backupConfirmed
                               ? "bg-black dark:bg-white border-black dark:border-white"
                               : "border-gray-300 dark:border-gray-700 group-hover:border-gray-400 dark:group-hover:border-gray-600"
                           }`}
-                          onClick={() => setBackupConfirmed(!backupConfirmed)}
                         >
                           {backupConfirmed && (
                             <CheckIcon className="h-3 w-3 text-white dark:text-black" />
                           )}
                         </div>
                         <div className="space-y-1">
-                          <span className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed block">
+                          <span className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed block cursor-pointer">
                             I have safely backed up my recovery phrase
                           </span>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
                             Confirm that you have written down or securely
                             stored your 12-word recovery phrase.
                           </p>
                         </div>
+                        <input
+                          type="checkbox"
+                          checked={backupConfirmed}
+                          onChange={(e) => setBackupConfirmed(e.target.checked)}
+                          className="sr-only"
+                        />
                       </label>
                     </div>
                   )}
@@ -2314,8 +2345,8 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={prevStep}
-                  disabled={currentStep === 1}
-                  className={`border border-black dark:border-white text-black dark:text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2 ${currentStep === 1 ? "opacity-50 cursor-not-allowed" : ""}`}
+                  disabled={currentStep === 1 || currentStep === 7}
+                  className={`border border-black dark:border-white text-black dark:text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2 ${currentStep === 1 || currentStep === 7 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                 >
                   <ChevronLeftIcon className="h-3.5 w-3.5" />
                   Previous
@@ -2331,7 +2362,7 @@ export default function RegisterPage() {
                     className={`bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2 ${
                       currentStep === 2 && (isCheckingEmail || emailExists)
                         ? "opacity-50 cursor-not-allowed"
-                        : ""
+                        : "cursor-pointer"
                     }`}
                   >
                     {currentStep === 2 && isCheckingEmail ? (
@@ -2354,7 +2385,7 @@ export default function RegisterPage() {
                     className={`bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2 ${
                       isLoading || !acceptedTerms
                         ? "opacity-50 cursor-not-allowed"
-                        : ""
+                        : "cursor-pointer"
                     }`}
                   >
                     {isLoading ? (
@@ -2377,7 +2408,7 @@ export default function RegisterPage() {
                     className={`bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2 ${
                       isVerifyingOtp || otp.some((d) => !d)
                         ? "opacity-50 cursor-not-allowed"
-                        : ""
+                        : "cursor-pointer"
                     }`}
                   >
                     {isVerifyingOtp ? (
@@ -2397,7 +2428,7 @@ export default function RegisterPage() {
                     type="button"
                     onClick={handleComplete}
                     disabled={!backupConfirmed || !otpVerified}
-                    className={`bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2 ${!backupConfirmed || !otpVerified ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2 ${!backupConfirmed || !otpVerified ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                   >
                     <BoltIcon className="h-3.5 w-3.5" />
                     Complete Setup
@@ -2412,7 +2443,7 @@ export default function RegisterPage() {
                 Already have a wallet?{" "}
                 <Link
                   href="/login"
-                  className="text-gray-900 dark:text-white hover:underline transition-colors"
+                  className="text-gray-900 dark:text-white hover:underline transition-colors cursor-pointer"
                 >
                   Sign In
                 </Link>

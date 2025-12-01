@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
   Card,
   CardContent,
@@ -55,7 +56,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
-import SupplierInsightsSkeleton from "@/components/skeletons/supplierInsightsSkeleton";
+import { Loader2 } from "lucide-react";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import {
   Breadcrumb,
@@ -400,7 +401,16 @@ export default function SupplierAnalyticsPage() {
   };
 
   if (isLoading) {
-    return <SupplierInsightsSkeleton />;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading analytics...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -421,10 +431,10 @@ export default function SupplierAnalyticsPage() {
       </Breadcrumb>
 
       {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
       >
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div>
@@ -481,13 +491,13 @@ export default function SupplierAnalyticsPage() {
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Key Metrics */}
-      <div
-        className={`transform transition-all duration-700 delay-200 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <MetricCard
@@ -524,13 +534,13 @@ export default function SupplierAnalyticsPage() {
             formatter={formatCurrency}
           />
         </div>
-      </div>
+      </motion.div>
 
       {/* Charts Section */}
-      <div
-        className={`transform transition-all duration-700 delay-400 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
       >
         <Tabs
           defaultValue="supply"
@@ -1182,95 +1192,109 @@ export default function SupplierAnalyticsPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </motion.div>
 
       {/* Quick Actions */}
-      <Card
-        className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
       >
-        <CardHeader>
-          <CardTitle
-            className={`text-base flex items-center gap-3 ${colors.texts.primary}`}
-          >
-            <div className="h-8 w-8 flex items-center justify-center rounded-none">
-              <ChartBarIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+        <Card
+          className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
+        >
+          <CardHeader>
+            <CardTitle
+              className={`text-base flex items-center gap-3 ${colors.texts.primary}`}
+            >
+              <div className="h-8 w-8 flex items-center justify-center rounded-none">
+                <ChartBarIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+              </div>
+              Quick Actions
+            </CardTitle>
+            <CardDescription className={`text-sm ${colors.texts.secondary}`}>
+              Common supply chain actions based on your analytics
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <button
+                className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <PlusIcon className={`h-6 w-6 ${colors.texts.primary}`} />
+                </div>
+                <div className="text-center">
+                  <p
+                    className={`font-semibold ${colors.texts.primary} text-xs`}
+                  >
+                    Add Supply Product
+                  </p>
+                  <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                    Expand catalog
+                  </p>
+                </div>
+              </button>
+              <button
+                className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <UsersIcon className={`h-6 w-6 ${colors.texts.primary}`} />
+                </div>
+                <div className="text-center">
+                  <p
+                    className={`font-semibold ${colors.texts.primary} text-xs`}
+                  >
+                    Manage Vendors
+                  </p>
+                  <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                    Partner relationships
+                  </p>
+                </div>
+              </button>
+              <button
+                className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <BuildingStorefrontIcon
+                    className={`h-6 w-6 ${colors.texts.primary}`}
+                  />
+                </div>
+                <div className="text-center">
+                  <p
+                    className={`font-semibold ${colors.texts.primary} text-xs`}
+                  >
+                    Check Inventory
+                  </p>
+                  <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                    Stock levels
+                  </p>
+                </div>
+              </button>
+              <button
+                className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+                onClick={handleExport}
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <ArrowDownTrayIcon
+                    className={`h-6 w-6 ${colors.texts.primary}`}
+                  />
+                </div>
+                <div className="text-center">
+                  <p
+                    className={`font-semibold ${colors.texts.primary} text-xs`}
+                  >
+                    Export Report
+                  </p>
+                  <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                    Supply chain data
+                  </p>
+                </div>
+              </button>
             </div>
-            Quick Actions
-          </CardTitle>
-          <CardDescription className={`text-sm ${colors.texts.secondary}`}>
-            Common supply chain actions based on your analytics
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <button
-              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
-            >
-              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                <PlusIcon className={`h-6 w-6 ${colors.texts.primary}`} />
-              </div>
-              <div className="text-center">
-                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
-                  Add Supply Product
-                </p>
-                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
-                  Expand catalog
-                </p>
-              </div>
-            </button>
-            <button
-              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
-            >
-              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                <UsersIcon className={`h-6 w-6 ${colors.texts.primary}`} />
-              </div>
-              <div className="text-center">
-                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
-                  Manage Vendors
-                </p>
-                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
-                  Partner relationships
-                </p>
-              </div>
-            </button>
-            <button
-              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
-            >
-              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                <BuildingStorefrontIcon
-                  className={`h-6 w-6 ${colors.texts.primary}`}
-                />
-              </div>
-              <div className="text-center">
-                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
-                  Check Inventory
-                </p>
-                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
-                  Stock levels
-                </p>
-              </div>
-            </button>
-            <button
-              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
-              onClick={handleExport}
-            >
-              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                <ArrowDownTrayIcon
-                  className={`h-6 w-6 ${colors.texts.primary}`}
-                />
-              </div>
-              <div className="text-center">
-                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
-                  Export Report
-                </p>
-                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
-                  Supply chain data
-                </p>
-              </div>
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 }

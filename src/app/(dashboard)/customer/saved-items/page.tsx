@@ -121,7 +121,7 @@ function SavedItemCard({ item, onRemove, onAddToCart }: SavedItemCardProps) {
         <div className="flex items-center justify-between mb-0">
           <button
             onClick={() => router.push(`/customer/product/${product._id}`)}
-            className="block flex-1 text-left"
+            className="block flex-1 text-left cursor-pointer"
           >
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               {product.name}
@@ -245,7 +245,7 @@ function SimilarProductCard({ product, onAddToCart }: SimilarProductCardProps) {
         <div className="flex items-center justify-between mb-0">
           <button
             onClick={() => router.push(`/customer/product/${product.id}`)} // Changed from product._id to product.id
-            className="block flex-1 text-left"
+            className="block flex-1 text-left cursor-pointer"
           >
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               {product.name}
@@ -428,7 +428,7 @@ export default function SavedItemsPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               Home
             </button>
@@ -462,7 +462,7 @@ export default function SavedItemsPage() {
             {savedItems.length > 0 && (
               <button
                 onClick={handleClearAll}
-                className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors"
+                className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors cursor-pointer"
               >
                 Clear All
               </button>
@@ -502,7 +502,7 @@ export default function SavedItemsPage() {
               </div>
               <button
                 onClick={() => router.push("/customer/browse")}
-                className="mt-8 bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors"
+                className="mt-8 bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 Continue Shopping
               </button>

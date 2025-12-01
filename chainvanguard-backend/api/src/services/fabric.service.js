@@ -246,7 +246,9 @@ class FabricService {
    */
   async recordUserRegistration(userData) {
     try {
-      console.log(`📝 Recording user registration on blockchain: ${userData.name || userData.walletAddress}`);
+      console.log(
+        `📝 Recording user registration on blockchain: ${userData.name || userData.walletAddress}`
+      );
 
       if (!this.userContract) {
         throw new Error("Not connected to Fabric network");
@@ -259,7 +261,8 @@ class FabricService {
 
       // Only send IMMUTABLE fields
       const registrationEvent = {
-        userId: userData.userId || userData._id?.toString() || userData.walletAddress,
+        userId:
+          userData.userId || userData._id?.toString() || userData.walletAddress,
         walletAddress: userData.walletAddress,
         role: userData.role,
         kycHash: userData.kycHash || null,
@@ -275,7 +278,7 @@ class FabricService {
       const result = await this.retryOperation(
         async () => {
           return await this.userContract.submitTransaction(
-            "recordUserRegistration",  // ✅ NEW METHOD
+            "recordUserRegistration", // ✅ NEW METHOD
             JSON.stringify(registrationEvent)
           );
         },
@@ -307,7 +310,9 @@ class FabricService {
    * @deprecated Use recordUserRegistration() instead
    */
   async registerUser(userData) {
-    console.warn("⚠️ registerUser() is deprecated. Use recordUserRegistration() instead.");
+    console.warn(
+      "⚠️ registerUser() is deprecated. Use recordUserRegistration() instead."
+    );
     return this.recordUserRegistration(userData);
   }
 
@@ -352,7 +357,12 @@ class FabricService {
   /**
    * Record KYC verification event
    */
-  async recordKYCVerification(userId, kycHash, verifiedBy, verificationLevel = "basic") {
+  async recordKYCVerification(
+    userId,
+    kycHash,
+    verifiedBy,
+    verificationLevel = "basic"
+  ) {
     try {
       if (!this.userContract) {
         throw new Error("Not connected to Fabric network");
@@ -419,7 +429,9 @@ class FabricService {
    * @deprecated Use getUserEventHistory() instead
    */
   async getUser(userId) {
-    console.warn("⚠️ getUser() is deprecated. Use getUserEventHistory() instead.");
+    console.warn(
+      "⚠️ getUser() is deprecated. Use getUserEventHistory() instead."
+    );
     return this.getUserEventHistory(userId);
   }
 
@@ -429,7 +441,7 @@ class FabricService {
   async updateUser(userId, updateData) {
     throw new Error(
       "updateUser() is deprecated. User data like email/phone/name is mutable and should only be in MongoDB. " +
-      "For immutable events, use: recordUserRoleChange(), recordKYCVerification(), recordUserDeactivation()"
+        "For immutable events, use: recordUserRoleChange(), recordKYCVerification(), recordUserDeactivation()"
     );
   }
 
@@ -439,9 +451,7 @@ class FabricService {
         throw new Error("Not connected to Fabric network");
       }
 
-      const result = await this.userContract.evaluateTransaction(
-        "getAllUsers"
-      );
+      const result = await this.userContract.evaluateTransaction("getAllUsers");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -488,9 +498,8 @@ class FabricService {
         throw new Error("Not connected to Fabric network");
       }
 
-      const result = await this.userContract.evaluateTransaction(
-        "getUserStats"
-      );
+      const result =
+        await this.userContract.evaluateTransaction("getUserStats");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -510,7 +519,9 @@ class FabricService {
    * @deprecated Login tracking is mutable and should NOT be on blockchain
    */
   async recordLogin(userId) {
-    console.warn("⚠️ recordLogin() is deprecated. Login tracking is mutable and should only be in MongoDB, not blockchain.");
+    console.warn(
+      "⚠️ recordLogin() is deprecated. Login tracking is mutable and should only be in MongoDB, not blockchain."
+    );
     return;
   }
 
@@ -560,9 +571,7 @@ class FabricService {
         await this.ensureContract("token");
       }
 
-      const result = await this.tokenContract.submitTransaction(
-        "initLedger"
-      );
+      const result = await this.tokenContract.submitTransaction("initLedger");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -613,9 +622,7 @@ class FabricService {
     } catch (error) {
       // Account might already exist - check both error message and details
       const errorMessage = error.message || "";
-      const errorDetails = error.details
-        ? JSON.stringify(error.details)
-        : "";
+      const errorDetails = error.details ? JSON.stringify(error.details) : "";
       const fullErrorText = errorMessage + errorDetails;
 
       if (
@@ -804,9 +811,8 @@ class FabricService {
         await this.ensureContract("token");
       }
 
-      const result = await this.tokenContract.evaluateTransaction(
-        "getTokenInfo"
-      );
+      const result =
+        await this.tokenContract.evaluateTransaction("getTokenInfo");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -878,11 +884,11 @@ class FabricService {
         sellerId: productData.sellerId || productData.vendorId,
         sellerName: productData.sellerName || "",
         sellerRole: productData.sellerRole || "vendor",
-        originalPrice: productData.price,  // Price at creation
+        originalPrice: productData.price, // Price at creation
         currency: productData.currency || "CVT",
-        imageHash: productData.ipfsImageHash || null,  // IPFS hash
+        imageHash: productData.ipfsImageHash || null, // IPFS hash
         certificateHash: productData.certificateHash || null,
-        metadataHash: productData.metadataHash || null,  // ✅ IPFS metadata snapshot hash
+        metadataHash: productData.metadataHash || null, // ✅ IPFS metadata snapshot hash
         createdAt: productData.createdAt || new Date().toISOString(),
       };
 
@@ -894,7 +900,7 @@ class FabricService {
       });
 
       const result = await this.productContract.submitTransaction(
-        "recordProductCreation",  // ✅ NEW METHOD
+        "recordProductCreation", // ✅ NEW METHOD
         JSON.stringify(creationEvent)
       );
 
@@ -918,7 +924,9 @@ class FabricService {
    * @deprecated Use recordProductCreation() instead
    */
   async createProduct(productData) {
-    console.warn("⚠️ createProduct() is deprecated. Use recordProductCreation() instead.");
+    console.warn(
+      "⚠️ createProduct() is deprecated. Use recordProductCreation() instead."
+    );
     return this.recordProductCreation(productData);
   }
 
@@ -954,7 +962,9 @@ class FabricService {
    * @deprecated Use getProductEventHistory() instead
    */
   async getProduct(productId) {
-    console.warn("⚠️ getProduct() is deprecated. Use getProductEventHistory() instead.");
+    console.warn(
+      "⚠️ getProduct() is deprecated. Use getProductEventHistory() instead."
+    );
     return this.getProductEventHistory(productId);
   }
 
@@ -966,9 +976,8 @@ class FabricService {
         throw new Error("Product contract not initialized");
       }
 
-      const result = await this.productContract.evaluateTransaction(
-        "getAllProducts"
-      );
+      const result =
+        await this.productContract.evaluateTransaction("getAllProducts");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -990,7 +999,7 @@ class FabricService {
   async updateProduct(productId, updateData) {
     throw new Error(
       "updateProduct() is deprecated. Price/quantity/status updates are mutable and should only be in MongoDB. " +
-      "For immutable events, use: recordProductVerification(), recordOwnershipTransfer()"
+        "For immutable events, use: recordProductVerification(), recordOwnershipTransfer()"
     );
   }
 
@@ -1121,7 +1130,7 @@ class FabricService {
       };
 
       const result = await this.productContract.submitTransaction(
-        "recordProductVerification",  // ✅ NEW METHOD
+        "recordProductVerification", // ✅ NEW METHOD
         JSON.stringify(event)
       );
 
@@ -1145,7 +1154,9 @@ class FabricService {
    * @deprecated Use recordProductVerification() instead
    */
   async verifyProduct(productId, verificationData) {
-    console.warn("⚠️ verifyProduct() is deprecated. Use recordProductVerification() instead.");
+    console.warn(
+      "⚠️ verifyProduct() is deprecated. Use recordProductVerification() instead."
+    );
     return this.recordProductVerification(productId, verificationData);
   }
 
@@ -1199,7 +1210,9 @@ class FabricService {
    * @deprecated Use recordOwnershipTransfer instead
    */
   async transferProduct(productId, transferData) {
-    throw new Error("transferProduct() is deprecated. Use recordOwnershipTransfer() instead.");
+    throw new Error(
+      "transferProduct() is deprecated. Use recordOwnershipTransfer() instead."
+    );
   }
 
   /**
@@ -1248,7 +1261,9 @@ class FabricService {
    * @deprecated Use recordProductArchival instead
    */
   async archiveProduct(productId, deletedBy) {
-    throw new Error("archiveProduct() is deprecated. Use recordProductArchival() instead.");
+    throw new Error(
+      "archiveProduct() is deprecated. Use recordProductArchival() instead."
+    );
   }
 
   async productExists(productId) {
@@ -1314,7 +1329,8 @@ class FabricService {
         // Seller/Vendor information (required by chaincode)
         sellerId: orderData.sellerId || orderData.vendorId,
         sellerName: orderData.sellerName || orderData.vendorName || "",
-        sellerWalletAddress: orderData.sellerWalletAddress || orderData.vendorWalletAddress || "",
+        sellerWalletAddress:
+          orderData.sellerWalletAddress || orderData.vendorWalletAddress || "",
         sellerRole: orderData.sellerRole || "vendor",
 
         // Items snapshot (immutable at creation)
@@ -1369,7 +1385,9 @@ class FabricService {
    * @deprecated Use recordOrderCreation instead
    */
   async createOrder(orderData) {
-    throw new Error("createOrder() is deprecated. Use recordOrderCreation() instead.");
+    throw new Error(
+      "createOrder() is deprecated. Use recordOrderCreation() instead."
+    );
   }
 
   /**
@@ -1408,7 +1426,9 @@ class FabricService {
    * @deprecated Use getOrderEventHistory instead
    */
   async getOrder(orderId) {
-    console.warn("⚠️ getOrder() is deprecated. Use getOrderEventHistory() instead.");
+    console.warn(
+      "⚠️ getOrder() is deprecated. Use getOrderEventHistory() instead."
+    );
     return this.getOrderEventHistory(orderId);
   }
 
@@ -1465,7 +1485,9 @@ class FabricService {
    * @deprecated Use recordOrderStatusChange instead
    */
   async updateOrderStatus(orderId, updateData) {
-    throw new Error("updateOrderStatus() is deprecated. Use recordOrderStatusChange() instead.");
+    throw new Error(
+      "updateOrderStatus() is deprecated. Use recordOrderStatusChange() instead."
+    );
   }
 
   /**
@@ -1596,9 +1618,8 @@ class FabricService {
         await this.initOrderContract();
       }
 
-      const result = await this.orderContract.evaluateTransaction(
-        "getAllOrders"
-      );
+      const result =
+        await this.orderContract.evaluateTransaction("getAllOrders");
 
       let resultStr;
       if (result instanceof Uint8Array) {
@@ -2182,7 +2203,8 @@ class FabricService {
         currency: requestData.currency || "CVT",
 
         // Initial status
-        initialStatus: requestData.initialStatus || requestData.status || "pending",
+        initialStatus:
+          requestData.initialStatus || requestData.status || "pending",
 
         // Timestamps
         createdAt: requestData.createdAt || new Date().toISOString(),
@@ -2204,7 +2226,10 @@ class FabricService {
       }
 
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor request creation event recorded on blockchain:", parsedResult);
+      console.log(
+        "✅ Vendor request creation event recorded on blockchain:",
+        parsedResult
+      );
 
       return parsedResult;
     } catch (error) {
@@ -2217,7 +2242,9 @@ class FabricService {
    * @deprecated Use recordVendorRequestCreation instead
    */
   async createVendorRequest(requestData) {
-    throw new Error("createVendorRequest() is deprecated. Use recordVendorRequestCreation() instead.");
+    throw new Error(
+      "createVendorRequest() is deprecated. Use recordVendorRequestCreation() instead."
+    );
   }
 
   /**
@@ -2228,9 +2255,16 @@ class FabricService {
    * @param {string} notes - Approval notes
    * @returns {object} Approval event
    */
-  async recordVendorRequestApproval(requestId, approverId, timestamp, notes = "") {
+  async recordVendorRequestApproval(
+    requestId,
+    approverId,
+    timestamp,
+    notes = ""
+  ) {
     try {
-      console.log(`✅ Recording vendor request approval ${requestId} on blockchain`);
+      console.log(
+        `✅ Recording vendor request approval ${requestId} on blockchain`
+      );
 
       if (!this.vendorRequestContract) {
         await this.initVendorRequestContract();
@@ -2258,7 +2292,10 @@ class FabricService {
       }
 
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor request approval event recorded on blockchain:", parsedResult);
+      console.log(
+        "✅ Vendor request approval event recorded on blockchain:",
+        parsedResult
+      );
 
       return parsedResult;
     } catch (error) {
@@ -2271,7 +2308,9 @@ class FabricService {
    * @deprecated Use recordVendorRequestApproval instead
    */
   async approveVendorRequest(requestId, approverId, timestamp, notes = "") {
-    throw new Error("approveVendorRequest() is deprecated. Use recordVendorRequestApproval() instead.");
+    throw new Error(
+      "approveVendorRequest() is deprecated. Use recordVendorRequestApproval() instead."
+    );
   }
 
   /**
@@ -2284,7 +2323,9 @@ class FabricService {
    */
   async recordVendorRequestRejection(requestId, rejecterId, timestamp, reason) {
     try {
-      console.log(`❌ Recording vendor request rejection ${requestId} on blockchain`);
+      console.log(
+        `❌ Recording vendor request rejection ${requestId} on blockchain`
+      );
 
       if (!this.vendorRequestContract) {
         await this.initVendorRequestContract();
@@ -2316,7 +2357,10 @@ class FabricService {
       }
 
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor request rejection event recorded on blockchain:", parsedResult);
+      console.log(
+        "✅ Vendor request rejection event recorded on blockchain:",
+        parsedResult
+      );
 
       return parsedResult;
     } catch (error) {
@@ -2329,7 +2373,9 @@ class FabricService {
    * @deprecated Use recordVendorRequestRejection instead
    */
   async rejectVendorRequest(requestId, rejecterId, timestamp, reason) {
-    throw new Error("rejectVendorRequest() is deprecated. Use recordVendorRequestRejection() instead.");
+    throw new Error(
+      "rejectVendorRequest() is deprecated. Use recordVendorRequestRejection() instead."
+    );
   }
 
   /**
@@ -2343,7 +2389,9 @@ class FabricService {
    */
   async recordVendorRequestPayment(requestId, paymentData) {
     try {
-      console.log(`💰 Recording vendor request payment ${requestId} on blockchain`);
+      console.log(
+        `💰 Recording vendor request payment ${requestId} on blockchain`
+      );
 
       if (!this.vendorRequestContract) {
         await this.initVendorRequestContract();
@@ -2376,7 +2424,10 @@ class FabricService {
       }
 
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor request payment event recorded on blockchain:", parsedResult);
+      console.log(
+        "✅ Vendor request payment event recorded on blockchain:",
+        parsedResult
+      );
 
       return parsedResult;
     } catch (error) {
@@ -2393,9 +2444,16 @@ class FabricService {
    * @param {string} notes - Cancellation notes
    * @returns {object} Cancellation event
    */
-  async recordVendorRequestCancellation(requestId, vendorId, timestamp, notes = "") {
+  async recordVendorRequestCancellation(
+    requestId,
+    vendorId,
+    timestamp,
+    notes = ""
+  ) {
     try {
-      console.log(`🚫 Recording vendor request cancellation ${requestId} on blockchain`);
+      console.log(
+        `🚫 Recording vendor request cancellation ${requestId} on blockchain`
+      );
 
       if (!this.vendorRequestContract) {
         await this.initVendorRequestContract();
@@ -2423,11 +2481,17 @@ class FabricService {
       }
 
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor request cancellation event recorded on blockchain:", parsedResult);
+      console.log(
+        "✅ Vendor request cancellation event recorded on blockchain:",
+        parsedResult
+      );
 
       return parsedResult;
     } catch (error) {
-      console.error("❌ Blockchain recordVendorRequestCancellation error:", error);
+      console.error(
+        "❌ Blockchain recordVendorRequestCancellation error:",
+        error
+      );
       throw error;
     }
   }
@@ -2436,7 +2500,9 @@ class FabricService {
    * @deprecated Use recordVendorRequestCancellation instead
    */
   async cancelVendorRequest(requestId, vendorId, timestamp, notes = "") {
-    throw new Error("cancelVendorRequest() is deprecated. Use recordVendorRequestCancellation() instead.");
+    throw new Error(
+      "cancelVendorRequest() is deprecated. Use recordVendorRequestCancellation() instead."
+    );
   }
 
   /**
@@ -2454,7 +2520,9 @@ class FabricService {
     timestamp,
     notes = ""
   ) {
-    throw new Error("updateVendorRequestStatus() is deprecated. Use specific event methods: recordVendorRequestApproval(), recordVendorRequestPayment(), etc.");
+    throw new Error(
+      "updateVendorRequestStatus() is deprecated. Use specific event methods: recordVendorRequestApproval(), recordVendorRequestPayment(), etc."
+    );
   }
 
   /**
@@ -2465,7 +2533,12 @@ class FabricService {
    * @param {string} notes - Completion notes
    * @returns {object} Completion event
    */
-  async recordVendorRequestCompletion(requestId, completedBy, timestamp, notes = "") {
+  async recordVendorRequestCompletion(
+    requestId,
+    completedBy,
+    timestamp,
+    notes = ""
+  ) {
     try {
       console.log(
         `🔒 Recording vendor request completion ${requestId} on blockchain`
@@ -2504,7 +2577,10 @@ class FabricService {
 
       return parsedResult;
     } catch (error) {
-      console.error("❌ Blockchain recordVendorRequestCompletion error:", error);
+      console.error(
+        "❌ Blockchain recordVendorRequestCompletion error:",
+        error
+      );
       throw error;
     }
   }
@@ -2754,7 +2830,7 @@ class FabricService {
         await this.ensureContract("vendorinventory");
       }
 
-      // Only send immutable fields
+      // Only send immutable fields - MATCH CHAINCODE EXPECTATIONS
       const event = {
         vendorInventoryId: vendorInventoryData.vendorInventoryId,
         name: vendorInventoryData.name,
@@ -2771,8 +2847,8 @@ class FabricService {
 
         sourceInventoryId: vendorInventoryData.sourceInventoryId,
 
-        // Received quantity (immutable snapshot at creation)
-        quantity: vendorInventoryData.quantity || vendorInventoryData.receivedQuantity,
+        // ✅ CRITICAL: Use 'quantity' not 'receivedQuantity' (chaincode expects 'quantity')
+        quantity: vendorInventoryData.quantity,
         unit: vendorInventoryData.unit || "",
 
         // Purchase details (immutable)
@@ -2791,6 +2867,11 @@ class FabricService {
         createdAt: vendorInventoryData.createdAt || new Date().toISOString(),
       };
 
+      console.log(
+        `📤 Sending to VendorInventoryContract:`,
+        JSON.stringify(event, null, 2)
+      );
+
       const result = await this.vendorInventoryContract.submitTransaction(
         "recordVendorInventoryCreation",
         JSON.stringify(event)
@@ -2805,12 +2886,22 @@ class FabricService {
         resultStr = result.toString();
       }
 
+      console.log(`📥 Raw chaincode response:`, resultStr);
+
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor inventory creation event recorded on blockchain:", parsedResult);
+      console.log(
+        "✅ Vendor inventory creation event recorded on blockchain:",
+        parsedResult
+      );
 
       return parsedResult;
     } catch (error) {
-      console.error("❌ Blockchain recordVendorInventoryCreation error:", error);
+      console.error(
+        "❌ Blockchain recordVendorInventoryCreation error:",
+        error
+      );
+      console.error("❌ Error message:", error.message);
+      console.error("❌ Error details:", error.details || "No details");
       throw error;
     }
   }
@@ -2819,7 +2910,9 @@ class FabricService {
    * @deprecated Use recordVendorInventoryCreation instead
    */
   async createVendorInventory(vendorInventoryData) {
-    throw new Error("createVendorInventory() is deprecated. Use recordVendorInventoryCreation() instead.");
+    throw new Error(
+      "createVendorInventory() is deprecated. Use recordVendorInventoryCreation() instead."
+    );
   }
 
   /**
@@ -2864,7 +2957,10 @@ class FabricService {
       }
 
       const parsedResult = JSON.parse(resultStr);
-      console.log("✅ Vendor inventory usage event recorded on blockchain:", parsedResult);
+      console.log(
+        "✅ Vendor inventory usage event recorded on blockchain:",
+        parsedResult
+      );
 
       return parsedResult;
     } catch (error) {
@@ -2877,7 +2973,9 @@ class FabricService {
    * @deprecated Quantity updates are mutable. Use recordVendorInventoryUsage instead
    */
   async updateVendorInventory(vendorInventoryData) {
-    throw new Error("updateVendorInventory() is deprecated. Quantity updates are mutable. Use recordVendorInventoryUsage() to track usage.");
+    throw new Error(
+      "updateVendorInventory() is deprecated. Quantity updates are mutable. Use recordVendorInventoryUsage() to track usage."
+    );
   }
 
   /**
@@ -2907,7 +3005,10 @@ class FabricService {
 
       return JSON.parse(resultStr);
     } catch (error) {
-      console.error("❌ Blockchain getVendorInventoryEventHistory error:", error);
+      console.error(
+        "❌ Blockchain getVendorInventoryEventHistory error:",
+        error
+      );
       throw error;
     }
   }
@@ -2916,7 +3017,9 @@ class FabricService {
    * @deprecated Use getVendorInventoryEventHistory instead
    */
   async getVendorInventory(vendorInventoryId) {
-    console.warn("⚠️ getVendorInventory() is deprecated. Use getVendorInventoryEventHistory() instead.");
+    console.warn(
+      "⚠️ getVendorInventory() is deprecated. Use getVendorInventoryEventHistory() instead."
+    );
     return this.getVendorInventoryEventHistory(vendorInventoryId);
   }
 
@@ -2965,7 +3068,9 @@ class FabricService {
    * @deprecated Use queryVendorInventoryByVendor instead
    */
   async getVendorInventoryByVendor(vendorId) {
-    console.warn("⚠️ getVendorInventoryByVendor() is deprecated. Use queryVendorInventoryByVendor() instead.");
+    console.warn(
+      "⚠️ getVendorInventoryByVendor() is deprecated. Use queryVendorInventoryByVendor() instead."
+    );
     return this.queryVendorInventoryByVendor(vendorId);
   }
 
@@ -2980,7 +3085,9 @@ class FabricService {
    */
   async recordInvoiceIssued(invoiceData) {
     try {
-      console.log(`📄 Recording invoice issuance on blockchain: ${invoiceData.invoiceNumber}`);
+      console.log(
+        `📄 Recording invoice issuance on blockchain: ${invoiceData.invoiceNumber}`
+      );
 
       // For now, we'll use the order contract for invoice events
       // In production, you might want a dedicated InvoiceContract
@@ -3012,7 +3119,9 @@ class FabricService {
         JSON.stringify(event)
       );
 
-      console.log(`✅ Invoice recorded on blockchain: ${invoiceData.invoiceNumber}`);
+      console.log(
+        `✅ Invoice recorded on blockchain: ${invoiceData.invoiceNumber}`
+      );
 
       return {
         success: true,

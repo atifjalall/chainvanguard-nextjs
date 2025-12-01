@@ -161,7 +161,9 @@ export default function OrderDetailPage() {
         const invoice = response.data.invoices[0]; // Get the first invoice
 
         // Download the invoice PDF
-        const downloadResponse = await invoiceApi.downloadInvoiceById(invoice._id);
+        const downloadResponse = await invoiceApi.downloadInvoiceById(
+          invoice._id
+        );
 
         if (downloadResponse.success && downloadResponse.data) {
           // Trigger download
@@ -265,14 +267,14 @@ export default function OrderDetailPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="cursor-pointer text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               Home
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <button
               onClick={() => router.push("/customer/orders")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="cursor-pointer text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               Orders
             </button>
@@ -327,7 +329,7 @@ export default function OrderDetailPage() {
               {canCancelOrder && (
                 <button
                   onClick={() => setShowCancelModal(true)}
-                  className="border border-red-600 dark:border-red-500 text-red-600 dark:text-red-500 px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+                  className="cursor-pointer border border-red-600 dark:border-red-500 text-red-600 dark:text-red-500 px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
                 >
                   Cancel Order
                 </button>
@@ -339,14 +341,14 @@ export default function OrderDetailPage() {
                       `/customer/returns?orderId=${order._id || order.id}`
                     )
                   }
-                  className="border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-500 px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
+                  className="cursor-pointer border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-500 px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
                 >
                   Request Return
                 </button>
               )}
               <button
                 onClick={handleDownloadInvoice}
-                className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors"
+                className="cursor-pointer bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors"
               >
                 Download Invoice
               </button>
@@ -501,7 +503,7 @@ export default function OrderDetailPage() {
                                 productId &&
                                 router.push(`/customer/product/${productId}`)
                               }
-                              className="text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-left"
+                              className="cursor-pointer text-sm font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-left"
                             >
                               {productName}
                             </button>
@@ -597,7 +599,7 @@ export default function OrderDetailPage() {
                             order.trackingNumber &&
                             copyToClipboard(order.trackingNumber)
                           }
-                          className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                          className="cursor-pointer text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
                           <DocumentTextIcon className="h-4 w-4" />
                         </button>
@@ -638,7 +640,7 @@ export default function OrderDetailPage() {
                             )
                           }
                           aria-label="Copy transaction hash"
-                          className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                          className="cursor-pointer text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
                           <DocumentTextIcon className="h-4 w-4" />
                         </button>
@@ -647,7 +649,7 @@ export default function OrderDetailPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           aria-label="View transaction"
-                          className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                          className="cursor-pointer text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
                           <ArrowTopRightOnSquareIcon className="h-4 w-4" />
                         </a>
@@ -770,13 +772,13 @@ export default function OrderDetailPage() {
                 <div className="space-y-2">
                   <button
                     onClick={() => toast.success("Support feature coming soon")}
-                    className="w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                    className="cursor-pointer w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     Contact Support
                   </button>
                   <button
                     onClick={() => toast.success("Return feature coming soon")}
-                    className="w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                    className="cursor-pointer w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     Return or Exchange
                   </button>
@@ -784,7 +786,7 @@ export default function OrderDetailPage() {
                     onClick={() =>
                       toast.success("Tracking feature coming soon")
                     }
-                    className="w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                    className="cursor-pointer w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     Track Shipment
                   </button>
@@ -838,14 +840,14 @@ export default function OrderDetailPage() {
                   setCancelReason("");
                 }}
                 disabled={isCancelling}
-                className="flex-1 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50"
+                className="cursor-pointer flex-1 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50"
               >
                 Keep Order
               </button>
               <button
                 onClick={handleCancelOrder}
                 disabled={isCancelling || !cancelReason.trim()}
-                className="flex-1 bg-red-600 dark:bg-red-500 text-white h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="cursor-pointer flex-1 bg-red-600 dark:bg-red-500 text-white h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isCancelling ? "Cancelling..." : "Cancel Order"}
               </button>
@@ -853,6 +855,14 @@ export default function OrderDetailPage() {
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        /* Ensure buttons & links use pointer cursor consistently */
+        button,
+        a {
+          cursor: pointer;
+        }
+      `}</style>
     </div>
   );
 }

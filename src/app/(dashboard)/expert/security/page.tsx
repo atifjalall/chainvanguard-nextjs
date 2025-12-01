@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,7 +76,19 @@ import { badgeColors, colors } from "@/lib/colorConstants";
 import { useRouter } from "next/navigation";
 import { formatCurrency, formatCurrencyAbbreviated } from "@/utils/currency";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { Loader2 } from "lucide-react";
 
+type ApiResponse<T = any> = {
+  success: boolean;
+  data?: T;
+  message?: string;
+  pagination?: {
+    totalPages?: number;
+    totalItems?: number;
+    page?: number;
+    limit?: number;
+  };
+};
 
 export default function SecurityPage() {
   usePageTitle("Security & Access Control");
@@ -128,7 +141,8 @@ export default function SecurityPage() {
       setIsLoading(true);
 
       // Load security overview
-      const securityResponse = await expertApi.getSecurityOverview();
+      const securityResponse =
+        (await expertApi.getSecurityOverview()) as ApiResponse<any>;
       if (securityResponse.success) {
         setSecurityData(securityResponse.data);
       }
@@ -143,18 +157,28 @@ export default function SecurityPage() {
         balanceMax = 50;
       }
 
+      // Build status filter based on selected tab
+      let statusFilter: string | undefined;
+      if (selectedTab === "active") {
+        statusFilter = "active";
+      } else if (selectedTab === "frozen") {
+        statusFilter = "frozen";
+      } else {
+        statusFilter = selectedStatus !== "all" ? selectedStatus : undefined;
+      }
+
       // Load users with wallet information
-      const walletsResponse = await expertApi.getSecurityWallets({
+      const walletsResponse = (await expertApi.getSecurityWallets({
         page: currentPage,
         limit: itemsPerPage,
         search: searchTerm || undefined,
-        status: selectedStatus !== "all" ? selectedStatus : undefined,
+        status: statusFilter,
         role: selectedRole !== "all" ? selectedRole : undefined,
         sortBy: sortBy,
         sortOrder: "desc",
         balanceMin,
         balanceMax,
-      });
+      })) as ApiResponse<any[]>;
 
       if (walletsResponse.success) {
         const walletsData = walletsResponse.data ?? [];
@@ -163,7 +187,7 @@ export default function SecurityPage() {
 
         // Update pagination info
         if (walletsResponse.pagination) {
-          setTotalPages(walletsResponse.pagination.totalPages);
+          setTotalPages(walletsResponse.pagination.totalPages || 1);
         }
       }
     } catch (error) {
@@ -182,10 +206,10 @@ export default function SecurityPage() {
 
     try {
       setIsSubmitting(true);
-      const response = await expertApi.disableUser(
+      const response = (await expertApi.disableUser(
         selectedUser.userId || selectedUser._id,
         disableReason
-      );
+      )) as ApiResponse<any>;
 
       if (response.success) {
         toast.success("User wallet frozen successfully");
@@ -223,10 +247,10 @@ export default function SecurityPage() {
 
     try {
       setIsUnfreezeSubmitting(true);
-      const response = await expertApi.unfreezeUser(
+      const response = (await expertApi.unfreezeUser(
         selectedUser.userId || selectedUser._id,
         unfreezeReason
-      );
+      )) as ApiResponse<any>;
 
       if (response.success) {
         toast.success("User reactivated successfully");
@@ -273,8 +297,8 @@ export default function SecurityPage() {
     { value: "recent", label: "Most Recent" },
     { value: "balance-desc", label: "Highest Balance" },
     { value: "balance-asc", label: "Lowest Balance" },
-    { value: "name-asc", label: "Name A → Z" },
-    { value: "name-desc", label: "Name Z → A" },
+    { value: "name-asc", label: "Name A to Z" },
+    { value: "name-desc", label: "Name Z to A" },
   ];
 
   const getStatusLabel = (val: string) => {
@@ -288,6 +312,28 @@ export default function SecurityPage() {
       default:
         return val;
     }
+  };
+
+  const getRoleLabel = (val: string) => {
+    switch (val) {
+      case "all":
+        return "All Roles";
+      case "supplier":
+        return "Supplier";
+      case "vendor":
+        return "Vendor";
+      case "customer":
+        return "Customer";
+      case "expert":
+        return "Expert";
+      default:
+        return val;
+    }
+  };
+
+  const getSortLabel = (val: string) => {
+    const option = sortOptions.find((s) => s.value === val);
+    return option ? option.label : val;
   };
 
   const copyToClipboard = async (text: string | undefined) => {
@@ -335,24 +381,22 @@ export default function SecurityPage() {
 
   if (isLoading && users.length === 0) {
     return (
-      <div
-        className={`p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
-      >
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-          <div className="grid grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700"></div>
-            ))}
-          </div>
-          <div className="h-96 bg-gray-200 dark:bg-gray-700"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading security data...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
       className={`relative z-10 p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
     >
       {/* Breadcrumb */}
@@ -369,10 +413,10 @@ export default function SecurityPage() {
       </Breadcrumb>
 
       {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-        }`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
       >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
@@ -416,17 +460,22 @@ export default function SecurityPage() {
             <Button
               onClick={loadSecurityData}
               variant="outline"
-              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
+              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all hover:border-black`}
             >
               <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
               Refresh
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Security Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
         {[
           {
             title: "Security Events",
@@ -479,153 +528,197 @@ export default function SecurityPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
+      </motion.div>
 
       {/* Filters */}
-      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle
-              className={`text-lg font-semibold ${colors.texts.primary}`}
-            >
-              User Management
-            </CardTitle>
-            <div className="ml-auto lg:hidden">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className="border-2 border-gray-200 dark:border-gray-700 rounded-none text-xs"
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle
+                className={`text-lg font-semibold ${colors.texts.primary}`}
               >
-                <FunnelIcon className="h-3 w-3 mr-2" />
-                {showFilters ? "Hide" : "Show"} Filters
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div className={`${showFilters ? "block" : "hidden lg:block"}`}>
-            <div className="relative w-full mb-4">
-              <MagnifyingGlassIcon
-                className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
-              />
-              <Input
-                placeholder="Name, email, wallet..."
-                className={`pl-10 rounded-none text-xs ${colors.inputs.base} focus:outline-none focus:ring-0 focus-visible:outline-none`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2 items-stretch">
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger
-                  className={`w-full min-w-[240px] rounded-none text-xs ${colors.inputs.base} focus:outline-none focus:ring-0 focus-visible:outline-none`}
+                User Management
+              </CardTitle>
+              <div className="ml-auto lg:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="border-2 border-gray-200 dark:border-gray-700 rounded-none text-xs"
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="w-full min-w-[240px] focus:outline-none focus-visible:outline-none">
-                  <SelectItem value="all" className="text-xs">
-                    All Status
-                  </SelectItem>
-                  <SelectItem value="active" className="text-xs">
-                    Active
-                  </SelectItem>
-                  <SelectItem value="frozen" className="text-xs">
-                    Frozen
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger
-                  className={`w-full rounded-none text-xs ${colors.inputs.base} focus:outline-none focus:ring-0 focus-visible:outline-none`}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="w-full min-w-[240px] focus:outline-none focus-visible:outline-none">
-                  {sortOptions.map((s) => (
-                    <SelectItem
-                      key={s.value}
-                      value={s.value}
-                      className="text-xs"
-                    >
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger
-                  className={`w-full rounded-none text-xs ${colors.inputs.base} focus:outline-none focus:ring-0 focus-visible:outline-none`}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="w-full min-w-[240px] focus:outline-none focus-visible:outline-none">
-                  <SelectItem value="all" className="text-xs">
-                    All Roles
-                  </SelectItem>
-                  <SelectItem value="supplier" className="text-xs">
-                    Supplier
-                  </SelectItem>
-                  <SelectItem value="vendor" className="text-xs">
-                    Vendor
-                  </SelectItem>
-                  <SelectItem value="customer" className="text-xs">
-                    Customer
-                  </SelectItem>
-                  <SelectItem value="expert" className="text-xs">
-                    Expert
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-2">
-                {searchTerm && (
-                  <Badge
-                    variant="outline"
-                    className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
-                  >
-                    &quot;{searchTerm}&quot;
-                    <button
-                      onClick={() => setSearchTerm("")}
-                      className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                )}
-
-                {selectedStatus !== "all" && (
-                  <Badge
-                    variant="outline"
-                    className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
-                  >
-                    {getStatusLabel(selectedStatus)}
-                    <button
-                      onClick={() => setSelectedStatus("all")}
-                      className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                )}
-
-                <span className={`text-xs ${colors.texts.secondary} ml-2`}>
-                  {users.length} users found
-                </span>
+                  <FunnelIcon className="h-3 w-3 mr-2" />
+                  {showFilters ? "Hide" : "Show"} Filters
+                </Button>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <div className={`${showFilters ? "block" : "hidden lg:block"}`}>
+              <div className="relative w-full mb-4">
+                <MagnifyingGlassIcon
+                  className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                />
+                <Input
+                  placeholder="Name, email, wallet..."
+                  className={`pl-10 rounded-none text-xs ${colors.inputs.base} focus:outline-none focus:ring-0 focus-visible:outline-none`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2 items-stretch">
+                <Select
+                  value={selectedStatus}
+                  onValueChange={setSelectedStatus}
+                >
+                  <SelectTrigger
+                    className={`w-full min-w-[240px] rounded-none text-xs ${colors.inputs.base} focus:outline-none focus:ring-0 focus-visible:outline-none`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-full min-w-[240px] focus:outline-none focus-visible:outline-none">
+                    <SelectItem value="all" className="text-xs">
+                      All Status
+                    </SelectItem>
+                    <SelectItem value="active" className="text-xs">
+                      Active
+                    </SelectItem>
+                    <SelectItem value="frozen" className="text-xs">
+                      Frozen
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger
+                    className={`w-full rounded-none text-xs ${colors.inputs.base} focus:outline-none focus:ring-0 focus-visible:outline-none`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-full min-w-[240px] focus:outline-none focus-visible:outline-none">
+                    {sortOptions.map((s) => (
+                      <SelectItem
+                        key={s.value}
+                        value={s.value}
+                        className="text-xs"
+                      >
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger
+                    className={`w-full rounded-none text-xs ${colors.inputs.base} focus:outline-none focus:ring-0 focus-visible:outline-none`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-full min-w-[240px] focus:outline-none focus-visible:outline-none">
+                    <SelectItem value="all" className="text-xs">
+                      All Roles
+                    </SelectItem>
+                    <SelectItem value="supplier" className="text-xs">
+                      Supplier
+                    </SelectItem>
+                    <SelectItem value="vendor" className="text-xs">
+                      Vendor
+                    </SelectItem>
+                    <SelectItem value="customer" className="text-xs">
+                      Customer
+                    </SelectItem>
+                    <SelectItem value="expert" className="text-xs">
+                      Expert
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center gap-2">
+                  {searchTerm && (
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
+                    >
+                      &quot;{searchTerm}&quot;
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+
+                  {selectedStatus !== "all" && (
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
+                    >
+                      {getStatusLabel(selectedStatus)}
+                      <button
+                        onClick={() => setSelectedStatus("all")}
+                        className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+
+                  {selectedRole !== "all" && (
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
+                    >
+                      {getRoleLabel(selectedRole)}
+                      <button
+                        onClick={() => setSelectedRole("all")}
+                        className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+
+                  {sortBy !== "recent" && (
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
+                    >
+                      {getSortLabel(sortBy)}
+                      <button
+                        onClick={() => setSortBy("recent")}
+                        className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+
+                  <span className={`text-xs ${colors.texts.secondary} ml-2`}>
+                    {users.length} users found
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Tabs */}
-      <div className="transform transition-all duration-700">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="transform transition-all duration-700"
+      >
         <div className="w-full max-w-6xl mx-auto">
           <Tabs value={selectedTab} onValueChange={setSelectedTab}>
             <TabsList
@@ -633,7 +726,7 @@ export default function SecurityPage() {
             >
               <TabsTrigger
                 value="all"
-                className={`rounded-none flex-1 py-1.5 px-4 min-w-[120px] md:min-w-[150px] text-xs ${selectedTab === "all" ? `${colors.backgrounds.primary} ${colors.texts.primary}` : colors.texts.secondary}`}
+                className={`rounded-none flex-1 py-1.5 px-4 min-w-[120px] md:min-w-[150px] text-xs cursor-pointer ${selectedTab === "all" ? `${colors.backgrounds.primary} ${colors.texts.primary}` : colors.texts.secondary}`}
               >
                 <Squares2X2Icon className={`h-4 w-4 ${colors.icons.primary}`} />
                 All
@@ -641,7 +734,7 @@ export default function SecurityPage() {
 
               <TabsTrigger
                 value="active"
-                className={`rounded-none flex-1 py-1.5 px-4 min-w-[120px] md:min-w-[150px] text-xs ${selectedTab === "active" ? `${colors.backgrounds.primary} ${colors.texts.primary}` : colors.texts.secondary}`}
+                className={`rounded-none flex-1 py-1.5 px-4 min-w-[120px] md:min-w-[150px] text-xs cursor-pointer ${selectedTab === "active" ? `${colors.backgrounds.primary} ${colors.texts.primary}` : colors.texts.secondary}`}
               >
                 <CheckCircleIcon
                   className={`h-4 w-4 ${colors.icons.primary}`}
@@ -651,7 +744,7 @@ export default function SecurityPage() {
 
               <TabsTrigger
                 value="frozen"
-                className={`rounded-none flex-1 py-1.5 px-4 min-w-[120px] md:min-w-[150px] text-xs ${selectedTab === "frozen" ? `${colors.backgrounds.primary} ${colors.texts.primary}` : colors.texts.secondary}`}
+                className={`rounded-none flex-1 py-1.5 px-4 min-w-[120px] md:min-w-[150px] text-xs cursor-pointer ${selectedTab === "frozen" ? `${colors.backgrounds.primary} ${colors.texts.primary}` : colors.texts.secondary}`}
               >
                 <XCircleIcon className={`h-4 w-4 ${colors.icons.primary}`} />
                 Frozen
@@ -659,7 +752,7 @@ export default function SecurityPage() {
 
               <TabsTrigger
                 value="high_balance"
-                className={`rounded-none flex-1 py-1.5 px-4 min-w-[120px] md:min-w-[150px] text-xs ${selectedTab === "high_balance" ? `${colors.backgrounds.primary} ${colors.texts.primary}` : colors.texts.secondary}`}
+                className={`rounded-none flex-1 py-1.5 px-4 min-w-[120px] md:min-w-[150px] text-xs cursor-pointer ${selectedTab === "high_balance" ? `${colors.backgrounds.primary} ${colors.texts.primary}` : colors.texts.secondary}`}
               >
                 <BanknotesIcon className={`h-4 w-4 ${colors.icons.primary}`} />
                 High Balance
@@ -667,7 +760,7 @@ export default function SecurityPage() {
 
               <TabsTrigger
                 value="low_balance"
-                className={`rounded-none flex-1 py-1.5 px-4 min-w-[120px] md:min-w-[150px] text-xs ${selectedTab === "low_balance" ? `${colors.backgrounds.primary} ${colors.texts.primary}` : colors.texts.secondary}`}
+                className={`rounded-none flex-1 py-1.5 px-4 min-w-[120px] md:min-w-[150px] text-xs cursor-pointer ${selectedTab === "low_balance" ? `${colors.backgrounds.primary} ${colors.texts.primary}` : colors.texts.secondary}`}
               >
                 <ClockIcon className={`h-4 w-4 ${colors.icons.primary}`} />
                 Low Balance
@@ -675,316 +768,332 @@ export default function SecurityPage() {
             </TabsList>
           </Tabs>
         </div>
-      </div>
+      </motion.div>
 
       {/* Users table */}
-      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle
-              className={`text-lg font-semibold ${colors.texts.primary}`}
-            >
-              Users & Wallets
-            </CardTitle>
-            <div className={`text-xs ${colors.texts.secondary}`}>
-              Showing {users.length} users
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle
+                className={`text-lg font-semibold ${colors.texts.primary}`}
+              >
+                Users & Wallets
+              </CardTitle>
+              <div className={`text-xs ${colors.texts.secondary}`}>
+                Showing {users.length} users
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className={colors.tables.header}>
-                  <TableHead className="text-xs font-semibold">Name</TableHead>
-                  <TableHead className="text-xs font-semibold">Email</TableHead>
-                  <TableHead className="text-xs font-semibold">Role</TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    Balance (CVT)
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    Wallet Address
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    Status
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    Last Activity
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      <div className={`text-sm ${colors.texts.secondary}`}>
-                        No users found
-                      </div>
-                    </TableCell>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className={colors.tables.header}>
+                    <TableHead className="text-xs font-semibold">
+                      Name
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Email
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Role
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Balance (CVT)
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Wallet Address
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Last Activity
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Actions
+                    </TableHead>
                   </TableRow>
-                ) : (
-                  users.map((user, index) => (
-                    <TableRow
-                      key={user._id || user.userId || index}
-                      className={colors.tables.row}
-                    >
-                      <TableCell className="text-xs font-medium">
-                        {user.name}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {user.email || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={`${getRoleColor(user.role).bg} ${
-                            getRoleColor(user.role).border
-                          } ${getRoleColor(user.role).text} text-xs rounded-none`}
-                        >
-                          {user.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs font-semibold">
-                        {formatCurrencyAbbreviated(
-                          Number(user.balance) || 0,
-                          "CVT"
-                        )}
-                        {user.securityFlags &&
-                          user.securityFlags.length > 0 && (
-                            <div className="flex gap-1 mt-1">
-                              {user.securityFlags.includes("HIGH_BALANCE") && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px] px-1 py-0 rounded-none"
-                                >
-                                  HIGH
-                                </Badge>
-                              )}
-                              {user.securityFlags.includes("LOW_BALANCE") && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px] px-1 py-0 rounded-none"
-                                >
-                                  LOW
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {user.walletAddress ? (
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono truncate">
-                              {`${user.walletAddress.substring(0, 8)}...${user.walletAddress.substring(
-                                user.walletAddress.length - 6
-                              )}`}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                copyToClipboard(user.walletAddress)
-                              }
-                              aria-label={
-                                copiedAddress === user.walletAddress
-                                  ? "Address copied"
-                                  : "Copy wallet address"
-                              }
-                              title={
-                                copiedAddress === user.walletAddress
-                                  ? "Address copied"
-                                  : "Copy wallet address"
-                              }
-                              className="rounded-none text-xs"
-                            >
-                              {copiedAddress === user.walletAddress ? (
-                                <CheckIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                              ) : (
-                                <ClipboardDocumentIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                              )}
-                            </Button>
-                          </div>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={`${getStatusColor(user.isActive).bg} ${
-                            getStatusColor(user.isActive).border
-                          } ${getStatusColor(user.isActive).text} text-xs rounded-none flex items-center gap-1 w-fit`}
-                        >
-                          {user.isActive ? (
-                            <>
-                              <LockOpenIcon className="h-3 w-3" />
-                              Active
-                            </>
-                          ) : (
-                            <>
-                              <LockClosedIcon className="h-3 w-3" />
-                              Frozen
-                            </>
-                          )}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {user.lastActivity
-                          ? new Date(user.lastActivity).toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              }
-                            )
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => viewUserDetails(user)}
-                            className={`text-xs rounded-none ${colors.buttons.ghost}`}
-                          >
-                            <EyeIcon className="h-4 w-4" />
-                          </Button>
-                          {user.role !== "expert" && user.isActive && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDisableDialog(user)}
-                              className={`text-xs rounded-none text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20`}
-                              aria-label="Freeze Wallet"
-                              title="Freeze Wallet"
-                            >
-                              {/* Show open lock icon for active users (status = unfrozen) */}
-                              <LockOpenIcon className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {user.role !== "expert" && !user.isActive && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openUnfreezeDialog(user)}
-                              className={`text-xs rounded-none text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20`}
-                              aria-label="Reactivate Account"
-                              title="Reactivate Account"
-                            >
-                              {/* Show closed lock icon for frozen users (status = frozen) */}
-                              <LockClosedIcon className="h-4 w-4" />
-                            </Button>
-                          )}
+                </TableHeader>
+                <TableBody>
+                  {users.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <div className={`text-sm ${colors.texts.secondary}`}>
+                          No users found
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <div className={`text-xs ${colors.texts.secondary}`}>
-                Page {currentPage} of {totalPages}
-              </div>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      className={`cursor-pointer rounded-none ${
-                        currentPage === 1
-                          ? "pointer-events-none opacity-50"
-                          : ""
-                      }`}
-                    />
-                  </PaginationItem>
-
-                  {currentPage > 2 && (
-                    <PaginationItem>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(1)}
-                        className="cursor-pointer rounded-none"
+                  ) : (
+                    users.map((user, index) => (
+                      <TableRow
+                        key={user._id || user.userId || index}
+                        className={colors.tables.row}
                       >
-                        1
-                      </PaginationLink>
-                    </PaginationItem>
+                        <TableCell className="text-xs font-medium">
+                          {user.name}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {user.email || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={`${getRoleColor(user.role).bg} ${
+                              getRoleColor(user.role).border
+                            } ${getRoleColor(user.role).text} text-xs rounded-none`}
+                          >
+                            {user.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs font-semibold">
+                          {formatCurrencyAbbreviated(
+                            Number(user.balance) || 0,
+                            "CVT"
+                          )}
+                          {user.securityFlags &&
+                            user.securityFlags.length > 0 && (
+                              <div className="flex gap-1 mt-1">
+                                {user.securityFlags.includes(
+                                  "HIGH_BALANCE"
+                                ) && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] px-1 py-0 rounded-none"
+                                  >
+                                    HIGH
+                                  </Badge>
+                                )}
+                                {user.securityFlags.includes("LOW_BALANCE") && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] px-1 py-0 rounded-none"
+                                  >
+                                    LOW
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {user.walletAddress ? (
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono truncate">
+                                {`${user.walletAddress.substring(0, 8)}...${user.walletAddress.substring(
+                                  user.walletAddress.length - 6
+                                )}`}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  copyToClipboard(user.walletAddress)
+                                }
+                                aria-label={
+                                  copiedAddress === user.walletAddress
+                                    ? "Address copied"
+                                    : "Copy wallet address"
+                                }
+                                title={
+                                  copiedAddress === user.walletAddress
+                                    ? "Address copied"
+                                    : "Copy wallet address"
+                                }
+                                className="rounded-none text-xs"
+                              >
+                                {copiedAddress === user.walletAddress ? (
+                                  <CheckIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                ) : (
+                                  <ClipboardDocumentIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                )}
+                              </Button>
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={`${getStatusColor(user.isActive).bg} ${
+                              getStatusColor(user.isActive).border
+                            } ${getStatusColor(user.isActive).text} text-xs rounded-none flex items-center gap-1 w-fit`}
+                          >
+                            {user.isActive ? (
+                              <>
+                                <LockOpenIcon className="h-3 w-3" />
+                                Active
+                              </>
+                            ) : (
+                              <>
+                                <LockClosedIcon className="h-3 w-3" />
+                                Frozen
+                              </>
+                            )}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {user.lastActivity
+                            ? new Date(user.lastActivity).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                }
+                              )
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => viewUserDetails(user)}
+                              className={`text-xs rounded-none ${colors.buttons.outline}`}
+                            >
+                              <EyeIcon className="h-4 w-4" />
+                            </Button>
+                            {user.role !== "expert" && user.isActive && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openDisableDialog(user)}
+                                className={`text-xs rounded-none text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20`}
+                                aria-label="Freeze Wallet"
+                                title="Freeze Wallet"
+                              >
+                                {/* Show open lock icon for active users (status = unfrozen) */}
+                                <LockOpenIcon className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {user.role !== "expert" && !user.isActive && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openUnfreezeDialog(user)}
+                                className={`text-xs rounded-none text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20`}
+                                aria-label="Reactivate Account"
+                                title="Reactivate Account"
+                              >
+                                {/* Show closed lock icon for frozen users (status = frozen) */}
+                                <LockClosedIcon className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
-
-                  {currentPage > 3 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
-
-                  {currentPage > 1 && (
-                    <PaginationItem>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(currentPage - 1)}
-                        className="cursor-pointer rounded-none"
-                      >
-                        {currentPage - 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )}
-
-                  <PaginationItem>
-                    <PaginationLink isActive className="rounded-none">
-                      {currentPage}
-                    </PaginationLink>
-                  </PaginationItem>
-
-                  {currentPage < totalPages && (
-                    <PaginationItem>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                        className="cursor-pointer rounded-none"
-                      >
-                        {currentPage + 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )}
-
-                  {currentPage < totalPages - 2 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
-
-                  {currentPage < totalPages - 1 && (
-                    <PaginationItem>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(totalPages)}
-                        className="cursor-pointer rounded-none"
-                      >
-                        {totalPages}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )}
-
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      className={`cursor-pointer rounded-none ${
-                        currentPage === totalPages
-                          ? "pointer-events-none opacity-50"
-                          : ""
-                      }`}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6">
+                <div className={`text-xs ${colors.texts.secondary}`}>
+                  Page {currentPage} of {totalPages}
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() =>
+                          setCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        className={`cursor-pointer rounded-none ${
+                          currentPage === 1
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }`}
+                      />
+                    </PaginationItem>
+
+                    {currentPage > 2 && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(1)}
+                          className="cursor-pointer rounded-none"
+                        >
+                          1
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    {currentPage > 3 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+
+                    {currentPage > 1 && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          className="cursor-pointer rounded-none"
+                        >
+                          {currentPage - 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    <PaginationItem>
+                      <PaginationLink isActive className="rounded-none">
+                        {currentPage}
+                      </PaginationLink>
+                    </PaginationItem>
+
+                    {currentPage < totalPages && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          className="cursor-pointer rounded-none"
+                        >
+                          {currentPage + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    {currentPage < totalPages - 2 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+
+                    {currentPage < totalPages - 1 && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(totalPages)}
+                          className="cursor-pointer rounded-none"
+                        >
+                          {totalPages}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() =>
+                          setCurrentPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        className={`cursor-pointer rounded-none ${
+                          currentPage === totalPages
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }`}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Disable User Dialog */}
       <AlertDialog open={isDisableOpen} onOpenChange={setIsDisableOpen}>
@@ -1006,7 +1115,7 @@ export default function SecurityPage() {
           <div className="space-y-4 my-4">
             {selectedUser && (
               <div
-                className={`p-3 rounded-none bg-gray-50 dark:bg-gray-900/20 border ${colors.borders.default}`}
+                className={`p-3 rounded-none bg-gray-50 dark:bg-gray-900/20 border ${colors.borders.primary}`}
               >
                 <div className={`text-xs font-medium ${colors.texts.primary}`}>
                   {selectedUser.name}
@@ -1105,7 +1214,7 @@ export default function SecurityPage() {
           <div className="space-y-4 my-4">
             {selectedUser && (
               <div
-                className={`p-3 rounded-none bg-gray-50 dark:bg-gray-900/20 border ${colors.borders.default}`}
+                className={`p-3 rounded-none bg-gray-50 dark:bg-gray-900/20 border ${colors.borders.primary}`}
               >
                 <div className={`text-xs font-medium ${colors.texts.primary}`}>
                   {selectedUser.name}
@@ -1172,6 +1281,6 @@ export default function SecurityPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </motion.div>
   );
 }

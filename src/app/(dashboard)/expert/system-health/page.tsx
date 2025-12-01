@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,57 @@ import { toast } from "sonner";
 import { expertApi } from "@/lib/api/expert.api";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { Loader2 } from "lucide-react";
+
+// Add type definitions
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+  message?: string;
+};
+
+type PeerInfo = {
+  id?: string;
+  name?: string;
+  type?: string;
+  status?: string;
+  blockHeight?: number;
+  version?: string;
+  lastSeen?: string;
+};
+
+type ConsensusStatus = {
+  status?: string;
+  peers?: PeerInfo[];
+  // add other consensus props as needed
+};
+
+type ConsensusMetrics = {
+  metrics?: {
+    blockCount?: number;
+    transactionCount?: number;
+    avgBlockTime?: number | null;
+    // add other metrics props as needed
+  };
+};
+
+type FaultStatus = {
+  score?: string | number;
+  status?: string;
+  metrics?: {
+    failedTransactions?: number;
+    uptime?: number;
+  };
+};
+
+type SecurityOverview = {
+  status?: string;
+  metrics?: {
+    securityEvents?: number;
+    failedLogins?: number;
+    activeUsers?: number;
+  };
+};
 
 export default function SystemHealthPage() {
   usePageTitle("System Health");
@@ -46,11 +98,15 @@ export default function SystemHealthPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
 
-  // Data states
-  const [consensusStatus, setConsensusStatus] = useState<any>(null);
-  const [consensusMetrics, setConsensusMetrics] = useState<any>(null);
-  const [faultStatus, setFaultStatus] = useState<any>(null);
-  const [securityData, setSecurityData] = useState<any>(null);
+  // Data states - typed
+  const [consensusStatus, setConsensusStatus] =
+    useState<ConsensusStatus | null>(null);
+  const [consensusMetrics, setConsensusMetrics] =
+    useState<ConsensusMetrics | null>(null);
+  const [faultStatus, setFaultStatus] = useState<FaultStatus | null>(null);
+  const [securityData, setSecurityData] = useState<SecurityOverview | null>(
+    null
+  );
 
   useEffect(() => {
     setIsVisible(true);
@@ -61,18 +117,27 @@ export default function SystemHealthPage() {
     try {
       setIsLoading(true);
 
-      // Load all health data
-      const [consensus, metrics, fault, security] = await Promise.all([
-        expertApi.getConsensusStatus(),
-        expertApi.getConsensusMetrics("24h"),
-        expertApi.getFaultToleranceStatus(),
-        expertApi.getSecurityOverview(),
-      ]);
+      // Load all health data with explicit cast to known response types
+      const [consensusResp, metricsResp, faultResp, securityResp] =
+        await Promise.all([
+          expertApi.getConsensusStatus() as Promise<
+            ApiResponse<ConsensusStatus>
+          >,
+          expertApi.getConsensusMetrics("24h") as Promise<
+            ApiResponse<ConsensusMetrics>
+          >,
+          expertApi.getFaultToleranceStatus() as Promise<
+            ApiResponse<FaultStatus>
+          >,
+          expertApi.getSecurityOverview() as Promise<
+            ApiResponse<SecurityOverview>
+          >,
+        ]);
 
-      if (consensus.success) setConsensusStatus(consensus.data);
-      if (metrics.success) setConsensusMetrics(metrics.data);
-      if (fault.success) setFaultStatus(fault.data);
-      if (security.success) setSecurityData(security.data);
+      if (consensusResp?.success) setConsensusStatus(consensusResp.data);
+      if (metricsResp?.success) setConsensusMetrics(metricsResp.data);
+      if (faultResp?.success) setFaultStatus(faultResp.data);
+      if (securityResp?.success) setSecurityData(securityResp.data);
     } catch (error) {
       console.error("Error loading system health data:", error);
       toast.error("Failed to load system health data");
@@ -82,7 +147,7 @@ export default function SystemHealthPage() {
   };
 
   const getOverallHealth = () => {
-    const faultScore = parseFloat(faultStatus?.score || "0");
+    const faultScore = parseFloat(String(faultStatus?.score || "0"));
     const securityStatus = securityData?.status || "secure";
 
     if (faultScore >= 90 && securityStatus === "secure") {
@@ -100,24 +165,22 @@ export default function SystemHealthPage() {
 
   if (isLoading) {
     return (
-      <div
-        className={`p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
-      >
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-          <div className="grid grid-cols-4 gap-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700"></div>
-            ))}
-          </div>
-          <div className="h-96 bg-gray-200 dark:bg-gray-700"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading system health...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
       className={`relative z-10 p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
     >
       {/* Breadcrumb */}
@@ -134,10 +197,10 @@ export default function SystemHealthPage() {
       </Breadcrumb>
 
       {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-        }`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
       >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
@@ -173,84 +236,88 @@ export default function SystemHealthPage() {
             <Button
               onClick={loadSystemHealthData}
               variant="outline"
-              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
+              className={`flex items-center gap-2 text-xs cursor-pointer hover:border hover:border-black rounded-none ${colors.buttons.secondary} transition-all`}
             >
               <ArrowPathIcon className="h-4 w-4" />
               Refresh
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Overall System Status */}
-      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-        <CardHeader>
-          <CardTitle
-            className={`text-lg font-semibold ${colors.texts.primary}`}
-          >
-            Overall System Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div
-              className={`p-6 rounded-none border-l-4 border border-gray-200 dark:border-gray-700 ${
-                overallHealth.status === "Excellent" ||
-                overallHealth.status === "Good"
-                  ? "border-l-blue-500" // changed to left-only blue border
-                  : overallHealth.status === "Fair"
-                    ? "border-l-yellow-500"
-                    : "border-l-red-500"
-              }`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+          <CardHeader>
+            <CardTitle
+              className={`text-lg font-semibold ${colors.texts.primary}`}
             >
-              <div className={`text-xs ${colors.texts.secondary} mb-2`}>
-                System Health
+              Overall System Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div
+                className={`p-6 rounded-none border border-gray-200 dark:border-gray-700`}
+              >
+                <div className={`text-xs ${colors.texts.secondary} mb-2`}>
+                  System Health
+                </div>
+                <div
+                  className={`text-3xl font-bold ${colors.texts.primary} mb-1`}
+                >
+                  {overallHealth.status}
+                </div>
+                <div className={`text-xs ${colors.texts.muted}`}>
+                  All systems operational
+                </div>
               </div>
               <div
-                className={`text-3xl font-bold ${colors.texts.primary} mb-1`}
+                className={`p-6 rounded-none border border-gray-200 dark:border-gray-700`}
               >
-                {overallHealth.status}
-              </div>
-              <div className={`text-xs ${colors.texts.muted}`}>
-                All systems operational
-              </div>
-            </div>
-            <div
-              className={`p-6 rounded-none border-l-4 border border-gray-200 dark:border-gray-700`}
-            >
-              <div className={`text-xs ${colors.texts.secondary} mb-2`}>
-                Fault Tolerance Score
+                <div className={`text-xs ${colors.texts.secondary} mb-2`}>
+                  Fault Tolerance Score
+                </div>
+                <div
+                  className={`text-3xl font-bold ${colors.texts.primary} mb-1`}
+                >
+                  {faultStatus?.score || "0"}%
+                </div>
+                <div className={`text-xs ${colors.texts.muted}`}>
+                  {faultStatus?.status || "Good"} resilience
+                </div>
               </div>
               <div
-                className={`text-3xl font-bold ${colors.texts.primary} mb-1`}
+                className={`p-6 rounded-none border border-gray-200 dark:border-gray-700`}
               >
-                {faultStatus?.score || "0"}%
-              </div>
-              <div className={`text-xs ${colors.texts.muted}`}>
-                {faultStatus?.status || "Good"} resilience
+                <div className={`text-xs ${colors.texts.secondary} mb-2`}>
+                  Security Status
+                </div>
+                <div
+                  className={`text-3xl font-bold ${colors.texts.primary} mb-1 capitalize`}
+                >
+                  {securityData?.status || "Secure"}
+                </div>
+                <div className={`text-xs ${colors.texts.muted}`}>
+                  {securityData?.metrics?.securityEvents || 0} events (24h)
+                </div>
               </div>
             </div>
-            <div
-              className={`p-6 rounded-none border-l-4 border border-gray-200 dark:border-gray-700`}
-            >
-              <div className={`text-xs ${colors.texts.secondary} mb-2`}>
-                Security Status
-              </div>
-              <div
-                className={`text-3xl font-bold ${colors.texts.primary} mb-1 capitalize`}
-              >
-                {securityData?.status || "Secure"}
-              </div>
-              <div className={`text-xs ${colors.texts.muted}`}>
-                {securityData?.metrics?.securityEvents || 0} events (24h)
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Network Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
         {[
           {
             title: "Block Count",
@@ -310,10 +377,15 @@ export default function SystemHealthPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
+      </motion.div>
 
       {/* System Components Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+      >
         {/* Consensus Health */}
         <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
           <CardHeader>
@@ -332,7 +404,7 @@ export default function SystemHealthPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push("/expert/consensus")}
-                className={`text-xs rounded-none ${colors.buttons.ghost}`}
+                className={`text-xs rounded-none cursor-pointer hover:border hover:border-black ${colors.buttons.outline}`}
               >
                 View Details
                 <ArrowRightIcon className="h-3 w-3 ml-1" />
@@ -394,7 +466,10 @@ export default function SystemHealthPage() {
                   </div>
                 </div>
                 <div className={`text-xs font-medium ${colors.texts.primary}`}>
-                  {consensusMetrics?.metrics?.avgBlockTime?.toFixed(2) || "0"}s
+                  {typeof consensusMetrics?.metrics?.avgBlockTime === "number"
+                    ? consensusMetrics.metrics!.avgBlockTime!.toFixed(2)
+                    : "0"}
+                  s
                 </div>
               </div>
             </div>
@@ -419,7 +494,7 @@ export default function SystemHealthPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push("/expert/security")}
-                className={`text-xs rounded-none ${colors.buttons.ghost}`}
+                className={`text-xs rounded-none cursor-pointer hover:border hover:border-black ${colors.buttons.outline}`}
               >
                 View Details
                 <ArrowRightIcon className="h-3 w-3 ml-1" />
@@ -485,112 +560,120 @@ export default function SystemHealthPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Peer Nodes Status */}
       {consensusStatus?.peers && consensusStatus.peers.length > 0 && (
-        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle
-                  className={`text-lg font-semibold ${colors.texts.primary}`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
+          <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle
+                    className={`text-lg font-semibold ${colors.texts.primary}`}
+                  >
+                    Network Peers
+                  </CardTitle>
+                  <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                    Connected nodes and their status
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push("/expert/consensus")}
+                  className={`text-xs rounded-none cursor-pointer hover:border hover:border-black ${colors.buttons.outline}`}
                 >
-                  Network Peers
-                </CardTitle>
-                <p className={`text-xs ${colors.texts.muted} mt-1`}>
-                  Connected nodes and their status
-                </p>
+                  View All
+                  <ArrowRightIcon className="h-3 w-3 ml-1" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/expert/consensus")}
-                className={`text-xs rounded-none ${colors.buttons.ghost}`}
-              >
-                View All
-                <ArrowRightIcon className="h-3 w-3 ml-1" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className={colors.tables.header}>
-                    <TableHead className="text-xs font-semibold">
-                      Peer Name
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Type
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Status
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Block Height
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Version
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Last Seen
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {consensusStatus.peers
-                    .slice(0, 5)
-                    .map((peer: any, index: number) => (
-                      <TableRow
-                        key={peer.id || index}
-                        className={colors.tables.row}
-                      >
-                        <TableCell className="text-xs font-medium">
-                          {peer.name || `Peer ${index + 1}`}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
-                          >
-                            {peer.type || "peer"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none flex items-center gap-1 w-fit`}
-                          >
-                            <CheckCircleIcon className="h-3 w-3" />
-                            {peer.status || "online"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {peer.blockHeight?.toLocaleString() || "0"}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {peer.version || "1.0.0"}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {peer.lastSeen
-                            ? new Date(peer.lastSeen).toLocaleDateString(
-                                "en-US",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                }
-                              )
-                            : "Just now"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className={colors.tables.header}>
+                      <TableHead className="text-xs font-semibold">
+                        Peer Name
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Type
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Block Height
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Version
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Last Seen
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {consensusStatus.peers
+                      .slice(0, 5)
+                      .map((peer: any, index: number) => (
+                        <TableRow
+                          key={peer.id || index}
+                          className={colors.tables.row}
+                        >
+                          <TableCell className="text-xs font-medium">
+                            {peer.name || `Peer ${index + 1}`}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+                            >
+                              {peer.type || "peer"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none flex items-center gap-1 w-fit`}
+                            >
+                              <CheckCircleIcon className="h-3 w-3" />
+                              {peer.status || "online"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {(typeof peer.blockHeight === "number"
+                              ? peer.blockHeight.toLocaleString()
+                              : "0") || "0"}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {peer.version || "1.0.0"}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {peer.lastSeen
+                              ? new Date(peer.lastSeen).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )
+                              : "Just now"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

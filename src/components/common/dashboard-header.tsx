@@ -380,7 +380,7 @@ export function DashboardHeader({
   const isCustomer = user?.role === "customer";
   // Support both "expert" and "blockchain-expert" role strings
   const isExpert =
-    user?.role === "expert" || user?.role === "blockchain-expert";
+    user?.role === "expert";
 
   const getRoleColor = (role?: string) => {
     switch (role) {

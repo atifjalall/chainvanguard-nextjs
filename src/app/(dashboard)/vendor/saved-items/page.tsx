@@ -68,6 +68,7 @@ import { cn } from "@/lib/utils";
 import vendorBrowseApi from "@/lib/api/vendor.browse.api";
 import vendorRequestApi from "@/lib/api/vendor.request.api";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { Loader2 } from "lucide-react";
 
 const categoryOptions = [
   "All Categories",
@@ -684,10 +685,12 @@ export default function VendorSavedItemsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <ArrowPathIcon className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading saved items...</p>
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading saved items...
+          </p>
         </div>
       </div>
     );

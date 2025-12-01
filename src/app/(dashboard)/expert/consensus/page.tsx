@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,8 @@ import {
 import { toast } from "sonner";
 import { expertApi } from "@/lib/api/expert.api";
 import { badgeColors, colors } from "@/lib/colorConstants";
+import { usePageTitle } from "@/hooks/use-page-title";
+import { Loader2 } from "lucide-react";
 
 const timeRangeOptions = [
   { value: "1h", label: "Last 1 Hour" },
@@ -48,7 +51,6 @@ const timeRangeOptions = [
   { value: "7d", label: "Last 7 Days" },
   { value: "30d", label: "Last 30 Days" },
 ];
-import { usePageTitle } from "@/hooks/use-page-title";
 
 export default function ConsensusPage() {
   usePageTitle("Consensus Monitoring");
@@ -168,24 +170,22 @@ export default function ConsensusPage() {
 
   if (isLoading) {
     return (
-      <div
-        className={`p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
-      >
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-          <div className="grid grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700"></div>
-            ))}
-          </div>
-          <div className="h-96 bg-gray-200 dark:bg-gray-700"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading consensus data...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
       className={`relative z-10 p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
     >
       {/* Breadcrumb */}
@@ -202,10 +202,10 @@ export default function ConsensusPage() {
       </Breadcrumb>
 
       {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-        }`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
       >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
@@ -256,17 +256,22 @@ export default function ConsensusPage() {
             <Button
               onClick={loadConsensusData}
               variant="outline"
-              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all`}
+              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all hover:border-black`}
             >
               <ArrowPathIcon className="h-4 w-4" />
               Refresh
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
         {[
           {
             title: "Block Count",
@@ -343,216 +348,168 @@ export default function ConsensusPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
+      </motion.div>
 
       {/* Network Status */}
-      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle
-                className={`text-lg font-semibold ${colors.texts.primary}`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle
+                  className={`text-lg font-semibold ${colors.texts.primary}`}
+                >
+                  Network Status
+                </CardTitle>
+                <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                  Current blockchain network state and peer information
+                </p>
+              </div>
+              <Badge
+                className={`${getStatusColor(consensusStatus?.status).bg} ${
+                  getStatusColor(consensusStatus?.status).border
+                } ${getStatusColor(consensusStatus?.status).text} text-xs rounded-none`}
               >
-                Network Status
-              </CardTitle>
-              <p className={`text-xs ${colors.texts.muted} mt-1`}>
-                Current blockchain network state and peer information
-              </p>
+                {consensusStatus?.status || "Active"}
+              </Badge>
             </div>
-            <Badge
-              className={`${getStatusColor(consensusStatus?.status).bg} ${
-                getStatusColor(consensusStatus?.status).border
-              } ${getStatusColor(consensusStatus?.status).text} text-xs rounded-none`}
-            >
-              {consensusStatus?.status || "Active"}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div
-              className={`p-4 rounded-none border ${colors.borders.primary}`}
-            >
-              <div className={`text-xs ${colors.texts.secondary} mb-2`}>
-                Network State
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div
+                className={`p-4 rounded-none border ${colors.borders.primary}`}
+              >
+                <div className={`text-xs ${colors.texts.secondary} mb-2`}>
+                  Network State
+                </div>
+                <div className={`text-lg font-bold ${colors.texts.primary}`}>
+                  {consensusStatus?.networkState?.state || "Active"}
+                </div>
               </div>
-              <div className={`text-lg font-bold ${colors.texts.primary}`}>
-                {consensusStatus?.networkState?.state || "Active"}
+              <div
+                className={`p-4 rounded-none border ${colors.borders.primary}`}
+              >
+                <div className={`text-xs ${colors.texts.secondary} mb-2`}>
+                  Total Peers
+                </div>
+                <div className={`text-lg font-bold ${colors.texts.primary}`}>
+                  {consensusStatus?.peers?.length || 0}
+                </div>
               </div>
-            </div>
-            <div
-              className={`p-4 rounded-none border ${colors.borders.primary}`}
-            >
-              <div className={`text-xs ${colors.texts.secondary} mb-2`}>
-                Total Peers
-              </div>
-              <div className={`text-lg font-bold ${colors.texts.primary}`}>
-                {consensusStatus?.peers?.length || 0}
-              </div>
-            </div>
-            <div
-              className={`p-4 rounded-none border ${colors.borders.primary}`}
-            >
-              <div className={`text-xs ${colors.texts.secondary} mb-2`}>
-                Last Updated
-              </div>
-              <div className={`text-lg font-bold ${colors.texts.primary}`}>
-                {consensusStatus?.timestamp
-                  ? new Date(consensusStatus.timestamp).toLocaleTimeString(
-                      "en-US",
-                      {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }
-                    )
-                  : "N/A"}
+              <div
+                className={`p-4 rounded-none border ${colors.borders.primary}`}
+              >
+                <div className={`text-xs ${colors.texts.secondary} mb-2`}>
+                  Last Updated
+                </div>
+                <div className={`text-lg font-bold ${colors.texts.primary}`}>
+                  {consensusStatus?.timestamp
+                    ? new Date(consensusStatus.timestamp).toLocaleTimeString(
+                        "en-US",
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      )
+                    : "N/A"}
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Peer Nodes Table */}
-      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-        <CardHeader>
-          <CardTitle
-            className={`text-lg font-semibold ${colors.texts.primary}`}
-          >
-            Network Peers
-          </CardTitle>
-          <p className={`text-xs ${colors.texts.muted} mt-1`}>
-            Connected peer nodes and their status
-          </p>
-        </CardHeader>
-        <CardContent>
-          {consensusStatus?.peers && consensusStatus.peers.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className={colors.tables.header}>
-                    <TableHead className="text-xs font-semibold">
-                      Peer ID
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Name
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Type
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Status
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Block Height
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Version
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
-                      Last Seen
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {consensusStatus.peers.map((peer: any, index: number) => (
-                    <TableRow
-                      key={peer.id || index}
-                      className={colors.tables.row}
-                    >
-                      <TableCell className="font-mono text-xs">
-                        {peer.id || `Peer ${index + 1}`}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {peer.name || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
-                        >
-                          {peer.type || "peer"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={`${getStatusColor(peer.status).bg} ${
-                            getStatusColor(peer.status).border
-                          } ${getStatusColor(peer.status).text} text-xs rounded-none flex items-center gap-1 w-fit`}
-                        >
-                          {getPeerStatusIcon(peer.status)}
-                          {peer.status || "online"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {peer.blockHeight === undefined ||
-                        peer.blockHeight === null
-                          ? "N/A"
-                          : Number(peer.blockHeight).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {peer.version || "1.0.0"}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {peer.lastSeen
-                          ? new Date(peer.lastSeen).toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }
-                            )
-                          : "Just now"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <ServerIcon className="h-12 w-12 mx-auto mb-4" />
-              <div className={`text-sm ${colors.texts.secondary}`}>
-                No peer information available
-              </div>
-              <p className={`text-xs ${colors.texts.muted} mt-2`}>
-                Peer data will appear here once the network is active
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Performance Trends */}
-      {consensusMetrics?.trends && consensusMetrics.trends.length > 0 && (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+      >
         <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
           <CardHeader>
             <CardTitle
               className={`text-lg font-semibold ${colors.texts.primary}`}
             >
-              Performance Trends
+              Network Peers
             </CardTitle>
             <p className={`text-xs ${colors.texts.muted} mt-1`}>
-              Block generation and transaction throughput over time
+              Connected peer nodes and their status
             </p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {consensusMetrics.trends
-                .slice(0, 10)
-                .map((trend: any, index: number) => (
-                  <div
-                    key={index}
-                    className={`flex items-center justify-between p-3 rounded-none border ${colors.borders.primary}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <ChartBarIcon className="h-5 w-5" />
-                      <div>
-                        <div
-                          className={`text-xs font-medium ${colors.texts.primary}`}
-                        >
-                          {trend.timestamp
-                            ? new Date(trend.timestamp).toLocaleDateString(
+            {consensusStatus?.peers && consensusStatus.peers.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className={colors.tables.header}>
+                      <TableHead className="text-xs font-semibold">
+                        Peer ID
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Name
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Type
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Block Height
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Version
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        Last Seen
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {consensusStatus.peers.map((peer: any, index: number) => (
+                      <TableRow
+                        key={peer.id || index}
+                        className={colors.tables.row}
+                      >
+                        <TableCell className="font-mono text-xs">
+                          {peer.id || `Peer ${index + 1}`}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {peer.name || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+                          >
+                            {peer.type || "peer"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={`${getStatusColor(peer.status).bg} ${
+                              getStatusColor(peer.status).border
+                            } ${getStatusColor(peer.status).text} text-xs rounded-none flex items-center gap-1 w-fit`}
+                          >
+                            {getPeerStatusIcon(peer.status)}
+                            {peer.status || "online"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {peer.blockHeight === undefined ||
+                          peer.blockHeight === null
+                            ? "N/A"
+                            : Number(peer.blockHeight).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {peer.version || "1.0.0"}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {peer.lastSeen
+                            ? new Date(peer.lastSeen).toLocaleDateString(
                                 "en-US",
                                 {
                                   month: "short",
@@ -561,48 +518,114 @@ export default function ConsensusPage() {
                                   minute: "2-digit",
                                 }
                               )
-                            : `Period ${index + 1}`}
-                        </div>
-                        <div className={`text-xs ${colors.texts.muted}`}>
-                          {trend.blocks || 0} blocks • {trend.transactions || 0}{" "}
-                          transactions
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className={`text-xs ${colors.texts.secondary}`}>
-                          Avg Block Time
-                        </div>
-                        <div
-                          className={`text-xs font-medium ${colors.texts.primary}`}
-                        >
-                          {trend.avgBlockTime === undefined ||
-                          trend.avgBlockTime === null
-                            ? "N/A"
-                            : `${Number(trend.avgBlockTime).toFixed(2)}s`}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-xs ${colors.texts.secondary}`}>
-                          TX/Block
-                        </div>
-                        <div
-                          className={`text-xs font-medium ${colors.texts.primary}`}
-                        >
-                          {trend.avgTxPerBlock === undefined ||
-                          trend.avgTxPerBlock === null
-                            ? "N/A"
-                            : Number(trend.avgTxPerBlock).toFixed(1)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
+                            : "Just now"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <ServerIcon className="h-12 w-12 mx-auto mb-4" />
+                <div className={`text-sm ${colors.texts.secondary}`}>
+                  No peer information available
+                </div>
+                <p className={`text-xs ${colors.texts.muted} mt-2`}>
+                  Peer data will appear here once the network is active
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* Performance Trends */}
+      {consensusMetrics?.trends && consensusMetrics.trends.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
+          <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+            <CardHeader>
+              <CardTitle
+                className={`text-lg font-semibold ${colors.texts.primary}`}
+              >
+                Performance Trends
+              </CardTitle>
+              <p className={`text-xs ${colors.texts.muted} mt-1`}>
+                Block generation and transaction throughput over time
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {consensusMetrics.trends
+                  .slice(0, 10)
+                  .map((trend: any, index: number) => (
+                    <div
+                      key={index}
+                      className={`flex items-center justify-between p-3 rounded-none border ${colors.borders.primary}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <ChartBarIcon className="h-5 w-5" />
+                        <div>
+                          <div
+                            className={`text-xs font-medium ${colors.texts.primary}`}
+                          >
+                            {trend.timestamp
+                              ? new Date(trend.timestamp).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )
+                              : `Period ${index + 1}`}
+                          </div>
+                          <div className={`text-xs ${colors.texts.muted}`}>
+                            {trend.blocks || 0} blocks •{" "}
+                            {trend.transactions || 0} transactions
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className={`text-xs ${colors.texts.secondary}`}>
+                            Avg Block Time
+                          </div>
+                          <div
+                            className={`text-xs font-medium ${colors.texts.primary}`}
+                          >
+                            {trend.avgBlockTime === undefined ||
+                            trend.avgBlockTime === null
+                              ? "N/A"
+                              : `${Number(trend.avgBlockTime).toFixed(2)}s`}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-xs ${colors.texts.secondary}`}>
+                            TX/Block
+                          </div>
+                          <div
+                            className={`text-xs font-medium ${colors.texts.primary}`}
+                          >
+                            {trend.avgTxPerBlock === undefined ||
+                            trend.avgTxPerBlock === null
+                              ? "N/A"
+                              : Number(trend.avgTxPerBlock).toFixed(1)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

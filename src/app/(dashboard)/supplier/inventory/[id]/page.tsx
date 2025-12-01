@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -486,9 +487,7 @@ export default function InventoryDetailPage() {
         <Breadcrumb className="mb-4 md:mb-6">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/supplier">
-                Dashboard
-              </BreadcrumbLink>
+              <BreadcrumbLink href="/supplier">Dashboard</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
@@ -503,10 +502,11 @@ export default function InventoryDetailPage() {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <div
-          className={`transform transition-all duration-700 mb-4 md:mb-6 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-4 md:mb-6"
         >
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="space-y-2">
@@ -600,10 +600,15 @@ export default function InventoryDetailPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-          <div className="lg:col-span-1 space-y-4 md:space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="lg:col-span-1 space-y-4 md:space-y-6"
+          >
             <Card className="bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none overflow-hidden p-0">
               <CardContent className="p-0">
                 <div className="relative aspect-[3/4]">
@@ -908,9 +913,14 @@ export default function InventoryDetailPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
 
-          <div className="lg:col-span-2">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="lg:col-span-2"
+          >
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="w-full justify-start bg-transparent rounded-none p-0 h-auto mb-2 md:mb-3 flex-wrap">
                 <TabsTrigger
@@ -1743,7 +1753,7 @@ export default function InventoryDetailPage() {
                 </Card>
               </TabsContent>
             </Tabs>
-          </div>
+          </motion.div>
         </div>
 
         <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>

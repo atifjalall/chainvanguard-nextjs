@@ -15,7 +15,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { toast } from "sonner";
-import { getTransactionHistory, BackendTransaction } from "@/lib/api/wallet.api";
+import {
+  getTransactionHistory,
+  BackendTransaction,
+} from "@/lib/api/wallet.api";
 import { formatCVT } from "@/utils/currency";
 
 type FilterType =
@@ -91,7 +94,9 @@ export default function TransactionsPage() {
       !searchQuery ||
       tx.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tx._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.metadata?.blockchainTxId?.toLowerCase().includes(searchQuery.toLowerCase());
+      tx.metadata?.blockchainTxId
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
     // Type filter
     const displayType = getTransactionDisplayType(tx.type);
@@ -105,9 +110,13 @@ export default function TransactionsPage() {
 
   // Calculate stats from summary
   const totalTransactions = summary.totalTransactions;
-  const totalCredit = summary.statistics.totalReceived + summary.statistics.totalDeposited;
-  const totalDebit = summary.statistics.totalSpent + summary.statistics.totalWithdrawn;
-  const pendingCount = transactions.filter((tx) => tx.status === "pending").length;
+  const totalCredit =
+    summary.statistics.totalReceived + summary.statistics.totalDeposited;
+  const totalDebit =
+    summary.statistics.totalSpent + summary.statistics.totalWithdrawn;
+  const pendingCount = transactions.filter(
+    (tx) => tx.status === "pending"
+  ).length;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -178,7 +187,8 @@ export default function TransactionsPage() {
       if (tx.type === "refund") {
         from = tx.metadata?.storeName || tx.metadata?.vendorName || "Store";
       } else if (tx.type === "sale") {
-        from = tx.metadata?.buyerName || tx.metadata?.customerName || "Customer";
+        from =
+          tx.metadata?.buyerName || tx.metadata?.customerName || "Customer";
       } else if (tx.type === "transfer_in") {
         from = tx.metadata?.senderName || "User";
       } else if (tx.type === "deposit") {
@@ -193,7 +203,11 @@ export default function TransactionsPage() {
       let to = "External Recipient";
 
       if (tx.type === "payment") {
-        to = tx.metadata?.storeName || tx.metadata?.vendorName || tx.metadata?.sellerName || "Store";
+        to =
+          tx.metadata?.storeName ||
+          tx.metadata?.vendorName ||
+          tx.metadata?.sellerName ||
+          "Store";
       } else if (tx.type === "withdrawal") {
         to = tx.metadata?.withdrawalMethod || "Bank Account";
       } else if (tx.type === "transfer_out") {
@@ -220,12 +234,12 @@ export default function TransactionsPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Breadcrumb */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
+      <div>
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               Home
             </button>
@@ -252,14 +266,6 @@ export default function TransactionsPage() {
                 Transactions
               </h1>
             </div>
-
-            <button
-              onClick={handleExport}
-              className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2"
-            >
-              <ArrowDownTrayIcon className="h-4 w-4" />
-              Export
-            </button>
           </div>
         </div>
       </section>
@@ -330,7 +336,7 @@ export default function TransactionsPage() {
                   filterType === "all"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
-                }`}
+                } cursor-pointer`}
               >
                 All
               </button>
@@ -340,7 +346,7 @@ export default function TransactionsPage() {
                   filterType === "credit"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
-                }`}
+                } cursor-pointer`}
               >
                 Received
               </button>
@@ -350,7 +356,7 @@ export default function TransactionsPage() {
                   filterType === "debit"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
-                }`}
+                } cursor-pointer`}
               >
                 Sent
               </button>
@@ -360,7 +366,7 @@ export default function TransactionsPage() {
                   filterType === "pending"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
-                }`}
+                } cursor-pointer`}
               >
                 Pending
               </button>
@@ -376,14 +382,18 @@ export default function TransactionsPage() {
             <>
               <div className="space-y-0 border border-gray-200 dark:border-gray-800">
                 {filteredTransactions.map((transaction, index) => {
-                  const displayType = getTransactionDisplayType(transaction.type);
+                  const displayType = getTransactionDisplayType(
+                    transaction.type
+                  );
                   const parties = getTransactionParties(transaction);
-                  const category = transaction.metadata?.category || transaction.type.replace(/_/g, " ");
+                  const category =
+                    transaction.metadata?.category ||
+                    transaction.type.replace(/_/g, " ");
 
                   return (
                     <div
                       key={transaction._id}
-                      className={`p-8 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer ${
+                      className={`p-8 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer border border-transparent hover:border-black dark:border-transparent dark:hover:border-white ${
                         index !== filteredTransactions.length - 1
                           ? "border-b border-gray-200 dark:border-gray-800"
                           : ""
@@ -426,7 +436,9 @@ export default function TransactionsPage() {
                               <span>•</span>
                               <span>{formatTime(transaction.timestamp)}</span>
                               <span>•</span>
-                              <span className="font-mono">{transaction._id.slice(0, 8)}</span>
+                              <span className="font-mono">
+                                {transaction._id.slice(0, 8)}
+                              </span>
                             </div>
 
                             <div className="flex items-center gap-2 text-xs">
@@ -468,7 +480,9 @@ export default function TransactionsPage() {
                             )}`}
                           >
                             {getStatusIcon(transaction.status)}
-                            <span className="capitalize">{transaction.status}</span>
+                            <span className="capitalize">
+                              {transaction.status}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -481,21 +495,26 @@ export default function TransactionsPage() {
               {pagination.totalPages > 1 && (
                 <div className="flex items-center justify-between mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Page {pagination.currentPage} of {pagination.totalPages} • {pagination.totalItems} total transactions
+                    Page {pagination.currentPage} of {pagination.totalPages} •{" "}
+                    {pagination.totalItems} total transactions
                   </p>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handlePageChange(pagination.currentPage - 1)}
+                      onClick={() =>
+                        handlePageChange(pagination.currentPage - 1)
+                      }
                       disabled={!pagination.hasPrevPage}
-                      className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
                     >
                       <ChevronLeftIcon className="h-4 w-4" />
                       Previous
                     </button>
                     <button
-                      onClick={() => handlePageChange(pagination.currentPage + 1)}
+                      onClick={() =>
+                        handlePageChange(pagination.currentPage + 1)
+                      }
                       disabled={!pagination.hasNextPage}
-                      className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
                     >
                       Next
                       <ChevronRightIcon className="h-4 w-4" />
@@ -525,7 +544,7 @@ export default function TransactionsPage() {
                     setSearchQuery("");
                     setFilterType("all");
                   }}
-                  className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                  className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
                 >
                   Clear Filters
                 </button>

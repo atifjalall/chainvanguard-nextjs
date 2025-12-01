@@ -37,6 +37,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { invoiceApi } from "@/lib/api/invoice.api";
+import { Loader2 } from "lucide-react";
 
 export default function VendorOrderViewPage() {
   usePageTitle("Order Details");
@@ -196,10 +197,12 @@ export default function VendorOrderViewPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-xs text-gray-600">Loading order details...</p>
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading order details...
+          </p>
         </div>
       </div>
     );

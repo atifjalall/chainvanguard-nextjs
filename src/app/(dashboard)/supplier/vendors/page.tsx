@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
   Card,
   CardContent,
@@ -50,8 +51,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
-import SupplierVendorsSkeleton from "@/components/skeletons/supplierVendorsSkeleton";
-import { Activity } from "lucide-react";
+import { Activity, Loader2 } from "lucide-react";
 import { colors, badgeColors } from "@/lib/colorConstants";
 import {
   Breadcrumb,
@@ -324,7 +324,16 @@ export default function SupplierVendorsPage() {
   };
 
   if (isLoading) {
-    return <SupplierVendorsSkeleton />;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading vendors...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -344,10 +353,10 @@ export default function SupplierVendorsPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
@@ -369,13 +378,13 @@ export default function SupplierVendorsPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Statistics Cards */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
@@ -435,13 +444,13 @@ export default function SupplierVendorsPage() {
               </Card>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Filters and Controls */}
-        <div
-          className={`transform transition-all duration-700 delay-300 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
           <Card
             className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
@@ -547,13 +556,14 @@ export default function SupplierVendorsPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* Tabs */}
-        <div
-          className={`flex justify-center mt-6 transition-all duration-700 delay-350 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="flex justify-center mt-6"
         >
           <div className="w-full flex justify-center">
             <Tabs
@@ -605,13 +615,13 @@ export default function SupplierVendorsPage() {
               </TabsList>
             </Tabs>
           </div>
-        </div>
+        </motion.div>
 
         {/* Vendor Content */}
-        <div
-          className={`transform transition-all duration-700 delay-400 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
         >
           {filteredAndSortedVendors.length > 0 ? (
             <Tabs value={selectedTab} className="space-y-6">
@@ -779,7 +789,7 @@ export default function SupplierVendorsPage() {
               </CardContent>
             </Card>
           )}
-        </div>
+        </motion.div>
       </div>
 
       {/* Vendor Details Dialog */}

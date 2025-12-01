@@ -255,9 +255,9 @@ cartSchema.virtual("isAbandoned").get(function () {
 // ========================================
 
 cartSchema.pre("save", function (next) {
-  // Calculate totals
-  this.totalItems = this.items.length;
-  this.totalQuantity = this.items.reduce((sum, item) => sum + item.quantity, 0);
+  // Calculate totals - totalItems should be count of UNIQUE items, not quantities
+  this.totalItems = this.items.length; // ✅ Number of unique items
+  this.totalQuantity = this.items.reduce((sum, item) => sum + item.quantity, 0); // Total quantity across all items
   this.subtotal = this.items.reduce((sum, item) => sum + item.subtotal, 0);
 
   // Calculate unique sellers
@@ -362,6 +362,11 @@ cartSchema.methods.removeItem = async function (itemId) {
  */
 cartSchema.methods.clearCart = async function () {
   this.items = [];
+  this.savedItems = [];
+  this.totalItems = 0;
+  this.totalQuantity = 0;
+  this.subtotal = 0;
+  this.totalSellers = 0;
   this.appliedCoupon = {
     code: "",
     discount: 0,
