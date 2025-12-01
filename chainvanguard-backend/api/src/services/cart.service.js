@@ -55,9 +55,8 @@ class CartService {
         ? `cart:user:${userId}`
         : `cart:guest:${sessionId}`;
 
-      // Cache cart summary for quick access
-      // Use correct totalItems value (0 if no items)
-      const totalItems = cart.items.length || 0;
+      // ✅ Use items.length for unique item count
+      const totalItems = cart.items.length;
       await redisService.set(
         cacheKey,
         JSON.stringify({
@@ -407,8 +406,21 @@ class CartService {
         throw new Error("Cart not found");
       }
 
-      // 2. Clear cart
-      await cart.clearCart();
+      // 2. Clear cart - explicitly set all values
+      cart.items = [];
+      cart.savedItems = [];
+      cart.totalItems = 0; // ✅ EXPLICITLY SET TO 0
+      cart.totalQuantity = 0; // ✅ EXPLICITLY SET TO 0
+      cart.subtotal = 0; // ✅ EXPLICITLY SET TO 0
+      cart.totalSellers = 0; // ✅ EXPLICITLY SET TO 0
+      cart.appliedCoupon = {
+        code: "",
+        discount: 0,
+        discountType: "",
+      };
+
+      // Force save with validation
+      await cart.save({ validateBeforeSave: true });
 
       // 3. Invalidate cache AND set it to empty values
       const cacheKey = userId
@@ -429,7 +441,7 @@ class CartService {
         300 // 5 minutes TTL
       );
 
-      console.log("✅ Cart cleared");
+      console.log("✅ Cart cleared successfully");
 
       // 🆕 LOG CART ACTION
       await logger.logCart({
@@ -811,7 +823,7 @@ class CartService {
       }
 
       const summary = {
-        totalItems: cart.totalItems,
+        totalItems: cart.items.length, // ✅ Use items.length for unique count
         totalQuantity: cart.totalQuantity,
         subtotal: cart.subtotal,
         discount: cart.appliedCoupon?.discount || 0,
@@ -835,8 +847,17 @@ class CartService {
    */
   async getCartItemCount(userId, sessionId) {
     try {
-      const summary = await this.getCartSummary(userId, sessionId);
-      return summary.totalItems || 0;
+      // ✅ Get fresh cart data instead of cached summary
+      const cart = await this.getCart(userId, sessionId);
+
+      // ✅ Return actual items.length, not cached value
+      const count = cart?.items?.length || 0;
+
+      console.log(
+        `[CART COUNT] User: ${userId || sessionId}, Count: ${count}, Items: ${cart?.items?.length || 0}`
+      );
+
+      return count;
     } catch (error) {
       console.error("❌ Get cart item count error:", error);
       return 0;

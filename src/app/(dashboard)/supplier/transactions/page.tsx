@@ -3,6 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   Card,
   CardContent,
@@ -64,7 +65,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
-import SupplierTransactionsSkeleton from "@/components/skeletons/supplierTransactionsSkeleton";
+import { Loader2 } from "lucide-react";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import {
   Breadcrumb,
@@ -370,13 +371,16 @@ export default function SupplierTransactionsPage() {
       toast.loading("Downloading invoice...");
 
       // Get invoices for this vendor request
-      const response = await invoiceApi.getInvoicesByVendorRequest(transactionId);
+      const response =
+        await invoiceApi.getInvoicesByVendorRequest(transactionId);
 
       if (response.success && response.data?.invoices?.length > 0) {
         const invoice = response.data.invoices[0]; // Get the first invoice
 
         // Download the invoice PDF
-        const downloadResponse = await invoiceApi.downloadInvoiceById(invoice._id);
+        const downloadResponse = await invoiceApi.downloadInvoiceById(
+          invoice._id
+        );
 
         if (downloadResponse.success && downloadResponse.data) {
           // Trigger download
@@ -459,7 +463,16 @@ export default function SupplierTransactionsPage() {
   };
 
   if (isLoading) {
-    return <SupplierTransactionsSkeleton />;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading transactions...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -477,608 +490,653 @@ export default function SupplierTransactionsPage() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div className="space-y-2">
-              <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
-                Supply Chain Transactions
-              </h1>
-              <p className={`text-base ${colors.texts.secondary}`}>
-                Track all blockchain transactions and financial activities
-              </p>
-              <div className={`flex items-center gap-3 mt-2`}>
-                <Badge
-                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+          <div
+            className={`transform transition-all duration-700 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-10 opacity-0"
+            }`}
+          >
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+              <div className="space-y-2">
+                <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
+                  Supply Chain Transactions
+                </h1>
+                <p className={`text-base ${colors.texts.secondary}`}>
+                  Track all blockchain transactions and financial activities
+                </p>
+                <div className={`flex items-center gap-3 mt-2`}>
+                  <Badge
+                    className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                  >
+                    <ArrowsRightLeftIcon
+                      className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
+                    />
+                    On-Chain Transactions
+                  </Badge>
+                  <Badge
+                    className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                  >
+                    <ShieldCheckIcon
+                      className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                    />
+                    Blockchain Verified
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={loadTransactions}
+                  variant="outline"
+                  className={`hidden lg:flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.secondary} transition-all hover:border-black dark:hover:border-white`}
                 >
-                  <ArrowsRightLeftIcon
-                    className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
+                  <ArrowPathIcon
+                    className={`h-4 w-4 ${colors.icons.primary}`}
                   />
-                  On-Chain Transactions
-                </Badge>
-                <Badge
-                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                  Refresh
+                </Button>
+                <Button
+                  onClick={exportToCSV}
+                  variant="default"
+                  className={`flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.primary} transition-all`}
                 >
-                  <ShieldCheckIcon
-                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                  <ArrowDownTrayIcon
+                    className={`h-4 w-4 ${colors.icons.white}`}
                   />
-                  Blockchain Verified
-                </Badge>
+                  Export
+                </Button>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={loadTransactions}
-                variant="outline"
-                className={`hidden lg:flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.secondary} transition-all hover:border-black dark:hover:border-white`}
-              >
-                <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-                Refresh
-              </Button>
-              <Button
-                onClick={exportToCSV}
-                variant="default"
-                className={`flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.primary} transition-all`}
-              >
-                <ArrowDownTrayIcon
-                  className={`h-4 w-4 ${colors.icons.white}`}
-                />
-                Export
-              </Button>
-            </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Statistics Cards */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                title: "Total Transactions",
-                value: totalTransactions.toLocaleString(),
-                subtitle: "All time transactions",
-                icon: ReceiptPercentIcon,
-              },
-              {
-                title: "Total Volume",
-                value: formatCurrencyAbbreviated(totalVolume),
-                subtitle: "Transaction volume",
-                icon: RsIcon,
-              },
-              {
-                title: "Total Sales",
-                value: formatCurrencyAbbreviated(totalSales),
-                subtitle: "Revenue generated",
-                icon: ArrowTrendingUpIcon,
-              },
-              {
-                title: "Completed",
-                value: completedTransactions.toString(),
-                subtitle: "Successfully processed",
-                icon: CheckCircleIcon,
-              },
-            ].map((stat, index) => (
-              <Card
-                key={index}
-                className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 !rounded-none">
-                  <CardTitle
-                    className={`text-xs font-medium ${colors.texts.secondary}`}
-                  >
-                    {stat.title}
-                  </CardTitle>
-                  <div className="h-10 w-10 flex items-center justify-center !rounded-none">
-                    <stat.icon className={`h-5 w-5 ${colors.icons.primary}`} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div
-                    className={`text-lg font-bold ${colors.texts.primary} mb-1`}
-                  >
-                    {stat.value}
-                  </div>
-                  <p className={`text-xs ${colors.texts.secondary}`}>
-                    {stat.subtitle}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+          <div
+            className={`transform transition-all duration-700 delay-200 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-4 opacity-0"
+            }`}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                {
+                  title: "Total Transactions",
+                  value: totalTransactions.toLocaleString(),
+                  subtitle: "All time transactions",
+                  icon: ReceiptPercentIcon,
+                },
+                {
+                  title: "Total Volume",
+                  value: formatCurrencyAbbreviated(totalVolume),
+                  subtitle: "Transaction volume",
+                  icon: RsIcon,
+                },
+                {
+                  title: "Total Sales",
+                  value: formatCurrencyAbbreviated(totalSales),
+                  subtitle: "Revenue generated",
+                  icon: ArrowTrendingUpIcon,
+                },
+                {
+                  title: "Completed",
+                  value: completedTransactions.toString(),
+                  subtitle: "Successfully processed",
+                  icon: CheckCircleIcon,
+                },
+              ].map((stat, index) => (
+                <Card
+                  key={index}
+                  className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 !rounded-none">
+                    <CardTitle
+                      className={`text-xs font-medium ${colors.texts.secondary}`}
+                    >
+                      {stat.title}
+                    </CardTitle>
+                    <div className="h-10 w-10 flex items-center justify-center !rounded-none">
+                      <stat.icon
+                        className={`h-5 w-5 ${colors.icons.primary}`}
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div
+                      className={`text-lg font-bold ${colors.texts.primary} mb-1`}
+                    >
+                      {stat.value}
+                    </div>
+                    <p className={`text-xs ${colors.texts.secondary}`}>
+                      {stat.subtitle}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Filters Card */}
-        <div
-          className={`transform transition-all duration-700 delay-300 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <Card className={`${colors.cards.base} !rounded-none`}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-base">
-                <div className="h-8 w-8 !rounded-none flex items-center justify-center">
-                  <FunnelIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-                </div>
-                Filters & Search
-              </CardTitle>
-              <CardDescription className={`text-xs ${colors.texts.secondary}`}>
-                Filter and search through your transactions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="relative w-full">
-                <MagnifyingGlassIcon
-                  className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
-                />
-                <Input
-                  placeholder="Search by reference, vendor or product"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 !rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px] !rounded-none">
-                    {transactionTypes.map((type) => (
-                      <SelectItem
-                        key={type}
-                        value={type}
-                        className="text-sm h-9"
-                      >
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={selectedStatus}
-                  onValueChange={setSelectedStatus}
+          <div
+            className={`transform transition-all duration-700 delay-300 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-4 opacity-0"
+            }`}
+          >
+            <Card className={`${colors.cards.base} !rounded-none`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-base">
+                  <div className="h-8 w-8 !rounded-none flex items-center justify-center">
+                    <FunnelIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                  </div>
+                  Filters & Search
+                </CardTitle>
+                <CardDescription
+                  className={`text-xs ${colors.texts.secondary}`}
                 >
-                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 !rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px] !rounded-none">
-                    {transactionStatuses.map((status) => (
-                      <SelectItem
-                        key={status}
-                        value={status}
-                        className="text-sm h-9"
-                      >
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 !rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px] !rounded-none">
-                    {sortOptions.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="text-sm h-9"
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2 items-center">
-                  {searchTerm && (
-                    <Badge
-                      variant="outline"
-                      className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs !rounded-none`}
-                    >
-                      &quot;{searchTerm}&quot;
-                      <button
-                        onClick={() => setSearchTerm("")}
-                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  {selectedType !== "All Types" && (
-                    <Badge
-                      variant="outline"
-                      className={`${getBadgeColor(selectedType).bg} ${getBadgeColor(selectedType).border} ${getBadgeColor(selectedType).text} text-xs !rounded-none flex items-center gap-1`}
-                    >
-                      {selectedType === "sale" && (
-                        <ArrowUpIcon
-                          className={`h-3 w-3 ${badgeColors.green.icon}`}
-                        />
-                      )}
-                      {selectedType === "purchase" && (
-                        <ArrowDownIcon
-                          className={`h-3 w-3 ${badgeColors.red.icon}`}
-                        />
-                      )}
-                      {selectedType === "adjustment" && (
-                        <ArrowsUpDownIcon
-                          className={`h-3 w-3 ${badgeColors.yellow.icon}`}
-                        />
-                      )}
-                      {selectedType === "transfer" && (
-                        <ArrowsUpDownIcon
-                          className={`h-3 w-3 ${badgeColors.blue.icon}`}
-                        />
-                      )}
-                      {selectedType}
-                      <button
-                        onClick={() => setSelectedType("All Types")}
-                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  {selectedStatus !== "All Status" && (
-                    <Badge
-                      variant="outline"
-                      className={`${getBadgeColor(selectedStatus).bg} ${getBadgeColor(selectedStatus).border} ${getBadgeColor(selectedStatus).text} text-xs !rounded-none flex items-center gap-1`}
-                    >
-                      {selectedStatus === "completed" && (
-                        <CheckCircleIcon
-                          className={`h-3 w-3 ${badgeColors.green.icon}`}
-                        />
-                      )}
-                      {selectedStatus === "pending" && (
-                        <ClockIcon
-                          className={`h-3 w-3 ${badgeColors.yellow.icon}`}
-                        />
-                      )}
-                      {selectedStatus === "cancelled" && (
-                        <XCircleIcon
-                          className={`h-3 w-3 ${badgeColors.red.icon}`}
-                        />
-                      )}
-                      {selectedStatus}
-                      <button
-                        onClick={() => setSelectedStatus("All Status")}
-                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
-                    {filteredAndSortedTransactions.length} transactions found
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Transactions Table */}
-        <div
-          className={`transform transition-all duration-700 delay-400 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          {filteredAndSortedTransactions.length > 0 ? (
-            <Card
-              className={`${colors.cards.base} !rounded-none !shadow-none hover:!shadow-none`}
-            >
-              <CardHeader
-                className={`border-b ${colors.borders.primary} !rounded-none`}
-              >
-                <div className="flex flex-row items-center gap-4">
-                  <div className="flex flex-col">
-                    <CardTitle
-                      className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
-                    >
-                      <div className="h-8 w-8 !rounded-none flex items-center justify-center">
-                        <BanknotesIcon
-                          className={`h-4 w-4 ${colors.icons.primary}`}
-                        />
-                      </div>
-                      Transaction History
-                    </CardTitle>
-                  </div>
-                  <div className="flex-1" />
-                  <div>
-                    <Badge
-                      variant="secondary"
-                      className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} text-xs !rounded-none flex items-center`}
-                    >
-                      <ShieldCheckIcon
-                        className={`h-3 w-3 mr-1 ${badgeColors.cyan.icon}`}
-                      />
-                      Blockchain Verified
-                    </Badge>
-                  </div>
-                </div>
+                  Filter and search through your transactions
+                </CardDescription>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow
-                        className={`border-b ${colors.borders.secondary} py-4 !rounded-none`}
-                      >
-                        <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[140px]`}
-                        >
-                          Reference
-                        </TableHead>
-                        <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[140px]`}
-                        >
-                          Date
-                        </TableHead>
-                        <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[120px]`}
-                        >
-                          Type
-                        </TableHead>
-                        <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[120px]`}
-                        >
-                          Status
-                        </TableHead>
-                        <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[140px]`}
-                        >
-                          Vendor
-                        </TableHead>
-                        <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[140px]`}
-                        >
-                          Product
-                        </TableHead>
-                        <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[120px]`}
-                        >
-                          Amount
-                        </TableHead>
-                        <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[160px]`}
-                        >
-                          Blockchain
-                        </TableHead>
-                        <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[100px]`}
-                        >
-                          Invoice
-                        </TableHead>
-                        <TableHead
-                          className={`${colors.texts.primary} font-semibold min-w-[100px]`}
-                        >
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAndSortedTransactions.map((transaction: any) => (
-                        <TableRow
-                          key={transaction.id}
-                          className={`border-b ${colors.borders.secondary} ${colors.backgrounds.hover} transition-colors py-4 !rounded-none`}
-                        >
-                          <TableCell className="px-2">
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <code
-                                  className={`text-sm font-mono ${colors.backgrounds.tertiary} px-2 py-1 rounded-none`}
-                                >
-                                  {transaction.reference}
-                                </code>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-2">
-                            <div className="flex items-center gap-2">
-                              <CalendarIcon
-                                className={`h-3 w-3 ${colors.icons.muted}`}
-                              />
-                              <span
-                                className={`text-sm ${colors.texts.primary}`}
-                              >
-                                {formatDate(transaction.date)}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-2">
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                className={`text-xs px-2 py-1 font-medium ${getBadgeColor(transaction.type).bg} ${getBadgeColor(transaction.type).border} ${getBadgeColor(transaction.type).text} flex items-center gap-1 !rounded-none`}
-                                variant="secondary"
-                              >
-                                {transaction.type === "sale" && (
-                                  <ArrowUpIcon
-                                    className={`h-3 w-3 ${badgeColors.green.icon}`}
-                                  />
-                                )}
-                                {transaction.type === "purchase" && (
-                                  <ArrowDownIcon
-                                    className={`h-3 w-3 ${badgeColors.red.icon}`}
-                                  />
-                                )}
-                                {transaction.type === "adjustment" && (
-                                  <ArrowsUpDownIcon
-                                    className={`h-3 w-3 ${badgeColors.yellow.icon}`}
-                                  />
-                                )}
-                                {transaction.type === "transfer" && (
-                                  <ArrowsUpDownIcon
-                                    className={`h-3 w-3 ${badgeColors.blue.icon}`}
-                                  />
-                                )}
-                                {transaction.type}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-2">
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                className={`text-xs px-2 py-1 font-medium ${getBadgeColor(transaction.status).bg} ${getBadgeColor(transaction.status).border} ${getBadgeColor(transaction.status).text} flex items-center gap-1 !rounded-none`}
-                                variant="secondary"
-                              >
-                                {transaction.status === "completed" && (
-                                  <CheckCircleIcon
-                                    className={`h-3 w-3 ${badgeColors.green.icon}`}
-                                  />
-                                )}
-                                {transaction.status === "pending" && (
-                                  <ClockIcon
-                                    className={`h-3 w-3 ${badgeColors.yellow.icon}`}
-                                  />
-                                )}
-                                {transaction.status === "cancelled" && (
-                                  <XCircleIcon
-                                    className={`h-3 w-3 ${badgeColors.red.icon}`}
-                                  />
-                                )}
-                                {transaction.status}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-2">
-                            <div className="flex items-center gap-2">
-                              <BuildingOffice2Icon className="h-3 w-3 text-gray-500" />
-                              <span className="font-medium text-gray-900 dark:text-gray-100">
-                                {transaction.vendor}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-2">
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-gray-100">
-                                {transaction.product}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">
-                                Qty: {transaction.quantity}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-2">
-                            <div className="flex items-center gap-1">
-                              {transaction.amount >= 0 ? (
-                                <ArrowTrendingUpIcon className="h-3 w-3 text-green-500" />
-                              ) : (
-                                <ArrowTrendingDownIcon className="h-3 w-3 text-red-500" />
-                              )}
-                              <span
-                                className={`font-bold ${
-                                  transaction.amount >= 0
-                                    ? "text-green-600 dark:text-green-400"
-                                    : "text-red-600 dark:text-red-400"
-                                }`}
-                              >
-                                {transaction.amount >= 0 ? "+" : ""}
-                                {formatCurrency(transaction.amount)}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-2">
-                            <div className="flex items-center gap-2">
-                              <HashtagIcon className="h-2.5 w-2.5 text-gray-500" />
-                              <code className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-none block">
-                                {transaction.blockchainHash.substring(0, 16)}...
-                              </code>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                handleDownloadInvoice(transaction.id)
-                              }
-                              className={`h-8 w-8 p-0 ${colors.buttons.outline} cursor-pointer !rounded-none transition-all hover:border-black dark:hover:border-white`}
-                            >
-                              <ArrowDownTrayIcon className="h-3 w-3" />
-                            </Button>
-                          </TableCell>
-                          <TableCell className="px-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                handleViewDetails(transaction.id)
-                              }
-                              className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer !rounded-none transition-all hover:border-black dark:hover:border-white`}
-                            >
-                              <EyeIcon className="h-3 w-3 mr-1" />
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card
-              className={`text-center py-16 ${colors.cards.base} overflow-hidden !rounded-none !shadow-none hover:!shadow-none`}
-            >
-              <CardContent>
-                <div
-                  className={`h-20 w-20 mx-auto mb-6 backdrop-blur-sm !rounded-none flex items-center justify-center`}
-                >
-                  <ArrowsUpDownIcon
-                    className={`h-10 w-10 ${colors.icons.muted}`}
+              <CardContent className="space-y-6">
+                <div className="relative w-full">
+                  <MagnifyingGlassIcon
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                  />
+                  <Input
+                    placeholder="Search by reference, vendor or product"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
                   />
                 </div>
-                <h3
-                  className={`text-base font-semibold ${colors.texts.primary} mb-2`}
-                >
-                  {totalTransactions === 0
-                    ? "No Transactions Yet"
-                    : "No Transactions Found"}
-                </h3>
-                <p
-                  className={`text-xs ${colors.texts.secondary} mb-6 max-w-md mx-auto`}
-                >
-                  {totalTransactions === 0
-                    ? "Start selling your supply products to see transactions here."
-                    : "Try adjusting your search terms or filters to find transactions."}
-                </p>
-                {totalTransactions === 0 ? (
-                  <Button
-                    onClick={() => router.push("/supplier/inventory")}
-                    className={`${colors.buttons.primary} shadow-none transition-all duration-300 text-xs cursor-pointer !rounded-none`}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Select value={selectedType} onValueChange={setSelectedType}>
+                    <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 !rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px] !rounded-none">
+                      {transactionTypes.map((type) => (
+                        <SelectItem
+                          key={type}
+                          value={type}
+                          className="text-sm h-9"
+                        >
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={selectedStatus}
+                    onValueChange={setSelectedStatus}
                   >
-                    <CubeIcon
-                      className={`h-4 w-4 mr-2 ${colors.texts.inverse}`}
-                    />
-                    View Inventory
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSelectedType("All Types");
-                      setSelectedStatus("All Status");
-                    }}
-                    className={`inline-flex items-center gap-2 text-xs cursor-pointer ${colors.buttons.outline} transition-all`}
-                  >
-                    Clear Filters
-                  </Button>
-                )}
+                    <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 !rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px] !rounded-none">
+                      {transactionStatuses.map((status) => (
+                        <SelectItem
+                          key={status}
+                          value={status}
+                          className="text-sm h-9"
+                        >
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 !rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px] !rounded-none">
+                      {sortOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="text-sm h-9"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2 items-center">
+                    {searchTerm && (
+                      <Badge
+                        variant="outline"
+                        className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs !rounded-none`}
+                      >
+                        &quot;{searchTerm}&quot;
+                        <button
+                          onClick={() => setSearchTerm("")}
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedType !== "All Types" && (
+                      <Badge
+                        variant="outline"
+                        className={`${getBadgeColor(selectedType).bg} ${getBadgeColor(selectedType).border} ${getBadgeColor(selectedType).text} text-xs !rounded-none flex items-center gap-1`}
+                      >
+                        {selectedType === "sale" && (
+                          <ArrowUpIcon
+                            className={`h-3 w-3 ${badgeColors.green.icon}`}
+                          />
+                        )}
+                        {selectedType === "purchase" && (
+                          <ArrowDownIcon
+                            className={`h-3 w-3 ${badgeColors.red.icon}`}
+                          />
+                        )}
+                        {selectedType === "adjustment" && (
+                          <ArrowsUpDownIcon
+                            className={`h-3 w-3 ${badgeColors.yellow.icon}`}
+                          />
+                        )}
+                        {selectedType === "transfer" && (
+                          <ArrowsUpDownIcon
+                            className={`h-3 w-3 ${badgeColors.blue.icon}`}
+                          />
+                        )}
+                        {selectedType}
+                        <button
+                          onClick={() => setSelectedType("All Types")}
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedStatus !== "All Status" && (
+                      <Badge
+                        variant="outline"
+                        className={`${getBadgeColor(selectedStatus).bg} ${getBadgeColor(selectedStatus).border} ${getBadgeColor(selectedStatus).text} text-xs !rounded-none flex items-center gap-1`}
+                      >
+                        {selectedStatus === "completed" && (
+                          <CheckCircleIcon
+                            className={`h-3 w-3 ${badgeColors.green.icon}`}
+                          />
+                        )}
+                        {selectedStatus === "pending" && (
+                          <ClockIcon
+                            className={`h-3 w-3 ${badgeColors.yellow.icon}`}
+                          />
+                        )}
+                        {selectedStatus === "cancelled" && (
+                          <XCircleIcon
+                            className={`h-3 w-3 ${badgeColors.red.icon}`}
+                          />
+                        )}
+                        {selectedStatus}
+                        <button
+                          onClick={() => setSelectedStatus("All Status")}
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
+                      {filteredAndSortedTransactions.length} transactions found
+                    </span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          )}
-        </div>
+          </div>
+        </motion.div>
+
+        {/* Transactions Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <div
+            className={`transform transition-all duration-700 delay-400 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-4 opacity-0"
+            }`}
+          >
+            {filteredAndSortedTransactions.length > 0 ? (
+              <Card
+                className={`${colors.cards.base} !rounded-none !shadow-none hover:!shadow-none`}
+              >
+                <CardHeader
+                  className={`border-b ${colors.borders.primary} !rounded-none`}
+                >
+                  <div className="flex flex-row items-center gap-4">
+                    <div className="flex flex-col">
+                      <CardTitle
+                        className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
+                      >
+                        <div className="h-8 w-8 !rounded-none flex items-center justify-center">
+                          <BanknotesIcon
+                            className={`h-4 w-4 ${colors.icons.primary}`}
+                          />
+                        </div>
+                        Transaction History
+                      </CardTitle>
+                    </div>
+                    <div className="flex-1" />
+                    <div>
+                      <Badge
+                        variant="secondary"
+                        className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} text-xs !rounded-none flex items-center`}
+                      >
+                        <ShieldCheckIcon
+                          className={`h-3 w-3 mr-1 ${badgeColors.cyan.icon}`}
+                        />
+                        Blockchain Verified
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow
+                          className={`border-b ${colors.borders.secondary} py-4 !rounded-none`}
+                        >
+                          <TableHead
+                            className={`${colors.texts.primary} font-semibold min-w-[140px]`}
+                          >
+                            Reference
+                          </TableHead>
+                          <TableHead
+                            className={`${colors.texts.primary} font-semibold min-w-[140px]`}
+                          >
+                            Date
+                          </TableHead>
+                          <TableHead
+                            className={`${colors.texts.primary} font-semibold min-w-[120px]`}
+                          >
+                            Type
+                          </TableHead>
+                          <TableHead
+                            className={`${colors.texts.primary} font-semibold min-w-[120px]`}
+                          >
+                            Status
+                          </TableHead>
+                          <TableHead
+                            className={`${colors.texts.primary} font-semibold min-w-[140px]`}
+                          >
+                            Vendor
+                          </TableHead>
+                          <TableHead
+                            className={`${colors.texts.primary} font-semibold min-w-[140px]`}
+                          >
+                            Product
+                          </TableHead>
+                          <TableHead
+                            className={`${colors.texts.primary} font-semibold min-w-[120px]`}
+                          >
+                            Amount
+                          </TableHead>
+                          <TableHead
+                            className={`${colors.texts.primary} font-semibold min-w-[160px]`}
+                          >
+                            Blockchain
+                          </TableHead>
+                          <TableHead
+                            className={`${colors.texts.primary} font-semibold min-w-[100px]`}
+                          >
+                            Invoice
+                          </TableHead>
+                          <TableHead
+                            className={`${colors.texts.primary} font-semibold min-w-[100px]`}
+                          >
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAndSortedTransactions.map(
+                          (transaction: any) => (
+                            <TableRow
+                              key={transaction.id}
+                              className={`border-b ${colors.borders.secondary} ${colors.backgrounds.hover} transition-colors py-4 !rounded-none`}
+                            >
+                              <TableCell className="px-2">
+                                <div className="flex items-center gap-3">
+                                  <div>
+                                    <code
+                                      className={`text-sm font-mono ${colors.backgrounds.tertiary} px-2 py-1 rounded-none`}
+                                    >
+                                      {transaction.reference}
+                                    </code>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-2">
+                                <div className="flex items-center gap-2">
+                                  <CalendarIcon
+                                    className={`h-3 w-3 ${colors.icons.muted}`}
+                                  />
+                                  <span
+                                    className={`text-sm ${colors.texts.primary}`}
+                                  >
+                                    {formatDate(transaction.date)}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    className={`text-xs px-2 py-1 font-medium ${getBadgeColor(transaction.type).bg} ${getBadgeColor(transaction.type).border} ${getBadgeColor(transaction.type).text} flex items-center gap-1 !rounded-none`}
+                                    variant="secondary"
+                                  >
+                                    {transaction.type === "sale" && (
+                                      <ArrowUpIcon
+                                        className={`h-3 w-3 ${badgeColors.green.icon}`}
+                                      />
+                                    )}
+                                    {transaction.type === "purchase" && (
+                                      <ArrowDownIcon
+                                        className={`h-3 w-3 ${badgeColors.red.icon}`}
+                                      />
+                                    )}
+                                    {transaction.type === "adjustment" && (
+                                      <ArrowsUpDownIcon
+                                        className={`h-3 w-3 ${badgeColors.yellow.icon}`}
+                                      />
+                                    )}
+                                    {transaction.type === "transfer" && (
+                                      <ArrowsUpDownIcon
+                                        className={`h-3 w-3 ${badgeColors.blue.icon}`}
+                                      />
+                                    )}
+                                    {transaction.type}
+                                  </Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    className={`text-xs px-2 py-1 font-medium ${getBadgeColor(transaction.status).bg} ${getBadgeColor(transaction.status).border} ${getBadgeColor(transaction.status).text} flex items-center gap-1 !rounded-none`}
+                                    variant="secondary"
+                                  >
+                                    {transaction.status === "completed" && (
+                                      <CheckCircleIcon
+                                        className={`h-3 w-3 ${badgeColors.green.icon}`}
+                                      />
+                                    )}
+                                    {transaction.status === "pending" && (
+                                      <ClockIcon
+                                        className={`h-3 w-3 ${badgeColors.yellow.icon}`}
+                                      />
+                                    )}
+                                    {transaction.status === "cancelled" && (
+                                      <XCircleIcon
+                                        className={`h-3 w-3 ${badgeColors.red.icon}`}
+                                      />
+                                    )}
+                                    {transaction.status}
+                                  </Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-2">
+                                <div className="flex items-center gap-2">
+                                  <BuildingOffice2Icon className="h-3 w-3 text-gray-500" />
+                                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                                    {transaction.vendor}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-2">
+                                <div>
+                                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                                    {transaction.product}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                                    Qty: {transaction.quantity}
+                                  </p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-2">
+                                <div className="flex items-center gap-1">
+                                  {transaction.amount >= 0 ? (
+                                    <ArrowTrendingUpIcon className="h-3 w-3 text-green-500" />
+                                  ) : (
+                                    <ArrowTrendingDownIcon className="h-3 w-3 text-red-500" />
+                                  )}
+                                  <span
+                                    className={`font-bold ${
+                                      transaction.amount >= 0
+                                        ? "text-green-600 dark:text-green-400"
+                                        : "text-red-600 dark:text-red-400"
+                                    }`}
+                                  >
+                                    {transaction.amount >= 0 ? "+" : ""}
+                                    {formatCurrency(transaction.amount)}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-2">
+                                <div className="flex items-center gap-2">
+                                  <HashtagIcon className="h-2.5 w-2.5 text-gray-500" />
+                                  <code className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-none block">
+                                    {transaction.blockchainHash.substring(
+                                      0,
+                                      16
+                                    )}
+                                    ...
+                                  </code>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleDownloadInvoice(transaction.id)
+                                  }
+                                  className={`h-8 w-8 p-0 ${colors.buttons.outline} cursor-pointer !rounded-none transition-all hover:border-black dark:hover:border-white`}
+                                >
+                                  <ArrowDownTrayIcon className="h-3 w-3" />
+                                </Button>
+                              </TableCell>
+                              <TableCell className="px-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleViewDetails(transaction.id)
+                                  }
+                                  className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer !rounded-none transition-all hover:border-black dark:hover:border-white`}
+                                >
+                                  <EyeIcon className="h-3 w-3 mr-1" />
+                                  View
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card
+                className={`text-center py-16 ${colors.cards.base} overflow-hidden !rounded-none !shadow-none hover:!shadow-none`}
+              >
+                <CardContent>
+                  <div
+                    className={`h-20 w-20 mx-auto mb-6 backdrop-blur-sm !rounded-none flex items-center justify-center`}
+                  >
+                    <ArrowsUpDownIcon
+                      className={`h-10 w-10 ${colors.icons.muted}`}
+                    />
+                  </div>
+                  <h3
+                    className={`text-base font-semibold ${colors.texts.primary} mb-2`}
+                  >
+                    {totalTransactions === 0
+                      ? "No Transactions Yet"
+                      : "No Transactions Found"}
+                  </h3>
+                  <p
+                    className={`text-xs ${colors.texts.secondary} mb-6 max-w-md mx-auto`}
+                  >
+                    {totalTransactions === 0
+                      ? "Start selling your supply products to see transactions here."
+                      : "Try adjusting your search terms or filters to find transactions."}
+                  </p>
+                  {totalTransactions === 0 ? (
+                    <Button
+                      onClick={() => router.push("/supplier/inventory")}
+                      className={`${colors.buttons.primary} shadow-none transition-all duration-300 text-xs cursor-pointer !rounded-none`}
+                    >
+                      <CubeIcon
+                        className={`h-4 w-4 mr-2 ${colors.texts.inverse}`}
+                      />
+                      View Inventory
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setSelectedType("All Types");
+                        setSelectedStatus("All Status");
+                      }}
+                      className={`inline-flex items-center gap-2 text-xs cursor-pointer ${colors.buttons.outline} transition-all`}
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </motion.div>
       </div>
 
       {/* Transaction Details Modal */}

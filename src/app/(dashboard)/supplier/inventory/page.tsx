@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   Card,
   CardContent,
@@ -51,7 +52,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { Inventory } from "@/types";
 import { toast } from "@/components/ui/sonner";
-import SupplierInventorySkeleton from "@/components/skeletons/supplierInventorySkeleton";
+import { Loader2 } from "lucide-react";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import {
   Breadcrumb,
@@ -398,7 +399,16 @@ export default function SupplierInventoryPage() {
   );
 
   if (isLoading) {
-    return <SupplierInventorySkeleton />;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading inventory...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -419,10 +429,10 @@ export default function SupplierInventoryPage() {
       </Breadcrumb>
 
       {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-        }`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
       >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
@@ -477,10 +487,14 @@ export default function SupplierInventoryPage() {
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Statistics Cards */}
-      <div className={`transform transition-all duration-700 delay-200`}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
           {[
             {
@@ -547,10 +561,14 @@ export default function SupplierInventoryPage() {
             </Card>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Filters Card */}
-      <div className={`transform transition-all duration-700 delay-300`}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
         <Card className={`${colors.cards.base} rounded-none shadow-none`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-base">
@@ -651,10 +669,14 @@ export default function SupplierInventoryPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Inventory Table */}
-      <div className={`transform transition-all duration-700 delay-400`}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
         {filteredAndSortedInventory.length > 0 ? (
           <Card
             className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
@@ -1131,11 +1153,16 @@ export default function SupplierInventoryPage() {
             </CardContent>
           </Card>
         )}
-      </div>
+      </motion.div>
 
       {/* Pagination */}
       {filteredAndSortedInventory.length > itemsPerPage && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6"
+        >
           <div className="text-xs text-gray-600 dark:text-gray-400">
             Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
             {Math.min(
@@ -1183,9 +1210,10 @@ export default function SupplierInventoryPage() {
               Next
             </Button>
           </div>
-        </div>
+        </motion.div>
       )}
 
+      {/* ...existing dialogs... */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent
           className={`max-w-md ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none shadow-none`}

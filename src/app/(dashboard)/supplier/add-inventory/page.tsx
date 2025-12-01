@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1441,10 +1442,11 @@ export default function AddInventoryPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 mb-4 md:mb-6 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-4 md:mb-6"
         >
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="space-y-2">
@@ -1503,7 +1505,7 @@ export default function AddInventoryPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Main Content - Form with Preview */}
         <div
@@ -1511,173 +1513,184 @@ export default function AddInventoryPage() {
         >
           {/* Form Section with Progress Bar */}
           <div className={showPreview ? "lg:col-span-9" : "lg:col-span-12"}>
-            {/* Progress Bar - Matches Form Width */}
-            <Card
-              className={`${colors.cards.base} transition-all duration-300 rounded-none mb-4 md:mb-6 shadow-none`}
+            {/* Progress Bar */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <CardContent className="">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-                    Step {currentStep} of {totalSteps}
-                  </h3>
-                  <span className="text-xs text-gray-500 dark:text-gray-500">
-                    {Math.round(getStepProgress())}% Complete
-                  </span>
-                </div>
-                <Progress
-                  value={getStepProgress()}
-                  className="h-2 mb-4 rounded-none"
-                />
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                  {[
-                    { step: 1, title: "Basic Info", icon: DocumentTextIcon },
-                    { step: 2, title: "Textile Details", icon: SwatchIcon },
-                    { step: 3, title: "Stock & Pricing", icon: CubeIcon },
-                    { step: 4, title: "Quality", icon: ShieldCheckIcon },
-                    {
-                      step: 5,
-                      title: "Supplier",
-                      icon: BuildingStorefrontIcon,
-                    },
-                    { step: 6, title: "Media", icon: CameraIcon },
-                  ].map(({ step, title, icon: Icon }) => {
-                    const isSelected = step === currentStep;
-                    const isCompleted = step < currentStep;
-                    const canGoToNext =
-                      step === currentStep + 1 &&
-                      Object.keys(validateStep(currentStep)).length === 0;
-                    const isDisabled = step > currentStep && !canGoToNext;
-                    return (
-                      <button
-                        key={step}
-                        onClick={() => {
-                          if (step < currentStep) {
-                            setCurrentStep(step);
-                          } else if (step === currentStep + 1) {
-                            const stepErrors = validateStep(currentStep);
-                            if (Object.keys(stepErrors).length === 0) {
+              <Card
+                className={`${colors.cards.base} transition-all duration-300 rounded-none mb-4 md:mb-6 shadow-none`}
+              >
+                <CardContent className="">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+                      Step {currentStep} of {totalSteps}
+                    </h3>
+                    <span className="text-xs text-gray-500 dark:text-gray-500">
+                      {Math.round(getStepProgress())}% Complete
+                    </span>
+                  </div>
+                  <Progress
+                    value={getStepProgress()}
+                    className="h-2 mb-4 rounded-none"
+                  />
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                    {[
+                      { step: 1, title: "Basic Info", icon: DocumentTextIcon },
+                      { step: 2, title: "Textile Details", icon: SwatchIcon },
+                      { step: 3, title: "Stock & Pricing", icon: CubeIcon },
+                      { step: 4, title: "Quality", icon: ShieldCheckIcon },
+                      {
+                        step: 5,
+                        title: "Supplier",
+                        icon: BuildingStorefrontIcon,
+                      },
+                      { step: 6, title: "Media", icon: CameraIcon },
+                    ].map(({ step, title, icon: Icon }) => {
+                      const isSelected = step === currentStep;
+                      const isCompleted = step < currentStep;
+                      const canGoToNext =
+                        step === currentStep + 1 &&
+                        Object.keys(validateStep(currentStep)).length === 0;
+                      const isDisabled = step > currentStep && !canGoToNext;
+                      return (
+                        <button
+                          key={step}
+                          onClick={() => {
+                            if (step < currentStep) {
                               setCurrentStep(step);
+                            } else if (step === currentStep + 1) {
+                              const stepErrors = validateStep(currentStep);
+                              if (Object.keys(stepErrors).length === 0) {
+                                setCurrentStep(step);
+                              }
                             }
-                          }
-                        }}
-                        disabled={isDisabled}
-                        className={`flex items-center justify-center gap-1 md:gap-2 p-2 rounded-none transition-all cursor-pointer text-xs md:text-sm
-                          ${
-                            isSelected
-                              ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
-                              : isCompleted
+                          }}
+                          disabled={isDisabled}
+                          className={`flex items-center justify-center gap-1 md:gap-2 p-2 rounded-none transition-all cursor-pointer text-xs md:text-sm
+                            ${
+                              isSelected
+                                ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                                : isCompleted
                                 ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                                 : isDisabled
-                                  ? "bg-gray-50 dark:bg-gray-900 text-gray-400 cursor-not-allowed"
-                                  : "bg-gray-50 dark:bg-gray-900 text-gray-500"
-                          }
-                          ${
-                            !isSelected && !isDisabled
-                              ? "border border-transparent hover:border-black dark:hover:border-white"
-                              : ""
-                          }
-                        `}
-                        style={{
-                          // Remove outline on click for consistency
-                          outline: "none",
-                        }}
-                        type="button"
-                      >
-                        <Icon
-                          className={`h-3 w-3 md:h-4 md:w-4 ${
-                            isSelected
-                              ? "text-white dark:text-gray-900"
-                              : "text-gray-900 dark:text-gray-100"
-                          }`}
-                        />
-                        <span className="text-xs font-medium hidden md:inline">
-                          {title}
-                        </span>
-                        <span className="text-xs font-medium md:hidden">
-                          {title.split(" ")[0]}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                                ? "bg-gray-50 dark:bg-gray-900 text-gray-400 cursor-not-allowed"
+                                : "bg-gray-50 dark:bg-gray-900 text-gray-500"
+                            }
+                            ${
+                              !isSelected && !isDisabled
+                                ? "border border-transparent hover:border-black dark:hover:border-white"
+                                : ""
+                            }
+                          `}
+                          style={{
+                            // Remove outline on click for consistency
+                            outline: "none",
+                          }}
+                          type="button"
+                        >
+                          <Icon
+                            className={`h-3 w-3 md:h-4 md:w-4 ${
+                              isSelected
+                                ? "text-white dark:text-gray-900"
+                                : "text-gray-900 dark:text-gray-100"
+                            }`}
+                          />
+                          <span className="text-xs font-medium hidden md:inline">
+                            {title}
+                          </span>
+                          <span className="text-xs font-medium md:hidden">
+                            {title.split(" ")[0]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Form Card */}
-            <Card
-              className={`${colors.cards.base} transition-all duration-300 rounded-none shadow-none`}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <CardContent className="">
-                {/* Step 1: Basic Information */}
-                {currentStep === 1 && (
-                  <div className="space-y-2 md:space-y-4">
-                    <div className="flex items-center gap-3 mb-4 md:mb-6">
-                      <div>
-                        <h3
-                          className={`text-sm md:text-base font-semibold ${colors.texts.primary}`}
-                        >
-                          Basic Item Information
-                        </h3>
-                        <p
-                          className={`text-xs md:text-sm ${colors.texts.secondary}`}
-                        >
-                          Essential details about the inventory item
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-x-6 gap-y-2">
-                      <div className="space-y-1">
-                        <Label
-                          htmlFor="name"
-                          className={`text-xs md:text-sm font-medium ${colors.texts.accent}`}
-                        >
-                          Item Name <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="name"
-                          placeholder="e.g., Premium Cotton Fabric"
-                          value={formData.name}
-                          onChange={(e) =>
-                            handleInputChange("name", e.target.value)
-                          }
-                          className={`text-sm h-9 md:h-10 ${colors.inputs.base} ${colors.inputs.focus} transition-colors duration-200 ${
-                            errors.name ? `border-red-500` : ""
-                          } rounded-none hover:border-black`}
-                        />
-                        <div className="min-h-4">
-                          {errors.name && (
-                            <p
-                              className={`text-xs ${colors.texts.error} flex items-center gap-1`}
-                            >
-                              <ExclamationTriangleIcon className="h-1.5 w-1.5" />
-                              {errors.name}
-                            </p>
-                          )}
+              <Card
+                className={`${colors.cards.base} transition-all duration-300 rounded-none shadow-none`}
+              >
+                <CardContent className="">
+                  {/* Step 1: Basic Information */}
+                  {currentStep === 1 && (
+                    <div className="space-y-2 md:space-y-4">
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <div>
+                          <h3
+                            className={`text-sm md:text-base font-semibold ${colors.texts.primary}`}
+                          >
+                            Basic Item Information
+                          </h3>
+                          <p
+                            className={`text-xs md:text-sm ${colors.texts.secondary}`}
+                          >
+                            Essential details about the inventory item
+                          </p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                      <div className="grid grid-cols-1 gap-x-6 gap-y-2">
                         <div className="space-y-1">
                           <Label
-                            htmlFor="category"
-                            className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                            htmlFor="name"
+                            className={`text-xs md:text-sm font-medium ${colors.texts.accent}`}
                           >
-                            Category <span className="text-red-500">*</span>
+                            Item Name <span className="text-red-500">*</span>
                           </Label>
-                          <Select
-                            value={formData.category}
-                            onValueChange={(value) => {
-                              handleInputChange("category", value);
-                              handleInputChange("subcategory", "");
-                            }}
-                          >
-                            <SelectTrigger
-                              className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
-                                errors.category
-                                  ? "border-red-500"
-                                  : "border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white"
-                              }`}
+                          <Input
+                            id="name"
+                            placeholder="e.g., Premium Cotton Fabric"
+                            value={formData.name}
+                            onChange={(e) =>
+                              handleInputChange("name", e.target.value)
+                            }
+                            className={`text-sm h-9 md:h-10 ${colors.inputs.base} ${colors.inputs.focus} transition-colors duration-200 ${
+                              errors.name ? `border-red-500` : ""
+                            } rounded-none hover:border-black`}
+                          />
+                          <div className="min-h-4">
+                            {errors.name && (
+                              <p
+                                className={`text-xs ${colors.texts.error} flex items-center gap-1`}
+                              >
+                                <ExclamationTriangleIcon className="h-1.5 w-1.5" />
+                                {errors.name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                          <div className="space-y-1">
+                            <Label
+                              htmlFor="category"
+                              className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
+                            >
+                              Category <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                              value={formData.category}
+                              onValueChange={(value) => {
+                                handleInputChange("category", value);
+                                handleInputChange("subcategory", "");
+                              }}
+                            >
+                              <SelectTrigger
+                                className={`text-sm h-9 md:h-10 w-full bg-white dark:bg-gray-900 border rounded-none cursor-pointer hover:border-black outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none ${
+                                  errors.category
+                                    ? "border-red-500"
+                                    : "border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-white"
+                                }`}
                             >
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
@@ -3181,19 +3194,25 @@ export default function AddInventoryPage() {
                 )}
               </CardContent>
             </Card>
+            </motion.div>
           </div>
 
           {/* Preview Section - Narrower and Separate */}
           {showPreview && (
-            <div className="lg:col-span-3">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="lg:col-span-3"
+            >
               <div className="sticky top-20">
                 <PreviewCard formData={formData} />
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
 
-        {/* Confirmation Dialog */}
+        {/* Confirmation Dialog - no changes needed, dialogs handle their own animations */}
         <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
           <DialogContent
             className={`${colors.backgrounds.modal} ${colors.borders.primary} rounded-none shadow-none max-w-sm md:max-w-md`}

@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   Card,
   CardContent,
@@ -34,7 +35,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
-import SupplierDashboardSkeleton from "@/components/skeletons/supplierDashboardSkeleton";
+import { Loader2 } from "lucide-react";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import { analyticsApi } from "@/lib/api/supplier.dashboard.api";
 import supplierRatingApi from "@/lib/api/supplier.rating.api";
@@ -395,17 +396,26 @@ export default function SupplierDashboard() {
   }, [metrics.totalRevenue, metrics.totalInventoryValue]);
 
   if (isLoading) {
-    return <SupplierDashboardSkeleton />;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading dashboard...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="relative z-10 p-6 space-y-6">
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="space-y-2">
@@ -448,13 +458,13 @@ export default function SupplierDashboard() {
               Add Inventory
             </Button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Stats Grid */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
             {[
@@ -527,13 +537,13 @@ export default function SupplierDashboard() {
               );
             })}
           </div>
-        </div>
+        </motion.div>
 
         {/* Main Content */}
-        <div
-          className={`transform transition-all duration-700 delay-400 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Recent Activity */}
@@ -721,13 +731,13 @@ export default function SupplierDashboard() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </motion.div>
 
         {/* Bottom Section */}
-        <div
-          className={`transform transition-all duration-700 delay-600 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top Vendors */}
@@ -959,13 +969,13 @@ export default function SupplierDashboard() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </motion.div>
 
         {/* Quick Actions */}
-        <div
-          className={`transform transition-all duration-700 delay-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
         >
           <Card
             className={`${colors.cards.base} transition-all duration-300 mt-6 rounded-none !shadow-none hover:!shadow-none`}
@@ -1062,7 +1072,7 @@ export default function SupplierDashboard() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

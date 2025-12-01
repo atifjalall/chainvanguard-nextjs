@@ -215,14 +215,14 @@ export default function LoginPage() {
         {/* Header */}
         <header className="border-gray-200 dark:border-gray-800">
           <div className="max-w-[1600px] mx-auto px-12 lg:px-16 h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3 cursor-pointer">
               <span className="text-lg font-light text-gray-900 dark:text-white tracking-wide">
                 ChainVanguard
               </span>
             </Link>
 
-            <Link href="/register">
-              <button className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors">
+            <Link href="/register" className="cursor-pointer">
+              <button className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors cursor-pointer">
                 Create Account
               </button>
             </Link>
@@ -270,7 +270,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setWalletInputMode("select")}
-                      className={`flex-1 h-11 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors ${
+                      className={`flex-1 h-11 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors cursor-pointer ${
                         walletInputMode === "select"
                           ? "bg-black dark:bg-white text-white dark:text-black"
                           : "bg-white dark:bg-gray-950 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -281,7 +281,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setWalletInputMode("manual")}
-                      className={`flex-1 h-11 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors ${
+                      className={`flex-1 h-11 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors cursor-pointer ${
                         walletInputMode === "manual"
                           ? "bg-black dark:bg-white text-white dark:text-black"
                           : "bg-white dark:bg-gray-950 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -317,7 +317,7 @@ export default function LoginPage() {
                                   walletError
                                     ? "border-red-500 dark:border-red-500"
                                     : "border-gray-900 dark:border-white"
-                                } pb-px`}
+                                } pb-px cursor-pointer`}
                               >
                                 <span className="h-12 flex items-center text-sm text-gray-900 dark:text-white">
                                   {getSelectedWalletName()}
@@ -345,7 +345,7 @@ export default function LoginPage() {
                                             setSelectedWallet(wallet.id);
                                             setShowWalletDropdown(false);
                                           }}
-                                          className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-0"
+                                          className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-0 cursor-pointer"
                                         >
                                           <p className="text-sm text-gray-900 dark:text-white font-medium">
                                             {wallet.name}
@@ -449,7 +449,7 @@ export default function LoginPage() {
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="h-12 px-3 -mr-3 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                              className="h-12 px-3 -mr-3 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
                             >
                               {showPassword ? (
                                 <EyeSlashIcon className="h-4 w-4" />
@@ -478,7 +478,7 @@ export default function LoginPage() {
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full bg-black dark:bg-white text-white dark:text-black h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-black dark:bg-white text-white dark:text-black h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {isLoading ? (
                         <>
@@ -494,7 +494,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => router.push("/forgot-password")}
-                      className="w-full border border-black dark:border-white text-black dark:text-white h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                      className="w-full border border-black dark:border-white text-black dark:text-white h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
                     >
                       Forgot Password?
                     </button>
@@ -507,7 +507,7 @@ export default function LoginPage() {
                     Don&apos;t have a wallet?{" "}
                     <Link
                       href="/register"
-                      className="text-gray-900 dark:text-white hover:underline transition-colors"
+                      className="text-gray-900 dark:text-white hover:underline transition-colors cursor-pointer"
                     >
                       Create New Wallet
                     </Link>
@@ -518,21 +518,21 @@ export default function LoginPage() {
                 {availableWallets.length === 0 &&
                   walletInputMode === "select" && (
                     <div className="border border-gray-200 dark:border-gray-800 p-6">
-                      <div className="flex items-start gap-3">
-                        <ExclamationTriangleIcon className="h-5 w-5 text-gray-900 dark:text-white flex-shrink-0 mt-0.5" />
-                        <div className="space-y-3">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="flex items-center gap-3">
+                          <ExclamationTriangleIcon className="h-4 w-4 text-gray-900 dark:text-white flex-shrink-0" />
                           <p className="text-xs text-gray-900 dark:text-white">
                             No wallets found. Create a new wallet or enter your
                             wallet address manually.
                           </p>
-                          <button
-                            type="button"
-                            onClick={() => router.push("/register")}
-                            className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-                          >
-                            Create Wallet
-                          </button>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => router.push("/register")}
+                          className="mx-auto border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
+                        >
+                          Create Wallet
+                        </button>
                       </div>
                     </div>
                   )}

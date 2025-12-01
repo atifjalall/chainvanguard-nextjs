@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -1613,8 +1614,8 @@ export default function EditInventoryPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
             Loading inventory data...
           </p>
         </div>
@@ -1645,10 +1646,11 @@ export default function EditInventoryPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 mb-4 md:mb-6 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-4 md:mb-6"
         >
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="space-y-2">
@@ -1707,14 +1709,19 @@ export default function EditInventoryPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Main Content - Form with Preview */}
         <div
           className={`grid gap-4 md:gap-6 ${showPreview ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1"}`}
         >
           {/* Form Section with Progress Bar */}
-          <div className={showPreview ? "lg:col-span-9" : "lg:col-span-12"}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className={showPreview ? "lg:col-span-9" : "lg:col-span-12"}
+          >
             {/* Progress Bar - Matches Form Width */}
             <Card
               className={`${colors.cards.base} transition-all duration-300 rounded-none mb-4 md:mb-6 shadow-none`}
@@ -3471,18 +3478,23 @@ export default function EditInventoryPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
 
           {/* Preview Section - Narrower and Separate */}
           {showPreview && (
-            <div className="lg:col-span-3">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="lg:col-span-3"
+            >
               <div className="sticky top-20">
                 <PreviewCard
                   formData={formData}
                   originalFormData={originalFormData}
                 />
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
 

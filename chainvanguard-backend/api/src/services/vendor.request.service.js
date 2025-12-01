@@ -124,7 +124,8 @@ class VendorRequestService {
         vendorName: vendor.name || vendor.email || vendor.companyName || "",
         vendorWalletAddress: vendor.walletAddress || "",
         supplierId: supplierId.toString(),
-        supplierName: supplier.name || supplier.email || supplier.companyName || "",
+        supplierName:
+          supplier.name || supplier.email || supplier.companyName || "",
         supplierWalletAddress: supplier.walletAddress || "",
 
         // Immutable snapshot at creation
@@ -139,7 +140,7 @@ class VendorRequestService {
         total: request.total,
         currency: request.currency || "CVT",
 
-        initialStatus: request.status,  // Status at creation
+        initialStatus: request.status, // Status at creation
         createdAt: request.createdAt.toISOString(),
       };
 
@@ -339,12 +340,13 @@ class VendorRequestService {
 
       // ✅ ADD: Record approval to blockchain
       try {
-        const blockchainResult = await fabricService.recordVendorRequestApproval(
-          requestId,
-          supplierId.toString(),
-          new Date().toISOString(),
-          supplierNotes || ""
-        );
+        const blockchainResult =
+          await fabricService.recordVendorRequestApproval(
+            requestId,
+            supplierId.toString(),
+            new Date().toISOString(),
+            supplierNotes || ""
+          );
 
         // Update MongoDB with blockchain confirmation
         if (!request.blockchainVerified) {
@@ -439,12 +441,13 @@ class VendorRequestService {
 
       // ✅ ADD: Record rejection to blockchain
       try {
-        const blockchainResult = await fabricService.recordVendorRequestRejection(
-          requestId,
-          supplierId.toString(),
-          new Date().toISOString(),
-          rejectionReason
-        );
+        const blockchainResult =
+          await fabricService.recordVendorRequestRejection(
+            requestId,
+            supplierId.toString(),
+            new Date().toISOString(),
+            rejectionReason
+          );
 
         // Update MongoDB with blockchain confirmation
         if (!request.blockchainVerified) {
@@ -537,12 +540,13 @@ class VendorRequestService {
 
       // ✅ ADD: Record cancellation to blockchain
       try {
-        const blockchainResult = await fabricService.recordVendorRequestCancellation(
-          requestId,
-          vendorId.toString(),
-          new Date().toISOString(),
-          "Request cancelled by vendor"
-        );
+        const blockchainResult =
+          await fabricService.recordVendorRequestCancellation(
+            requestId,
+            vendorId.toString(),
+            new Date().toISOString(),
+            "Request cancelled by vendor"
+          );
 
         // Update MongoDB with blockchain confirmation
         if (!request.blockchainVerified) {
@@ -1381,7 +1385,11 @@ class VendorRequestService {
         },
       });
 
-      // Since payment is complete, immediately transfer inventory to vendor
+      // ✅ COMMIT TRANSACTION FIRST before creating vendor inventory
+      await session.commitTransaction();
+      logger.info("✅ Payment transaction committed successfully");
+
+      // ✅ NOW create vendor inventory AFTER transaction is committed
       try {
         logger.info(
           `📦 Auto-creating vendor inventory from paid order ${order._id}`
@@ -1396,168 +1404,85 @@ class VendorRequestService {
           "vendor",
           "Auto-delivered after payment completion"
         );
-        await order.save({ session });
+        await order.save(); // ✅ Save WITHOUT session (transaction already committed)
 
-        // Create vendor inventory records
-        const inventoryRecords = [];
+        // ✅ FIXED: Call the proper service method that handles blockchain recording
+        const vendorInventoryService = (
+          await import("./vendor.inventory.service.js")
+        ).default;
 
-        for (const item of order.items) {
-          const inventoryIdToLookup =
-            item.productId?._id || item.productId || item.inventoryId;
+        // This method will:
+        // 1. Create vendor inventory records in MongoDB
+        // 2. Record creation events on blockchain with full logging
+        // 3. Generate delivery receipts
+        // 4. Send notifications
+        const inventoryResult =
+          await vendorInventoryService.createFromDeliveredOrder(
+            order._id,
+            vendorId
+          );
 
-          if (!inventoryIdToLookup) {
-            logger.warn(`No inventory ID found for item in order ${order._id}`);
-            continue;
-          }
-
-          const inventoryItem =
-            await Inventory.findById(inventoryIdToLookup).session(session);
-
-          if (!inventoryItem) {
-            logger.warn(
-              `Inventory item not found for ID: ${inventoryIdToLookup}`
-            );
-            continue;
-          }
-
-          const VendorInventory = (await import("../models/VendorInventory.js"))
-            .default;
-
-          const inventoryRecord = new VendorInventory({
-            vendorId: vendorId,
-            vendorName:
-              vendorRequest.vendorId.name ||
-              vendorRequest.vendorId.companyName ||
-              "Vendor",
-            vendorRequestId: vendorRequest._id,
-            orderId: order._id,
-            supplier: {
-              supplierId: vendorRequest.supplierId._id,
-              supplierName:
-                vendorRequest.supplierId.companyName ||
-                vendorRequest.supplierId.name ||
-                "Supplier",
-              contactEmail: vendorRequest.supplierId.email || "",
-              contactPhone: vendorRequest.supplierId.phone || "",
-            },
-            inventoryItem: {
-              inventoryId: inventoryItem._id,
-              name: inventoryItem.name,
-              sku: inventoryItem.sku || "",
-              category: inventoryItem.category,
-              subcategory: inventoryItem.subcategory || "",
-              description: inventoryItem.description || "",
-              images: inventoryItem.images || [],
-              specifications: inventoryItem.specifications || {},
-            },
-            quantity: {
-              received: item.quantity,
-              used: 0,
-              current: item.quantity,
-              reserved: 0,
-              damaged: 0,
-              unit: inventoryItem.unit || "units",
-            },
-            cost: {
-              perUnit: item.price,
-              totalCost: item.subtotal,
-              currency: order.currency || "CVT",
-            },
-            dates: {
-              purchased: vendorRequest.createdAt,
-              approved: vendorRequest.reviewedAt,
-              received: order.deliveredAt,
-            },
-            location: {
-              warehouse: "Main Warehouse",
-              section: "",
-              bin: "",
-            },
-            reorderLevel: Math.floor(item.quantity * 0.2),
-            reorderQuantity: item.quantity,
-            status: "active",
-            blockchain: {
-              txId: "",
-              verified: false,
-            },
-          });
-
-          // Add initial movement record
-          inventoryRecord.movements.push({
-            type: "received",
-            quantity: item.quantity,
-            previousQuantity: 0,
-            newQuantity: item.quantity,
-            performedBy: vendorId,
-            performedByRole: "vendor",
-            relatedOrderId: order._id,
-            reason: `Received from ${vendorRequest.supplierId.companyName || vendorRequest.supplierId.name}`,
-            notes: `Order ${order.orderNumber}`,
-            timestamp: new Date(),
-          });
-
-          await inventoryRecord.save({ session });
-          inventoryRecords.push(inventoryRecord);
-
+        if (inventoryResult.alreadyExists) {
+          logger.warn(`Vendor inventory already exists for order ${order._id}`);
+        } else {
           logger.info(
-            `✅ Created vendor inventory record: ${inventoryRecord._id} for ${inventoryItem.name}`
+            `✅ Created ${inventoryResult.count} vendor inventory records with blockchain recording`
           );
         }
-
-        // Send notification about inventory received
-        await notificationService.createNotification({
-          userId: vendorId,
-          userRole: "vendor",
-          type: "stock_updated",
-          category: "inventory",
-          title: "Raw Materials Received",
-          message: `${inventoryRecords.length} items have been added to your inventory from order ${order.orderNumber}`,
-          priority: "high",
-          relatedEntity: {
-            entityType: "order",
-            entityId: order._id,
-          },
-        });
-
-        logger.info(
-          `✅ Created ${inventoryRecords.length} vendor inventory records from order ${order._id}`
-        );
       } catch (inventoryError) {
         logger.error("❌ Failed to create vendor inventory:", inventoryError);
-        // Don't fail the entire transaction - inventory can be created manually later
+        // Don't fail the entire response - inventory can be created manually later
       }
-
-      await session.commitTransaction();
 
       // ✅ CRITICAL: Record vendor payment event on blockchain
       try {
-        await fabricService.recordVendorRequestPayment(vendorRequest._id.toString(), {
-          vendorId: vendorId.toString(),
-          amount: vendorRequest.total,
-          currency: "CVT",
-          paymentMethod: "wallet",
-          transactionHash: null,
-          orderId: order._id.toString(),
-          vendorInventoryId: null, // Vendor inventory IDs created above
-        });
-        logger.info(`✅ Vendor payment event recorded on blockchain: ${vendorRequest.requestNumber}`);
+        await fabricService.recordVendorRequestPayment(
+          vendorRequest._id.toString(),
+          {
+            vendorId: vendorId.toString(),
+            amount: vendorRequest.total,
+            currency: "CVT",
+            paymentMethod: "wallet",
+            transactionHash: null,
+            orderId: order._id.toString(),
+            vendorInventoryId: null,
+          }
+        );
+        logger.info(
+          `✅ Vendor payment event recorded on blockchain: ${vendorRequest.requestNumber}`
+        );
       } catch (blockchainError) {
-        logger.error("⚠️ Failed to record vendor payment on blockchain:", blockchainError.message);
+        logger.error(
+          "⚠️ Failed to record vendor payment on blockchain:",
+          blockchainError.message
+        );
         // Continue even if blockchain fails - payment already processed
       }
 
       // 🧾 AUTO-GENERATE PURCHASE INVOICE after payment
-      logger.info(`🧾 Starting invoice generation for vendor request: ${vendorRequest.requestNumber}`);
+      logger.info(
+        `🧾 Starting invoice generation for vendor request: ${vendorRequest.requestNumber}`
+      );
       try {
         const invoiceService = (await import("./invoice.service.js")).default;
 
         // Populate vendor and supplier if not already populated
         await vendorRequest.populate([
-          { path: "vendorId", select: "name email companyName phone address city state country postalCode walletAddress" },
-          { path: "supplierId", select: "name email companyName phone businessAddress address city state country postalCode walletAddress" }
+          {
+            path: "vendorId",
+            select:
+              "name email companyName phone address city state country postalCode walletAddress",
+          },
+          {
+            path: "supplierId",
+            select:
+              "name email companyName phone businessAddress address city state country postalCode walletAddress",
+          },
         ]);
 
-        logger.info(`📋 Vendor: ${vendorRequest.vendorId?.name || 'N/A'}, Supplier: ${vendorRequest.supplierId?.name || 'N/A'}`);
+        logger.info(
+          `📋 Vendor: ${vendorRequest.vendorId?.name || "N/A"}, Supplier: ${vendorRequest.supplierId?.name || "N/A"}`
+        );
 
         const invoice = await invoiceService.generateVendorRequestInvoice(
           vendorRequest,
@@ -1565,12 +1490,14 @@ class VendorRequestService {
           vendorRequest.supplierId
         );
 
-        logger.info(`✅ Purchase invoice auto-generated: ${invoice.invoiceNumber} | IPFS: ${invoice.ipfsHash || 'PENDING'}`);
+        logger.info(
+          `✅ Purchase invoice auto-generated: ${invoice.invoiceNumber} | IPFS: ${invoice.ipfsHash || "PENDING"}`
+        );
       } catch (invoiceError) {
         logger.error("❌ Failed to generate purchase invoice:", {
           error: invoiceError.message,
           stack: invoiceError.stack,
-          requestNumber: vendorRequest.requestNumber
+          requestNumber: vendorRequest.requestNumber,
         });
         // Continue even if invoice generation fails
       }
@@ -1805,10 +1732,18 @@ class VendorRequestService {
         requestId: request._id.toString(),
         requestNumber: request.requestNumber,
         vendorId: request.vendorId._id.toString(),
-        vendorName: request.vendorId.name || request.vendorId.email || request.vendorId.companyName || "",
+        vendorName:
+          request.vendorId.name ||
+          request.vendorId.email ||
+          request.vendorId.companyName ||
+          "",
         vendorWalletAddress: request.vendorId.walletAddress || "",
         supplierId: request.supplierId._id.toString(),
-        supplierName: request.supplierId.name || request.supplierId.email || request.supplierId.companyName || "",
+        supplierName:
+          request.supplierId.name ||
+          request.supplierId.email ||
+          request.supplierId.companyName ||
+          "",
         supplierWalletAddress: request.supplierId.walletAddress || "",
         items: request.items.map((item) => ({
           inventoryId: item.inventoryId.toString(),
@@ -1842,7 +1777,9 @@ class VendorRequestService {
         );
 
         if (ipfsResult.success) {
-          console.log(`✅ Updated vendor request data on IPFS: ${ipfsResult.ipfsHash}`);
+          console.log(
+            `✅ Updated vendor request data on IPFS: ${ipfsResult.ipfsHash}`
+          );
           ipfsHash = ipfsResult.ipfsHash;
           request.ipfsHash = ipfsHash;
         }

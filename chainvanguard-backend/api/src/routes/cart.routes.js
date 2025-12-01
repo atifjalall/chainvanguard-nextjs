@@ -28,8 +28,8 @@ router.get("/", optionalAuth, async (req, res) => {
           _id: cart._id,
           userId: cart.userId,
           items: cart.items.map((item) => ({
-            _id: item._id.toString(), // 🆕 ENSURE STRING
-            productId: item.productId, // Return full product object
+            _id: item._id.toString(),
+            productId: item.productId,
             quantity: item.quantity,
             price: item.price,
             subtotal: item.subtotal,
@@ -40,7 +40,7 @@ router.get("/", optionalAuth, async (req, res) => {
             selectedFit: item.selectedFit,
           })),
           totalAmount: cart.totalAmount,
-          totalItems: cart.totalItems,
+          totalItems: cart.items.length, // ✅ Always use items.length for unique count
           totalQuantity: cart.totalQuantity,
           subtotal: cart.subtotal,
           discount: cart.discount || 0,
@@ -55,8 +55,8 @@ router.get("/", optionalAuth, async (req, res) => {
           _id: cart._id,
           sessionId: cart.sessionId,
           items: cart.items.map((item) => ({
-            _id: item._id.toString(), // 🆕 ENSURE STRING
-            productId: item.productId, // Return full product object
+            _id: item._id.toString(),
+            productId: item.productId,
             quantity: item.quantity,
             price: item.price,
             subtotal: item.subtotal,
@@ -67,7 +67,7 @@ router.get("/", optionalAuth, async (req, res) => {
             selectedFit: item.selectedFit,
           })),
           totalAmount: cart.totalAmount,
-          totalItems: cart.totalItems,
+          totalItems: cart.items.length, // ✅ Always use items.length for unique count
           totalQuantity: cart.totalQuantity,
           subtotal: cart.subtotal,
           discount: cart.discount || 0,
@@ -732,13 +732,13 @@ router.get("/count", optionalAuth, async (req, res) => {
 
     res.json({
       success: true,
-      count,
+      count: count || 0, // ✅ Ensure 0 if undefined/null
     });
   } catch (error) {
     console.error("GET /api/cart/count error:", error);
     res.json({
       success: true,
-      count: 0,
+      count: 0, // ✅ Return 0 on error
     });
   }
 });

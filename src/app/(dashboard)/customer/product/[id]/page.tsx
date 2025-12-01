@@ -30,6 +30,12 @@ import { addToCart } from "@/lib/api/customer.cart.api";
 import type { Product } from "@/types";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useCart } from "@/components/providers/cart-provider";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import { motion } from "framer-motion";
 
 interface ProductCardProps {
   id: string | number;
@@ -86,7 +92,7 @@ function ProductCard({
   return (
     <div className="group relative w-full">
       <div className="relative bg-gray-100 dark:bg-gray-900 w-full overflow-hidden">
-        <a href={`/customer/product/${id}`} className="block">
+        <a href={`/customer/product/${id}`} className="block cursor-pointer">
           <div className="relative w-full aspect-[3/4]">
             {!imageError && images && images.length > 0 ? (
               <img
@@ -138,13 +144,16 @@ function ProductCard({
 
       <div className="pt-1 pb-1">
         <div className="flex items-center justify-between mb-0">
-          <a href={`/customer/product/${id}`} className="block flex-1">
+          <a
+            href={`/customer/product/${id}`}
+            className="block flex-1 cursor-pointer"
+          >
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               {name}
             </h3>
           </a>
           <button
-            className="flex items-center justify-center hover:border hover:border-gray-300 dark:hover:border-gray-700"
+            className="flex items-center justify-center hover:border hover:border-gray-300 dark:hover:border-gray-700 cursor-pointer"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -196,6 +205,9 @@ export default function ProductDetailPage() {
   const [wishlistItems, setWishlistItems] = useState<(number | string)[]>([]);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+
+  // Collapsible state for description expand / collapse
+  const [descOpen, setDescOpen] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -399,6 +411,51 @@ export default function ProductDetailPage() {
     );
   };
 
+  // Helper to render multi-paragraph descriptions while fully justifying text.
+  // Collapses single newlines into spaces so text flows naturally, splits paragraphs
+  // on blank lines, and applies hyphenation/word-breaking to improve justification.
+  const renderDescription = (description?: string | null) => {
+    if (!description) return null;
+
+    // Normalize CRLF to LF and trim
+    const normalized = description.replace(/\r\n/g, "\n").trim();
+
+    // Split by two or more newlines (paragraph separator)
+    const rawParagraphs = normalized.split(/\n{2,}/g).map((p) => p.trim());
+
+    // Collapse single newlines inside paragraphs to spaces so text flows naturally
+    const paragraphs = rawParagraphs.map((p) => p.replace(/\n+/g, " ").trim());
+
+    return (
+      <>
+        {paragraphs.map((para, idx) => {
+          // Treat as "short" if fewer than ~80 chars or fewer than 8 words,
+          // so we avoid full justification that creates large gaps on short lines.
+          const wordCount = para.split(/\s+/).filter(Boolean).length;
+          const isShort = para.length < 80 || wordCount < 8;
+
+          return (
+            <p
+              key={idx}
+              className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed break-words mb-4"
+              style={{
+                textAlign: isShort ? "left" : "justify",
+                // Avoid justifying the last line — prevents big gaps
+                textAlignLast: isShort ? "left" : "start",
+                textJustify: "inter-word",
+                WebkitHyphens: isShort ? "manual" : "auto",
+                hyphens: isShort ? "manual" : "auto",
+                overflowWrap: "break-word",
+              }}
+            >
+              {para}
+            </p>
+          );
+        })}
+      </>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
@@ -421,7 +478,7 @@ export default function ProductDetailPage() {
           </p>
           <button
             onClick={() => router.push("/customer/browse")}
-            className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline"
+            className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline cursor-pointer"
           >
             Back to Browse
           </button>
@@ -443,14 +500,14 @@ export default function ProductDetailPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               Home
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <button
               onClick={() => router.push("/customer/browse")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               Browse
             </button>
@@ -459,7 +516,7 @@ export default function ProductDetailPage() {
               onClick={() =>
                 router.push(`/customer/browse?category=${product.category}`)
               }
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               {product.category}
             </button>
@@ -582,11 +639,7 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {product.description}
-                </p>
-              </div>
+              {/* Removed description from here (moved under Product Details) */}
 
               {/* Updated: Check for color/size directly, with fallbacks to apparelDetails */}
               {(product.color || product.apparelDetails?.color) && (
@@ -620,7 +673,7 @@ export default function ProductDetailPage() {
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
                       disabled={quantity <= 1}
-                      className="w-10 h-11 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-10 h-11 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       <MinusIcon className="h-3 w-3" />
                     </button>
@@ -632,7 +685,7 @@ export default function ProductDetailPage() {
                         setQuantity(Math.min(productQuantity, quantity + 1))
                       }
                       disabled={quantity >= productQuantity}
-                      className="w-10 h-11 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-10 h-11 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       <PlusIcon className="h-3 w-3" />
                     </button>
@@ -644,7 +697,7 @@ export default function ProductDetailPage() {
                 <button
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
-                  className="flex-1 bg-black dark:bg-white text-white dark:text-black h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 bg-black dark:bg-white text-white dark:text-black h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer"
                 >
                   {addedToCart ? (
                     <CheckIcon className="h-4 w-4" />
@@ -656,7 +709,7 @@ export default function ProductDetailPage() {
                 </button>
                 <button
                   onClick={() => toggleWishlist(product._id || product.id)}
-                  className="w-12 h-12 border border-gray-300 dark:border-gray-700 flex items-center justify-center hover:border-black dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                  className="w-12 h-12 border border-gray-300 dark:border-gray-700 flex items-center justify-center hover:border-black dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
                 >
                   <BookmarkIcon
                     className={`h-4 w-4 ${
@@ -718,6 +771,114 @@ export default function ProductDetailPage() {
                       </li>
                     ))}
                   </ul>
+                  {/* Collapsible product description below product details */}
+                  {product.description && (
+                    <div className="pt-4">
+                      <div className="relative">
+                        <Collapsible open={descOpen} onOpenChange={setDescOpen}>
+                          <div className="flex items-center">
+                            {/* Heading as a trigger — clicking text toggles */}
+                            <CollapsibleTrigger asChild>
+                              <motion.button
+                                type="button"
+                                aria-label={
+                                  descOpen
+                                    ? "Collapse description"
+                                    : "Expand description"
+                                }
+                                aria-expanded={descOpen}
+                                animate={{
+                                  color: descOpen ? "#000000" : undefined,
+                                }}
+                                className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium leading-none text-left cursor-pointer hover:text-gray-600 dark:hover:text-gray-300"
+                              >
+                                Description
+                              </motion.button>
+                            </CollapsibleTrigger>
+
+                            {/* Inline icon trigger next to heading — smaller icon-only button */}
+                            <CollapsibleTrigger asChild>
+                              <motion.button
+                                type="button"
+                                aria-hidden={false}
+                                aria-label={
+                                  descOpen
+                                    ? "Collapse description"
+                                    : "Expand description"
+                                }
+                                className="w-6 h-6 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white self-center cursor-pointer"
+                              >
+                                {descOpen ? (
+                                  <MinusIcon className="h-3 w-3" />
+                                ) : (
+                                  <PlusIcon className="h-3 w-3" />
+                                )}
+                              </motion.button>
+                            </CollapsibleTrigger>
+                          </div>
+
+                          <CollapsibleContent isOpen={descOpen}>
+                            <div className="pt-3">
+                              {renderDescription(product.description)}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* If no details exist but a description is present, render the description under the same Product Details block */}
+              {details.length === 0 && product.description && (
+                <div className="space-y-4 pt-8 border-t border-gray-200 dark:border-gray-800">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium">
+                    Product Details
+                  </p>
+                  <div className="pt-4">
+                    {/* Reuse collapsible for the standalone description section */}
+                    <div className="relative">
+                      <Collapsible open={descOpen} onOpenChange={setDescOpen}>
+                        <div className="flex items-center">
+                          <CollapsibleTrigger asChild>
+                            <motion.button
+                              aria-label={
+                                descOpen
+                                  ? "Collapse description"
+                                  : "Expand description"
+                              }
+                              aria-expanded={descOpen}
+                              className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium leading-none text-left cursor-pointer hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                              Description
+                            </motion.button>
+                          </CollapsibleTrigger>
+                          <CollapsibleTrigger asChild>
+                            <motion.button
+                              aria-hidden
+                              aria-label={
+                                descOpen
+                                  ? "Collapse description"
+                                  : "Expand description"
+                              }
+                              className="w-6 h-6 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white self-center cursor-pointer"
+                            >
+                              {descOpen ? (
+                                <MinusIcon className="h-3 w-3" />
+                              ) : (
+                                <PlusIcon className="h-3 w-3" />
+                              )}
+                            </motion.button>
+                          </CollapsibleTrigger>
+                        </div>
+                        <CollapsibleContent isOpen={descOpen}>
+                          <div className="pt-3">
+                            {renderDescription(product.description)}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -767,9 +928,7 @@ export default function ProductDetailPage() {
                       ).toLocaleDateString()}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {review.comment}
-                  </p>
+                  {renderDescription(review.comment)}
                   {review.isVerifiedPurchase && (
                     <div className="mt-3">
                       <span className="inline-flex items-center px-2 py-1 text-[10px] uppercase tracking-wider bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">

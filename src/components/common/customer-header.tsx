@@ -342,7 +342,20 @@ export default function CustomerHeader() {
   };
 
   const getDisplayName = () => {
-    return user?.name || user?.walletName || "User";
+    const name = user?.name || user?.walletName || "User";
+
+    // If a full name exists, display only the first token (first name).
+    // If it's an email, use the part before "@"
+    if (user?.name) {
+      const firstToken = name.trim().split(/\s+/)[0];
+      const firstName = firstToken.includes("@")
+        ? firstToken.split("@")[0]
+        : firstToken;
+      return firstName.charAt(0).toUpperCase() + firstName.slice(1);
+    }
+
+    // Fallback to walletName or "User"
+    return name;
   };
 
   return (
@@ -493,7 +506,7 @@ export default function CustomerHeader() {
                                 onClick={() =>
                                   handleNotificationClick(notification)
                                 }
-                                className="w-full p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-left group"
+                                className="w-full p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-left group cursor-pointer"
                               >
                                 <div className="flex items-start gap-3">
                                   {/* Unread Indicator - Grey Square */}
@@ -566,7 +579,7 @@ export default function CustomerHeader() {
                           setNotificationOpen(false);
                           router.push("/customer/notifications");
                         }}
-                        className="w-full text-center text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
+                        className="w-full text-center text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors cursor-pointer"
                       >
                         View All Notifications
                       </button>
@@ -608,7 +621,7 @@ export default function CustomerHeader() {
                   router.push("/customer/profile");
                 }}
                 aria-label="Profile"
-                className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium hidden sm:block cursor-pointer text-left"
+                className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium hidden sm:block cursor-pointer text-left max-w-[120px] truncate"
               >
                 {getDisplayName()}
               </button>

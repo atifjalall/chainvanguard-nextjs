@@ -79,35 +79,9 @@ export default function NotificationsPage() {
     }
   };
 
-  const getNotificationColor = (category: string) => {
-    switch (category) {
-      case "order":
-        return "text-blue-600 dark:text-blue-400";
-      case "return":
-        return "text-yellow-600 dark:text-yellow-400";
-      case "payment":
-        return "text-green-600 dark:text-green-400";
-      case "system":
-        return "text-gray-600 dark:text-gray-400";
-      default:
-        return "text-gray-600 dark:text-gray-400";
-    }
-  };
-
-  const getNotificationBg = (category: string) => {
-    switch (category) {
-      case "order":
-        return "bg-blue-50 dark:bg-blue-900/20";
-      case "return":
-        return "bg-yellow-50 dark:bg-yellow-900/20";
-      case "payment":
-        return "bg-green-50 dark:bg-green-900/20";
-      case "system":
-        return "bg-gray-50 dark:bg-gray-900";
-      default:
-        return "bg-gray-50 dark:bg-gray-900";
-    }
-  };
+  // Use a single background for all notification icons (same badge)
+  const getNotificationBg = (_category: string) =>
+    "bg-gray-100 dark:bg-gray-900";
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -292,12 +266,12 @@ export default function NotificationsPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Breadcrumb */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
+      <div>
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="cursor-pointer text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               Home
             </button>
@@ -325,7 +299,7 @@ export default function NotificationsPage() {
                   Notifications
                 </h1>
                 {unreadCount > 0 && (
-                  <div className="h-8 w-8 bg-gray-400 dark:bg-gray-600 text-white flex items-center justify-center">
+                  <div className="h-8 w-8 bg-black text-white flex items-center justify-center">
                     <span className="text-xs font-medium">{unreadCount}</span>
                   </div>
                 )}
@@ -335,7 +309,7 @@ export default function NotificationsPage() {
             <button
               onClick={handleMarkAllAsRead}
               disabled={unreadCount === 0 || loading}
-              className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
+              className="cursor-pointer border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <CheckIcon className="h-4 w-4" />
               Mark All Read
@@ -350,7 +324,7 @@ export default function NotificationsPage() {
           <div className="flex gap-0 overflow-x-auto">
             <button
               onClick={() => setFilterType("all")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 filterType === "all"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -360,7 +334,7 @@ export default function NotificationsPage() {
             </button>
             <button
               onClick={() => setFilterType("order")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 filterType === "order"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -371,7 +345,7 @@ export default function NotificationsPage() {
             </button>
             <button
               onClick={() => setFilterType("return")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 filterType === "return"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -382,7 +356,7 @@ export default function NotificationsPage() {
             </button>
             <button
               onClick={() => setFilterType("payment")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 filterType === "payment"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -393,7 +367,7 @@ export default function NotificationsPage() {
             </button>
             <button
               onClick={() => setFilterType("system")}
-              className={`px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer px-8 h-14 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors border-b-2 whitespace-nowrap ${
                 filterType === "system"
                   ? "border-black dark:border-white text-gray-900 dark:text-white"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -415,7 +389,7 @@ export default function NotificationsPage() {
                 <button
                   onClick={handleSelectAll}
                   disabled={loading}
-                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-[0.2em] disabled:opacity-50"
+                  className="cursor-pointer text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-[0.2em] disabled:opacity-50"
                 >
                   {selectedNotifications.length === filteredNotifications.length
                     ? "Deselect All"
@@ -433,7 +407,7 @@ export default function NotificationsPage() {
                   <button
                     onClick={handleDeleteSelected}
                     disabled={loading}
-                    className="border border-gray-900 dark:border-white text-gray-900 dark:text-white px-6 h-9 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 hover:text-white dark:hover:bg-white dark:hover:text-gray-900 transition-colors flex items-center gap-2 disabled:opacity-50"
+                    className="cursor-pointer border border-gray-900 dark:border-white text-gray-900 dark:text-white px-6 h-9 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 hover:text-white dark:hover:bg-white dark:hover:text-gray-900 transition-colors flex items-center gap-2 disabled:opacity-50"
                   >
                     <TrashIcon className="h-3.5 w-3.5" />
                     Delete Selected
@@ -442,7 +416,7 @@ export default function NotificationsPage() {
                 <button
                   onClick={handleClearAll}
                   disabled={loading}
-                  className="border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-9 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors flex items-center gap-2 disabled:opacity-50"
+                  className="cursor-pointer border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white px-6 h-9 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
                   <XMarkIcon className="h-3.5 w-3.5" />
                   Clear All
@@ -491,10 +465,10 @@ export default function NotificationsPage() {
                           handleSelectNotification(notification._id)
                         }
                         disabled={loading}
-                        className="h-5 w-5 border-2 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors flex items-center justify-center flex-shrink-0 mt-1 disabled:opacity-50"
+                        className="cursor-pointer h-5 w-5 border-2 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors flex items-center justify-center flex-shrink-0 mt-1 disabled:opacity-50"
                       >
                         {selectedNotifications.includes(notification._id) && (
-                          <CheckIcon className="h-3 w-3 text-gray-900 dark:text-white" />
+                          <CheckIcon className="h-3 w-3" />
                         )}
                       </button>
 
@@ -509,20 +483,14 @@ export default function NotificationsPage() {
                           notification.category
                         )}`}
                       >
-                        <div
-                          className={getNotificationColor(
-                            notification.category
-                          )}
-                        >
-                          {getNotificationIcon(notification.category)}
-                        </div>
+                        <div>{getNotificationIcon(notification.category)}</div>
                       </div>
 
                       {/* Content */}
                       <button
                         onClick={() => handleNotificationClick(notification)}
                         disabled={loading}
-                        className="flex-1 text-left disabled:opacity-50"
+                        className="cursor-pointer flex-1 text-left disabled:opacity-50"
                       >
                         <div className="space-y-2">
                           <h3
@@ -555,10 +523,10 @@ export default function NotificationsPage() {
                           <button
                             onClick={() => handleMarkAsRead(notification._id)}
                             disabled={loading}
-                            className="h-8 w-8 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors disabled:opacity-50"
+                            className="cursor-pointer h-8 w-8 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors disabled:opacity-50"
                             title="Mark as read"
                           >
-                            <CheckIcon className="h-3.5 w-3.5 text-gray-900 dark:text-white" />
+                            <CheckIcon className="h-3.5 w-3.5" />
                           </button>
                         )}
                         <button
@@ -566,10 +534,10 @@ export default function NotificationsPage() {
                             handleDeleteNotification(notification._id)
                           }
                           disabled={loading}
-                          className="h-8 w-8 border border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white flex items-center justify-center transition-colors group disabled:opacity-50"
+                          className="cursor-pointer h-8 w-8 border border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white flex items-center justify-center transition-colors group disabled:opacity-50"
                           title="Delete"
                         >
-                          <TrashIcon className="h-3.5 w-3.5 text-gray-900 dark:text-white" />
+                          <TrashIcon className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </div>

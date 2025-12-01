@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
 import * as vendorRequestApi from "@/lib/api/supplier.vendor.request.api";
 import type { VendorRequest, VendorRequestStats } from "@/types";
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -458,10 +460,12 @@ export default function VendorRequestsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading requests...</p>
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading requests...
+          </p>
         </div>
       </div>
     );
@@ -484,218 +488,245 @@ export default function VendorRequestsPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div className="space-y-2">
-              <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
-                Vendor Requests
-              </h1>
-              <p className={`text-base ${colors.texts.secondary}`}>
-                Manage incoming requests from your vendor partners
-              </p>
-              <div className={`flex items-center ${HEADER_GAP} mt-2`}>
-                <Badge
-                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
-                >
-                  <InboxStackIcon
-                    className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
-                  />
-                  Request Management
-                </Badge>
-                <Badge
-                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
-                >
-                  <ShieldCheckIcon
-                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
-                  />
-                  Blockchain Verified
-                </Badge>
+          <div
+            className={`transform transition-all duration-700 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-10 opacity-0"
+            }`}
+          >
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+              <div className="space-y-2">
+                <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
+                  Vendor Requests
+                </h1>
+                <p className={`text-base ${colors.texts.secondary}`}>
+                  Manage incoming requests from your vendor partners
+                </p>
+                <div className={`flex items-center ${HEADER_GAP} mt-2`}>
+                  <Badge
+                    className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                  >
+                    <InboxStackIcon
+                      className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
+                    />
+                    Request Management
+                  </Badge>
+                  <Badge
+                    className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                  >
+                    <ShieldCheckIcon
+                      className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                    />
+                    Blockchain Verified
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Statistics Cards */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                title: "Total Requests",
-                value: totalRequests.toString(),
-                subtitle: "All requests",
-                icon: InboxStackIcon,
-              },
-              {
-                title: "New Requests",
-                value: newRequests.toString(),
-                subtitle: "Recently submitted",
-                icon: InboxArrowDownIcon,
-              },
-              {
-                title: "Pending",
-                value: pendingRequests.toString(),
-                subtitle: "Awaiting payment",
-                icon: ClockIcon,
-              },
-              {
-                title: "Confirmed",
-                value: confirmedRequests.toString(),
-                subtitle: "Payment confirmed",
-                icon: CheckCircleIcon,
-              },
-            ].map((stat, index) => (
-              <Card
-                key={index}
-                className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle
-                    className={`text-xs font-medium ${colors.texts.secondary}`}
-                  >
-                    {stat.title}
-                  </CardTitle>
-                  <stat.icon className={`h-5 w-5 ${colors.icons.primary}`} />
-                </CardHeader>
-                <CardContent>
-                  <div
-                    className={`text-lg font-bold ${colors.texts.primary} mb-1`}
-                  >
-                    {stat.value}
-                  </div>
-                  <p className={`text-xs ${colors.texts.secondary}`}>
-                    {stat.subtitle}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+          <div
+            className={`transform transition-all duration-700 delay-200 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-4 opacity-0"
+            }`}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                {
+                  title: "Total Requests",
+                  value: totalRequests.toString(),
+                  subtitle: "All requests",
+                  icon: InboxStackIcon,
+                },
+                {
+                  title: "New Requests",
+                  value: newRequests.toString(),
+                  subtitle: "Recently submitted",
+                  icon: InboxArrowDownIcon,
+                },
+                {
+                  title: "Pending",
+                  value: pendingRequests.toString(),
+                  subtitle: "Awaiting payment",
+                  icon: ClockIcon,
+                },
+                {
+                  title: "Confirmed",
+                  value: confirmedRequests.toString(),
+                  subtitle: "Payment confirmed",
+                  icon: CheckCircleIcon,
+                },
+              ].map((stat, index) => (
+                <Card
+                  key={index}
+                  className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle
+                      className={`text-xs font-medium ${colors.texts.secondary}`}
+                    >
+                      {stat.title}
+                    </CardTitle>
+                    <stat.icon className={`h-5 w-5 ${colors.icons.primary}`} />
+                  </CardHeader>
+                  <CardContent>
+                    <div
+                      className={`text-lg font-bold ${colors.texts.primary} mb-1`}
+                    >
+                      {stat.value}
+                    </div>
+                    <p className={`text-xs ${colors.texts.secondary}`}>
+                      {stat.subtitle}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Filters and Controls */}
-        <div
-          className={`transform transition-all duration-700 delay-300 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <Card
-            className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+          <div
+            className={`transform transition-all duration-700 delay-300 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-4 opacity-0"
+            }`}
           >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-base">
-                <FunnelIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-                Filters & Search
-              </CardTitle>
-              <CardDescription className={`text-xs ${colors.texts.secondary}`}>
-                Filter and search through your vendor requests
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-6 mb-4">
-                <div className="relative w-full">
-                  <MagnifyingGlassIcon
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
-                  />
-                  <Input
-                    placeholder="Search requests by vendor or request number"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Select
-                    value={selectedStatus}
-                    onValueChange={setSelectedStatus}
-                  >
-                    <SelectTrigger
-                      className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
-                    >
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {statusOptions.map((status) => (
-                        <SelectItem
-                          key={status}
-                          value={status}
-                          className="text-sm h-9"
-                        >
-                          {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger
-                      className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
-                    >
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {sortOptions.map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={option.value}
-                          className="text-sm h-9"
-                        >
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2 items-center mt-2">
-                {searchTerm && (
-                  <Badge
-                    variant="outline"
-                    className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
-                  >
-                    &quot;{searchTerm}&quot;
-                    <button
-                      onClick={() => setSearchTerm("")}
-                      className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                )}
-                {selectedStatus !== "All Status" && (
-                  <Badge
-                    variant="outline"
-                    className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
-                  >
-                    {selectedStatus}
-                    <button
-                      onClick={() => setSelectedStatus("All Status")}
-                      className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                )}
-                <span
-                  className={`text-xs ${colors.texts.secondary} ml-2 whitespace-nowrap`}
+            <Card
+              className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-base">
+                  <FunnelIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+                  Filters & Search
+                </CardTitle>
+                <CardDescription
+                  className={`text-xs ${colors.texts.secondary}`}
                 >
-                  {filteredAndSortedRequests.length} requests found
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  Filter and search through your vendor requests
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-6 mb-4">
+                  <div className="relative w-full">
+                    <MagnifyingGlassIcon
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                    />
+                    <Input
+                      placeholder="Search requests by vendor or request number"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Select
+                      value={selectedStatus}
+                      onValueChange={setSelectedStatus}
+                    >
+                      <SelectTrigger
+                        className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                      >
+                        <SelectValue placeholder="All Status" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {statusOptions.map((status) => (
+                          <SelectItem
+                            key={status}
+                            value={status}
+                            className="text-sm h-9"
+                          >
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger
+                        className={`text-sm h-9 w-full min-w-[240px} ${colors.inputs.base} cursor-pointer ${colors.inputs.focus} transition-colors duration-200`}
+                      >
+                        <SelectValue placeholder="Sort by" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {sortOptions.map((option) => (
+                          <SelectItem
+                            key={option.value}
+                            value={option.value}
+                            className="text-sm h-9"
+                          >
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 items-center mt-2">
+                  {searchTerm && (
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
+                    >
+                      &quot;{searchTerm}&quot;
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                  {selectedStatus !== "All Status" && (
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${colors.backgrounds.primary} ${colors.borders.primary} ${colors.texts.secondary} rounded-none`}
+                    >
+                      {selectedStatus}
+                      <button
+                        onClick={() => setSelectedStatus("All Status")}
+                        className={`ml-1 ${colors.texts.secondary} hover:${colors.texts.primary} cursor-pointer`}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                  <span
+                    className={`text-xs ${colors.texts.secondary} ml-2 whitespace-nowrap`}
+                  >
+                    {filteredAndSortedRequests.length} requests found
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </motion.div>
 
-        {/* Tabs - Removed numbers */}
-        <div
-          className={`flex justify-center mt-6 transition-all duration-700 delay-350 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        {/* Tabs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="flex justify-center mt-6"
         >
           <div className="w-full flex justify-center">
             <Tabs
@@ -787,227 +818,243 @@ export default function VendorRequestsPage() {
               </TabsList>
             </Tabs>
           </div>
-        </div>
+        </motion.div>
 
         {/* Auto Approve Toggle */}
-        <div
-          className={`transform transition-all duration-700 delay-400 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <Card
-            className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+          <div
+            className={`transform transition-all duration-700 delay-400 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-4 opacity-0"
+            }`}
           >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label
-                    className={`text-base font-medium ${colors.texts.primary}`}
-                  >
-                    Auto Approve Requests
-                  </Label>
-                  <p className={`text-sm ${colors.texts.secondary}`}>
-                    Automatically approve requests below a certain threshold
-                  </p>
+            <Card
+              className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label
+                      className={`text-base font-medium ${colors.texts.primary}`}
+                    >
+                      Auto Approve Requests
+                    </Label>
+                    <p className={`text-sm ${colors.texts.secondary}`}>
+                      Automatically approve requests below a certain threshold
+                    </p>
+                  </div>
+                  <Switch
+                    checked={autoApprove}
+                    onCheckedChange={handleAutoApproveToggle}
+                  />
                 </div>
-                <Switch
-                  checked={autoApprove}
-                  onCheckedChange={handleAutoApproveToggle}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        </motion.div>
 
         {/* Request Cards */}
-        <div
-          className={`transform transition-all duration-700 delay-500 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAndSortedRequests.map((request) => (
-              <Card
-                key={request._id}
-                className={`${colors.cards.base} hover:${colors.cards.hover} overflow-hidden group rounded-none !shadow-none hover:!shadow-none`}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4 mb-4">
-                    <Avatar
-                      className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
-                    >
-                      <AvatarFallback
-                        className={`${colors.texts.primary} font-bold rounded-none`}
+          <div
+            className={`transform transition-all duration-700 delay-500 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-4 opacity-0"
+            }`}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredAndSortedRequests.map((request) => (
+                <Card
+                  key={request._id}
+                  className={`${colors.cards.base} hover:${colors.cards.hover} overflow-hidden group rounded-none !shadow-none hover:!shadow-none`}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4 mb-4">
+                      <Avatar
+                        className={`h-12 w-12 ${colors.borders.primary} rounded-none ${colors.backgrounds.tertiary}`}
                       >
-                        {getVendorName(request).substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3
-                          className={`font-semibold ${colors.texts.primary} truncate`}
+                        <AvatarFallback
+                          className={`${colors.texts.primary} font-bold rounded-none`}
                         >
-                          {getVendorName(request)}
-                        </h3>
-                        {getStatusIcon(getDisplayStatus(request))}
-                      </div>
-                      <p className={`text-sm ${colors.texts.muted} truncate`}>
-                        {getVendorEmail(request)}
-                      </p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Badge
-                          className={`flex items-center gap-1 text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(request)}`}
-                          variant="secondary"
-                        >
-                          {getDisplayStatus(request).replace("_", " ")}
-                        </Badge>
-                        {request.urgency && (
+                          {getVendorName(request).substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3
+                            className={`font-semibold ${colors.texts.primary} truncate`}
+                          >
+                            {getVendorName(request)}
+                          </h3>
+                          {getStatusIcon(getDisplayStatus(request))}
+                        </div>
+                        <p className={`text-sm ${colors.texts.muted} truncate`}>
+                          {getVendorEmail(request)}
+                        </p>
+                        <div className="flex items-center gap-1 mt-1">
                           <Badge
-                            className={`flex items-center gap-1 text-xs rounded-none px-2 py-0.5 ${getUrgencyBadgeClass(request.urgency)}`}
+                            className={`flex items-center gap-1 text-xs rounded-none px-2 py-0.5 ${getStatusBadgeClass(request)}`}
                             variant="secondary"
                           >
-                            {request.urgency} priority
+                            {getDisplayStatus(request).replace("_", " ")}
                           </Badge>
-                        )}
+                          {request.urgency && (
+                            <Badge
+                              className={`flex items-center gap-1 text-xs rounded-none px-2 py-0.5 ${getUrgencyBadgeClass(request.urgency)}`}
+                              variant="secondary"
+                            >
+                              {request.urgency} priority
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-3 mb-4">
-                    <div
-                      className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
-                    >
-                      <CubeIcon className={`h-4 w-4 ${colors.icons.muted}`} />
-                      <span className={`${colors.texts.primary}`}>
-                        Items: {request.items.length}
-                      </span>
-                    </div>
-                    <div
-                      className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
-                    >
-                      <ShoppingBagIcon
-                        className={`h-4 w-4 ${colors.icons.muted}`}
-                      />
-                      <span className={`${colors.texts.primary}`}>
-                        Request #{request.requestNumber}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <div
-                      className={`text-center p-3 ${colors.backgrounds.accent} rounded-none`}
-                    >
-                      <p
-                        className={`text-xl font-bold ${colors.texts.success}`}
+                    <div className="space-y-3 mb-4">
+                      <div
+                        className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
                       >
-                        {formatCurrency(request.total)}
-                      </p>
-                      <p className={`text-xs ${colors.texts.muted}`}>
-                        Total Value
-                      </p>
+                        <CubeIcon className={`h-4 w-4 ${colors.icons.muted}`} />
+                        <span className={`${colors.texts.primary}`}>
+                          Items: {request.items.length}
+                        </span>
+                      </div>
+                      <div
+                        className={`flex items-center gap-2 text-sm ${colors.texts.accent}`}
+                      >
+                        <ShoppingBagIcon
+                          className={`h-4 w-4 ${colors.icons.muted}`}
+                        />
+                        <span className={`${colors.texts.primary}`}>
+                          Request #{request.requestNumber}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`text-xs ${colors.texts.muted}`}>
-                      Requested: {formatDate(request.createdAt)}
+                    <div className="mb-4">
+                      <div
+                        className={`text-center p-3 ${colors.backgrounds.accent} rounded-none`}
+                      >
+                        <p
+                          className={`text-xl font-bold ${colors.texts.success}`}
+                        >
+                          {formatCurrency(request.total)}
+                        </p>
+                        <p className={`text-xs ${colors.texts.muted}`}>
+                          Total Value
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex gap-3">
-                    {request.status === "pending" && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setIsApproveDialogOpen(true);
-                          }}
-                          disabled={actionLoading}
-                          className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none transition-all hover:border-black dark:hover:border-white`}
-                        >
-                          <CheckCircleIcon
-                            className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
-                          />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setIsRejectDialogOpen(true);
-                          }}
-                          disabled={actionLoading}
-                          className={`flex-1 h-8 px-3 ${colors.buttons.outline} 
-                            text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400`}
-                        >
-                          <NoSymbolIcon
-                            className={`h-3 w-3 mr-1 ${colors.icons.red}`}
-                          />
-                          Reject
-                        </Button>
-                      </>
-                    )}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`text-xs ${colors.texts.muted}`}>
+                        Requested: {formatDate(request.createdAt)}
+                      </div>
+                    </div>
 
-                    {request.status === "approved" &&
-                      request.orderId &&
-                      !request.isCompleted && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleComplete(request)}
-                          disabled={actionLoading}
-                          className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all`}
-                        >
-                          <CheckCircleIcon
-                            className={`h-3 w-3 mr-1 text-white dark:text-gray-900`}
-                          />
-                          Mark Complete
-                        </Button>
+                    <div className="flex gap-3">
+                      {request.status === "pending" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setIsApproveDialogOpen(true);
+                            }}
+                            disabled={actionLoading}
+                            className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none transition-all hover:border-black dark:hover:border-white`}
+                          >
+                            <CheckCircleIcon
+                              className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
+                            />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setIsRejectDialogOpen(true);
+                            }}
+                            disabled={actionLoading}
+                            className={`flex-1 h-8 px-3 ${colors.buttons.outline} 
+                              text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400`}
+                          >
+                            <NoSymbolIcon
+                              className={`h-3 w-3 mr-1 ${colors.icons.red}`}
+                            />
+                            Reject
+                          </Button>
+                        </>
                       )}
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedRequest(request);
-                        setIsDetailsOpen(true);
-                      }}
-                      className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none transition-all hover:border-black dark:hover:border-white`}
-                    >
-                      <EyeIcon
-                        className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
-                      />
                       {request.status === "approved" &&
-                      request.orderId &&
-                      !request.isCompleted
-                        ? "Manage"
-                        : "View"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                        request.orderId &&
+                        !request.isCompleted && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleComplete(request)}
+                            disabled={actionLoading}
+                            className={`${colors.buttons.primary} text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none transition-all`}
+                          >
+                            <CheckCircleIcon
+                              className={`h-3 w-3 mr-1 text-white dark:text-gray-900`}
+                            />
+                            Mark Complete
+                          </Button>
+                        )}
 
-          {filteredAndSortedRequests.length === 0 && (
-            <div className="text-center py-12">
-              <InboxIcon
-                className={`h-16 w-16 mx-auto ${colors.icons.muted} mb-4`}
-              />
-              <h3
-                className={`text-lg font-medium ${colors.texts.primary} mb-2`}
-              >
-                No requests found
-              </h3>
-              <p className={`text-sm ${colors.texts.secondary}`}>
-                Try adjusting your filters or search terms
-              </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedRequest(request);
+                          setIsDetailsOpen(true);
+                        }}
+                        className={`flex-1 h-8 px-3 ${colors.buttons.outline} cursor-pointer rounded-none transition-all hover:border-black dark:hover:border-white`}
+                      >
+                        <EyeIcon
+                          className={`h-3 w-3 mr-1 ${colors.icons.primary}`}
+                        />
+                        {request.status === "approved" &&
+                        request.orderId &&
+                        !request.isCompleted
+                          ? "Manage"
+                          : "View"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {filteredAndSortedRequests.length === 0 && (
+                <div className="text-center py-12">
+                  <InboxIcon
+                    className={`h-16 w-16 mx-auto ${colors.icons.muted} mb-4`}
+                  />
+                  <h3
+                    className={`text-lg font-medium ${colors.texts.primary} mb-2`}
+                  >
+                    No requests found
+                  </h3>
+                  <p className={`text-sm ${colors.texts.secondary}`}>
+                    Try adjusting your filters or search terms
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        </motion.div>
       </div>
 
       {/* Approve Dialog */}

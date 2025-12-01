@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import { useAuth } from "./auth-provider";
 import { getCart, getCartCount } from "@/lib/api/customer.cart.api";
 import { Cart } from "@/lib/api/customer.cart.api";
@@ -47,9 +53,20 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       setLoading(true);
       const response = await getCart();
       setCart(response.data);
-      // Ensure count is 0 if cart is empty or has no items
-      const count = response.data?.items?.length || response.data?.totalItems || 0;
-      setCartCount(count > 0 ? count : 0);
+      // ✅ Use items.length for unique item count, not totalItems or totalQuantity
+      const count = response.data?.items?.length || 0;
+      console.log(
+        `[CART PROVIDER] Refreshed cart. Items: ${count}, Response totalItems: ${response.data?.totalItems}`
+      );
+      setCartCount(count);
+
+      // ✅ If cart is empty but count shows items, force refresh from server
+      if (count === 0 && cartCount > 0) {
+        console.log(
+          "[CART PROVIDER] Detected stale count, forcing server refresh"
+        );
+        await refreshCartCount();
+      }
     } catch (err) {
       console.error("Error fetching cart:", err);
       setCart(null);
@@ -67,8 +84,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
     try {
       const response = await getCartCount();
-      // Ensure count is a valid number and not negative
-      const count = typeof response.count === 'number' && response.count > 0 ? response.count : 0;
+      // ✅ Ensure count is valid and use it directly
+      const count =
+        typeof response.count === "number" ? Math.max(0, response.count) : 0;
+      console.log(`[CART PROVIDER] Cart count from server: ${count}`);
       setCartCount(count);
     } catch (err) {
       console.error("Error fetching cart count:", err);
@@ -88,10 +107,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     if (user) {
       // Initial fetch
       refreshCartCount();
-      // Poll every 30 seconds for updates (reduced from 3s to prevent spam)
+      // ✅ Poll every 10 seconds for updates (increased frequency for testing)
       const interval = setInterval(() => {
         refreshCartCount();
-      }, 30000);
+      }, 10000); // 10 seconds during testing, change back to 30000 later
       return () => clearInterval(interval);
     } else {
       setCart(null);

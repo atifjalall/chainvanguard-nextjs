@@ -54,6 +54,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "@/components/ui/sonner";
+import { Loader2 } from "lucide-react";
 
 // VendorInventory type matching backend structure
 interface VendorInventoryItem {
@@ -410,7 +411,16 @@ export default function VendorMyInventoryPage() {
   };
 
   if (isLoading) {
-    return <SupplierInventorySkeleton />;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading inventory...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

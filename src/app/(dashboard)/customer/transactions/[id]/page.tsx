@@ -23,7 +23,9 @@ export default function TransactionDetailPage() {
   const params = useParams();
   const transactionId = (params?.id as string) || "";
 
-  const [transaction, setTransaction] = useState<BackendTransaction | null>(null);
+  const [transaction, setTransaction] = useState<BackendTransaction | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
 
   // Load transaction data
@@ -71,14 +73,16 @@ export default function TransactionDetailPage() {
         from = tx.metadata?.storeName || tx.metadata?.vendorName || "Store";
         fromAddress = tx.metadata?.vendorWallet || "N/A";
       } else if (tx.type === "sale") {
-        from = tx.metadata?.buyerName || tx.metadata?.customerName || "Customer";
-        fromAddress = tx.metadata?.buyerWallet || tx.metadata?.buyerWalletAddress || "N/A";
+        from =
+          tx.metadata?.buyerName || tx.metadata?.customerName || "Customer";
+        fromAddress =
+          tx.metadata?.buyerWallet || tx.metadata?.buyerWalletAddress || "N/A";
       } else if (tx.type === "transfer_in") {
         from = tx.metadata?.senderName || "User";
         fromAddress = tx.metadata?.senderWallet || "N/A";
       } else if (tx.type === "deposit") {
         from = tx.metadata?.paymentMethod
-          ? `Payment via ${tx.metadata.paymentMethod}${tx.metadata.cardLast4 ? ` (****${tx.metadata.cardLast4})` : ''}`
+          ? `Payment via ${tx.metadata.paymentMethod}${tx.metadata.cardLast4 ? ` (****${tx.metadata.cardLast4})` : ""}`
           : "Payment Source";
         fromAddress = "N/A";
       }
@@ -94,8 +98,15 @@ export default function TransactionDetailPage() {
       let toAddress = "N/A";
 
       if (tx.type === "payment") {
-        to = tx.metadata?.storeName || tx.metadata?.vendorName || tx.metadata?.sellerName || "Store";
-        toAddress = tx.metadata?.vendorWallet || tx.metadata?.sellerWalletAddress || "N/A";
+        to =
+          tx.metadata?.storeName ||
+          tx.metadata?.vendorName ||
+          tx.metadata?.sellerName ||
+          "Store";
+        toAddress =
+          tx.metadata?.vendorWallet ||
+          tx.metadata?.sellerWalletAddress ||
+          "N/A";
 
         // Add product name if available
         if (tx.metadata?.productName) {
@@ -205,24 +216,25 @@ export default function TransactionDetailPage() {
 
   const displayType = getTransactionDisplayType(transaction.type);
   const parties = getTransactionParties(transaction);
-  const category = transaction.metadata?.category || transaction.type.replace(/_/g, " ");
+  const category =
+    transaction.metadata?.category || transaction.type.replace(/_/g, " ");
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Breadcrumb */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
+      <div>
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               Home
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <button
               onClick={() => router.push("/customer/transactions")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               Transactions
             </button>
@@ -268,14 +280,15 @@ export default function TransactionDetailPage() {
                   </h1>
                   <div className="flex items-center gap-2">
                     {getStatusIcon(transaction.status)}
-                    <span className={`text-sm capitalize ${getStatusColor(transaction.status)}`}>
+                    <span
+                      className={`text-sm capitalize ${getStatusColor(transaction.status)}`}
+                    >
                       {transaction.status}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
@@ -363,22 +376,24 @@ export default function TransactionDetailPage() {
                         <p className="text-lg font-normal text-gray-900 dark:text-white">
                           {parties.from}
                         </p>
-                        {parties.fromAddress !== "N/A" && parties.fromAddress !== "Your Account" && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono break-all">
-                            {parties.fromAddress}
-                          </p>
-                        )}
+                        {parties.fromAddress !== "N/A" &&
+                          parties.fromAddress !== "Your Account" && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-mono break-all">
+                              {parties.fromAddress}
+                            </p>
+                          )}
                       </div>
-                      {parties.fromAddress !== "N/A" && parties.fromAddress !== "Your Account" && (
-                        <button
-                          onClick={() =>
-                            copyToClipboard(parties.fromAddress, "Address")
-                          }
-                          className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors ml-4 shrink-0"
-                        >
-                          <DocumentDuplicateIcon className="h-4 w-4 text-gray-900 dark:text-white" />
-                        </button>
-                      )}
+                      {parties.fromAddress !== "N/A" &&
+                        parties.fromAddress !== "Your Account" && (
+                          <button
+                            onClick={() =>
+                              copyToClipboard(parties.fromAddress, "Address")
+                            }
+                            className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors ml-4 shrink-0 cursor-pointer"
+                          >
+                            <DocumentDuplicateIcon className="h-4 w-4 text-gray-900 dark:text-white" />
+                          </button>
+                        )}
                     </div>
                   </div>
 
@@ -399,22 +414,24 @@ export default function TransactionDetailPage() {
                         <p className="text-lg font-normal text-gray-900 dark:text-white">
                           {parties.to}
                         </p>
-                        {parties.toAddress !== "N/A" && parties.toAddress !== "Your Account" && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono break-all">
-                            {parties.toAddress}
-                          </p>
-                        )}
+                        {parties.toAddress !== "N/A" &&
+                          parties.toAddress !== "Your Account" && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-mono break-all">
+                              {parties.toAddress}
+                            </p>
+                          )}
                       </div>
-                      {parties.toAddress !== "N/A" && parties.toAddress !== "Your Account" && (
-                        <button
-                          onClick={() =>
-                            copyToClipboard(parties.toAddress, "Address")
-                          }
-                          className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors ml-4 shrink-0"
-                        >
-                          <DocumentDuplicateIcon className="h-4 w-4 text-gray-900 dark:text-white" />
-                        </button>
-                      )}
+                      {parties.toAddress !== "N/A" &&
+                        parties.toAddress !== "Your Account" && (
+                          <button
+                            onClick={() =>
+                              copyToClipboard(parties.toAddress, "Address")
+                            }
+                            className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors ml-4 shrink-0 cursor-pointer"
+                          >
+                            <DocumentDuplicateIcon className="h-4 w-4 text-gray-900 dark:text-white" />
+                          </button>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -434,12 +451,17 @@ export default function TransactionDetailPage() {
                           Order Reference
                         </p>
                         <p className="text-sm text-gray-900 dark:text-white font-mono">
-                          {transaction.metadata?.orderReference || transaction.relatedOrderId}
+                          {transaction.metadata?.orderReference ||
+                            transaction.relatedOrderId}
                         </p>
                       </div>
                       <button
-                        onClick={() => router.push(`/customer/orders/${transaction.relatedOrderId}`)}
-                        className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                        onClick={() =>
+                          router.push(
+                            `/customer/orders/${transaction.relatedOrderId}`
+                          )
+                        }
+                        className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
                       >
                         View Order
                       </button>
@@ -468,8 +490,11 @@ export default function TransactionDetailPage() {
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         Transaction Amount
                       </span>
-                      <span className={`text-sm font-medium ${displayType === "credit" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                        {displayType === "credit" ? "+" : "-"}{formatCVT(transaction.amount)}
+                      <span
+                        className={`text-sm font-medium ${displayType === "credit" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                      >
+                        {displayType === "credit" ? "+" : "-"}
+                        {formatCVT(transaction.amount)}
                       </span>
                     </div>
                     <div className="pt-4 border-t border-gray-200 dark:border-gray-800 flex justify-between items-center">
@@ -514,7 +539,7 @@ export default function TransactionDetailPage() {
                                 "Transaction hash"
                               )
                             }
-                            className="shrink-0"
+                            className="shrink-0 cursor-pointer"
                           >
                             <DocumentDuplicateIcon className="h-4 w-4 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
                           </button>
@@ -545,7 +570,9 @@ export default function TransactionDetailPage() {
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         Status
                       </span>
-                      <span className={`text-xs capitalize ${getStatusColor(transaction.status)}`}>
+                      <span
+                        className={`text-xs capitalize ${getStatusColor(transaction.status)}`}
+                      >
                         {transaction.status}
                       </span>
                     </div>
@@ -582,7 +609,6 @@ export default function TransactionDetailPage() {
                   </div>
                 </div>
               )}
-
             </div>
           </div>
         </div>

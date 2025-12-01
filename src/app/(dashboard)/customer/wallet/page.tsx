@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   WalletIcon,
@@ -8,59 +8,28 @@ import {
   ArrowDownIcon,
   ClockIcon,
   CheckCircleIcon,
-  DocumentDuplicateIcon,
-  QrCodeIcon,
   PlusIcon,
   ArrowPathIcon,
   UserIcon,
   CreditCardIcon,
   ShieldCheckIcon,
-  UsersIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { loadStripe } from "@stripe/stripe-js";
-import { createPaymentIntent, confirmPayment, withdrawFunds } from "@/lib/api/wallet.api";
+import {
+  createPaymentIntent,
+  confirmPayment,
+  withdrawFunds,
+} from "@/lib/api/wallet.api";
 import { toast } from "sonner";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { useAuth } from "@/components/providers/auth-provider";
 import {
   formatCurrency,
   formatCurrencyAbbreviated,
-  formatUSD,
   formatCVT,
 } from "@/utils/currency";
-
-// CVT Icon Component
-const RsIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    className="h-5 w-5"
-  >
-    <text
-      x="12"
-      y="15"
-      textAnchor="middle"
-      fontSize="8"
-      fontWeight="600"
-      fill="currentColor"
-      stroke="currentColor"
-      strokeWidth="0.2"
-      fontFamily="Arial, sans-serif"
-    >
-      CVT
-    </text>
-    <path
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-    />
-  </svg>
-);
 
 type Currency = "USD" | "CVT";
 
@@ -523,7 +492,6 @@ export default function CustomerWalletPage() {
   const router = useRouter();
 
   const [currency, setCurrency] = useState<Currency>("CVT");
-  const [showQRCode, setShowQRCode] = useState(false);
   const [addFundsAmount, setAddFundsAmount] = useState("");
   const [isAddingFunds, setIsAddingFunds] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<string | null>(
@@ -546,9 +514,52 @@ export default function CustomerWalletPage() {
     refreshTransactions,
   } = useWallet();
 
+  // helper - sanitize wallet name: remove "[user]'s wallet" patterns and prefer explicit wallet name from user if present
+  const sanitizeWalletName = (
+    rawName?: string | null,
+    userWalletName?: string | null,
+    userName?: string | null
+  ) => {
+    // prefer an explicit wallet name defined on the user (walletName)
+    if (userWalletName && userWalletName.trim().length > 0) {
+      return userWalletName;
+    }
+
+    if (!rawName) {
+      return "My Wallet";
+    }
+
+    // remove trailing "'s wallet" e.g. "John Doe's wallet" -> "John Doe"
+    const cleaned = rawName.replace(/'s wallet$/i, "").trim();
+
+    // If the cleaned name is identical to the user's full name, prefer user's walletName or fallback to "My Wallet"
+    if (userName && cleaned.toLowerCase() === userName.toLowerCase()) {
+      return userWalletName || "My Wallet";
+    }
+
+    // If cleaned still contains the user's name but with different casing, avoid showing constructed name
+    if (userName && cleaned.toLowerCase().includes(userName.toLowerCase())) {
+      return userWalletName || "My Wallet";
+    }
+
+    // otherwise return cleaned or fallback
+    return cleaned || "My Wallet";
+  };
+
+  // derive wallet display name just once per render
+  const walletDisplayName = useMemo(
+    () =>
+      sanitizeWalletName(
+        walletData?.name,
+        user?.walletName || "",
+        user?.name || ""
+      ),
+    [walletData?.name, user?.walletName, user?.name]
+  );
+
   const balance = walletBalance || 0;
   const currentWallet = {
-    name: walletData?.name || "My Wallet",
+    name: walletDisplayName,
     address:
       walletData?.address || "0x1234567890abcdef1234567890abcdef12345678",
   };
@@ -571,11 +582,6 @@ export default function CustomerWalletPage() {
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 10)}...${address.slice(-8)}`;
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
   };
 
   // Refresh wallet data on mount (empty deps to avoid infinite loop)
@@ -768,7 +774,7 @@ export default function CustomerWalletPage() {
       {/* Breadcrumb */}
       <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
         <div className="flex items-center gap-2">
-          <button className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+          <button className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer">
             Home
           </button>
           <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
@@ -821,7 +827,7 @@ export default function CustomerWalletPage() {
               <div className="flex border border-gray-200 dark:border-gray-800">
                 <button
                   onClick={() => setCurrency("USD")}
-                  className={`px-6 h-10 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors flex items-center gap-2 ${
+                  className={`cursor-pointer px-6 h-10 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors flex items-center gap-2 ${
                     currency === "USD"
                       ? "bg-black dark:bg-white text-white dark:text-black"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -831,7 +837,7 @@ export default function CustomerWalletPage() {
                 </button>
                 <button
                   onClick={() => setCurrency("CVT")}
-                  className={`px-6 h-10 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors flex items-center gap-2 border-l border-gray-200 dark:border-gray-800 ${
+                  className={`cursor-pointer px-6 h-10 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors flex items-center gap-2 border-l border-gray-200 dark:border-gray-800 ${
                     currency === "CVT"
                       ? "bg-black dark:bg-white text-white dark:text-black"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -872,27 +878,6 @@ export default function CustomerWalletPage() {
                     </div>
                     <WalletIcon className="h-16 w-16 text-gray-900 dark:text-white opacity-20" />
                   </div>
-
-                  <div className="pt-8 border-t border-gray-200 dark:border-gray-800">
-                    <div className="grid grid-cols-2 gap-4">
-                      <button
-                        onClick={() => setShowQRCode(!showQRCode)}
-                        className="border border-black dark:border-white text-black dark:text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <QrCodeIcon className="h-4 w-4" />
-                        QR Code
-                      </button>
-                      <button
-                        onClick={() =>
-                          copyToClipboard(currentWallet?.address || "")
-                        }
-                        className="bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <DocumentDuplicateIcon className="h-4 w-4" />
-                        Copy Address
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -917,7 +902,7 @@ export default function CustomerWalletPage() {
                         onClick={() => {
                           setAddFundsAmount(amount.toString());
                         }}
-                        className={`border px-4 h-12 text-sm font-medium transition-colors ${
+                        className={`cursor-pointer border px-4 h-12 text-sm font-medium transition-colors ${
                           addFundsAmount === amount.toString()
                             ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black"
                             : "border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
@@ -964,7 +949,7 @@ export default function CustomerWalletPage() {
                     disabled={
                       !addFundsAmount || parseFloat(addFundsAmount) <= 0
                     }
-                    className="bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full"
+                    className="cursor-pointer bg-black dark:bg-white text-white dark:text-black px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full"
                   >
                     <PlusIcon className="h-4 w-4" />
                     Add Funds
@@ -994,7 +979,7 @@ export default function CustomerWalletPage() {
                           setWithdrawAmount(amount.toString());
                         }}
                         disabled={amount * CONVERSION_RATE > balance}
-                        className={`border px-4 h-12 text-sm font-medium transition-colors ${
+                        className={`cursor-pointer border px-4 h-12 text-sm font-medium transition-colors ${
                           withdrawAmount === amount.toString()
                             ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black"
                             : "border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
@@ -1036,7 +1021,8 @@ export default function CustomerWalletPage() {
                       </p>
                     )}
                     {withdrawAmount &&
-                      parseFloat(withdrawAmount) * CONVERSION_RATE > balance && (
+                      parseFloat(withdrawAmount) * CONVERSION_RATE >
+                        balance && (
                         <p className="text-xs text-red-600 dark:text-red-400">
                           Insufficient balance
                         </p>
@@ -1059,7 +1045,7 @@ export default function CustomerWalletPage() {
                       parseFloat(withdrawAmount) <= 0 ||
                       parseFloat(withdrawAmount) * CONVERSION_RATE > balance
                     }
-                    className="border border-black dark:border-white text-black dark:text-white px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full"
+                    className="cursor-pointer border border-black dark:border-white text-black dark:text-white px-12 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full"
                   >
                     <ArrowUpIcon className="h-4 w-4" />
                     Withdraw Funds
@@ -1080,7 +1066,7 @@ export default function CustomerWalletPage() {
                   </div>
                   <button
                     onClick={() => router.push("/customer/transactions")}
-                    className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2"
+                    className="cursor-pointer border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2"
                   >
                     View All
                     <ChevronRightIcon className="h-4 w-4" />
@@ -1307,52 +1293,6 @@ export default function CustomerWalletPage() {
         </div>
       </section>
 
-      {/* QR Code Modal */}
-      {showQRCode && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-            onClick={() => setShowQRCode(false)}
-          />
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-6">
-            <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-12 max-w-md w-full">
-              <div className="space-y-8">
-                <div className="text-center">
-                  <h3 className="text-2xl font-extralight text-gray-900 dark:text-white tracking-tight mb-2">
-                    Wallet QR Code
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Scan to receive funds
-                  </p>
-                </div>
-
-                <div className="flex justify-center">
-                  <div className="h-64 w-64 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-                    <QrCodeIcon className="h-32 w-32 text-gray-400 dark:text-gray-600" />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                    Wallet Address
-                  </p>
-                  <p className="text-xs text-gray-900 dark:text-white font-mono text-center break-all">
-                    {currentWallet?.address}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setShowQRCode(false)}
-                  className="w-full bg-black dark:bg-white text-white dark:text-black h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* Payment Modal */}
       <PaymentModal
         isOpen={isPaymentModalOpen}
@@ -1398,17 +1338,15 @@ export default function CustomerWalletPage() {
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">
-                        Tokens to burn:
-                      </span>
+                      <span className="text-gray-500">Tokens to burn:</span>
                       <span className="font-semibold text-gray-900">
-                        {formatCVT(parseFloat(withdrawAmount) * CONVERSION_RATE)}
+                        {formatCVT(
+                          parseFloat(withdrawAmount) * CONVERSION_RATE
+                        )}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">
-                        New Balance:
-                      </span>
+                      <span className="text-gray-500">New Balance:</span>
                       <span className="font-semibold text-gray-900">
                         {formatCVT(
                           balance - parseFloat(withdrawAmount) * CONVERSION_RATE
@@ -1434,8 +1372,8 @@ export default function CustomerWalletPage() {
                         Secure Withdrawal
                       </p>
                       <p className="text-xs text-gray-600">
-                        Tokens will be burned on the blockchain and funds will be
-                        processed to your account.
+                        Tokens will be burned on the blockchain and funds will
+                        be processed to your account.
                       </p>
                     </div>
                   </div>
@@ -1448,14 +1386,14 @@ export default function CustomerWalletPage() {
                         }
                       }}
                       disabled={isWithdrawing}
-                      className="flex-1 border border-gray-300 text-gray-900 px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="cursor-pointer flex-1 border border-gray-300 text-gray-900 px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleWithdraw}
                       disabled={isWithdrawing}
-                      className="flex-1 bg-black text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="cursor-pointer flex-1 bg-black text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isWithdrawing ? (
                         <>

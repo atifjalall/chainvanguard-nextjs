@@ -195,7 +195,7 @@ export default function OrdersPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="cursor-pointer text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               Home
             </button>
@@ -211,7 +211,7 @@ export default function OrdersPage() {
       <section className="py-16 border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16">
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <div className="h-px w-16 bg-gray-300 dark:bg-gray-700" />
               <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
                 Order History
@@ -247,7 +247,7 @@ export default function OrdersPage() {
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                    className="cursor-pointer text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     <XMarkIcon className="h-4 w-4" />
                   </button>
@@ -258,7 +258,7 @@ export default function OrdersPage() {
               <div className="relative">
                 <button
                   onClick={() => setFiltersOpen(!filtersOpen)}
-                  className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
+                  className="cursor-pointer flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
                 >
                   <FunnelIcon className="h-4 w-4" />
                   Sort
@@ -279,7 +279,7 @@ export default function OrdersPage() {
                               setSortBy(option.value);
                               setFiltersOpen(false);
                             }}
-                            className={`block w-full text-left px-4 py-3 text-xs transition-colors ${
+                            className={`cursor-pointer block w-full text-left px-4 py-3 text-xs transition-colors ${
                               sortBy === option.value
                                 ? "text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900"
                                 : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900"
@@ -301,7 +301,7 @@ export default function OrdersPage() {
                 <button
                   key={filter.value}
                   onClick={() => setSelectedStatus(filter.value)}
-                  className={`px-5 h-10 text-[10px] uppercase tracking-[0.2em] font-medium whitespace-nowrap transition-all ${
+                  className={`cursor-pointer px-5 h-10 text-[10px] uppercase tracking-[0.2em] font-medium whitespace-nowrap transition-all ${
                     selectedStatus === filter.value
                       ? "bg-black dark:bg-white text-white dark:text-black"
                       : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
@@ -468,7 +468,7 @@ export default function OrdersPage() {
                     setSelectedStatus("all");
                     setSortBy("newest");
                   }}
-                  className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline"
+                  className="cursor-pointer text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline"
                 >
                   Clear Filters
                 </button>
@@ -485,6 +485,12 @@ export default function OrdersPage() {
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+
+        /* Ensure buttons & links use pointer cursor consistently */
+        button,
+        a {
+          cursor: pointer;
         }
       `}</style>
     </div>

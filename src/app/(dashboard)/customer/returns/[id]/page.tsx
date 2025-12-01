@@ -10,8 +10,6 @@ import {
   ClockIcon,
   XCircleIcon,
   DocumentDuplicateIcon,
-  ArrowDownTrayIcon,
-  ChatBubbleLeftRightIcon,
   CubeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
@@ -81,14 +79,6 @@ export default function ReturnDetailPage() {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
-  };
-
-  const handleDownloadReceipt = () => {
-    toast.success("Downloading return receipt...");
-  };
-
-  const handleContactSupport = () => {
-    toast.success("Opening support chat...");
   };
 
   const getStatusIcon = (status: string) => {
@@ -182,19 +172,19 @@ export default function ReturnDetailPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Breadcrumb */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
+      <div>
         <div className="max-w-[1600px] mx-auto px-12 lg:px-16 py-6">
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="cursor-pointer text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               Home
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <button
               onClick={() => router.push("/customer/returns")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="cursor-pointer text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               Returns
             </button>
@@ -233,23 +223,6 @@ export default function ReturnDetailPage() {
                   </p>
                 </div>
               </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleContactSupport}
-                className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2"
-              >
-                <ChatBubbleLeftRightIcon className="h-4 w-4" />
-                Contact Support
-              </button>
-              <button
-                onClick={handleDownloadReceipt}
-                className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2"
-              >
-                <ArrowDownTrayIcon className="h-4 w-4" />
-                Download Receipt
-              </button>
             </div>
           </div>
         </div>
@@ -359,7 +332,7 @@ export default function ReturnDetailPage() {
                           setSelectedImage(index);
                           setShowImageModal(true);
                         }}
-                        className="aspect-square border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white transition-colors overflow-hidden group"
+                        className="cursor-pointer aspect-square border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white transition-colors overflow-hidden group"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -495,7 +468,8 @@ export default function ReturnDetailPage() {
                         Return Rejected
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Your return request was not approved. No refund will be processed.
+                        Your return request was not approved. No refund will be
+                        processed.
                       </p>
                     </div>
                   )}
@@ -587,7 +561,7 @@ export default function ReturnDetailPage() {
                               "Order number"
                             )
                           }
-                          className="flex-shrink-0"
+                          className="cursor-pointer flex-shrink-0"
                         >
                           <DocumentDuplicateIcon className="h-4 w-4 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
                         </button>
@@ -597,7 +571,7 @@ export default function ReturnDetailPage() {
                       onClick={() =>
                         router.push(`/customer/orders/${returnDetail.orderId}`)
                       }
-                      className="w-full border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors"
+                      className="cursor-pointer w-full border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:border-black dark:hover:border-white transition-colors"
                     >
                       View Order
                     </button>
@@ -689,7 +663,7 @@ export default function ReturnDetailPage() {
                     </p>
                     <button
                       onClick={() => setShowImageModal(false)}
-                      className="h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors"
+                      className="cursor-pointer h-10 w-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white flex items-center justify-center transition-colors"
                     >
                       <XCircleIcon className="h-5 w-5 text-gray-900 dark:text-white" />
                     </button>
@@ -709,7 +683,7 @@ export default function ReturnDetailPage() {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`h-2 w-2 ${
+                        className={`cursor-pointer h-2 w-2 ${
                           selectedImage === index
                             ? "bg-gray-900 dark:bg-white"
                             : "bg-gray-300 dark:bg-gray-700"
@@ -722,6 +696,14 @@ export default function ReturnDetailPage() {
             </div>
           </>
         )}
+
+      <style jsx global>{`
+        /* Ensure buttons & links use pointer cursor consistently */
+        button,
+        a {
+          cursor: pointer;
+        }
+      `}</style>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +60,8 @@ import { apiClient } from "@/lib/api/client";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import { useRouter } from "next/navigation";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/currency";
+import { usePageTitle } from "@/hooks/use-page-title";
+import { Loader2 } from "lucide-react";
 
 interface UserDetailPageProps {
   params: Promise<{
@@ -66,8 +69,46 @@ interface UserDetailPageProps {
   }>;
 }
 
-import { usePageTitle } from "@/hooks/use-page-title";
+type ApiResponse<T = any> = {
+  success: boolean;
+  data?: T;
+  message?: string;
+  wallet?: any;
+  pagination?: {
+    totalPages?: number;
+    [key: string]: any;
+  };
+};
 
+const isApiResponse = (obj: unknown): obj is ApiResponse => {
+  return !!obj && typeof obj === "object" && "success" in (obj as any);
+};
+
+const normalizeApiResponse = <T = any,>(
+  res: unknown
+): ApiResponse<T> | undefined => {
+  if (!res) return undefined;
+  // If it already has the success key, assume it's the API response
+  if (isApiResponse(res)) return res as ApiResponse<T>;
+
+  // If it's an array, treat it as a successful data array
+  if (Array.isArray(res))
+    return { success: true, data: res as any } as ApiResponse<T>;
+
+  // If it's an object with data/wallet or shape similar to response, wrap it
+  if (typeof res === "object") {
+    const asAny = res as any;
+    if ("data" in asAny || "wallet" in asAny) {
+      return {
+        success: true,
+        data: asAny.data || asAny,
+        wallet: asAny.wallet,
+      } as ApiResponse<T>;
+    }
+  }
+
+  return undefined;
+};
 
 export default function UserDetailPage({ params }: UserDetailPageProps) {
   usePageTitle("User Details");
@@ -103,30 +144,37 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
       setIsLoading(true);
 
       // Load user details
-      const userResponse = await apiClient.get(`/auth/users/${userId}`);
-      if (userResponse.success) {
+      const userResponseRaw = await apiClient.get(`/auth/users/${userId}`);
+      const userResponse = normalizeApiResponse<any>(userResponseRaw);
+      if (userResponse?.success) {
         setUserData(userResponse.data);
       }
 
       // Load wallet data using expertApi endpoint (fallbacks handled inside expertApi)
-      let walletResponse = await expertApi.getWalletByUserId(userId);
+      const walletResponseRaw = await expertApi.getWalletByUserId(userId);
+      let walletResponse = normalizeApiResponse<any>(walletResponseRaw) || {
+        success: false,
+        message: "Unknown wallet response",
+      };
 
       // If the expertApi helper returned a structured failure, try direct /wallet route as last fallback
       if (!walletResponse?.success) {
         try {
-          const fallback = await apiClient.get(`/wallet/${userId}`);
+          const fallbackRaw = await apiClient.get(`/wallet/${userId}`);
+          const fallback = normalizeApiResponse<any>(fallbackRaw);
           if (fallback?.success) {
             walletResponse = fallback;
           } else {
-            // keep the original failed response, handled below
             walletResponse = {
               success: false,
-              message: fallback?.message || "Wallet not found",
+              message:
+                fallback?.message ||
+                (fallbackRaw && (fallbackRaw as any).message) ||
+                "Wallet not found",
             };
           }
         } catch (fallbackErr) {
-          // keep the original expertApi error details — we'll handle gracefully below
-          walletResponse = walletResponse || {
+          walletResponse = {
             success: false,
             message: (fallbackErr as any)?.message || "Failed to fetch wallet",
           };
@@ -137,14 +185,11 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
         setWalletData(walletResponse.data || walletResponse.wallet);
 
         // Set wallet transactions if available
-        if (
+        const walletTx =
           walletResponse.data?.transactions ||
-          walletResponse.wallet?.transactions
-        ) {
-          const walletTx =
-            walletResponse.data?.transactions ||
-            walletResponse.wallet?.transactions ||
-            [];
+          walletResponse.wallet?.transactions ||
+          [];
+        if (Array.isArray(walletTx)) {
           setTransactions(walletTx);
         }
       } else {
@@ -154,7 +199,7 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
 
       // Load blockchain transactions for this user
       if (selectedTab === "blockchain") {
-        const blockchainResponse = await expertApi.getAllTransactions({
+        const blockchainResponseRaw = await expertApi.getAllTransactions({
           userId: userId,
           page: currentPage,
           limit: itemsPerPage,
@@ -163,10 +208,22 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           search: searchTerm || undefined,
         });
 
+        const blockchainResponse =
+          normalizeApiResponse<any>(blockchainResponseRaw) ||
+          (Array.isArray(blockchainResponseRaw)
+            ? ({
+                success: true,
+                data: blockchainResponseRaw,
+              } as ApiResponse<any>)
+            : { success: false });
+
         if (blockchainResponse.success) {
-          setBlockchainLogs(blockchainResponse.data || []);
+          const data = Array.isArray(blockchainResponse.data)
+            ? blockchainResponse.data
+            : blockchainResponse.data?.items || [];
+          setBlockchainLogs(data);
           if (blockchainResponse.pagination) {
-            setTotalPages(blockchainResponse.pagination.totalPages);
+            setTotalPages(blockchainResponse.pagination.totalPages || 1);
           }
         }
       }
@@ -195,7 +252,7 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
       completed: badgeColors.green,
       pending: badgeColors.yellow,
       failed: badgeColors.red,
-      cancelled: badgeColors.gray,
+      cancelled: badgeColors.grey,
       success: badgeColors.green,
     };
     return statusColors[status] || badgeColors.blue;
@@ -248,24 +305,22 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
 
   if (isLoading && !userData) {
     return (
-      <div
-        className={`p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
-      >
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-          <div className="grid grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700"></div>
-            ))}
-          </div>
-          <div className="h-96 bg-gray-200 dark:bg-gray-700"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            Loading user details...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
       className={`relative z-10 p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
     >
       {/* Breadcrumb */}
@@ -276,7 +331,9 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="/expert/security">Security & Access Control</BreadcrumbLink>
+            <BreadcrumbLink href="/expert/security">
+              Security & Access Control
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -286,10 +343,10 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
       </Breadcrumb>
 
       {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-        }`}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
       >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
@@ -337,11 +394,18 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* User Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
+        <Card
+          className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle
               className={`text-xs font-medium ${colors.texts.secondary}`}
@@ -360,7 +424,9 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           </CardContent>
         </Card>
 
-        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+        <Card
+          className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle
               className={`text-xs font-medium ${colors.texts.secondary}`}
@@ -377,7 +443,9 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           </CardContent>
         </Card>
 
-        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+        <Card
+          className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle
               className={`text-xs font-medium ${colors.texts.secondary}`}
@@ -394,7 +462,9 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           </CardContent>
         </Card>
 
-        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+        <Card
+          className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle
               className={`text-xs font-medium ${colors.texts.secondary}`}
@@ -410,94 +480,105 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
             <p className={`text-xs ${colors.texts.muted} mt-1`}>All time</p>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* User Details Card */}
-      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-        <CardHeader>
-          <CardTitle
-            className={`text-lg font-semibold ${colors.texts.primary}`}
-          >
-            User Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <div
-                className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
-              >
-                Email
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+          <CardHeader>
+            <CardTitle
+              className={`text-lg font-semibold ${colors.texts.primary}`}
+            >
+              User Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <div
+                  className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
+                >
+                  Email
+                </div>
+                <div className={`text-sm ${colors.texts.primary}`}>
+                  {userData?.email || "-"}
+                </div>
               </div>
-              <div className={`text-sm ${colors.texts.primary}`}>
-                {userData?.email || "-"}
+              <div>
+                <div
+                  className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
+                >
+                  Wallet Address
+                </div>
+                <div className={`text-sm ${colors.texts.primary} font-mono`}>
+                  {walletData?.walletAddress
+                    ? `${walletData.walletAddress.substring(0, 12)}...${walletData.walletAddress.substring(
+                        walletData.walletAddress.length - 8
+                      )}`
+                    : "-"}
+                </div>
+              </div>
+              <div>
+                <div
+                  className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
+                >
+                  Last Activity
+                </div>
+                <div className={`text-sm ${colors.texts.primary}`}>
+                  {walletData?.lastActivity
+                    ? formatDate(walletData.lastActivity)
+                    : "-"}
+                </div>
+              </div>
+              <div>
+                <div
+                  className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
+                >
+                  Member Since
+                </div>
+                <div className={`text-sm ${colors.texts.primary}`}>
+                  {userData?.createdAt ? formatDate(userData.createdAt) : "-"}
+                </div>
+              </div>
+              <div>
+                <div
+                  className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
+                >
+                  Daily Limit
+                </div>
+                <div className={`text-sm ${colors.texts.primary}`}>
+                  {formatCurrencyUtil(
+                    walletData?.dailyWithdrawalLimit || 0,
+                    "CVT"
+                  )}
+                </div>
+              </div>
+              <div>
+                <div
+                  className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
+                >
+                  Today&apos;s Withdrawn
+                </div>
+                <div className={`text-sm ${colors.texts.primary}`}>
+                  {formatCurrencyUtil(walletData?.dailyWithdrawn || 0, "CVT")}
+                </div>
               </div>
             </div>
-            <div>
-              <div
-                className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
-              >
-                Wallet Address
-              </div>
-              <div className={`text-sm ${colors.texts.primary} font-mono`}>
-                {walletData?.walletAddress
-                  ? `${walletData.walletAddress.substring(0, 12)}...${walletData.walletAddress.substring(
-                      walletData.walletAddress.length - 8
-                    )}`
-                  : "-"}
-              </div>
-            </div>
-            <div>
-              <div
-                className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
-              >
-                Last Activity
-              </div>
-              <div className={`text-sm ${colors.texts.primary}`}>
-                {walletData?.lastActivity
-                  ? formatDate(walletData.lastActivity)
-                  : "-"}
-              </div>
-            </div>
-            <div>
-              <div
-                className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
-              >
-                Member Since
-              </div>
-              <div className={`text-sm ${colors.texts.primary}`}>
-                {userData?.createdAt ? formatDate(userData.createdAt) : "-"}
-              </div>
-            </div>
-            <div>
-              <div
-                className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
-              >
-                Daily Limit
-              </div>
-              <div className={`text-sm ${colors.texts.primary}`}>
-                {formatCurrencyUtil(
-                  walletData?.dailyWithdrawalLimit || 0,
-                  "CVT"
-                )}
-              </div>
-            </div>
-            <div>
-              <div
-                className={`text-xs font-medium ${colors.texts.secondary} mb-1`}
-              >
-                Today&apos;s Withdrawn
-              </div>
-              <div className={`text-sm ${colors.texts.primary}`}>
-                {formatCurrencyUtil(walletData?.dailyWithdrawn || 0, "CVT")}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Tabs */}
-      <div className="transform transition-all duration-700">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="transform transition-all duration-700"
+      >
         <Tabs value={selectedTab} onValueChange={setSelectedTab}>
           <TabsList
             className={`flex justify-center mx-auto ${colors.borders.primary} ${colors.backgrounds.tertiary} rounded-none p-0.5`}
@@ -529,312 +610,332 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-      </div>
+      </motion.div>
 
       {/* Filters */}
-      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle
-              className={`text-lg font-semibold ${colors.texts.primary}`}
-            >
-              {selectedTab === "wallet"
-                ? "Wallet Transactions"
-                : "Blockchain Activity"}
-            </CardTitle>
-            <div className="lg:hidden">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className="border-2 border-gray-200 dark:border-gray-700 rounded-none text-xs"
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle
+                className={`text-lg font-semibold ${colors.texts.primary}`}
               >
-                <FunnelIcon className="h-3 w-3 mr-2" />
-                {showFilters ? "Hide" : "Show"} Filters
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div className={`${showFilters ? "block" : "hidden lg:block"}`}>
-            <div className="relative w-full mb-4">
-              <MagnifyingGlassIcon
-                className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
-              />
-              <Input
-                placeholder="Search transactions..."
-                className={`pl-10 rounded-none text-xs ${colors.inputs.base}`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger
-                  className={`w-full rounded-none text-xs ${colors.inputs.base}`}
+                {selectedTab === "wallet"
+                  ? "Wallet Transactions"
+                  : "Blockchain Activity"}
+              </CardTitle>
+              <div className="lg:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="border-2 border-gray-200 dark:border-gray-700 rounded-none text-xs"
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">
-                    All Types
-                  </SelectItem>
-                  {selectedTab === "wallet" ? (
-                    <>
-                      <SelectItem value="deposit" className="text-xs">
-                        Deposit
-                      </SelectItem>
-                      <SelectItem value="withdrawal" className="text-xs">
-                        Withdrawal
-                      </SelectItem>
-                      <SelectItem value="transfer_in" className="text-xs">
-                        Transfer In
-                      </SelectItem>
-                      <SelectItem value="transfer_out" className="text-xs">
-                        Transfer Out
-                      </SelectItem>
-                      <SelectItem value="payment" className="text-xs">
-                        Payment
-                      </SelectItem>
-                      <SelectItem value="refund" className="text-xs">
-                        Refund
-                      </SelectItem>
-                    </>
-                  ) : (
-                    <>
-                      <SelectItem value="user-action" className="text-xs">
-                        User Action
-                      </SelectItem>
-                      <SelectItem value="product-action" className="text-xs">
-                        Product Action
-                      </SelectItem>
-                      <SelectItem value="order-action" className="text-xs">
-                        Order Action
-                      </SelectItem>
-                      <SelectItem value="inventory-action" className="text-xs">
-                        Inventory Action
-                      </SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger
-                  className={`w-full rounded-none text-xs ${colors.inputs.base}`}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">
-                    All Status
-                  </SelectItem>
-                  <SelectItem value="completed" className="text-xs">
-                    Completed
-                  </SelectItem>
-                  <SelectItem value="pending" className="text-xs">
-                    Pending
-                  </SelectItem>
-                  <SelectItem value="failed" className="text-xs">
-                    Failed
-                  </SelectItem>
-                  <SelectItem value="success" className="text-xs">
-                    Success
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                  <FunnelIcon className="h-3 w-3 mr-2" />
+                  {showFilters ? "Hide" : "Show"} Filters
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className={`${showFilters ? "block" : "hidden lg:block"}`}>
+              <div className="relative w-full mb-4">
+                <MagnifyingGlassIcon
+                  className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                />
+                <Input
+                  placeholder="Search transactions..."
+                  className={`pl-10 rounded-none text-xs ${colors.inputs.base}`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger
+                    className={`w-full rounded-none text-xs ${colors.inputs.base}`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">
+                      All Types
+                    </SelectItem>
+                    {selectedTab === "wallet" ? (
+                      <>
+                        <SelectItem value="deposit" className="text-xs">
+                          Deposit
+                        </SelectItem>
+                        <SelectItem value="withdrawal" className="text-xs">
+                          Withdrawal
+                        </SelectItem>
+                        <SelectItem value="transfer_in" className="text-xs">
+                          Transfer In
+                        </SelectItem>
+                        <SelectItem value="transfer_out" className="text-xs">
+                          Transfer Out
+                        </SelectItem>
+                        <SelectItem value="payment" className="text-xs">
+                          Payment
+                        </SelectItem>
+                        <SelectItem value="refund" className="text-xs">
+                          Refund
+                        </SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="user-action" className="text-xs">
+                          User Action
+                        </SelectItem>
+                        <SelectItem value="product-action" className="text-xs">
+                          Product Action
+                        </SelectItem>
+                        <SelectItem value="order-action" className="text-xs">
+                          Order Action
+                        </SelectItem>
+                        <SelectItem
+                          value="inventory-action"
+                          className="text-xs"
+                        >
+                          Inventory Action
+                        </SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger
+                    className={`w-full rounded-none text-xs ${colors.inputs.base}`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">
+                      All Status
+                    </SelectItem>
+                    <SelectItem value="completed" className="text-xs">
+                      Completed
+                    </SelectItem>
+                    <SelectItem value="pending" className="text-xs">
+                      Pending
+                    </SelectItem>
+                    <SelectItem value="failed" className="text-xs">
+                      Failed
+                    </SelectItem>
+                    <SelectItem value="success" className="text-xs">
+                      Success
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Transactions Table */}
-      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-        <CardContent className="pt-6">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className={colors.tables.header}>
-                  <TableHead className="text-xs font-semibold">Date</TableHead>
-                  <TableHead className="text-xs font-semibold">Type</TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    Amount
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    Status
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    Description
-                  </TableHead>
-                  {selectedTab === "blockchain" && (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.6 }}
+      >
+        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+          <CardContent className="pt-6">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className={colors.tables.header}>
                     <TableHead className="text-xs font-semibold">
-                      Action
+                      Date
                     </TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {selectedTab === "wallet" ? (
-                  paginatedWalletTx.length === 0 ? (
+                    <TableHead className="text-xs font-semibold">
+                      Type
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Amount
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">
+                      Description
+                    </TableHead>
+                    {selectedTab === "blockchain" && (
+                      <TableHead className="text-xs font-semibold">
+                        Action
+                      </TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedTab === "wallet" ? (
+                    paginatedWalletTx.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8">
+                          <div className={`text-sm ${colors.texts.secondary}`}>
+                            No transactions found
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedWalletTx.map((tx, index) => (
+                        <TableRow
+                          key={tx._id || index}
+                          className={colors.tables.row}
+                        >
+                          <TableCell className="text-xs">
+                            {formatDate(tx.timestamp)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={`${getTransactionTypeColor(tx.type).bg} ${
+                                getTransactionTypeColor(tx.type).border
+                              } ${getTransactionTypeColor(tx.type).text} text-xs rounded-none`}
+                            >
+                              {tx.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs font-semibold">
+                            {formatCurrencyUtil(Number(tx.amount) || 0, "CVT")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={`${getStatusColor(tx.status).bg} ${
+                                getStatusColor(tx.status).border
+                              } ${getStatusColor(tx.status).text} text-xs rounded-none`}
+                            >
+                              {tx.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {tx.description || "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )
+                  ) : blockchainLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <div className={`text-sm ${colors.texts.secondary}`}>
-                          No transactions found
+                          No blockchain logs found
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedWalletTx.map((tx, index) => (
+                    blockchainLogs.map((log, index) => (
                       <TableRow
-                        key={tx._id || index}
+                        key={log.id || index}
                         className={colors.tables.row}
                       >
                         <TableCell className="text-xs">
-                          {formatDate(tx.timestamp)}
+                          {formatDate(log.timestamp)}
                         </TableCell>
                         <TableCell>
                           <Badge
-                            className={`${getTransactionTypeColor(tx.type).bg} ${
-                              getTransactionTypeColor(tx.type).border
-                            } ${getTransactionTypeColor(tx.type).text} text-xs rounded-none`}
+                            className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
                           >
-                            {tx.type}
+                            {log.type}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs font-semibold">
-                          {formatCurrencyUtil(Number(tx.amount) || 0, "CVT")}
+                        <TableCell className="text-xs font-mono">
+                          {log.transactionId?.substring(0, 12) || "-"}
                         </TableCell>
                         <TableCell>
                           <Badge
-                            className={`${getStatusColor(tx.status).bg} ${
-                              getStatusColor(tx.status).border
-                            } ${getStatusColor(tx.status).text} text-xs rounded-none`}
+                            className={`${getStatusColor(log.status).bg} ${
+                              getStatusColor(log.status).border
+                            } ${getStatusColor(log.status).text} text-xs rounded-none`}
                           >
-                            {tx.status}
+                            {log.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs">
-                          {tx.description || "-"}
+                          {log.action || "-"}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {log.executionTime ? `${log.executionTime}ms` : "-"}
                         </TableCell>
                       </TableRow>
                     ))
-                  )
-                ) : blockchainLogs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div className={`text-sm ${colors.texts.secondary}`}>
-                        No blockchain logs found
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  blockchainLogs.map((log, index) => (
-                    <TableRow
-                      key={log.id || index}
-                      className={colors.tables.row}
-                    >
-                      <TableCell className="text-xs">
-                        {formatDate(log.timestamp)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
-                        >
-                          {log.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs font-mono">
-                        {log.transactionId?.substring(0, 12) || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={`${getStatusColor(log.status).bg} ${
-                            getStatusColor(log.status).border
-                          } ${getStatusColor(log.status).text} text-xs rounded-none`}
-                        >
-                          {log.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {log.action || "-"}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {log.executionTime ? `${log.executionTime}ms` : "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <div className={`text-xs ${colors.texts.secondary}`}>
-                Page {currentPage} of {totalPages}
-              </div>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      className={`cursor-pointer rounded-none ${
-                        currentPage === 1
-                          ? "pointer-events-none opacity-50"
-                          : ""
-                      }`}
-                    />
-                  </PaginationItem>
-
-                  {currentPage > 1 && (
-                    <PaginationItem>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(currentPage - 1)}
-                        className="cursor-pointer rounded-none"
-                      >
-                        {currentPage - 1}
-                      </PaginationLink>
-                    </PaginationItem>
                   )}
-
-                  <PaginationItem>
-                    <PaginationLink isActive className="rounded-none">
-                      {currentPage}
-                    </PaginationLink>
-                  </PaginationItem>
-
-                  {currentPage < totalPages && (
-                    <PaginationItem>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                        className="cursor-pointer rounded-none"
-                      >
-                        {currentPage + 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )}
-
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      className={`cursor-pointer rounded-none ${
-                        currentPage === totalPages
-                          ? "pointer-events-none opacity-50"
-                          : ""
-                      }`}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6">
+                <div className={`text-xs ${colors.texts.secondary}`}>
+                  Page {currentPage} of {totalPages}
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() =>
+                          setCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        className={`cursor-pointer rounded-none ${
+                          currentPage === 1
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }`}
+                      />
+                    </PaginationItem>
+
+                    {currentPage > 1 && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          className="cursor-pointer rounded-none"
+                        >
+                          {currentPage - 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    <PaginationItem>
+                      <PaginationLink isActive className="rounded-none">
+                        {currentPage}
+                      </PaginationLink>
+                    </PaginationItem>
+
+                    {currentPage < totalPages && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          className="cursor-pointer rounded-none"
+                        >
+                          {currentPage + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() =>
+                          setCurrentPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        className={`cursor-pointer rounded-none ${
+                          currentPage === totalPages
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }`}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }
