@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { invoiceApi } from "@/lib/api/invoice.api";
 import { Loader2 } from "lucide-react";
+import { FadeUp } from "@/components/animations/fade-up";
 
 export default function VendorOrderViewPage() {
   usePageTitle("Order Details");
@@ -170,7 +171,9 @@ export default function VendorOrderViewPage() {
         const invoice = response.data.invoices[0]; // Get the first invoice
 
         // Download the invoice PDF
-        const downloadResponse = await invoiceApi.downloadInvoiceById(invoice._id);
+        const downloadResponse = await invoiceApi.downloadInvoiceById(
+          invoice._id
+        );
 
         if (downloadResponse.success && downloadResponse.data) {
           // Trigger download
@@ -261,11 +264,7 @@ export default function VendorOrderViewPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0}>
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
               <h1 className={`text-base font-bold ${colors.texts.primary}`}>
@@ -303,11 +302,11 @@ export default function VendorOrderViewPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </FadeUp>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Order Details */}
-          <div className="lg:col-span-2 space-y-6">
+          <FadeUp delay={0.1} className="lg:col-span-2 space-y-6">
             {/* Customer Information */}
             <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
               <CardHeader>
@@ -552,267 +551,285 @@ export default function VendorOrderViewPage() {
                 </CardContent>
               </Card>
             )}
-          </div>
+          </FadeUp>
 
           {/* Right Column - Summary & Details */}
           <div className="space-y-6">
-            {/* Order Summary */}
-            <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-              <CardHeader>
-                <CardTitle className="text-xs">Order Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between text-xs">
-                  <span className={colors.texts.secondary}>Subtotal</span>
-                  <span className={colors.texts.primary}>
-                    {formatCurrency(order.subtotal || 0)}
-                  </span>
-                </div>
-                {order.shippingCost ? (
+            <FadeUp delay={0.2}>
+              {/* Order Summary */}
+              <Card
+                className={`${colors.cards.base} rounded-none !shadow-none`}
+              >
+                <CardHeader>
+                  <CardTitle className="text-xs">Order Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <div className="flex justify-between text-xs">
-                    <span className={colors.texts.secondary}>Shipping</span>
+                    <span className={colors.texts.secondary}>Subtotal</span>
                     <span className={colors.texts.primary}>
-                      {formatCurrency(order.shippingCost)}
+                      {formatCurrency(order.subtotal || 0)}
                     </span>
                   </div>
-                ) : null}
-                {order.tax ? (
-                  <div className="flex justify-between text-xs">
-                    <span className={colors.texts.secondary}>Tax</span>
+                  {order.shippingCost ? (
+                    <div className="flex justify-between text-xs">
+                      <span className={colors.texts.secondary}>Shipping</span>
+                      <span className={colors.texts.primary}>
+                        {formatCurrency(order.shippingCost)}
+                      </span>
+                    </div>
+                  ) : null}
+                  {order.tax ? (
+                    <div className="flex justify-between text-xs">
+                      <span className={colors.texts.secondary}>Tax</span>
+                      <span className={colors.texts.primary}>
+                        {formatCurrency(order.tax)}
+                      </span>
+                    </div>
+                  ) : null}
+                  {order.discount ? (
+                    <div className="flex justify-between text-xs text-green-600">
+                      <span>Discount</span>
+                      <span>-{formatCurrency(order.discount)}</span>
+                    </div>
+                  ) : null}
+                  <Separator />
+                  <div className="flex justify-between text-xs font-bold">
+                    <span className={colors.texts.primary}>Total</span>
                     <span className={colors.texts.primary}>
-                      {formatCurrency(order.tax)}
+                      {formatCurrency(order.total || order.totalAmount || 0)}
                     </span>
                   </div>
-                ) : null}
-                {order.discount ? (
-                  <div className="flex justify-between text-xs text-green-600">
-                    <span>Discount</span>
-                    <span>-{formatCurrency(order.discount)}</span>
-                  </div>
-                ) : null}
-                <Separator />
-                <div className="flex justify-between text-xs font-bold">
-                  <span className={colors.texts.primary}>Total</span>
-                  <span className={colors.texts.primary}>
-                    {formatCurrency(order.total || order.totalAmount || 0)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </FadeUp>
 
             {/* Shipping Details */}
             {(order.trackingNumber ||
               order.trackingId ||
               order.courierName ||
               order.estimatedDeliveryDate) && (
+              <FadeUp delay={0.25}>
+                <Card
+                  className={`${colors.cards.base} rounded-none !shadow-none`}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xs">
+                      <MapPinIcon
+                        className={`h-4 w-4 ${colors.icons.primary}`}
+                      />
+                      Shipping Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {order.trackingNumber || order.trackingId ? (
+                      <div>
+                        <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                          Tracking Number
+                        </p>
+                        <p
+                          className={`font-mono text-xs ${colors.texts.primary}`}
+                        >
+                          {order.trackingNumber || order.trackingId}
+                        </p>
+                      </div>
+                    ) : null}
+                    {order.courierName || order.carrier ? (
+                      <div>
+                        <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                          Courier
+                        </p>
+                        <p
+                          className={`text-xs font-medium ${colors.texts.primary}`}
+                        >
+                          {order.courierName || order.carrier}
+                        </p>
+                      </div>
+                    ) : null}
+                    {order.estimatedDeliveryDate && (
+                      <div>
+                        <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                          Estimated Delivery
+                        </p>
+                        <p
+                          className={`text-xs font-medium ${colors.texts.primary}`}
+                        >
+                          {formatDate(order.estimatedDeliveryDate)}
+                        </p>
+                      </div>
+                    )}
+                    {order.trackingUrl && (
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-none text-xs"
+                        onClick={() => window.open(order.trackingUrl, "_blank")}
+                      >
+                        <TruckIcon className="h-4 w-4 mr-2" />
+                        Track Shipment
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </FadeUp>
+            )}
+
+            {/* Payment Information */}
+            <FadeUp delay={0.3}>
               <Card
                 className={`${colors.cards.base} rounded-none !shadow-none`}
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-xs">
-                    <MapPinIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-                    Shipping Details
+                    <CurrencyDollarIcon
+                      className={`h-4 w-4 ${colors.icons.primary}`}
+                    />
+                    Payment Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {order.trackingNumber || order.trackingId ? (
-                    <div>
-                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                        Tracking Number
-                      </p>
-                      <p
-                        className={`font-mono text-xs ${colors.texts.primary}`}
-                      >
-                        {order.trackingNumber || order.trackingId}
-                      </p>
-                    </div>
-                  ) : null}
-                  {order.courierName || order.carrier ? (
-                    <div>
-                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                        Courier
-                      </p>
-                      <p
-                        className={`text-xs font-medium ${colors.texts.primary}`}
-                      >
-                        {order.courierName || order.carrier}
-                      </p>
-                    </div>
-                  ) : null}
-                  {order.estimatedDeliveryDate && (
-                    <div>
-                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                        Estimated Delivery
-                      </p>
-                      <p
-                        className={`text-xs font-medium ${colors.texts.primary}`}
-                      >
-                        {formatDate(order.estimatedDeliveryDate)}
-                      </p>
-                    </div>
-                  )}
-                  {order.trackingUrl && (
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-none text-xs"
-                      onClick={() => window.open(order.trackingUrl, "_blank")}
+                  <div>
+                    <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                      Payment Method
+                    </p>
+                    <p
+                      className={`text-xs font-medium ${colors.texts.primary}`}
                     >
-                      <TruckIcon className="h-4 w-4 mr-2" />
-                      Track Shipment
-                    </Button>
+                      {order.paymentMethod
+                        ? order.paymentMethod
+                            .split("_")
+                            .map(
+                              (word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                            )
+                            .join(" ")
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                      Payment Status
+                    </p>
+                    <Badge
+                      className={`${
+                        order.paymentStatus === "paid"
+                          ? badgeColors.green.bg + " " + badgeColors.green.text
+                          : order.paymentStatus === "failed"
+                            ? badgeColors.red.bg + " " + badgeColors.red.text
+                            : badgeColors.yellow.bg +
+                              " " +
+                              badgeColors.yellow.text
+                      } rounded-none text-xs`}
+                      variant="outline"
+                    >
+                      {order.paymentStatus || "pending"}
+                    </Badge>
+                  </div>
+                  {order.transactionHash && (
+                    <div>
+                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                        Transaction Hash
+                      </p>
+                      <p
+                        className={`font-mono text-xs ${colors.texts.primary} break-all`}
+                      >
+                        {order.transactionHash}
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
-            )}
-
-            {/* Payment Information */}
-            <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xs">
-                  <CurrencyDollarIcon
-                    className={`h-4 w-4 ${colors.icons.primary}`}
-                  />
-                  Payment Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                    Payment Method
-                  </p>
-                  <p className={`text-xs font-medium ${colors.texts.primary}`}>
-                    {order.paymentMethod
-                      ? order.paymentMethod
-                          .split("_")
-                          .map(
-                            (word) =>
-                              word.charAt(0).toUpperCase() + word.slice(1)
-                          )
-                          .join(" ")
-                      : "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                    Payment Status
-                  </p>
-                  <Badge
-                    className={`${
-                      order.paymentStatus === "paid"
-                        ? badgeColors.green.bg + " " + badgeColors.green.text
-                        : order.paymentStatus === "failed"
-                          ? badgeColors.red.bg + " " + badgeColors.red.text
-                          : badgeColors.yellow.bg +
-                            " " +
-                            badgeColors.yellow.text
-                    } rounded-none text-xs`}
-                    variant="outline"
-                  >
-                    {order.paymentStatus || "pending"}
-                  </Badge>
-                </div>
-                {order.transactionHash && (
-                  <div>
-                    <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                      Transaction Hash
-                    </p>
-                    <p
-                      className={`font-mono text-xs ${colors.texts.primary} break-all`}
-                    >
-                      {order.transactionHash}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            </FadeUp>
 
             {/* Blockchain Information */}
             {(order.blockchainOrderId ||
               order.blockchainTxId ||
               order.blockchainTxHash) && (
-              <Card
-                className={`${colors.cards.base} rounded-none !shadow-none`}
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-xs">
-                    <ShieldCheckIcon
-                      className={`h-4 w-4 ${colors.icons.primary}`}
-                    />
-                    Blockchain Verification
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {order.blockchainOrderId && (
-                    <div>
-                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                        Blockchain Order ID
-                      </p>
-                      <p
-                        className={`font-mono text-xs ${colors.texts.primary} break-all`}
-                      >
-                        {order.blockchainOrderId}
-                      </p>
-                    </div>
-                  )}
-                  {(order.blockchainTxId || order.blockchainTxHash) && (
-                    <div>
-                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                        Transaction ID
-                      </p>
-                      <p
-                        className={`font-mono text-xs ${colors.texts.primary} break-all`}
-                      >
-                        {order.blockchainTxId || order.blockchainTxHash}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <FadeUp delay={0.35}>
+                <Card
+                  className={`${colors.cards.base} rounded-none !shadow-none`}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xs">
+                      <ShieldCheckIcon
+                        className={`h-4 w-4 ${colors.icons.primary}`}
+                      />
+                      Blockchain Verification
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {order.blockchainOrderId && (
+                      <div>
+                        <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                          Blockchain Order ID
+                        </p>
+                        <p
+                          className={`font-mono text-xs ${colors.texts.primary} break-all`}
+                        >
+                          {order.blockchainOrderId}
+                        </p>
+                      </div>
+                    )}
+                    {(order.blockchainTxId || order.blockchainTxHash) && (
+                      <div>
+                        <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                          Transaction ID
+                        </p>
+                        <p
+                          className={`font-mono text-xs ${colors.texts.primary} break-all`}
+                        >
+                          {order.blockchainTxId || order.blockchainTxHash}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </FadeUp>
             )}
 
             {/* Additional Notes */}
             {(order.customerNotes ||
               order.specialInstructions ||
               order.isGift) && (
-              <Card
-                className={`${colors.cards.base} rounded-none !shadow-none`}
-              >
-                <CardHeader>
-                  <CardTitle className="text-xs">Notes</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {order.customerNotes && (
-                    <div>
-                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                        Customer Notes
-                      </p>
-                      <p className={`text-xs ${colors.texts.primary}`}>
-                        {order.customerNotes}
-                      </p>
-                    </div>
-                  )}
-                  {order.specialInstructions && (
-                    <div>
-                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                        Special Instructions
-                      </p>
-                      <p className={`text-xs ${colors.texts.primary}`}>
-                        {order.specialInstructions}
-                      </p>
-                    </div>
-                  )}
-                  {order.isGift && (
-                    <div>
-                      <p className={`text-xs ${colors.texts.secondary} mb-1`}>
-                        Gift Message
-                      </p>
-                      <p className={`text-xs ${colors.texts.primary}`}>
-                        {order.giftMessage || "This is a gift order"}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <FadeUp delay={0.4}>
+                <Card
+                  className={`${colors.cards.base} rounded-none !shadow-none`}
+                >
+                  <CardHeader>
+                    <CardTitle className="text-xs">Notes</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {order.customerNotes && (
+                      <div>
+                        <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                          Customer Notes
+                        </p>
+                        <p className={`text-xs ${colors.texts.primary}`}>
+                          {order.customerNotes}
+                        </p>
+                      </div>
+                    )}
+                    {order.specialInstructions && (
+                      <div>
+                        <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                          Special Instructions
+                        </p>
+                        <p className={`text-xs ${colors.texts.primary}`}>
+                          {order.specialInstructions}
+                        </p>
+                      </div>
+                    )}
+                    {order.isGift && (
+                      <div>
+                        <p className={`text-xs ${colors.texts.secondary} mb-1`}>
+                          Gift Message
+                        </p>
+                        <p className={`text-xs ${colors.texts.primary}`}>
+                          {order.giftMessage || "This is a gift order"}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </FadeUp>
             )}
           </div>
         </div>

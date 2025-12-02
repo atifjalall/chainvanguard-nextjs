@@ -184,6 +184,8 @@ router.post("/send-otp", async (req, res) => {
       });
     }
 
+    await sessionService.deleteVerificationCode(email);
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -234,21 +236,14 @@ router.post("/verify-otp", async (req, res) => {
       });
     }
 
-    // Update user's isVerified status in database
-    const user = await User.findOneAndUpdate(
-      { email: email.toLowerCase().trim() },
-      {
-        isVerified: true,
-        emailVerifiedAt: new Date(),
-      },
-      { new: true }
-    );
+    // ✅ Delete OTP after successful verification to prevent reuse
+    await sessionService.deleteVerificationCode(email);
 
-    if (user) {
-      console.log(`✅ OTP verified and user marked as verified: ${email}`);
-    } else {
-      console.log(`⚠️ OTP verified but user not found in database: ${email}`);
-    }
+    // ✅ Remove this section - don't mark user as verified here
+    // User will be created as verified in the registration process
+    // const user = await User.findOneAndUpdate(...)
+
+    console.log(`✅ OTP verified for: ${email}`);
 
     res.json({
       success: true,

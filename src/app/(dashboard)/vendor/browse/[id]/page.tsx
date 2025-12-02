@@ -60,6 +60,7 @@ import vendorBrowseApi from "@/lib/api/vendor.browse.api";
 import vendorRequestApi from "@/lib/api/vendor.request.api";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Inventory } from "@/types";
+import { FadeUp } from "@/components/animations/fade-up";
 
 export default function VendorInventoryDetailPage() {
   usePageTitle("Inventory Details");
@@ -320,73 +321,71 @@ export default function VendorInventoryDetailPage() {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <div
-          className={`transform transition-all duration-700 mb-4 md:mb-6 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
-                  {inventoryItem.name}
-                </h1>
+        <FadeUp delay={0}>
+          <div className="mb-4 md:mb-6">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
+                    {inventoryItem.name}
+                  </h1>
+                </div>
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                  SKU: {inventoryItem.sku}
+                </p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <Badge
+                    className={`${
+                      stockStatus.color === "green"
+                        ? "bg-green-100/10 dark:bg-green-900/10 border-green-200 dark:border-green-900 text-green-700 dark:text-green-400"
+                        : "bg-red-100/10 dark:bg-red-900/10 border-red-100 dark:border-red-900 text-red-700 dark:text-red-400"
+                    } border text-xs rounded-none`}
+                  >
+                    {stockStatus.label}
+                  </Badge>
+                  <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
+                    {inventoryItem.category}
+                  </Badge>
+                  <Badge
+                    className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                  >
+                    <ShieldCheckIcon
+                      className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                    />
+                    Blockchain Verified
+                  </Badge>
+                </div>
               </div>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                SKU: {inventoryItem.sku}
-              </p>
-              <div className="flex items-center gap-3 flex-wrap">
-                <Badge
-                  className={`${
-                    stockStatus.color === "green"
-                      ? "bg-green-100/10 dark:bg-green-900/10 border-green-200 dark:border-green-900 text-green-700 dark:text-green-400"
-                      : "bg-red-100/10 dark:bg-red-900/10 border-red-100 dark:border-red-900 text-red-700 dark:text-red-400"
-                  } border text-xs rounded-none`}
-                >
-                  {stockStatus.label}
-                </Badge>
-                <Badge className="bg-blue-100/10 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-xs rounded-none">
-                  {inventoryItem.category}
-                </Badge>
-                <Badge
-                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
-                >
-                  <ShieldCheckIcon
-                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
-                  />
-                  Blockchain Verified
-                </Badge>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                className="flex items-center justify-center flex-shrink-0 mt-0.5"
-                onClick={handleToggleSaved}
-              >
-                <BookmarkIcon
-                  className={`w-6 h-6 transition-colors cursor-pointer ${
-                    isSaved
-                      ? "fill-black text-black"
-                      : "text-gray-400 hover:text-black"
-                  }`}
-                />
-              </button>
-              <Button
-                onClick={handleRequest}
-                disabled={inventoryItem.availableQuantity === 0}
-                size="sm"
-                className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
-              >
-                <PlusIcon className="h-3 w-3 mr-2" />
-                Request Item
-              </Button>
+              <div className="flex items-center gap-3">
+                <button
+                  className="flex items-center justify-center flex-shrink-0 mt-0.5"
+                  onClick={handleToggleSaved}
+                >
+                  <BookmarkIcon
+                    className={`w-6 h-6 transition-colors cursor-pointer ${
+                      isSaved
+                        ? "fill-black text-black"
+                        : "text-gray-400 hover:text-black"
+                    }`}
+                  />
+                </button>
+                <Button
+                  onClick={handleRequest}
+                  disabled={inventoryItem.availableQuantity === 0}
+                  size="sm"
+                  className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-xs md:text-sm cursor-pointer h-8 md:h-9 rounded-none"
+                >
+                  <PlusIcon className="h-3 w-3 mr-2" />
+                  Request Item
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </FadeUp>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-          <div className="lg:col-span-1 space-y-4 md:space-y-6">
+          <FadeUp delay={0.1} className="lg:col-span-1 space-y-4 md:space-y-6">
             <Card className="bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none overflow-hidden p-0">
               <CardContent className="p-0">
                 <div className="relative aspect-[4/5]">
@@ -576,9 +575,9 @@ export default function VendorInventoryDetailPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </FadeUp>
 
-          <div className="lg:col-span-2">
+          <FadeUp delay={0.2} className="lg:col-span-2">
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="w-full justify-start bg-transparent rounded-none p-0 h-auto mb-2 md:mb-3 flex-wrap">
                 <TabsTrigger
@@ -688,7 +687,7 @@ export default function VendorInventoryDetailPage() {
                 </Card>
               </TabsContent>
             </Tabs>
-          </div>
+          </FadeUp>
         </div>
 
         {/* Enhanced Request Dialog */}

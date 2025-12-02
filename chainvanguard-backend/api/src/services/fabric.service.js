@@ -19,6 +19,7 @@ class FabricService {
     this.vendorInventoryContract = null;
     this.vendorRequestContract = null;
     this.tokenContract = null;
+    this.backupContract = null;
     this.client = null;
   }
 
@@ -135,6 +136,10 @@ class FabricService {
         chaincodeName,
         "TokenContract"
       );
+      this.backupContract = this.network.getContract(
+        chaincodeName,
+        "BackupContract"
+      );
 
       this.contract = this.userContract;
 
@@ -142,7 +147,7 @@ class FabricService {
       console.log(`   Channel: ${channelName}`);
       console.log(`   Chaincode: ${chaincodeName}`);
       console.log(
-        `   Contracts: UserContract, ProductContract, OrderContract, InventoryContract, VendorInventoryContract, VendorRequestContract, TokenContract`
+        `   Contracts: UserContract, ProductContract, OrderContract, InventoryContract, VendorInventoryContract, VendorRequestContract, TokenContract, BackupContract`
       );
 
       return true;
@@ -1919,6 +1924,15 @@ class FabricService {
           console.log("✅ Token contract initialized");
         }
         break;
+      case "backup":
+        if (!this.backupContract) {
+          this.backupContract = this.network.getContract(
+            chaincodeName,
+            "BackupContract"
+          );
+          console.log("✅ Backup contract initialized");
+        }
+        break;
       default:
         throw new Error(`Unknown contract type: ${contractType}`);
     }
@@ -3130,6 +3144,267 @@ class FabricService {
       };
     } catch (error) {
       console.error("❌ Blockchain recordInvoiceIssued error:", error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // BACKUP CONTRACT METHODS
+  // ========================================
+
+  /**
+   * Log backup to blockchain
+   * CRITICAL: This creates immutable record of backup CID on blockchain
+   * Used during disaster recovery when MongoDB is unavailable
+   *
+   * @param {object} backupData - Backup metadata
+   * @returns {object} Transaction result
+   */
+  async logBackupToBlockchain(backupData) {
+    try {
+      console.log(`📝 Logging backup to blockchain: ${backupData.backupId}`);
+
+      if (!this.backupContract) {
+        await this.ensureContract("backup");
+      }
+
+      const result = await this.backupContract.submitTransaction(
+        "logBackup",
+        JSON.stringify(backupData)
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const parsed = JSON.parse(resultStr);
+      console.log(`✅ Backup logged to blockchain: ${backupData.backupId}`);
+
+      return parsed;
+    } catch (error) {
+      console.error("❌ Log backup to blockchain error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all active backups from blockchain
+   * CRITICAL FOR DISASTER RECOVERY: When MongoDB is down, this is the ONLY way to find backup CIDs
+   *
+   * @returns {Array} Array of active backups
+   */
+  async getAllBackupsFromBlockchain() {
+    try {
+      console.log("📋 Getting all backups from blockchain...");
+
+      if (!this.backupContract) {
+        await this.ensureContract("backup");
+      }
+
+      const result = await this.backupContract.evaluateTransaction(
+        "getAllBackups"
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const backups = JSON.parse(resultStr);
+      console.log(`✅ Retrieved ${backups.length} backups from blockchain`);
+
+      return backups;
+    } catch (error) {
+      console.error("❌ Get all backups from blockchain error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get latest full backup from blockchain
+   * Used for disaster recovery
+   *
+   * @returns {object|null} Latest full backup or null
+   */
+  async getLatestFullBackupFromBlockchain() {
+    try {
+      console.log("📋 Getting latest full backup from blockchain...");
+
+      if (!this.backupContract) {
+        await this.ensureContract("backup");
+      }
+
+      const result = await this.backupContract.evaluateTransaction(
+        "getLatestFullBackup"
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const backup = JSON.parse(resultStr);
+      console.log(
+        backup
+          ? `✅ Latest full backup: ${backup.backupId}`
+          : "⚠️ No full backups found"
+      );
+
+      return backup;
+    } catch (error) {
+      console.error("❌ Get latest full backup from blockchain error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get incremental backup chain from blockchain
+   * Used for restoration with incrementals
+   *
+   * @param {string} parentBackupId - Parent backup ID
+   * @returns {Array} Array of incremental backups
+   */
+  async getIncrementalChainFromBlockchain(parentBackupId) {
+    try {
+      console.log(
+        `📋 Getting incremental chain for ${parentBackupId} from blockchain...`
+      );
+
+      if (!this.backupContract) {
+        await this.ensureContract("backup");
+      }
+
+      const result = await this.backupContract.evaluateTransaction(
+        "getIncrementalChain",
+        parentBackupId
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const incrementals = JSON.parse(resultStr);
+      console.log(`✅ Retrieved ${incrementals.length} incrementals`);
+
+      return incrementals;
+    } catch (error) {
+      console.error("❌ Get incremental chain from blockchain error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get backup by ID from blockchain
+   *
+   * @param {string} backupId - Backup ID
+   * @returns {object|null} Backup object or null
+   */
+  async getBackupByIdFromBlockchain(backupId) {
+    try {
+      console.log(`📋 Getting backup ${backupId} from blockchain...`);
+
+      if (!this.backupContract) {
+        await this.ensureContract("backup");
+      }
+
+      const result = await this.backupContract.evaluateTransaction(
+        "getBackupById",
+        backupId
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const backup = JSON.parse(resultStr);
+      console.log(backup ? `✅ Backup found` : "⚠️ Backup not found");
+
+      return backup;
+    } catch (error) {
+      console.error("❌ Get backup by ID from blockchain error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark backup as deleted on blockchain
+   * Used during cleanup
+   *
+   * @param {string} backupId - Backup ID to mark as deleted
+   * @returns {object} Updated backup object
+   */
+  async markBackupDeletedOnBlockchain(backupId) {
+    try {
+      console.log(`🗑️ Marking backup ${backupId} as deleted on blockchain...`);
+
+      if (!this.backupContract) {
+        await this.ensureContract("backup");
+      }
+
+      const result = await this.backupContract.submitTransaction(
+        "markBackupDeleted",
+        backupId
+      );
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const backup = JSON.parse(resultStr);
+      console.log(`✅ Backup marked as deleted on blockchain`);
+
+      return backup;
+    } catch (error) {
+      console.error("❌ Mark backup deleted on blockchain error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get backup statistics from blockchain
+   *
+   * @returns {object} Backup statistics
+   */
+  async getBackupStatsFromBlockchain() {
+    try {
+      console.log("📊 Getting backup stats from blockchain...");
+
+      if (!this.backupContract) {
+        await this.ensureContract("backup");
+      }
+
+      const result =
+        await this.backupContract.evaluateTransaction("getBackupStats");
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      const stats = JSON.parse(resultStr);
+      console.log(`✅ Backup stats retrieved from blockchain`);
+
+      return stats;
+    } catch (error) {
+      console.error("❌ Get backup stats from blockchain error:", error);
       throw error;
     }
   }

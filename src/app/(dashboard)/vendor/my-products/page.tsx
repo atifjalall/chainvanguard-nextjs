@@ -67,6 +67,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { FadeUp } from "@/components/animations/fade-up";
 
 // Custom CVT Icon component
 const RsIcon = () => (
@@ -864,13 +865,9 @@ export default function VendorMyProductsPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 mb-4 md:mb-6 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0}>
           <div
-            className={`flex flex-col lg:flex-row justify-between items-start lg:items-center ${GRID_GAP}`}
+            className={`${SECTION_MARGIN} flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4`}
           >
             <div className={FORM_SPACING}>
               <h1
@@ -911,16 +908,11 @@ export default function VendorMyProductsPage() {
               </Link>
             </div>
           </div>
-        </div>
+        </FadeUp>
 
-        <div
-          className={`transform transition-all duration-700 delay-100 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <div
-            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 ${GRID_GAP}`}
-          >
+        {/* Statistics Cards */}
+        <FadeUp delay={0.1}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <Card
               className={`${colors.cards.base} hover:scale-[1.02] transition-all duration-300 rounded-none`}
             >
@@ -1042,324 +1034,328 @@ export default function VendorMyProductsPage() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </FadeUp>
 
-        <div
-          className={`transform transition-all duration-700 delay-200 mt-6 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <Card className={`${colors.cards.base} rounded-none`}>
-            <CardHeader>
-              <div className={`flex items-center justify-between`}>
-                <div>
-                  <CardTitle
-                    className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
-                  >
-                    <div className="h-8 w-8 flex items-center justify-center">
-                      <FunnelIcon
-                        className={`h-4 w-4 ${colors.texts.primary}`}
-                      />
-                    </div>
-                    Filters & Search
-                  </CardTitle>
-                  <CardDescription
-                    className={`text-xs ${colors.texts.secondary}`}
-                  >
-                    Find and manage your products easily
-                  </CardDescription>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="lg:hidden border-2 border-gray-200 dark:border-gray-700 text-xs"
-                >
-                  <FunnelIcon className="h-3 w-3 mr-2" />
-                  {showFilters ? "Hide" : "Show"} Filters
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div
-                className={`space-y-6 ${showFilters ? "block" : "hidden lg:block"}`}
-              >
-                <div className="relative w-full">
-                  <MagnifyingGlassIcon
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
-                  />
-                  <Input
-                    placeholder="Search by name, description, or SKU..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm("")}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+        {/* Filters Card */}
+        <FadeUp delay={0.2}>
+          <div className="mt-6">
+            <Card className={`${colors.cards.base} rounded-none`}>
+              <CardHeader>
+                <div className={`flex items-center justify-between`}>
+                  <div>
+                    <CardTitle
+                      className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
                     >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Select
-                    value={selectedCategory}
-                    onValueChange={setSelectedCategory}
-                  >
-                    <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="w-full">
-                      {categories.map((category) => (
-                        <SelectItem
-                          key={category}
-                          value={category}
-                          className="text-xs"
-                        >
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={selectedStatus}
-                    onValueChange={setSelectedStatus}
-                  >
-                    <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="w-full">
-                      {statusOptions.map((status) => (
-                        <SelectItem
-                          key={status}
-                          value={status}
-                          className="text-xs"
-                        >
-                          <span className="capitalize">
-                            {status.replace("_", " ")}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="w-full">
-                      {sortOptions.map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={option.value}
-                          className="text-xs"
-                        >
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex gap-2 items-center">
-                    {searchTerm && (
-                      <Badge
-                        variant="outline"
-                        className={`${badgeColors.grey.bg} ${badgeColors.grey.border} ${badgeColors.grey.text} text-xs rounded-none`}
-                      >
-                        &quot;{searchTerm}&quot;
-                        <button
-                          onClick={() => setSearchTerm("")}
-                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    )}
-                    {selectedCategory !== "All Categories" && (
-                      <Badge
-                        variant="outline"
-                        className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
-                      >
-                        {selectedCategory}
-                        <button
-                          onClick={() => setSelectedCategory("All Categories")}
-                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    )}
-                    {selectedStatus !== "All Status" && (
-                      <Badge
-                        variant="outline"
-                        className={`${getStatusBadgeColor(selectedStatus).bg} ${getStatusBadgeColor(selectedStatus).border} ${getStatusBadgeColor(selectedStatus).text} flex items-center gap-1 text-xs rounded-none`}
-                      >
-                        {selectedStatus.replace("_", " ")}
-                        <button
-                          onClick={() => setSelectedStatus("All Status")}
-                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    )}
-                    <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
-                      {paginatedProducts.length} of{" "}
-                      {filteredAndSortedProducts.length} products
-                    </span>
+                      <div className="h-8 w-8 flex items-center justify-center">
+                        <FunnelIcon
+                          className={`h-4 w-4 ${colors.texts.primary}`}
+                        />
+                      </div>
+                      Filters & Search
+                    </CardTitle>
+                    <CardDescription
+                      className={`text-xs ${colors.texts.secondary}`}
+                    >
+                      Find and manage your products easily
+                    </CardDescription>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className={`text-xs ${colors.texts.secondary} mr-2`}>
-                      View:
-                    </span>
-                    <button
-                      onClick={() => setViewMode("grid")}
-                      className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer ${
-                        viewMode === "grid"
-                          ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
-                          : "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      }`}
-                    >
-                      <Squares2X2Icon className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer ${
-                        viewMode === "list"
-                          ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
-                          : "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      }`}
-                    >
-                      <Bars3Icon className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="lg:hidden border-2 border-gray-200 dark:border-gray-700 text-xs"
+                  >
+                    <FunnelIcon className="h-3 w-3 mr-2" />
+                    {showFilters ? "Hide" : "Show"} Filters
+                  </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div
-          className={`transform transition-all duration-700 delay-300 mt-6 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          {filteredAndSortedProducts.length > 0 ? (
-            <>
-              <div
-                className={
-                  viewMode === "grid"
-                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                    : "space-y-6"
-                }
-              >
-                {paginatedProducts.map((product) =>
-                  viewMode === "grid" ? (
-                    <ProductCard key={product._id} product={product} />
-                  ) : (
-                    <ProductListItem key={product._id} product={product} />
-                  )
-                )}
-              </div>
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <Pagination className="mt-8 rounded-none">
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() =>
-                          setCurrentPage(Math.max(1, currentPage - 1))
-                        }
-                        className={
-                          currentPage === 1
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      (page) => (
-                        <PaginationItem key={page}>
-                          <PaginationLink
-                            onClick={() => setCurrentPage(page)}
-                            isActive={currentPage === page}
-                            className="cursor-pointer"
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      )
-                    )}
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() =>
-                          setCurrentPage(Math.min(totalPages, currentPage + 1))
-                        }
-                        className={
-                          currentPage === totalPages
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              )}
-            </>
-          ) : (
-            <Card
-              className={`text-center py-16 ${colors.cards.base} rounded-none`}
-            >
+              </CardHeader>
               <CardContent>
-                <div className="h-20 w-20 mx-auto mb-6 flex items-center justify-center">
-                  <CubeIcon className="h-10 w-10 text-gray-500 dark:text-gray-400" />
-                </div>
-                <h3
-                  className={`text-base font-semibold ${colors.texts.primary} mb-2`}
+                <div
+                  className={`space-y-6 ${showFilters ? "block" : "hidden lg:block"}`}
                 >
-                  {totalProducts === 0
-                    ? "No products yet"
-                    : "No products found"}
-                </h3>
-                <p
-                  className={`text-xs ${colors.texts.secondary} mb-6 max-w-md mx-auto`}
-                >
-                  {totalProducts === 0
-                    ? "Start building your blockchain marketplace by adding your first product!"
-                    : "We couldn't find any products matching your filters. Try adjusting your search criteria."}
-                </p>
-                {totalProducts === 0 ? (
-                  <div className="flex justify-center">
-                    {" "}
-                    {/* Center the button */}
-                    <Link href="/vendor/add-product">
+                  <div className="relative w-full">
+                    <MagnifyingGlassIcon
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
+                    />
+                    <Input
+                      placeholder="Search by name, description, or SKU..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className={`${colors.inputs.base} pl-9 h-9 w-full min-w-[240px] ${colors.inputs.focus} transition-colors duration-200`}
+                    />
+                    {searchTerm && (
                       <button
-                        className={`flex items-center gap-2 px-4 py-2 text-xs text-white font-medium transition-colors cursor-pointer ${colors.buttons.primary}`}
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       >
-                        <PlusIcon className="h-3 w-3" />
-                        Add Your First Product
+                        <XMarkIcon className="h-4 w-4" />
                       </button>
-                    </Link>
+                    )}
                   </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSelectedCategory("All Categories");
-                      setSelectedStatus("All Status");
-                    }}
-                    className={`flex items-center gap-2 px-6 py-3 mx-auto border-2 ${colors.borders.primary} ${colors.backgrounds.primary} ${colors.texts.primary} text-xs font-medium transition-colors cursor-pointer`}
-                  >
-                    <ArrowPathIcon className="h-3 w-3" />
-                    Clear Filters
-                  </button>
-                )}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Select
+                      value={selectedCategory}
+                      onValueChange={setSelectedCategory}
+                    >
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-full">
+                        {categories.map((category) => (
+                          <SelectItem
+                            key={category}
+                            value={category}
+                            className="text-xs"
+                          >
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={selectedStatus}
+                      onValueChange={setSelectedStatus}
+                    >
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-full">
+                        {statusOptions.map((status) => (
+                          <SelectItem
+                            key={status}
+                            value={status}
+                            className="text-xs"
+                          >
+                            <span className="capitalize">
+                              {status.replace("_", " ")}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="text-sm h-9 w-full min-w-[240px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white outline-none ring-0 shadow-none transition-colors duration-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-full">
+                        {sortOptions.map((option) => (
+                          <SelectItem
+                            key={option.value}
+                            value={option.value}
+                            className="text-xs"
+                          >
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex gap-2 items-center">
+                      {searchTerm && (
+                        <Badge
+                          variant="outline"
+                          className={`${badgeColors.grey.bg} ${badgeColors.grey.border} ${badgeColors.grey.text} text-xs rounded-none`}
+                        >
+                          &quot;{searchTerm}&quot;
+                          <button
+                            onClick={() => setSearchTerm("")}
+                            className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      )}
+                      {selectedCategory !== "All Categories" && (
+                        <Badge
+                          variant="outline"
+                          className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                        >
+                          {selectedCategory}
+                          <button
+                            onClick={() =>
+                              setSelectedCategory("All Categories")
+                            }
+                            className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      )}
+                      {selectedStatus !== "All Status" && (
+                        <Badge
+                          variant="outline"
+                          className={`${getStatusBadgeColor(selectedStatus).bg} ${getStatusBadgeColor(selectedStatus).border} ${getStatusBadgeColor(selectedStatus).text} flex items-center gap-1 text-xs rounded-none`}
+                        >
+                          {selectedStatus.replace("_", " ")}
+                          <button
+                            onClick={() => setSelectedStatus("All Status")}
+                            className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      )}
+                      <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
+                        {paginatedProducts.length} of{" "}
+                        {filteredAndSortedProducts.length} products
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span
+                        className={`text-xs ${colors.texts.secondary} mr-2`}
+                      >
+                        View:
+                      </span>
+                      <button
+                        onClick={() => setViewMode("grid")}
+                        className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer ${
+                          viewMode === "grid"
+                            ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+                            : "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        <Squares2X2Icon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setViewMode("list")}
+                        className={`h-8 w-8 p-0 flex items-center justify-center transition-colors cursor-pointer ${
+                          viewMode === "list"
+                            ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+                            : "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        <Bars3Icon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          )}
-        </div>
+          </div>
+        </FadeUp>
+
+        {/* Products Grid/List */}
+        <FadeUp delay={0.3}>
+          <div className="mt-6">
+            {filteredAndSortedProducts.length > 0 ? (
+              <>
+                <div
+                  className={
+                    viewMode === "grid"
+                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                      : "space-y-6"
+                  }
+                >
+                  {paginatedProducts.map((product) =>
+                    viewMode === "grid" ? (
+                      <ProductCard key={product._id} product={product} />
+                    ) : (
+                      <ProductListItem key={product._id} product={product} />
+                    )
+                  )}
+                </div>
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <Pagination className="mt-8 rounded-none">
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() =>
+                            setCurrentPage(Math.max(1, currentPage - 1))
+                          }
+                          className={
+                            currentPage === 1
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() =>
+                            setCurrentPage(
+                              Math.min(totalPages, currentPage + 1)
+                            )
+                          }
+                          className={
+                            currentPage === totalPages
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+              </>
+            ) : (
+              <Card
+                className={`text-center py-16 ${colors.cards.base} rounded-none`}
+              >
+                <CardContent>
+                  <div className="h-20 w-20 mx-auto mb-6 flex items-center justify-center">
+                    <CubeIcon className="h-10 w-10 text-gray-500 dark:text-gray-400" />
+                  </div>
+                  <h3
+                    className={`text-base font-semibold ${colors.texts.primary} mb-2`}
+                  >
+                    {totalProducts === 0
+                      ? "No products yet"
+                      : "No products found"}
+                  </h3>
+                  <p
+                    className={`text-xs ${colors.texts.secondary} mb-6 max-w-md mx-auto`}
+                  >
+                    {totalProducts === 0
+                      ? "Start building your blockchain marketplace by adding your first product!"
+                      : "We couldn't find any products matching your filters. Try adjusting your search criteria."}
+                  </p>
+                  {totalProducts === 0 ? (
+                    <div className="flex justify-center">
+                      {" "}
+                      {/* Center the button */}
+                      <Link href="/vendor/add-product">
+                        <button
+                          className={`flex items-center gap-2 px-4 py-2 text-xs text-white font-medium transition-colors cursor-pointer ${colors.buttons.primary}`}
+                        >
+                          <PlusIcon className="h-3 w-3" />
+                          Add Your First Product
+                        </button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setSearchTerm("");
+                        setSelectedCategory("All Categories");
+                        setSelectedStatus("All Status");
+                      }}
+                      className={`flex items-center gap-2 px-6 py-3 mx-auto border-2 ${colors.borders.primary} ${colors.backgrounds.primary} ${colors.texts.primary} text-xs font-medium transition-colors cursor-pointer`}
+                    >
+                      <ArrowPathIcon className="h-3 w-3" />
+                      Clear Filters
+                    </button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </FadeUp>
       </div>
 
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>

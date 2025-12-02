@@ -73,12 +73,10 @@ import {
 } from "@/components/ui/breadcrumb";
 
 import { usePageTitle } from "@/hooks/use-page-title";
-import {
-  getMyRequests,
-  getRequestById,
-} from "@/lib/api/vendor.request.api";
+import { getMyRequests, getRequestById } from "@/lib/api/vendor.request.api";
 import { invoiceApi } from "@/lib/api/invoice.api";
 import { Loader2 } from "lucide-react";
+import { FadeUp } from "@/components/animations/fade-up";
 
 const RsIcon = () => (
   <svg
@@ -325,13 +323,16 @@ export default function VendorTransactionsPage() {
       toast.loading("Downloading invoice...");
 
       // Get invoices for this vendor request
-      const response = await invoiceApi.getInvoicesByVendorRequest(transactionId);
+      const response =
+        await invoiceApi.getInvoicesByVendorRequest(transactionId);
 
       if (response.success && response.data?.invoices?.length > 0) {
         const invoice = response.data.invoices[0]; // Get the first invoice
 
         // Download the invoice PDF
-        const downloadResponse = await invoiceApi.downloadInvoiceById(invoice._id);
+        const downloadResponse = await invoiceApi.downloadInvoiceById(
+          invoice._id
+        );
 
         if (downloadResponse.success && downloadResponse.data) {
           // Trigger download
@@ -441,12 +442,9 @@ export default function VendorTransactionsPage() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0}>
           <div className="flex justify-between items-start">
             <div className="space-y-2">
               <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
@@ -469,14 +467,10 @@ export default function VendorTransactionsPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </FadeUp>
 
         {/* Statistics Cards */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0.1}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
@@ -531,14 +525,10 @@ export default function VendorTransactionsPage() {
               </Card>
             ))}
           </div>
-        </div>
+        </FadeUp>
 
         {/* Filters Card */}
-        <div
-          className={`transform transition-all duration-700 delay-300 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0.2}>
           <Card className={`${colors.cards.base} !rounded-none`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base">
@@ -702,14 +692,10 @@ export default function VendorTransactionsPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </FadeUp>
 
         {/* Transactions Table */}
-        <div
-          className={`transform transition-all duration-700 delay-400 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0.3}>
           {filteredAndSortedTransactions.length > 0 ? (
             <Card
               className={`${colors.cards.base} !rounded-none !shadow-none hover:!shadow-none`}
@@ -948,9 +934,7 @@ export default function VendorTransactionsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() =>
-                                handleViewDetails(transaction.id)
-                              }
+                              onClick={() => handleViewDetails(transaction.id)}
                               className={`h-8 px-3 ${colors.buttons.outline} cursor-pointer !rounded-none transition-all hover:border-black dark:hover:border-white`}
                             >
                               <EyeIcon className="h-3 w-3 mr-1" />
@@ -1006,7 +990,7 @@ export default function VendorTransactionsPage() {
               </CardContent>
             </Card>
           )}
-        </div>
+        </FadeUp>
       </div>
 
       {/* Transaction Details Modal */}

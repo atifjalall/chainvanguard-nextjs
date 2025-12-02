@@ -32,6 +32,7 @@ import {
   ExclamationTriangleIcon,
   BanknotesIcon,
   Bars3Icon,
+  ServerIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "@/components/common/dashboard-sidebar";
@@ -102,9 +103,20 @@ export function DashboardHeader({
         fetchNotifications();
       }, 30000);
 
+      // Listen for backup completion events (for immediate refresh)
+      const handleBackupComplete = () => {
+        console.log(
+          "🔔 Backup completed event received, refreshing notifications..."
+        );
+        fetchNotifications();
+      };
+
+      window.addEventListener("backup:completed", handleBackupComplete);
+
       return () => {
         console.log("🛑 Clearing notification polling interval");
         clearInterval(interval);
+        window.removeEventListener("backup:completed", handleBackupComplete);
       };
     } else {
       console.log("⚠️ No user found, skipping notification fetch");
@@ -349,6 +361,12 @@ export function DashboardHeader({
       blockchain_verified: CheckCircleIcon,
       blockchain_failed: ExclamationCircleIcon,
 
+      // Backup related
+      backup_completed: ServerIcon,
+      backup_failed: ExclamationCircleIcon,
+      backup_storage_warning: ExclamationTriangleIcon,
+      backup_storage_critical: ExclamationCircleIcon,
+
       // General
       alert: ExclamationCircleIcon,
       notification: BellIcon,
@@ -379,8 +397,7 @@ export function DashboardHeader({
   const isVendor = user?.role === "vendor";
   const isCustomer = user?.role === "customer";
   // Support both "expert" and "blockchain-expert" role strings
-  const isExpert =
-    user?.role === "expert";
+  const isExpert = user?.role === "expert";
 
   const getRoleColor = (role?: string) => {
     switch (role) {

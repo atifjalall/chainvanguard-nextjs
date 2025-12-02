@@ -57,6 +57,7 @@ import { productAPI } from "@/lib/api/product.api";
 import Image from "next/image";
 import { badgeColors } from "@/lib/colorConstants";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { FadeUp } from "@/components/animations/fade-up";
 
 type BadgeKey = keyof typeof badgeColors;
 
@@ -233,7 +234,6 @@ export default function VendorProductDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="relative z-10 p-2 md:p-4 lg:px-6 pt-0">
-        {" "}
         <Breadcrumb className="mb-2 md:mb-4">
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -253,79 +253,83 @@ export default function VendorProductDetailPage() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <div className="mb-2 md:mb-4">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div className="space-y-2 md:space-y-1">
-              <div className="flex items-center gap-6">
-                <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
-                  {product.name}
-                </h1>
-              </div>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                SKU: {product.sku}
-              </p>
-              <div className="flex items-center gap-3 flex-wrap mb-2">
-                <Badge
-                  className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
-                >
-                  {product.category}
-                </Badge>
-                <Badge
-                  className={`${badgeColors[stockStatus.key as BadgeKey].bg} ${badgeColors[stockStatus.key as BadgeKey].border} ${badgeColors[stockStatus.key as BadgeKey].text} text-xs rounded-none`}
-                >
-                  {stockStatus.text}
-                </Badge>
-                {product.isFeatured && (
-                  <Badge
-                    className={`${badgeColors.purple.bg} ${badgeColors.purple.border} ${badgeColors.purple.text} text-xs rounded-none`}
-                  >
-                    Featured
-                  </Badge>
-                )}
-                {product.isSustainable && (
-                  <Badge
-                    className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
-                  >
-                    Sustainable
-                  </Badge>
-                )}
-                {product.blockchainVerified && (
-                  <Badge
-                    className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} text-xs rounded-none`}
-                  >
-                    <ShieldCheckIcon className="h-3 w-3 md:h-4 " />
-                    Blockchain Verified
-                  </Badge>
-                )}
-              </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  router.push(`/vendor/my-products/${product._id}/edit`)
-                }
-                className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all hover:border-black dark:hover:border-white"
-              >
-                <PencilSquareIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400"
-              >
-                <TrashIcon className="h-3 w-3 md:h-4 md:w-4 mr-2 text-red-600 dark:text-red-400" />
-                Delete
-              </Button>
+        <FadeUp delay={0}>
+          <div className="mb-2 md:mb-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+              <div className="space-y-2 md:space-y-1">
+                <div className="flex items-center gap-6">
+                  <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
+                    {product.name}
+                  </h1>
+                </div>
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                  SKU: {product.sku}
+                </p>
+                <div className="flex items-center gap-3 flex-wrap mb-2">
+                  <Badge
+                    className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+                  >
+                    {product.category}
+                  </Badge>
+                  <Badge
+                    className={`${badgeColors[stockStatus.key as BadgeKey].bg} ${badgeColors[stockStatus.key as BadgeKey].border} ${badgeColors[stockStatus.key as BadgeKey].text} text-xs rounded-none`}
+                  >
+                    {stockStatus.text}
+                  </Badge>
+                  {product.isFeatured && (
+                    <Badge
+                      className={`${badgeColors.purple.bg} ${badgeColors.purple.border} ${badgeColors.purple.text} text-xs rounded-none`}
+                    >
+                      Featured
+                    </Badge>
+                  )}
+                  {product.isSustainable && (
+                    <Badge
+                      className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                    >
+                      Sustainable
+                    </Badge>
+                  )}
+                  {product.blockchainVerified && (
+                    <Badge
+                      className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} text-xs rounded-none`}
+                    >
+                      <ShieldCheckIcon className="h-3 w-3 md:h-4 " />
+                      Blockchain Verified
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    router.push(`/vendor/my-products/${product._id}/edit`)
+                  }
+                  className="text-xs cursor-pointer h-8 border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all hover:border-black dark:hover:border-white"
+                >
+                  <PencilSquareIcon className="h-3 w-3 md:h-4 md:w-4 mr-2" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="text-xs cursor-pointer h-8 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 rounded-none transition-all hover:border-red-600 dark:hover:border-red-400"
+                >
+                  <TrashIcon className="h-3 w-3 md:h-4 md:w-4 mr-2 text-red-600 dark:text-red-400" />
+                  Delete
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </FadeUp>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-6">
+          <FadeUp delay={0.1} className="lg:col-span-1 space-y-6">
             <Card className="bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none overflow-hidden border border-gray-200 dark:border-gray-700 p-0">
               <CardContent className="p-0 m-0">
                 <div className="relative aspect-[3/4] group m-0">
@@ -487,9 +491,9 @@ export default function VendorProductDetailPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </FadeUp>
 
-          <div className="lg:col-span-2">
+          <FadeUp delay={0.2} className="lg:col-span-2">
             <Tabs defaultValue="details" className="w-full">
               <TabsList className="w-full justify-start bg-transparent rounded-none p-0 h-auto mb-2 md:mb-4 flex-wrap">
                 <TabsTrigger
@@ -938,7 +942,7 @@ export default function VendorProductDetailPage() {
                 </motion.div>
               </TabsContent>
             </Tabs>
-          </div>
+          </FadeUp>
         </div>
         {/* Delete Confirmation Modal */}
         <AnimatePresence>

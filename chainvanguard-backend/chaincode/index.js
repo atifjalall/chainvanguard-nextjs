@@ -8,6 +8,7 @@ const InventoryContract = require('./lib/inventoryContract');
 const VendorRequestContract = require('./lib/vendorRequestContract');
 const VendorInventoryContract = require('./lib/vendorInventoryContract');
 const TokenContract = require('./lib/tokenContract');
+const BackupContract = require('./lib/backupContract');
 
 module.exports.UserContract = UserContract;
 module.exports.ProductContract = ProductContract;
@@ -16,6 +17,7 @@ module.exports.InventoryContract = InventoryContract;
 module.exports.VendorRequestContract = VendorRequestContract;
 module.exports.VendorInventoryContract = VendorInventoryContract;
 module.exports.TokenContract = TokenContract;
+module.exports.BackupContract = BackupContract;
 
 module.exports.contracts = [
   UserContract,
@@ -24,5 +26,6 @@ module.exports.contracts = [
   InventoryContract,
   VendorRequestContract,
   VendorInventoryContract,
-  TokenContract
+  TokenContract,
+  BackupContract
 ];

@@ -322,7 +322,20 @@ peer chaincode invoke \
   --peerAddresses localhost:9051 --tlsRootCertFiles $ORG2_CERT \
   -c '{"function":"TokenContract:initLedger","Args":[]}' > /dev/null 2>&1 || print_info "TokenContract already initialized"
 
-print_success "All 7 contracts initialized"
+# Initialize BackupContract ✨ DISASTER RECOVERY
+print_info "Initializing BackupContract (Disaster Recovery)..."
+peer chaincode invoke \
+  -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls \
+  --cafile ${FABRIC_SAMPLES_PATH}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem \
+  -C $CHANNEL_NAME \
+  -n $CHAINCODE_NAME \
+  --peerAddresses localhost:7051 --tlsRootCertFiles $ORG1_CERT \
+  --peerAddresses localhost:9051 --tlsRootCertFiles $ORG2_CERT \
+  -c '{"function":"BackupContract:initLedger","Args":[]}' > /dev/null 2>&1 || print_info "BackupContract already initialized"
+
+print_success "All 8 contracts initialized"
 echo ""
 
 echo "=========================================="
@@ -337,6 +350,7 @@ echo "   4. InventoryContract"
 echo "   5. VendorRequestContract"
 echo "   6. VendorInventoryContract"
 echo "   7. TokenContract"
+echo "   8. BackupContract (Disaster Recovery)"
 echo ""
 echo "📊 CouchDB Access:"
 echo "   Org1: http://localhost:5984/_utils/"

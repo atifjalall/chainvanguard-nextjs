@@ -82,6 +82,14 @@ export const NOTIFICATION_TYPES = {
     ITEM_AVAILABLE: "wishlist_item_available",
     PRICE_DROP: "wishlist_price_drop",
   },
+
+  // Backup System
+  BACKUP: {
+    COMPLETED: "backup_completed",
+    FAILED: "backup_failed",
+    STORAGE_WARNING: "backup_storage_warning",
+    STORAGE_CRITICAL: "backup_storage_critical",
+  },
 };
 
 export const NOTIFICATION_CATEGORIES = {
@@ -96,4 +104,5 @@ export const NOTIFICATION_CATEGORIES = {
   REVIEWS: "reviews",
   CART: "cart",
   WISHLIST: "wishlist",
+  BACKUP: "backup",
 };

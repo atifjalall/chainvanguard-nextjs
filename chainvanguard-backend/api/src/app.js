@@ -9,6 +9,7 @@ import morgan from "morgan";
 import { connectMongoDB, redisClient } from "./config/database.js";
 import { testCloudinaryConnection } from "./config/cloudinary.js";
 import ipfsService from "./config/ipfs.js";
+import backupCron from "./jobs/backup.cron.js";
 import authRoutes from "./routes/auth.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
@@ -38,6 +39,7 @@ import customerBrowseRoutes from "./routes/customer.browse.routes.js";
 import supplierRatingRoutes from "./routes/supplier.rating.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
 import invoiceRoutes from "./routes/invoice.routes.js";
+import backupRoutes from "./routes/backup.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -103,6 +105,19 @@ const initializeServices = async () => {
     console.log("📦 Testing IPFS/Pinata connection...");
     await ipfsService.testConnection();
     console.log("✅ IPFS/Pinata connected successfully");
+
+    // Backup Scheduler
+    console.log("⏰ Starting backup scheduler...");
+    try {
+      if (backupCron && typeof backupCron.start === 'function') {
+        backupCron.start();
+        console.log("✅ Backup scheduler started successfully");
+      } else {
+        console.log("⚠️  Backup scheduler not available:", typeof backupCron, typeof backupCron?.start);
+      }
+    } catch (error) {
+      console.error("❌ Failed to start backup scheduler:", error.message);
+    }
 
     console.log("\n🎉 All services initialized successfully!\n");
   } catch (error) {
@@ -208,6 +223,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/vendor", vendorTransactionRoutes);
 app.use("/api/suppliers", supplierRatingRoutes);
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/backups", backupRoutes);
 
 /**
  * API Info Endpoint
@@ -506,11 +522,13 @@ const server = app.listen(PORT, () => {
   console.log(`   📋 Orders:       http://localhost:${PORT}/api/orders`);
   console.log(`   🛒 Cart:         http://localhost:${PORT}/api/cart`);
   console.log(`   🏷️  Categories:   http://localhost:${PORT}/api/categories`);
+  console.log(`   💾 Backups:      http://localhost:${PORT}/api/backups`);
   console.log(`\n🛠️  Services:`);
   console.log(`   📊 MongoDB:      Connected`);
   console.log(`   🔴 Redis:        Connected`);
   console.log(`   ☁️  Cloudinary:   Connected`);
   console.log(`   📦 IPFS/Pinata:  Connected`);
+  console.log(`   ⏰ Backup Cron:  Running`);
   console.log("\n" + "=".repeat(70) + "\n");
   console.log("✅ Ready to accept requests!\n");
 });

@@ -118,6 +118,12 @@ const notificationSchema = new Schema(
         "vendor_request_completed",
         "vendor_request_payment_received",
         "vendor_request_payment_confirmed",
+
+        // Backup Notifications
+        "backup_completed",
+        "backup_failed",
+        "backup_storage_warning",
+        "backup_storage_critical",
       ],
       required: true,
       index: true,
@@ -138,6 +144,7 @@ const notificationSchema = new Schema(
         "security",
         "vendor_requests",
         "return",
+        "backup",
       ],
       required: true,
       index: true,

@@ -32,6 +32,7 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import type { Product } from "@/types";
 import { Loader2 } from "lucide-react";
 import { badgeColors, colors } from "@/lib/colorConstants";
+import { FadeUp } from "@/components/animations/fade-up";
 
 // Currency formatting (CVT, abbreviated)
 const formatCurrency = (amount: number) => {
@@ -251,11 +252,7 @@ export default function VendorDashboardPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="relative z-10 p-6 space-y-6">
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0}>
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="space-y-2">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -285,75 +282,67 @@ export default function VendorDashboardPage() {
               Add New Product
             </Button>
           </div>
-        </div>
+        </FadeUp>
 
         {/* Stats Grid */}
-        <div>
-          <div
-            className={`transform transition-all duration-700 delay-200 ${
-              isVisible
-                ? "translate-y-0 opacity-100"
-                : "translate-y-4 opacity-0"
-            }`}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {statsData.map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <Card
-                    key={index}
-                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]"
-                  >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                        {stat.title}
-                      </CardTitle>
-                      <div className="h-10 w-10 flex items-center justify-center rounded-none">
-                        <Icon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                        {stat.value}
-                      </div>
-                      {stat.badge ? (
-                        <div>{stat.badge}</div>
-                      ) : stat.trend ? (
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          <span
-                            className={`inline-flex items-baseline gap-0.5 ${
-                              stat.trend.isPositive
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-red-600 dark:text-red-400"
-                            } font-medium`}
-                          >
-                            {stat.trend.isPositive ? (
-                              <ArrowTrendingUpIcon className="h-3 w-3" />
-                            ) : (
-                              <ArrowTrendingDownIcon className="h-3 w-3" />
-                            )}
-                            {stat.trend.isPositive ? "+" : ""}
-                            {stat.trend.value}%
-                          </span>
-                          <span className="ml-1 text-xs text-gray-600 dark:text-gray-400 font-normal">
-                            {stat.trend.label}
-                          </span>
-                        </p>
-                      ) : (
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {stat.subtitle}
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+        <FadeUp delay={0.1}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {statsData.map((stat, index) => {
+              const Icon = stat.icon;
+              return (
+                <Card
+                  key={index}
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]"
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                      {stat.title}
+                    </CardTitle>
+                    <div className="h-10 w-10 flex items-center justify-center rounded-none">
+                      <Icon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                      {stat.value}
+                    </div>
+                    {stat.badge ? (
+                      <div>{stat.badge}</div>
+                    ) : stat.trend ? (
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        <span
+                          className={`inline-flex items-baseline gap-0.5 ${
+                            stat.trend.isPositive
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400"
+                          } font-medium`}
+                        >
+                          {stat.trend.isPositive ? (
+                            <ArrowTrendingUpIcon className="h-3 w-3" />
+                          ) : (
+                            <ArrowTrendingDownIcon className="h-3 w-3" />
+                          )}
+                          {stat.trend.isPositive ? "+" : ""}
+                          {stat.trend.value}%
+                        </span>
+                        <span className="ml-1 text-xs text-gray-600 dark:text-gray-400 font-normal">
+                          {stat.trend.label}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {stat.subtitle}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        </div>
+        </FadeUp>
 
         {/* Content Grid */}
-        <div>
+        <FadeUp delay={0.2}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Inventory Overview */}
             <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none !shadow-none hover:!shadow-none transition-all duration-300">
@@ -507,83 +496,73 @@ export default function VendorDashboardPage() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </FadeUp>
 
         {/* Low Stock Alert */}
         {lowStockProducts.length > 0 && (
-          <div>
-            <div
-              className={`transform transition-all duration-700 delay-500 ${
-                isVisible
-                  ? "translate-y-0 opacity-100"
-                  : "translate-y-4 opacity-0"
-              }`}
-            >
-              <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none !shadow-none hover:!shadow-none transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
-                    <ExclamationCircleIcon className="h-5 w-5 text-gray-700 dark:text-gray-300 animate-pulse" />
-                    <span>Low Stock Alert</span>
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
-                    These products are running low on stock. Restock soon to
-                    avoid out-of-stock situations.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {lowStockProducts.map((product) => (
-                      <div
-                        key={product._id}
-                        className={`flex items-center justify-between p-4 ${badgeColors.yellow.bg} ${badgeColors.yellow.border} rounded-none hover:shadow-none transition-all`}
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          {product.images?.[0]?.url ? (
-                            <img
-                              src={product.images[0].url}
-                              alt={product.name}
-                              className="w-12 h-12 object-cover rounded-none shadow-md"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-none flex items-center justify-center flex-shrink-0 shadow-md">
-                              <CubeIcon className="h-6 w-6 text-gray-400" />
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate text-xs">
-                              {product.name}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
-                                {product.quantity} left
-                              </p>
-                              <span className="text-xs text-gray-500 dark:text-gray-500">
-                                Min: {product.minStockLevel}
-                              </span>
-                            </div>
+          <FadeUp delay={0.3}>
+            <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none !shadow-none hover:!shadow-none transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
+                  <ExclamationCircleIcon className="h-5 w-5 text-gray-700 dark:text-gray-300 animate-pulse" />
+                  <span>Low Stock Alert</span>
+                </CardTitle>
+                <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
+                  These products are running low on stock. Restock soon to avoid
+                  out-of-stock situations.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {lowStockProducts.map((product) => (
+                    <div
+                      key={product._id}
+                      className={`flex items-center justify-between p-4 ${badgeColors.yellow.bg} ${badgeColors.yellow.border} rounded-none hover:shadow-none transition-all`}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {product.images?.[0]?.url ? (
+                          <img
+                            src={product.images[0].url}
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded-none shadow-md"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-none flex items-center justify-center flex-shrink-0 shadow-md">
+                            <CubeIcon className="h-6 w-6 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate text-xs">
+                            {product.name}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                              {product.quantity} left
+                            </p>
+                            <span className="text-xs text-gray-500 dark:text-gray-500">
+                              Min: {product.minStockLevel}
+                            </span>
                           </div>
                         </div>
-                        <Button
-                          onClick={() =>
-                            router.push(
-                              `/vendor/my-products/${product._id}/edit`
-                            )
-                          }
-                          className="ml-2 flex items-center gap-2 px-3 py-1.5 rounded-none bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-gray-200 text-white dark:text-gray-900 font-medium text-xs cursor-pointer"
-                        >
-                          Restock
-                        </Button>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                      <Button
+                        onClick={() =>
+                          router.push(`/vendor/my-products/${product._id}/edit`)
+                        }
+                        className="ml-2 flex items-center gap-2 px-3 py-1.5 rounded-none bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-gray-200 text-white dark:text-gray-900 font-medium text-xs cursor-pointer"
+                      >
+                        Restock
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </FadeUp>
         )}
 
         {/* Quick Actions */}
-        <div>
+        <FadeUp delay={0.4}>
           <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none !shadow-none hover:!shadow-none transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-base text-gray-900 dark:text-gray-100">
@@ -621,7 +600,7 @@ export default function VendorDashboardPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </FadeUp>
       </div>
     </div>
   );

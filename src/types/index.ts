@@ -2170,3 +2170,163 @@ export type {
   AnalyticsMetrics as VendorAnalyticsMetrics,
   VendorAnalyticsResponse,
 } from "@/lib/api/vendor.analytics.api";
+
+// ========================================
+// BACKUP & DISASTER RECOVERY TYPES
+// ========================================
+
+export interface BackupMetadata {
+  originalSize: number;
+  compressedSize: number;
+  compressionRatio: string;
+  collections: string[];
+  documentCounts: Record<string, number>;
+  totalDocuments: number;
+  duration: string;
+  totalChanges?: number;
+  changedCollections?: string[];
+}
+
+export interface BackupItem {
+  _id: string;
+  backupId: string;
+  type: "FULL" | "INCREMENTAL";
+  status: "ACTIVE" | "FAILED" | "ARCHIVED";
+  cid: string;
+  ipfsUrl: string;
+  size: number;
+  metadata: BackupMetadata;
+  timestamp: string;
+  createdAt: string;
+  updatedAt: string;
+  blockchainTxId?: string;
+  blockchainVerified: boolean;
+  triggeredBy?: string;
+  parentBackupId?: string;
+}
+
+export interface BackupSchedule {
+  cron: string;
+  description: string;
+  nextRun: string | null;
+  lastRun: {
+    timestamp: string;
+    backupId: string;
+    success: boolean;
+  } | null;
+}
+
+export interface BackupStatistics {
+  backupsCompleted: number;
+  backupsFailed: number;
+  successRate: string;
+  uptime: string | null;
+  startedAt: string | null;
+}
+
+export interface BackupStorageUsage {
+  used: number;
+  limit: number;
+  usagePercentage: string;
+  remaining: number;
+  files: number;
+  lastChecked: string;
+  totalBackups: number;
+  totalBackupSize: number;
+  fullBackups: number;
+  incrementalBackups: number;
+}
+
+export interface BackupDashboardStatus {
+  status: null;
+  isRunning: boolean;
+  schedulerRunning?: boolean;
+  schedules: {
+    fullBackup: BackupSchedule;
+    incrementalBackup: BackupSchedule;
+  };
+  statistics: BackupStatistics;
+  storage: BackupStorageUsage | null;
+  lastError: {
+    timestamp: string;
+    type: string;
+    message: string;
+  } | null;
+  lastFullBackup: {
+    timestamp: string;
+    backupId: string;
+    success: boolean;
+  } | null;
+  lastIncrementalBackup: {
+    timestamp: string;
+    backupId: string;
+    success: boolean;
+  } | null;
+  nextFullBackup: string | null;
+  nextIncrementalBackup: string | null;
+  backupsCompleted: number;
+  backupsFailed: number;
+  fullBackupsCount?: number;
+  incrementalBackupsCount?: number;
+}
+
+export interface BackupAlert {
+  _id: string;
+  type:
+    | "BACKUP_SUCCESS"
+    | "BACKUP_FAILURE"
+    | "STORAGE_WARNING"
+    | "STORAGE_CRITICAL"
+    | "SCHEDULED_BACKUP_STARTED";
+  severity: "info" | "warning" | "critical";
+  title: string;
+  message: string;
+  timestamp: string;
+  metadata?: Record<string, any>;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface BackupListResponse {
+  success: boolean;
+  data: {
+    backups: BackupItem[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  };
+}
+
+export interface BackupStatusResponse {
+  success: boolean;
+  data: BackupDashboardStatus;
+}
+
+export interface BackupStorageResponse {
+  success: boolean;
+  data: {
+    stats: BackupStorageUsage;
+  };
+}
+
+export interface BackupAlertsResponse {
+  success: boolean;
+  data: {
+    alerts: BackupAlert[];
+  };
+}
+
+export interface BackupTriggerResponse {
+  success: boolean;
+  data: {
+    backupId: string;
+    cid: string;
+    type: "FULL" | "INCREMENTAL";
+    status: string;
+    metadata: BackupMetadata;
+    message?: string;
+  };
+}

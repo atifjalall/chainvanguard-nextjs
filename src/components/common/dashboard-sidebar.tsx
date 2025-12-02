@@ -29,6 +29,7 @@ import {
   MagnifyingGlassIcon,
   BookmarkIcon,
   LockClosedIcon,
+  CircleStackIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useState, createContext, useContext } from "react";
 
@@ -213,6 +214,11 @@ export function DashboardSidebar() {
             href: "/expert/system-health",
             label: "System Health",
             icon: ComputerDesktopIcon,
+          },
+          {
+            href: "/expert/data-and-backups",
+            label: "Data & Backups",
+            icon: CircleStackIcon,
           },
           { href: "/wallet", label: "Wallet", icon: WalletIcon },
         ];

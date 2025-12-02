@@ -191,6 +191,166 @@ class IPFSService {
   getGatewayUrl(ipfsHash) {
     return `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
   }
+
+  // ========================================
+  // BACKUP/RESTORE SPECIFIC METHODS
+  // ========================================
+
+  /**
+   * Pin file to IPFS via Pinata
+   * Used for backup files
+   * @param {Buffer|string} data - File data (buffer or file path)
+   * @param {string} filename - File name
+   * @param {object} metadata - Additional metadata
+   * @returns {object} {success, ipfsHash (CID), pinSize, timestamp, pinataId}
+   */
+  async pinFileToIPFS(data, filename, metadata = {}) {
+    try {
+      console.log(`📌 Pinning file to IPFS: ${filename}`);
+
+      let result;
+      if (Buffer.isBuffer(data)) {
+        // Upload from buffer
+        result = await this.uploadBuffer(data, filename, metadata);
+      } else {
+        // Upload from file path
+        result = await this.uploadFile(data, metadata);
+      }
+
+      if (result.success) {
+        console.log(`✅ File pinned successfully: ${result.ipfsHash}`);
+        return {
+          success: true,
+          ipfsHash: result.ipfsHash, // CID
+          pinSize: result.pinSize,
+          timestamp: result.timestamp,
+          pinataId: result.pinataId || result.ipfsHash, // Pinata uses CID as ID
+        };
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error("❌ Pin file to IPFS error:", error.message);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Download file from IPFS
+   * Used for backup restoration
+   * @param {string} cid - IPFS CID
+   * @returns {object} {success, data: Buffer}
+   */
+  async downloadFromIPFS(cid) {
+    try {
+      console.log(`📥 Downloading from IPFS: ${cid}`);
+
+      const result = await this.getFile(cid);
+
+      if (result.success) {
+        console.log(`✅ Downloaded successfully from IPFS`);
+        return {
+          success: true,
+          data: result.data,
+        };
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error("❌ Download from IPFS error:", error.message);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get list of all pinned files from Pinata
+   * @returns {object} {success, pins: Array}
+   */
+  async getPinList() {
+    try {
+      console.log("📋 Getting pin list from Pinata...");
+
+      // This would require direct Pinata API access
+      // For now, we'll return a placeholder
+      // In production, implement using Pinata SDK's pinList method
+
+      console.warn("⚠️ getPinList not yet implemented - requires Pinata SDK");
+
+      return {
+        success: true,
+        pins: [],
+        message: "Method not yet implemented",
+      };
+    } catch (error) {
+      console.error("❌ Get pin list error:", error.message);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get storage usage statistics
+   * @returns {object} {used: bytes, limit: bytes, percentage: number}
+   */
+  async getStorageUsage() {
+    try {
+      console.log("📊 Calculating storage usage...");
+
+      // This would require direct Pinata API access
+      // For now, return estimated values
+      // In production, implement using Pinata SDK
+
+      const PINATA_FREE_LIMIT = 1073741824; // 1 GB in bytes
+
+      return {
+        success: true,
+        used: 0, // To be calculated from pin list
+        limit: PINATA_FREE_LIMIT,
+        percentage: 0,
+        message: "Actual usage calculation not yet implemented",
+      };
+    } catch (error) {
+      console.error("❌ Get storage usage error:", error.message);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Unpin file from Pinata (cleanup)
+   * @param {string} pinataIdOrCid - Pinata pin ID or IPFS CID
+   * @returns {object} {success: boolean}
+   */
+  async unpinFromPinata(pinataIdOrCid) {
+    try {
+      console.log(`🗑️ Unpinning from Pinata: ${pinataIdOrCid}`);
+
+      const result = await this.unpinFile(pinataIdOrCid);
+
+      if (result.success) {
+        console.log(`✅ Unpinned successfully`);
+        return { success: true };
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error("❌ Unpin from Pinata error:", error.message);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
 }
 
 export default new IPFSService();
