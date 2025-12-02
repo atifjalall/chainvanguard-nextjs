@@ -69,6 +69,7 @@ import vendorBrowseApi from "@/lib/api/vendor.browse.api";
 import vendorRequestApi from "@/lib/api/vendor.request.api";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Loader2 } from "lucide-react";
+import { FadeUp } from "@/components/animations/fade-up";
 
 const categoryOptions = [
   "All Categories",
@@ -713,267 +714,267 @@ export default function VendorSavedItemsPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`mb-6 transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
-        >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="space-y-2">
-              <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
-                Saved Items
-              </h1>
-              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
-                Your wishlist of saved inventory items
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge
-                  className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
-                >
-                  {filteredInventory.length} Saved Item
-                  {filteredInventory.length !== 1 && "s"}
-                </Badge>
-                <Badge
-                  className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
-                >
-                  <ShieldCheckIcon
-                    className={`h-3 w-3 ${badgeColors.cyan.icon}`}
-                  />
-                  Blockchain Verified
-                </Badge>
+        <FadeUp delay={0}>
+          <div className="mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="space-y-2">
+                <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
+                  Saved Items
+                </h1>
+                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
+                  Your wishlist of saved inventory items
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge
+                    className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                  >
+                    {filteredInventory.length} Saved Item
+                    {filteredInventory.length !== 1 && "s"}
+                  </Badge>
+                  <Badge
+                    className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                  >
+                    <ShieldCheckIcon
+                      className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                    />
+                    Blockchain Verified
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </FadeUp>
 
         {/* Filters Card */}
-        <div className="mb-6 transform transition-all duration-700 delay-300">
-          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none shadow-none">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-base">
-                <FunnelIcon className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-                Search & Filters
-              </CardTitle>
-              <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
-                Filter your saved items
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative w-full">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search saved items by name, SKU, category, or supplier"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-9 w-full border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white rounded-none transition-colors duration-200"
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Category
-                  </Label>
-                  <Select
-                    value={selectedCategory}
-                    onValueChange={(value) => {
-                      setSelectedCategory(value);
-                      setSelectedSubcategory("All Subcategories");
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {categoryOptions.map((category) => (
-                        <SelectItem
-                          key={category}
-                          value={category}
-                          className="text-sm h-9"
-                        >
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        <FadeUp delay={0.1}>
+          <div className="mb-6">
+            <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none shadow-none">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-base">
+                  <FunnelIcon className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+                  Search & Filters
+                </CardTitle>
+                <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
+                  Filter your saved items
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative w-full">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search saved items by name, SKU, category, or supplier"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 h-9 w-full border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white rounded-none transition-colors duration-200"
+                  />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Subcategory
-                  </Label>
-                  <Select
-                    value={selectedSubcategory}
-                    onValueChange={(value) => {
-                      setSelectedSubcategory(value);
-                      setCurrentPage(1);
-                    }}
-                    disabled={selectedCategory === "All Categories"}
-                  >
-                    <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
-                      <SelectValue placeholder="Select a subcategory" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      <SelectItem
-                        value="All Subcategories"
-                        className="text-sm h-9"
-                      >
-                        All Subcategories
-                      </SelectItem>
-                      {selectedCategory !== "All Categories" &&
-                        subcategoryMap[selectedCategory]?.map((subcat) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Category
+                    </Label>
+                    <Select
+                      value={selectedCategory}
+                      onValueChange={(value) => {
+                        setSelectedCategory(value);
+                        setSelectedSubcategory("All Subcategories");
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {categoryOptions.map((category) => (
                           <SelectItem
-                            key={subcat}
-                            value={subcat}
+                            key={category}
+                            value={category}
                             className="text-sm h-9"
                           >
-                            {subcat}
+                            {category}
                           </SelectItem>
                         ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Material Type
-                  </Label>
-                  <Select
-                    value={selectedMaterialType}
-                    onValueChange={(value) => {
-                      setSelectedMaterialType(value);
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
-                      <SelectValue placeholder="Select material type" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {materialTypes.map((type) => (
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Subcategory
+                    </Label>
+                    <Select
+                      value={selectedSubcategory}
+                      onValueChange={(value) => {
+                        setSelectedSubcategory(value);
+                        setCurrentPage(1);
+                      }}
+                      disabled={selectedCategory === "All Categories"}
+                    >
+                      <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
+                        <SelectValue placeholder="Select a subcategory" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
                         <SelectItem
-                          key={type}
-                          value={type}
+                          value="All Subcategories"
                           className="text-sm h-9"
                         >
-                          {type}
+                          All Subcategories
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        {selectedCategory !== "All Categories" &&
+                          subcategoryMap[selectedCategory]?.map((subcat) => (
+                            <SelectItem
+                              key={subcat}
+                              value={subcat}
+                              className="text-sm h-9"
+                            >
+                              {subcat}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Material Type
+                    </Label>
+                    <Select
+                      value={selectedMaterialType}
+                      onValueChange={(value) => {
+                        setSelectedMaterialType(value);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
+                        <SelectValue placeholder="Select material type" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {materialTypes.map((type) => (
+                          <SelectItem
+                            key={type}
+                            value={type}
+                            className="text-sm h-9"
+                          >
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Fabric Type
+                    </Label>
+                    <Select
+                      value={selectedFabricType}
+                      onValueChange={(value) => {
+                        setSelectedFabricType(value);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
+                        <SelectValue placeholder="Select fabric type" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {fabricTypes.map((type) => (
+                          <SelectItem
+                            key={type}
+                            value={type}
+                            className="text-sm h-9"
+                          >
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Fabric Type
-                  </Label>
-                  <Select
-                    value={selectedFabricType}
-                    onValueChange={(value) => {
-                      setSelectedFabricType(value);
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="text-sm h-9 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none cursor-pointer hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition-colors duration-200">
-                      <SelectValue placeholder="Select fabric type" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {fabricTypes.map((type) => (
-                        <SelectItem
-                          key={type}
-                          value={type}
-                          className="text-sm h-9"
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2 items-center flex-wrap">
+                    {searchTerm && (
+                      <Badge
+                        variant="outline"
+                        className="bg-blue-50 border-blue-200 text-blue-700 text-xs rounded-none"
+                      >
+                        &quot;{searchTerm}&quot;
+                        <button
+                          onClick={() => setSearchTerm("")}
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
                         >
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedCategory !== "All Categories" && (
+                      <Badge
+                        variant="outline"
+                        className="bg-gray-50 border-gray-200 text-gray-700 flex items-center gap-1 text-xs rounded-none"
+                      >
+                        {selectedCategory}
+                        <button
+                          onClick={() => setSelectedCategory("All Categories")}
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedSubcategory !== "All Subcategories" && (
+                      <Badge
+                        variant="outline"
+                        className="bg-gray-50 border-gray-200 text-gray-700 flex items-center gap-1 text-xs rounded-none"
+                      >
+                        {selectedSubcategory}
+                        <button
+                          onClick={() =>
+                            setSelectedSubcategory("All Subcategories")
+                          }
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedMaterialType !== "All Types" && (
+                      <Badge
+                        variant="outline"
+                        className="bg-gray-50 border-gray-200 text-gray-700 flex items-center gap-1 text-xs rounded-none"
+                      >
+                        {selectedMaterialType}
+                        <button
+                          onClick={() => setSelectedMaterialType("All Types")}
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedFabricType !== "All Fabric Types" && (
+                      <Badge
+                        variant="outline"
+                        className="bg-gray-50 border-gray-200 text-gray-700 flex items-center gap-1 text-xs rounded-none"
+                      >
+                        {selectedFabricType}
+                        <button
+                          onClick={() =>
+                            setSelectedFabricType("All Fabric Types")
+                          }
+                          className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
+                      {filteredInventory.length} saved items found
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2 items-center flex-wrap">
-                  {searchTerm && (
-                    <Badge
-                      variant="outline"
-                      className="bg-blue-50 border-blue-200 text-blue-700 text-xs rounded-none"
-                    >
-                      &quot;{searchTerm}&quot;
-                      <button
-                        onClick={() => setSearchTerm("")}
-                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  {selectedCategory !== "All Categories" && (
-                    <Badge
-                      variant="outline"
-                      className="bg-gray-50 border-gray-200 text-gray-700 flex items-center gap-1 text-xs rounded-none"
-                    >
-                      {selectedCategory}
-                      <button
-                        onClick={() => setSelectedCategory("All Categories")}
-                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  {selectedSubcategory !== "All Subcategories" && (
-                    <Badge
-                      variant="outline"
-                      className="bg-gray-50 border-gray-200 text-gray-700 flex items-center gap-1 text-xs rounded-none"
-                    >
-                      {selectedSubcategory}
-                      <button
-                        onClick={() =>
-                          setSelectedSubcategory("All Subcategories")
-                        }
-                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  {selectedMaterialType !== "All Types" && (
-                    <Badge
-                      variant="outline"
-                      className="bg-gray-50 border-gray-200 text-gray-700 flex items-center gap-1 text-xs rounded-none"
-                    >
-                      {selectedMaterialType}
-                      <button
-                        onClick={() => setSelectedMaterialType("All Types")}
-                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  {selectedFabricType !== "All Fabric Types" && (
-                    <Badge
-                      variant="outline"
-                      className="bg-gray-50 border-gray-200 text-gray-700 flex items-center gap-1 text-xs rounded-none"
-                    >
-                      {selectedFabricType}
-                      <button
-                        onClick={() =>
-                          setSelectedFabricType("All Fabric Types")
-                        }
-                        className="ml-1 text-gray-600 hover:text-gray-800 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
-                    {filteredInventory.length} saved items found
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        </FadeUp>
 
         {/* Inventory Grid */}
-        <div className="transform transition-all duration-700 delay-400">
+        <FadeUp delay={0.2}>
           {paginatedInventory.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
               {paginatedInventory.map((item) => (
@@ -1060,7 +1061,7 @@ export default function VendorSavedItemsPage() {
               </Pagination>
             </div>
           )}
-        </div>
+        </FadeUp>
 
         {/* Enhanced Request Dialog */}
         <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>

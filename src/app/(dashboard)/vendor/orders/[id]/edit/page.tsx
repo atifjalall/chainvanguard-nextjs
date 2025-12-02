@@ -54,6 +54,7 @@ import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Loader2 } from "lucide-react";
+import { FadeUp } from "@/components/animations/fade-up";
 
 const statusOptions: Array<{
   value: OrderStatus;
@@ -197,7 +198,9 @@ export default function VendorOrderEditPage() {
         const invoice = response.data.invoices[0]; // Get the first invoice
 
         // Download the invoice PDF
-        const downloadResponse = await invoiceApi.downloadInvoiceById(invoice._id);
+        const downloadResponse = await invoiceApi.downloadInvoiceById(
+          invoice._id
+        );
 
         if (downloadResponse.success && downloadResponse.data) {
           // Trigger download
@@ -333,13 +336,13 @@ export default function VendorOrderEditPage() {
 
   if (!order) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <XCircleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h3 className="text-base font-medium text-gray-900 mb-2">
+          <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-2">
             Order Not Found
           </h3>
-          <p className="text-xs text-gray-600 mb-4">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
             The order you&apos;re looking for doesn&apos;t exist or you
             don&apos;t have access to it.
           </p>
@@ -382,11 +385,7 @@ export default function VendorOrderEditPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0}>
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
               <h1 className={`text-base font-bold ${colors.texts.primary}`}>
@@ -401,11 +400,11 @@ export default function VendorOrderEditPage() {
               </Badge>
             </div>
           </div>
-        </div>
+        </FadeUp>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Edit Form */}
-          <div className="lg:col-span-2 space-y-6">
+          <FadeUp delay={0.1} className="lg:col-span-2 space-y-6">
             {/* Status Update */}
             <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
               <CardHeader>
@@ -626,10 +625,10 @@ export default function VendorOrderEditPage() {
                 Download Invoice
               </Button>
             </div>
-          </div>
+          </FadeUp>
 
           {/* Right Column - Order Summary */}
-          <div className="space-y-6">
+          <FadeUp delay={0.2} className="space-y-6">
             {/* Order Overview */}
             <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
               <CardHeader>
@@ -809,7 +808,7 @@ export default function VendorOrderEditPage() {
                 </CardContent>
               </Card>
             )}
-          </div>
+          </FadeUp>
         </div>
       </div>
     </div>

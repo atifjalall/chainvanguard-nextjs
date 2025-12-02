@@ -82,6 +82,19 @@ const blockchainLogSchema = new Schema(
         "notification_clicked",
         "notification_action_taken",
 
+        // Backup & Restore Actions
+        "backup_started",
+        "backup_completed",
+        "backup_failed",
+        "backup_deleted",
+        "backup_verified",
+        "restore_started",
+        "restore_completed",
+        "restore_failed",
+        "backup_cleanup_completed",
+        "emergency_recovery_started",
+        "emergency_recovery_completed",
+
         // Blockchain Actions
         "blockchain_transaction",
         "consensus_update",
@@ -125,6 +138,8 @@ const blockchainLogSchema = new Schema(
         "quality_check",
         "system",
         "vendor_request",
+        "backup",
+        "restore",
       ],
       required: true,
     },

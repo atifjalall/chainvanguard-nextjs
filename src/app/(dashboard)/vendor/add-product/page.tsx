@@ -61,6 +61,7 @@ import {
 import { aiApi } from "@/lib/api/ai.api";
 
 import { usePageTitle } from "@/hooks/use-page-title";
+import { FadeUp } from "@/components/animations/fade-up";
 import {
   CATEGORIES,
   PRODUCT_TYPES,
@@ -2319,17 +2320,20 @@ export default function AddProductPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-sm">
       {/* Breadcrumb - match add-inventory */}
       <div className={`relative z-10 ${CONTAINER_PADDING} font-sans text-sm`}>
-        <Breadcrumb className={SECTION_MARGIN}>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/vendor">Dashboard</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Add Product</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        <FadeUp delay={0}>
+          <Breadcrumb className={SECTION_MARGIN}>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/vendor">Dashboard</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Add Product</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </FadeUp>
+
         <div
           className={`max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start transform transition-all duration-700 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
@@ -2340,119 +2344,122 @@ export default function AddProductPage() {
             className={`lg:col-span-12 ${showPreview ? "lg:mr-[308px]" : ""}`}
           >
             {/* Header with Preview Toggle and Reset Button */}
-            <div
-              className={`${SECTION_MARGIN} flex flex-col lg:flex-row items-start lg:items-center justify-between font-sans gap-4`}
-            >
-              <div className="space-y-2">
-                <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
-                  Add Product
-                </h1>
-                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
-                  Add new finished products to your marketplace
-                </p>
-                <div className={`flex items-center ${HEADER_GAP} mt-2`}>
-                  <Badge
-                    className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+            <FadeUp delay={0.1}>
+              <div
+                className={`${SECTION_MARGIN} flex flex-col lg:flex-row items-start lg:items-center justify-between font-sans gap-4`}
+              >
+                <div className="space-y-2">
+                  <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
+                    Add Product
+                  </h1>
+                  <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
+                    Add new finished products to your marketplace
+                  </p>
+                  <div className={`flex items-center ${HEADER_GAP} mt-2`}>
+                    <Badge
+                      className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
+                    >
+                      <CubeIcon
+                        className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
+                      />
+                      Product Management
+                    </Badge>
+                    <Badge
+                      className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                    >
+                      <ShieldCheckIcon
+                        className={`h-3 w-3 ${badgeColors.cyan.icon}`}
+                      />
+                      Blockchain Verified
+                    </Badge>
+                  </div>
+                </div>
+                <div className={`flex flex-wrap items-center ${HEADER_GAP}`}>
+                  <Button
+                    variant="outline"
+                    onClick={resetForm}
+                    size="sm"
+                    className={`items-center gap-2 rounded-none ${colors.buttons.outline} text-xs cursor-pointer h-8 hover:border-black`}
                   >
-                    <CubeIcon
-                      className={`h-3 w-3 mr-1 ${badgeColors.green.icon}`}
-                    />
-                    Product Management
-                  </Badge>
-                  <Badge
-                    className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
+                    Reset
+                  </Button>
+                  <Button
+                    onClick={() => setShowPreview(!showPreview)}
+                    size="sm"
+                    className={`hidden lg:flex items-center gap-2 px-6 py-3 rounded-none ${colors.buttons.primary} text-xs md:text-sm text-white hover:text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8`}
                   >
-                    <ShieldCheckIcon
-                      className={`h-3 w-3 ${badgeColors.cyan.icon}`}
-                    />
-                    Blockchain Verified
-                  </Badge>
+                    <EyeIcon className="h-4 w-4" />
+                    {showPreview ? "Hide" : "Show"} Preview
+                  </Button>
                 </div>
               </div>
-              <div className={`flex flex-wrap items-center ${HEADER_GAP}`}>
-                <Button
-                  variant="outline"
-                  onClick={resetForm}
-                  size="sm"
-                  className={`items-center gap-2 rounded-none ${colors.buttons.outline} text-xs cursor-pointer h-8 hover:border-black`}
-                >
-                  Reset
-                </Button>
-                <Button
-                  onClick={() => setShowPreview(!showPreview)}
-                  size="sm"
-                  className={`hidden lg:flex items-center gap-2 px-6 py-3 rounded-none ${colors.buttons.primary} text-xs md:text-sm text-white hover:text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8`}
-                >
-                  <EyeIcon className="h-4 w-4" />
-                  {showPreview ? "Hide" : "Show"} Preview
-                </Button>
-              </div>
-            </div>
+            </FadeUp>
 
             {/* Progress Bar - match add-inventory */}
-            <Card
-              className={`${SECTION_MARGIN} border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none`}
-            >
-              <CardContent className="px-4 md:px-6 py-0">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-                    Step {currentStep} of {totalSteps}
-                  </h3>
-                  <span className="text-xs text-gray-500 dark:text-gray-500">
-                    {Math.round(getProgress())}% Complete
-                  </span>
-                </div>
-                <Progress
-                  value={getProgress()}
-                  className="h-2 mb-4 rounded-none"
-                />
-                <div className="grid grid-cols-6 gap-2">
-                  {[
-                    { step: 1, title: "Basic Info", icon: DocumentTextIcon },
-                    { step: 2, title: "Apparel Details", icon: SwatchIcon },
-                    {
-                      step: 3,
-                      title: "Fabric & Manufacturing",
-                      icon: Cog6ToothIcon,
-                    },
-                    {
-                      step: 4,
-                      title: "Stock & Pricing",
-                      icon: CubeIcon,
-                    },
-                    {
-                      step: 5,
-                      title: "Description & Features",
-                      icon: PencilSquareIcon,
-                    },
-                    { step: 6, title: "Media", icon: CameraIcon },
-                  ].map(({ step, title, icon: Icon }) => {
-                    const isSelected = step === currentStep;
-                    const isCompleted = step < currentStep;
-                    const canGoToNext =
-                      step === currentStep + 1 &&
-                      Object.keys(validateStep(currentStep)).length === 0;
-                    const isDisabled = step > currentStep && !canGoToNext;
+            <FadeUp delay={0.2}>
+              <Card
+                className={`${SECTION_MARGIN} border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none`}
+              >
+                <CardContent className="px-4 md:px-6 py-0">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+                      Step {currentStep} of {totalSteps}
+                    </h3>
+                    <span className="text-xs text-gray-500 dark:text-gray-500">
+                      {Math.round(getProgress())}% Complete
+                    </span>
+                  </div>
+                  <Progress
+                    value={getProgress()}
+                    className="h-2 mb-4 rounded-none"
+                  />
+                  <div className="grid grid-cols-6 gap-2">
+                    {[
+                      { step: 1, title: "Basic Info", icon: DocumentTextIcon },
+                      { step: 2, title: "Apparel Details", icon: SwatchIcon },
+                      {
+                        step: 3,
+                        title: "Fabric & Manufacturing",
+                        icon: Cog6ToothIcon,
+                      },
+                      {
+                        step: 4,
+                        title: "Stock & Pricing",
+                        icon: CubeIcon,
+                      },
+                      {
+                        step: 5,
+                        title: "Description & Features",
+                        icon: PencilSquareIcon,
+                      },
+                      { step: 6, title: "Media", icon: CameraIcon },
+                    ].map(({ step, title, icon: Icon }) => {
+                      const isSelected = step === currentStep;
+                      const isCompleted = step < currentStep;
+                      const canGoToNext =
+                        step === currentStep + 1 &&
+                        Object.keys(validateStep(currentStep)).length === 0;
+                      const isDisabled = step > currentStep && !canGoToNext;
 
-                    return (
-                      <button
-                        key={step}
-                        type="button"
-                        onClick={() => {
-                          if (step < currentStep) {
-                            // Can always go backwards
-                            setCurrentStep(step);
-                          } else if (step === currentStep + 1) {
-                            // Can only go forward one step if current step is valid
-                            const stepErrors = validateStep(currentStep);
-                            if (Object.keys(stepErrors).length === 0) {
+                      return (
+                        <button
+                          key={step}
+                          type="button"
+                          onClick={() => {
+                            if (step < currentStep) {
+                              // Can always go backwards
                               setCurrentStep(step);
+                            } else if (step === currentStep + 1) {
+                              // Can only go forward one step if current step is valid
+                              const stepErrors = validateStep(currentStep);
+                              if (Object.keys(stepErrors).length === 0) {
+                                setCurrentStep(step);
+                              }
                             }
-                          }
-                          // Otherwise, clicking does nothing (disabled state)
-                        }}
-                        disabled={isDisabled}
-                        className={`flex items-center justify-center gap-1 md:gap-2 p-2 rounded-none text-xs md:text-sm font-medium transition-all
+                            // Otherwise, clicking does nothing (disabled state)
+                          }}
+                          disabled={isDisabled}
+                          className={`flex items-center justify-center gap-1 md:gap-2 p-2 rounded-none text-xs md:text-sm font-medium transition-all
           ${
             isSelected
               ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
@@ -2464,107 +2471,112 @@ export default function AddProductPage() {
           }
           ${!isSelected && !isDisabled ? "border border-transparent hover:border-black dark:hover:border-white" : ""}
         `}
-                        style={{
-                          outline: "none",
-                        }}
-                      >
-                        <Icon
-                          className={`h-3 w-3 md:h-4 md:w-4 ${
-                            isSelected
-                              ? "text-white dark:text-gray-900"
-                              : "text-gray-900 dark:text-gray-100"
-                          }`}
-                        />
-                        <span className="text-xs font-medium hidden md:inline">
-                          {title}
-                        </span>
-                        <span className="text-xs font-medium md:hidden">
-                          {title.split(" ")[0]}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                          style={{
+                            outline: "none",
+                          }}
+                        >
+                          <Icon
+                            className={`h-3 w-3 md:h-4 md:w-4 ${
+                              isSelected
+                                ? "text-white dark:text-gray-900"
+                                : "text-gray-900 dark:text-gray-100"
+                            }`}
+                          />
+                          <span className="text-xs font-medium hidden md:inline">
+                            {title}
+                          </span>
+                          <span className="text-xs font-medium md:hidden">
+                            {title.split(" ")[0]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeUp>
 
             {/* Form Card */}
-            <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-                  {currentStep === 1 && <>Basic Information</>}
-                  {currentStep === 2 && <>Apparel Details</>}
-                  {currentStep === 3 && <>Fabric & Manufacturing</>}
-                  {currentStep === 4 && <>Stock & Pricing</>}
-                  {currentStep === 5 && <>Description & Features</>}
-                  {currentStep === 6 && <>Product Images</>}
-                </CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-400">
-                  {currentStep === 1 &&
-                    "Enter the core product identification details"}
-                  {currentStep === 2 &&
-                    "Specify size, fit, color and apparel-specific details"}
-                  {currentStep === 3 &&
-                    "Add fabric specifications and manufacturing information"}
-                  {currentStep === 4 &&
-                    "Set product prices and specify available stock levels"}
-                  {currentStep === 5 &&
-                    "Write the product description and highlight its key features"}
-                  {currentStep === 6 &&
-                    "Upload high-quality images of your product"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>{renderStepContent()}</CardContent>
-            </Card>
+            <FadeUp delay={0.3}>
+              <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300 rounded-none shadow-none">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+                    {currentStep === 1 && <>Basic Information</>}
+                    {currentStep === 2 && <>Apparel Details</>}
+                    {currentStep === 3 && <>Fabric & Manufacturing</>}
+                    {currentStep === 4 && <>Stock & Pricing</>}
+                    {currentStep === 5 && <>Description & Features</>}
+                    {currentStep === 6 && <>Product Images</>}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 dark:text-gray-400">
+                    {currentStep === 1 &&
+                      "Enter the core product identification details"}
+                    {currentStep === 2 &&
+                      "Specify size, fit, color and apparel-specific details"}
+                    {currentStep === 3 &&
+                      "Add fabric specifications and manufacturing information"}
+                    {currentStep === 4 &&
+                      "Set product prices and specify available stock levels"}
+                    {currentStep === 5 &&
+                      "Write the product description and highlight its key features"}
+                    {currentStep === 6 &&
+                      "Upload high-quality images of your product"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>{renderStepContent()}</CardContent>
+              </Card>
+            </FadeUp>
 
             {/* Navigation Buttons */}
-            <div className={`flex justify-between ${NAVIGATION_MARGIN}`}>
-              <Button
-                onClick={handlePrevious}
-                disabled={currentStep === 1 || isLoading}
-                size="sm"
-                className={`flex items-center gap-2 px-6 py-3 rounded-none ${colors.buttons.secondary} text-xs md:text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8 hover:border-black`}
-              >
-                <ArrowLeftIcon className="h-4 w-4" />
-                Previous
-              </Button>
+            <FadeUp delay={0.4}>
+              <div className={`flex justify-between ${NAVIGATION_MARGIN}`}>
+                <Button
+                  onClick={handlePrevious}
+                  disabled={currentStep === 1 || isLoading}
+                  size="sm"
+                  className={`flex items-center gap-2 px-6 py-3 rounded-none ${colors.buttons.secondary} text-xs md:text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8 hover:border-black`}
+                >
+                  <ArrowLeftIcon className="h-4 w-4" />
+                  Previous
+                </Button>
 
-              {currentStep < totalSteps ? (
-                <Button
-                  onClick={handleNext}
-                  disabled={isLoading}
-                  size="sm"
-                  className={`flex items-center gap-2 px-6 py-3 rounded-none ${colors.buttons.primary} text-xs md:text-sm text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8`}
-                >
-                  Next
-                  <ArrowRightIcon className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isLoading}
-                  size="sm"
-                  className={`flex items-center gap-2 px-6 py-3 rounded-none ${colors.buttons.primary} text-xs md:text-sm text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8`}
-                >
-                  {isLoading ? (
-                    <>
-                      <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircleIcon className="h-4 w-4" />
-                      Create Product
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+                {currentStep < totalSteps ? (
+                  <Button
+                    onClick={handleNext}
+                    disabled={isLoading}
+                    size="sm"
+                    className={`flex items-center gap-2 px-6 py-3 rounded-none ${colors.buttons.primary} text-xs md:text-sm text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8`}
+                  >
+                    Next
+                    <ArrowRightIcon className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={isLoading}
+                    size="sm"
+                    className={`flex items-center gap-2 px-6 py-3 rounded-none ${colors.buttons.primary} text-xs md:text-sm text-white font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8`}
+                  >
+                    {isLoading ? (
+                      <>
+                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircleIcon className="h-4 w-4" />
+                        Create Product
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </FadeUp>
           </div>
 
           {/* Right Column - Live Preview (Desktop only) */}
           {showPreview && (
-            <div className="fixed top-8 right-1 w-[280px]">
+            <FadeUp delay={0.5} className="fixed top-8 right-1 w-[280px]">
               <div className="">
                 <div className="mb-3">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -2609,13 +2621,13 @@ export default function AddProductPage() {
                   />
                 </div>
               </div>
-            </div>
+            </FadeUp>
           )}
         </div>
       </div>
 
       {/* Mobile Preview Section */}
-      <div className="lg:hidden mt-8 font-sans text-sm">
+      <FadeUp delay={0.6} className="lg:hidden mt-8 font-sans text-sm">
         <Card className="border border-gray-200 dark:border-gray-700 rounded-none bg-white dark:bg-gray-900 backdrop-blur-xl shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white text-base">
@@ -2659,7 +2671,7 @@ export default function AddProductPage() {
             />
           </CardContent>
         </Card>
-      </div>
+      </FadeUp>
     </div>
   );
 }

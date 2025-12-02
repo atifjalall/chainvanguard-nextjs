@@ -64,75 +64,7 @@ export FABRIC_CFG_PATH=${PWD}/../config/
 echo "✅ Fabric network and channel started."
 
 #--------------------------------------------------
-# Step 4: Deploy Chaincode
-#--------------------------------------------------
-CHAINCODE_PATH=~/Desktop/chainvanguard-nextjs/chainvanguard-backend/chaincode
-CHANNEL_NAME=supply-chain-channel
-
-echo "⚙️ Deploying USER chaincode..."
-./network.sh deployCC \
-  -ccn user \
-  -ccp $CHAINCODE_PATH \
-  -ccl javascript \
-  -c $CHANNEL_NAME \
-  -ccv 1.3
-
-echo "⚙️ Deploying PRODUCT chaincode..."
-./network.sh deployCC \
-  -ccn product \
-  -ccp $CHAINCODE_PATH \
-  -ccl javascript \
-  -c $CHANNEL_NAME \
-  -ccv 1.1
-
-echo "⚙️ Deploying ORDER chaincode..."
-./network.sh deployCC \
-  -ccn order \
-  -ccp $CHAINCODE_PATH \
-  -ccl javascript \
-  -c $CHANNEL_NAME \
-  -ccv 1.1
-
-#--------------------------------------------------
-# Step 5: Test Chaincode
-#--------------------------------------------------
-echo "🧪 Running initial test..."
-
-export CORE_PEER_TLS_ENABLED=true
-export CORE_PEER_LOCALMSPID="Org1MSP"
-export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
-export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
-export CORE_PEER_ADDRESS=localhost:7051
-export FABRIC_CFG_PATH=$PWD/../config/
-
-# Initialize Ledger
-peer chaincode invoke \
-  -o localhost:7050 \
-  --ordererTLSHostnameOverride orderer.example.com \
-  --tls \
-  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
-  -C $CHANNEL_NAME \
-  -n $CHAINCODE_NAME \
-  --peerAddresses localhost:7051 \
-  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
-  --peerAddresses localhost:9051 \
-  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
-  -c '{"function":"InitLedger","Args":[]}'
-
-sleep 5
-
-# Test queries
-echo "🧪 Testing chaincode queries..."
-
-peer chaincode query -C $CHANNEL_NAME -n user -c '{"function":"getAllUsers","Args":[]}'
-peer chaincode query -C $CHANNEL_NAME -n product -c '{"function":"ProductContract:getAllProducts","Args":[]}'
-peer chaincode query -C $CHANNEL_NAME -n order -c '{"function":"OrderContract:getAllOrders","Args":[]}'
-
-echo "✅ All chaincodes deployed and tested successfully."
-
-
-#--------------------------------------------------
-# Step 6: Copy Orgs to API
+# Step 4: Copy Orgs to API
 #--------------------------------------------------
 echo "📁 Copying organizations to API..."
 cd ~/Desktop/chainvanguard-nextjs/chainvanguard-backend/api
@@ -142,12 +74,13 @@ cp -r ~/Desktop/fabric-samples/test-network/organizations .
 echo "✅ Copied organizations to API."
 
 #--------------------------------------------------
-# Step 7: Final Message
+# Step 5: Final Message
 #--------------------------------------------------
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🎉 Fabric Setup Complete!"
 echo "👉 Next steps:"
-echo "   1️⃣ cd ~/Desktop/chainvanguard-nextjs/chainvanguard-backend/api"
-echo "   2️⃣ npm install"
-echo "   3️⃣ npm run dev"
+echo "   1️⃣ Deploy your chaincode using deploy-all-chaincodes.sh script"
+echo "   2️⃣ cd ~/Desktop/chainvanguard-nextjs/chainvanguard-backend/api"
+echo "   3️⃣ npm install"
+echo "   4️⃣ npm run dev"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

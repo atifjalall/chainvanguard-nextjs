@@ -346,12 +346,17 @@ export default function RegisterPage() {
   const sendOtpEmail = async () => {
     try {
       setIsLoading(true);
+      // ✅ Clear old OTP state before sending new one
+      setOtp(["", "", "", "", "", ""]);
+      setOtpError(false);
+      setOtpVerified(false);
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/auth/send-otp`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ email, name }),
         }
       );
 
@@ -360,6 +365,8 @@ export default function RegisterPage() {
       setOtpSent(true);
       setResendTimer(60);
       toast.success("Verification code sent to your email!");
+      // ✅ Focus on first OTP input after sending
+      setTimeout(() => document.getElementById("otp-0")?.focus(), 100);
     } catch (error) {
       toast.error("Failed to send verification code. Please try again.");
     } finally {
@@ -520,9 +527,12 @@ export default function RegisterPage() {
       nextStep();
     } catch (error: any) {
       setOtpError(true);
+      // ✅ Clear OTP and refocus on first input
       setOtp(["", "", "", "", "", ""]);
-      setOtpError(false);
-      document.getElementById("otp-0")?.focus();
+      setTimeout(() => {
+        setOtpError(false);
+        document.getElementById("otp-0")?.focus();
+      }, 100);
       toast.error(error.message || "Invalid verification code");
       localStorage.removeItem("chainvanguard_auth_user");
     } finally {

@@ -71,7 +71,8 @@ class AuthService {
         organizationMSP: this.getMSPForRole(userData.role),
         fabricRegistered: false,
         isActive: true,
-        isVerified: false,
+        isVerified: true, // ✅ Mark as verified since OTP was already verified before registration
+        emailVerifiedAt: new Date(), // ✅ Set verification timestamp
         isAuthenticated: false,
       });
 
@@ -162,9 +163,9 @@ class AuthService {
       // ✅ Prepare IMMUTABLE user registration data for blockchain
       const fabricUserData = {
         userId: user._id.toString(),
-        walletAddress: user.walletAddress,  // ✅ Immutable
-        role: user.role,                    // ✅ Rarely changes (tracked separately if it does)
-        kycHash: user.kycHash || null,      // ✅ IPFS hash of KYC documents (if uploaded)
+        walletAddress: user.walletAddress, // ✅ Immutable
+        role: user.role, // ✅ Rarely changes (tracked separately if it does)
+        kycHash: user.kycHash || null, // ✅ IPFS hash of KYC documents (if uploaded)
         registeredAt: user.createdAt,
       };
 
@@ -283,7 +284,9 @@ class AuthService {
   async recordLoginOnBlockchain(userId) {
     // ⚠️ DEPRECATED: Login tracking is mutable and should NOT be on blockchain
     // Login events are now tracked in MongoDB only
-    console.log(`ℹ️ Login tracking moved to MongoDB only (not blockchain): ${userId}`);
+    console.log(
+      `ℹ️ Login tracking moved to MongoDB only (not blockchain): ${userId}`
+    );
     return;
   }
 

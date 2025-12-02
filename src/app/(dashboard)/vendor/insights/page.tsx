@@ -80,6 +80,7 @@ import vendorAnalyticsApi, {
   VendorAnalyticsResponse,
 } from "@/lib/api/vendor.analytics.api";
 import { Loader2 } from "lucide-react";
+import { FadeUp } from "@/components/animations/fade-up";
 
 const timeRangeOptions = [
   { value: "7d", label: "Last 7 Days" },
@@ -367,7 +368,6 @@ export default function VendorAnalyticsPage() {
       className={`min-h-screen ${colors.backgrounds.secondary} p-6 space-y-6`}
     >
       {/* Breadcrumb */}
-      {/* Breadcrumb */}
       <Breadcrumb className="mb-6">
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -381,11 +381,7 @@ export default function VendorAnalyticsPage() {
       </Breadcrumb>
 
       {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
+      <FadeUp delay={0}>
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div>
             <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
@@ -450,14 +446,10 @@ export default function VendorAnalyticsPage() {
             </Button>
           </div>
         </div>
-      </div>
+      </FadeUp>
 
       {/* Key Metrics */}
-      <div
-        className={`transform transition-all duration-700 delay-200 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
+      <FadeUp delay={0.1}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
             title="Total Revenue"
@@ -486,14 +478,10 @@ export default function VendorAnalyticsPage() {
             formatter={formatCurrency}
           />
         </div>
-      </div>
+      </FadeUp>
 
       {/* Charts Section */}
-      <div
-        className={`transform transition-all duration-700 delay-400 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        }`}
-      >
+      <FadeUp delay={0.2}>
         <Tabs
           defaultValue="sales"
           value={selectedTab}
@@ -1110,94 +1098,104 @@ export default function VendorAnalyticsPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </FadeUp>
 
       {/* Quick Actions */}
-      <Card
-        className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
-      >
-        <CardHeader>
-          <CardTitle
-            className={`text-base flex items-center gap-3 ${colors.texts.primary}`}
-          >
-            <div className="h-8 w-8 flex items-center justify-center rounded-none">
-              <BoltIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+      <FadeUp delay={0.3}>
+        <Card
+          className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
+        >
+          <CardHeader>
+            <CardTitle
+              className={`text-base flex items-center gap-3 ${colors.texts.primary}`}
+            >
+              <div className="h-8 w-8 flex items-center justify-center rounded-none">
+                <BoltIcon className={`h-4 w-4 ${colors.icons.primary}`} />
+              </div>
+              Quick Actions
+            </CardTitle>
+            <CardDescription className={`text-sm ${colors.texts.secondary}`}>
+              Common actions based on your analytics insights
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <button
+                className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <CubeIcon className={`h-6 w-6 ${colors.texts.primary}`} />
+                </div>
+                <div className="text-center">
+                  <p
+                    className={`font-semibold ${colors.texts.primary} text-xs`}
+                  >
+                    Add Product
+                  </p>
+                  <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                    Expand inventory
+                  </p>
+                </div>
+              </button>
+              <button
+                className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <UsersIcon className={`h-6 w-6 ${colors.texts.primary}`} />
+                </div>
+                <div className="text-center">
+                  <p
+                    className={`font-semibold ${colors.texts.primary} text-xs`}
+                  >
+                    View Customers
+                  </p>
+                  <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                    Manage relationships
+                  </p>
+                </div>
+              </button>
+              <button
+                className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <ShoppingCartIcon
+                    className={`h-6 w-6 ${colors.texts.primary}`}
+                  />
+                </div>
+                <div className="text-center">
+                  <p
+                    className={`font-semibold ${colors.texts.primary} text-xs`}
+                  >
+                    Check Orders
+                  </p>
+                  <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                    Process pending
+                  </p>
+                </div>
+              </button>
+              <button
+                className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
+              >
+                <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
+                  <ArrowDownTrayIcon
+                    className={`h-6 w-6 ${colors.texts.primary}`}
+                  />
+                </div>
+                <div className="text-center">
+                  <p
+                    className={`font-semibold ${colors.texts.primary} text-xs`}
+                  >
+                    Export Report
+                  </p>
+                  <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
+                    Download data
+                  </p>
+                </div>
+              </button>
             </div>
-            Quick Actions
-          </CardTitle>
-          <CardDescription className={`text-sm ${colors.texts.secondary}`}>
-            Common actions based on your analytics insights
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <button
-              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
-            >
-              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                <CubeIcon className={`h-6 w-6 ${colors.texts.primary}`} />
-              </div>
-              <div className="text-center">
-                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
-                  Add Product
-                </p>
-                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
-                  Expand inventory
-                </p>
-              </div>
-            </button>
-            <button
-              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
-            >
-              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                <UsersIcon className={`h-6 w-6 ${colors.texts.primary}`} />
-              </div>
-              <div className="text-center">
-                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
-                  View Customers
-                </p>
-                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
-                  Manage relationships
-                </p>
-              </div>
-            </button>
-            <button
-              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
-            >
-              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                <ShoppingCartIcon
-                  className={`h-6 w-6 ${colors.texts.primary}`}
-                />
-              </div>
-              <div className="text-center">
-                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
-                  Check Orders
-                </p>
-                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
-                  Process pending
-                </p>
-              </div>
-            </button>
-            <button
-              className={`h-32 flex flex-col gap-3 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none`}
-            >
-              <div className="h-12 w-12 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 rounded-none">
-                <ArrowDownTrayIcon
-                  className={`h-6 w-6 ${colors.texts.primary}`}
-                />
-              </div>
-              <div className="text-center">
-                <p className={`font-semibold ${colors.texts.primary} text-xs`}>
-                  Export Report
-                </p>
-                <p className={`text-xs ${colors.texts.muted} mt-0.5`}>
-                  Download data
-                </p>
-              </div>
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </FadeUp>
     </div>
   );
 }

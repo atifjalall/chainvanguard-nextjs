@@ -370,7 +370,7 @@ class ProductService {
         productId: product._id,
         priority: "medium",
         actionType: "view_product",
-        actionUrl: `/products/${product._id}`,
+        actionUrl: `/my-products/${product._id}`,
       });
 
       // 9. Generate QR code image asynchronously (don't block response)

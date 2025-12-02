@@ -55,6 +55,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "@/components/ui/sonner";
 import { Loader2 } from "lucide-react";
+import { FadeUp } from "@/components/animations/fade-up";
 
 // VendorInventory type matching backend structure
 interface VendorInventoryItem {
@@ -441,11 +442,7 @@ export default function VendorMyInventoryPage() {
       </Breadcrumb>
 
       {/* Header */}
-      <div
-        className={`transform transition-all duration-700 ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-        }`}
-      >
+      <FadeUp delay={0}>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
             <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
@@ -481,10 +478,10 @@ export default function VendorMyInventoryPage() {
             </Button>
           </div>
         </div>
-      </div>
+      </FadeUp>
 
       {/* Statistics Cards */}
-      <div className={`transform transition-all duration-700 delay-200`}>
+      <FadeUp delay={0.1}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
@@ -539,10 +536,10 @@ export default function VendorMyInventoryPage() {
             </Card>
           ))}
         </div>
-      </div>
+      </FadeUp>
 
       {/* Filters Card */}
-      <div className={`transform transition-all duration-700 delay-300`}>
+      <FadeUp delay={0.2}>
         <Card className={`${colors.cards.base} rounded-none shadow-none`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-base">
@@ -643,10 +640,10 @@ export default function VendorMyInventoryPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </FadeUp>
 
       {/* Inventory Table */}
-      <div className={`transform transition-all duration-700 delay-400`}>
+      <FadeUp delay={0.3}>
         {filteredAndSortedInventory.length > 0 ? (
           <Card
             className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
@@ -931,7 +928,7 @@ export default function VendorMyInventoryPage() {
             </CardContent>
           </Card>
         )}
-      </div>
+      </FadeUp>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>

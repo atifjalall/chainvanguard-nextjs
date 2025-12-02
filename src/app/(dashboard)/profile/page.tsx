@@ -2,7 +2,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,15 +21,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   UserIcon,
   MapPinIcon,
   BuildingOfficeIcon,
   ShieldCheckIcon,
-  PencilIcon,
   CheckIcon,
-  XMarkIcon,
   ExclamationTriangleIcon,
+  ArrowPathIcon,
+  EnvelopeIcon,
+  PhoneIcon,
+  IdentificationIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
@@ -33,7 +42,6 @@ import {
   updateProfile,
   getProfileStats,
   ProfileStats,
-  // Added OTP helpers & types
   sendEmailOtp,
   verifyEmailOtp,
   UpdateProfileData,
@@ -54,6 +62,7 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
+import { FadeUp } from "@/components/animations/fade-up";
 
 // Province-City mapping (reuse from register page)
 const provinceCityMap: Record<string, string[]> = {
@@ -109,6 +118,11 @@ const businessTypes = [
   "Other",
 ];
 
+const FORM_SPACING = "space-y-6";
+const SECTION_MARGIN = "mb-6";
+const CONTAINER_PADDING = "p-4 md:p-6";
+const FIELD_GAP = "gap-6";
+
 export default function ProfilePage() {
   usePageTitle("Profile");
   const { user, updateProfile: updateAuthProfile } = useAuth();
@@ -146,6 +160,11 @@ export default function ProfilePage() {
     useState<UpdateProfileData | null>(null);
   const [pendingEmail, setPendingEmail] = useState<string>("");
 
+  // Email checking states
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailExists, setEmailExists] = useState(false);
+  const [originalEmail, setOriginalEmail] = useState("");
+
   useEffect(() => {
     setIsVisible(true);
     if (user) {
@@ -163,6 +182,7 @@ export default function ProfilePage() {
         businessType: user.businessType || "",
         registrationNumber: user.registrationNumber || "",
       });
+      setOriginalEmail(user.email || "");
 
       // Fetch profile stats
       const fetchStats = async () => {
@@ -195,7 +215,105 @@ export default function ProfilePage() {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
+  // Email checking effect
+  useEffect(() => {
+    const checkEmailExists = async () => {
+      // Skip if email hasn't changed or is invalid
+      if (!formData.email.trim() || !formData.email.includes("@")) {
+        setEmailExists(false);
+        return;
+      }
+
+      // Skip if email is the same as original
+      if (formData.email === originalEmail) {
+        setEmailExists(false);
+        return;
+      }
+
+      setIsCheckingEmail(true);
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/auth/check-email?email=${encodeURIComponent(formData.email)}`
+        );
+
+        if (!response.ok) throw new Error("Failed to check email");
+        const data = await response.json();
+
+        if (data.exists) {
+          setEmailExists(true);
+          setErrors((prev) => ({
+            ...prev,
+            email: "This email is already registered",
+          }));
+        } else {
+          setEmailExists(false);
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            if (newErrors.email === "This email is already registered") {
+              delete newErrors.email;
+            }
+            return newErrors;
+          });
+        }
+      } catch (error) {
+        setEmailExists(false);
+      } finally {
+        setIsCheckingEmail(false);
+      }
+    };
+
+    const timeoutId = setTimeout(checkEmailExists, 500);
+    return () => clearTimeout(timeoutId);
+  }, [formData.email, originalEmail]);
+
+  // Clear city when province changes, but only if city is not valid for the new province
+  useEffect(() => {
+    if (formData.province && formData.city) {
+      const validCities = provinceCityMap[formData.province] || [];
+      // Only clear city if it's not valid for the current province
+      if (!validCities.includes(formData.city)) {
+        setFormData((prev) => ({ ...prev, city: "" }));
+      }
+    } else if (!formData.province) {
+      // Clear city if no province is selected
+      setFormData((prev) => ({ ...prev, city: "" }));
+    }
+  }, [formData.province, formData.city]);
+
   const handleInputChange = (field: string, value: string) => {
+    // Add character limit for name field
+    if (field === "name" && value.length > 30) {
+      return;
+    }
+
+    // Phone formatting
+    if (field === "phone") {
+      let val = value;
+      if (!val.startsWith("+92 ")) val = "+92 ";
+      let rest = val.slice(4).replace(/[^0-9 ]/g, "");
+      rest = rest.replace(/ {2,}/g, " ");
+      rest = rest.replace(/^(\d{3})\s?(\d{0,7})/, "$1 $2").trimEnd();
+      rest = rest.slice(0, 11);
+      value = "+92 " + rest;
+    }
+
+    // Postal code formatting
+    if (field === "postalCode") {
+      value = value.replace(/\D/g, "").slice(0, 5);
+    }
+
+    // Clear city when province changes
+    if (field === "province") {
+      setFormData((prev) => ({ ...prev, province: value, city: "" }));
+      if (errors[field]) {
+        setErrors((prev) => ({ ...prev, [field]: "" }));
+      }
+      if (errors.city) {
+        setErrors((prev) => ({ ...prev, city: "" }));
+      }
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
@@ -209,6 +327,8 @@ export default function ProfilePage() {
     if (!formData.email.trim()) newErrors.email = "Email is required";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
       newErrors.email = "Invalid email format";
+    if (emailExists && formData.email !== originalEmail)
+      newErrors.email = "This email is already registered";
     if (!formData.phone.trim()) newErrors.phone = "Phone is required";
     if (
       !formData.phone.trim() ||
@@ -217,6 +337,8 @@ export default function ProfilePage() {
     )
       newErrors.phone = "Invalid phone format";
     if (!formData.address.trim()) newErrors.address = "Address is required";
+    if (formData.address.trim().length < 10)
+      newErrors.address = "Address must be at least 10 characters";
     if (!formData.province) newErrors.province = "Province is required";
     if (!formData.city) newErrors.city = "City is required";
     if (!formData.postalCode.trim())
@@ -230,6 +352,9 @@ export default function ProfilePage() {
         newErrors.companyName = "Company name is required";
       if (!formData.businessAddress.trim())
         newErrors.businessAddress = "Business address is required";
+      if (formData.businessAddress.trim().length < 10)
+        newErrors.businessAddress =
+          "Business address must be at least 10 characters";
       if (!formData.businessType)
         newErrors.businessType = "Business type is required";
     }
@@ -245,7 +370,7 @@ export default function ProfilePage() {
     try {
       const resp = await sendEmailOtp(targetEmail);
       if (resp.success) {
-        setResendTimer(30); // 30 second cooldown
+        setResendTimer(60);
         return { success: true, message: resp.message };
       }
       return { success: false, error: resp.error || "Failed to send OTP" };
@@ -255,13 +380,19 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    // Check if email is being checked
+    if (isCheckingEmail) {
+      toast.info("Please wait while we verify your email...");
+      return;
+    }
+
     if (!validateForm()) {
       toast.error("Please fix the errors before saving");
       return;
     }
 
     // If the email address is being changed, start OTP flow instead of saving immediately
-    const emailChanged = user?.email && formData.email !== user.email;
+    const emailChanged = originalEmail && formData.email !== originalEmail;
 
     if (emailChanged) {
       // Check wallet presence first
@@ -325,6 +456,7 @@ export default function ProfilePage() {
       if (result.success && result.user) {
         // Update auth context with new user data
         updateAuthProfile(result.user);
+        setOriginalEmail(result.user.email || formData.email);
         toast.success("Profile updated successfully");
         setIsEditing(false);
       } else {
@@ -365,6 +497,7 @@ export default function ProfilePage() {
 
       if (result.success && result.user) {
         updateAuthProfile(result.user);
+        setOriginalEmail(result.user.email || pendingEmail);
         toast.success("Profile updated successfully");
         setIsEditing(false);
         // clear pending
@@ -404,13 +537,6 @@ export default function ProfilePage() {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-  };
-
   const availableCities = formData.province
     ? provinceCityMap[formData.province] || []
     : [];
@@ -420,39 +546,50 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="relative z-10 p-6 space-y-6">
+      <div className={`relative z-10 ${CONTAINER_PADDING}`}>
         {/* Breadcrumb */}
-        <Breadcrumb className="mb-6">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/expert">Dashboard</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Profile Settings</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        <FadeUp delay={0}>
+          <Breadcrumb className={SECTION_MARGIN}>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/expert">Dashboard</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Profile Settings</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </FadeUp>
+
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
-        >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <FadeUp delay={0.1}>
+          <div
+            className={`${SECTION_MARGIN} flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4`}
+          >
             <div className="space-y-2">
-              <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
                 Profile Settings
               </h1>
-              <p className={`text-base ${colors.texts.secondary}`}>
+              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
                 Manage your account information and preferences
               </p>
               <div className="flex items-center gap-3 mt-2">
                 <Badge
                   className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
                 >
+                  <UserIcon
+                    className={`h-3 w-3 mr-1 ${badgeColors.blue.icon}`}
+                  />
                   {formData.role}
                 </Badge>
+                {stats && (
+                  <Badge
+                    className={`${badgeColors.grey.bg} ${badgeColors.grey.border} ${badgeColors.grey.text} text-xs rounded-none`}
+                  >
+                    Member since {new Date(stats.memberSince).getFullYear()}
+                  </Badge>
+                )}
                 <Badge
                   className={`${badgeColors.cyan.bg} ${badgeColors.cyan.border} ${badgeColors.cyan.text} flex items-center gap-1 text-xs rounded-none`}
                 >
@@ -463,458 +600,568 @@ export default function ProfilePage() {
                 </Badge>
               </div>
             </div>
-
-            {/* Edit Button */}
-            {!isEditing && (
-              <Button
-                onClick={() => setIsEditing(true)}
-                className={`${colors.buttons.primary} text-sm cursor-pointer h-10 rounded-none`}
-              >
-                <PencilIcon className="h-4 w-4 mr-2" />
-                Edit Profile
-              </Button>
-            )}
           </div>
-        </div>
+        </FadeUp>
 
-        {/* Profile Stats */}
-        {stats && (
-          <div
-            className={`transform transition-all duration-700 delay-100 ${
-              isVisible
-                ? "translate-y-0 opacity-100"
-                : "translate-y-4 opacity-0"
-            }`}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card
-                className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
-              >
-                <CardContent className="p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    Member Since
-                  </p>
-                  <p className={`text-sm font-medium ${colors.texts.primary}`}>
-                    {formatDate(stats.memberSince)}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
-              >
-                <CardContent className="p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    Total Orders
-                  </p>
-                  <p className={`text-sm font-medium ${colors.texts.primary}`}>
-                    {stats.totalOrders}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
-              >
-                <CardContent className="p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    Saved Items
-                  </p>
-                  <p className={`text-sm font-medium ${colors.texts.primary}`}>
-                    {stats.savedItems}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Profile Content */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Personal Information */}
-            <Card
-              className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
-            >
-              <CardHeader>
-                <CardTitle
-                  className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
-                >
-                  <UserIcon className={`h-5 w-5 ${colors.icons.primary}`} />
-                  Personal Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Full Name</Label>
-                  {isEditing ? (
-                    <Input
-                      value={formData.name}
-                      onChange={(e) =>
-                        handleInputChange("name", e.target.value)
-                      }
-                      className={`rounded-none ${errors.name ? "border-red-500" : ""}`}
-                    />
-                  ) : (
-                    <p className={`text-sm ${colors.texts.primary}`}>
-                      {formData.name}
-                    </p>
-                  )}
-                  {errors.name && (
-                    <p className="text-xs text-red-500 flex items-center gap-1">
-                      <ExclamationTriangleIcon className="h-3 w-3" />
-                      {errors.name}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Email</Label>
-                  {isEditing ? (
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        handleInputChange("email", e.target.value)
-                      }
-                      className={`rounded-none ${errors.email ? "border-red-500" : ""}`}
-                    />
-                  ) : (
-                    <p className={`text-sm ${colors.texts.primary}`}>
-                      {formData.email}
-                    </p>
-                  )}
-                  {errors.email && (
-                    <p className="text-xs text-red-500 flex items-center gap-1">
-                      <ExclamationTriangleIcon className="h-3 w-3" />
-                      {errors.email}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Phone</Label>
-                  {isEditing ? (
-                    <Input
-                      value={formData.phone}
-                      onChange={(e) =>
-                        handleInputChange("phone", e.target.value)
-                      }
-                      className={`rounded-none ${errors.phone ? "border-red-500" : ""}`}
-                    />
-                  ) : (
-                    <p className={`text-sm ${colors.texts.primary}`}>
-                      {formData.phone}
-                    </p>
-                  )}
-                  {errors.phone && (
-                    <p className="text-xs text-red-500 flex items-center gap-1">
-                      <ExclamationTriangleIcon className="h-3 w-3" />
-                      {errors.phone}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Address Information */}
-            <Card
-              className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
-            >
-              <CardHeader>
-                <CardTitle
-                  className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
-                >
-                  <MapPinIcon className={`h-5 w-5 ${colors.icons.primary}`} />
-                  Address Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Address</Label>
-                  {isEditing ? (
-                    <Textarea
-                      value={formData.address}
-                      onChange={(e) =>
-                        handleInputChange("address", e.target.value)
-                      }
-                      className={`rounded-none h-24 ${errors.address ? "border-red-500" : ""}`}
-                    />
-                  ) : (
-                    <p className={`text-sm ${colors.texts.primary}`}>
-                      {formData.address}
-                    </p>
-                  )}
-                  {errors.address && (
-                    <p className="text-xs text-red-500 flex items-center gap-1">
-                      <ExclamationTriangleIcon className="h-3 w-3" />
-                      {errors.address}
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Province</Label>
-                    {isEditing ? (
-                      <Select
-                        value={formData.province}
-                        onValueChange={(value) =>
-                          handleInputChange("province", value)
-                        }
-                      >
-                        <SelectTrigger
-                          className={`rounded-none w-full ${errors.province ? "border-red-500" : ""}`}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {provinceOptions.map((province) => (
-                            <SelectItem key={province} value={province}>
-                              {province}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <p className={`text-sm ${colors.texts.primary}`}>
-                        {formData.province}
-                      </p>
-                    )}
-                    {errors.province && (
-                      <p className="text-xs text-red-500 flex items-center gap-1">
-                        <ExclamationTriangleIcon className="h-3 w-3" />
-                        {errors.province}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">City</Label>
-                    {isEditing ? (
-                      <Select
-                        value={formData.city}
-                        onValueChange={(value) =>
-                          handleInputChange("city", value)
-                        }
-                      >
-                        <SelectTrigger
-                          className={`rounded-none w-full ${errors.city ? "border-red-500" : ""}`}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableCities.map((city) => (
-                            <SelectItem key={city} value={city}>
-                              {city}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <p className={`text-sm ${colors.texts.primary}`}>
-                        {formData.city}
-                      </p>
-                    )}
-                    {errors.city && (
-                      <p className="text-xs text-red-500 flex items-center gap-1">
-                        <ExclamationTriangleIcon className="h-3 w-3" />
-                        {errors.city}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Postal Code</Label>
-                  {isEditing ? (
-                    <Input
-                      value={formData.postalCode}
-                      onChange={(e) =>
-                        handleInputChange("postalCode", e.target.value)
-                      }
-                      className={`rounded-none ${errors.postalCode ? "border-red-500" : ""}`}
-                    />
-                  ) : (
-                    <p className={`text-sm ${colors.texts.primary}`}>
-                      {formData.postalCode}
-                    </p>
-                  )}
-                  {errors.postalCode && (
-                    <p className="text-xs text-red-500 flex items-center gap-1">
-                      <ExclamationTriangleIcon className="h-3 w-3" />
-                      {errors.postalCode}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Business Information (Conditional) */}
-            {requiresBusinessInfo && (
-              <Card
-                className={`${colors.cards.base} transition-all duration-300 rounded-none !shadow-none hover:!shadow-none`}
-              >
-                <CardHeader>
-                  <CardTitle
-                    className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
-                  >
-                    <BuildingOfficeIcon
-                      className={`h-5 w-5 ${colors.icons.primary}`}
-                    />
-                    Business Information
+        {/* Main Content */}
+        <FadeUp delay={0.2}>
+          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-none shadow-none">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+                    <IdentificationIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                    Account Information
                   </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Company Name</Label>
+                  <CardDescription className="text-gray-600 dark:text-gray-400 mt-1">
+                    {isEditing
+                      ? "Update your account details below"
+                      : "Your personal and business information"}
+                  </CardDescription>
+                </div>
+                {!isEditing && (
+                  <Button
+                    onClick={() => setIsEditing(true)}
+                    variant="outline"
+                    className="rounded-none text-sm hover:border-black dark:hover:border-white cursor-pointer"
+                  >
+                    Edit Profile
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+
+            <CardContent className={FORM_SPACING}>
+              {/* Personal Information Section */}
+              <div className={FORM_SPACING}>
+                <div className="flex items-center gap-2 mb-4">
+                  <UserIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                    Personal Details
+                  </h3>
+                </div>
+
+                <div className={`grid grid-cols-1 ${FIELD_GAP}`}>
+                  {/* Full Name - Full Row */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Full Name <span className="text-red-500">*</span>
+                    </Label>
                     {isEditing ? (
                       <Input
-                        value={formData.companyName}
+                        value={formData.name}
                         onChange={(e) =>
-                          handleInputChange("companyName", e.target.value)
+                          handleInputChange("name", e.target.value)
                         }
-                        className={`rounded-none ${errors.companyName ? "border-red-500" : ""}`}
+                        maxLength={30}
+                        className={`rounded-none h-10 ${errors.name ? "border-red-500" : ""}`}
+                        placeholder="Enter your full name"
                       />
                     ) : (
-                      <p className={`text-sm ${colors.texts.primary}`}>
-                        {formData.companyName}
-                      </p>
+                      <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                          {formData.name}
+                        </p>
+                      </div>
                     )}
-                    {errors.companyName && (
-                      <p className="text-xs text-red-500 flex items-center gap-1">
+                    {errors.name && (
+                      <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                         <ExclamationTriangleIcon className="h-3 w-3" />
-                        {errors.companyName}
+                        {errors.name}
                       </p>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Business Address
+                  {/* Email and Phone - Second Row */}
+                  <div
+                    className={`grid grid-cols-1 md:grid-cols-2 ${FIELD_GAP}`}
+                  >
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Email Address <span className="text-red-500">*</span>
+                      </Label>
+                      {isEditing ? (
+                        <div className="relative">
+                          <Input
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) =>
+                              handleInputChange("email", e.target.value)
+                            }
+                            className={`rounded-none h-10 pr-10 ${
+                              errors.email || emailExists
+                                ? "border-red-500"
+                                : formData.email &&
+                                    !isCheckingEmail &&
+                                    !emailExists &&
+                                    formData.email !== originalEmail &&
+                                    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                                      formData.email
+                                    )
+                                  ? "border-green-500"
+                                  : ""
+                            }`}
+                            placeholder="your@email.com"
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {isCheckingEmail ? (
+                              <ArrowPathIcon className="h-4 w-4 animate-spin text-blue-500" />
+                            ) : formData.email && emailExists ? (
+                              <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
+                            ) : formData.email &&
+                              !emailExists &&
+                              formData.email !== originalEmail &&
+                              /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                                formData.email
+                              ) ? (
+                              <CheckIcon className="h-4 w-4 text-green-500" />
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                            {formData.email}
+                          </p>
+                        </div>
+                      )}
+                      {errors.email && (
+                        <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                          <ExclamationTriangleIcon className="h-3 w-3" />
+                          {errors.email}
+                        </p>
+                      )}
+                      {isEditing &&
+                        formData.email &&
+                        !isCheckingEmail &&
+                        !emailExists &&
+                        !errors.email &&
+                        formData.email !== originalEmail &&
+                        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && (
+                          <p className="text-xs text-green-500 flex items-center gap-1 mt-1">
+                            <CheckIcon className="h-3 w-3" />
+                            Email is available
+                          </p>
+                        )}
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Phone Number <span className="text-red-500">*</span>
+                      </Label>
+                      {isEditing ? (
+                        <Input
+                          type="tel"
+                          maxLength={15}
+                          value={
+                            formData.phone.startsWith("+92 ")
+                              ? formData.phone
+                              : "+92 "
+                          }
+                          onChange={(e) =>
+                            handleInputChange("phone", e.target.value)
+                          }
+                          className={`rounded-none h-10 ${errors.phone ? "border-red-500" : ""}`}
+                          placeholder="300 1234567"
+                        />
+                      ) : (
+                        <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                            {formData.phone}
+                          </p>
+                        </div>
+                      )}
+                      {errors.phone && (
+                        <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                          <ExclamationTriangleIcon className="h-3 w-3" />
+                          {errors.phone}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Address Information Section */}
+              <div className={FORM_SPACING}>
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPinIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                    Address Information
+                  </h3>
+                </div>
+
+                <div className={FORM_SPACING}>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Street Address <span className="text-red-500">*</span>
                     </Label>
                     {isEditing ? (
                       <Textarea
-                        value={formData.businessAddress}
+                        value={formData.address}
                         onChange={(e) =>
-                          handleInputChange("businessAddress", e.target.value)
+                          handleInputChange("address", e.target.value)
                         }
-                        className={`rounded-none h-24 ${errors.businessAddress ? "border-red-500" : ""}`}
+                        className={`rounded-none min-h-[80px] ${errors.address ? "border-red-500" : ""}`}
+                        placeholder="Enter your complete address"
                       />
                     ) : (
-                      <p className={`text-sm ${colors.texts.primary}`}>
-                        {formData.businessAddress}
-                      </p>
+                      <div className="min-h-[80px] flex items-center px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                          {formData.address}
+                        </p>
+                      </div>
                     )}
-                    {errors.businessAddress && (
-                      <p className="text-xs text-red-500 flex items-center gap-1">
+                    {errors.address && (
+                      <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                         <ExclamationTriangleIcon className="h-3 w-3" />
-                        {errors.businessAddress}
+                        {errors.address}
                       </p>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        Business Type
+                  <div
+                    className={`grid grid-cols-1 md:grid-cols-3 ${FIELD_GAP}`}
+                  >
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Province <span className="text-red-500">*</span>
                       </Label>
                       {isEditing ? (
                         <Select
-                          value={formData.businessType}
+                          value={formData.province}
                           onValueChange={(value) =>
-                            handleInputChange("businessType", value)
+                            handleInputChange("province", value)
                           }
                         >
                           <SelectTrigger
-                            className={`rounded-none w-full ${errors.businessType ? "border-red-500" : ""}`}
+                            className={`rounded-none h-10 w-full ${errors.province ? "border-red-500" : ""}`}
                           >
-                            <SelectValue />
+                            <SelectValue placeholder="Select province" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {businessTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
+                          <SelectContent className="w-full">
+                            {provinceOptions.map((province) => (
+                              <SelectItem key={province} value={province}>
+                                {province}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       ) : (
-                        <p className={`text-sm ${colors.texts.primary}`}>
-                          {formData.businessType}
-                        </p>
+                        <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                            {formData.province}
+                          </p>
+                        </div>
                       )}
-                      {errors.businessType && (
-                        <p className="text-xs text-red-500 flex items-center gap-1">
+                      {errors.province && (
+                        <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                           <ExclamationTriangleIcon className="h-3 w-3" />
-                          {errors.businessType}
+                          {errors.province}
                         </p>
                       )}
                     </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        Registration Number
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        City <span className="text-red-500">*</span>
+                      </Label>
+                      {isEditing ? (
+                        <Select
+                          value={formData.city || ""}
+                          onValueChange={(value) =>
+                            handleInputChange("city", value)
+                          }
+                          disabled={!formData.province}
+                        >
+                          <SelectTrigger
+                            className={`rounded-none h-10 w-full ${errors.city ? "border-red-500" : ""}`}
+                          >
+                            <SelectValue
+                              placeholder={
+                                formData.province
+                                  ? "Select city"
+                                  : "Select province first"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent className="w-full">
+                            {availableCities.map((city) => (
+                              <SelectItem key={city} value={city}>
+                                {city}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                            {formData.city}
+                          </p>
+                        </div>
+                      )}
+                      {errors.city && (
+                        <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                          <ExclamationTriangleIcon className="h-3 w-3" />
+                          {errors.city}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Postal Code <span className="text-red-500">*</span>
                       </Label>
                       {isEditing ? (
                         <Input
-                          value={formData.registrationNumber}
+                          value={formData.postalCode}
                           onChange={(e) =>
-                            handleInputChange(
-                              "registrationNumber",
-                              e.target.value
-                            )
+                            handleInputChange("postalCode", e.target.value)
                           }
-                          className="rounded-none"
+                          className={`rounded-none h-10 ${errors.postalCode ? "border-red-500" : ""}`}
+                          placeholder="54000"
                         />
                       ) : (
-                        <p className={`text-sm ${colors.texts.primary}`}>
-                          {formData.registrationNumber}
+                        <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                            {formData.postalCode}
+                          </p>
+                        </div>
+                      )}
+                      {errors.postalCode && (
+                        <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                          <ExclamationTriangleIcon className="h-3 w-3" />
+                          {errors.postalCode}
                         </p>
                       )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Save Button */}
-          {isEditing && (
-            <div className="gap-6 pt-6">
-              <div className="flex justify-end gap-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditing(false)}
-                  className="rounded-none"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={isLoading}
-                  className={`${colors.buttons.primary} text-sm cursor-pointer h-10 rounded-none`}
-                >
-                  {isLoading ? (
-                    "Saving..."
-                  ) : (
-                    <>
-                      <CheckIcon className="h-4 w-4 mr-2" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+
+              {/* Business Information (Conditional) */}
+              {requiresBusinessInfo && (
+                <>
+                  <Separator />
+                  <div className={FORM_SPACING}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <BuildingOfficeIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                        Business Information
+                      </h3>
+                    </div>
+
+                    <div className={FORM_SPACING}>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Company Name <span className="text-red-500">*</span>
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            value={formData.companyName}
+                            onChange={(e) =>
+                              handleInputChange("companyName", e.target.value)
+                            }
+                            className={`rounded-none h-10 ${errors.companyName ? "border-red-500" : ""}`}
+                            placeholder="Your company name"
+                          />
+                        ) : (
+                          <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                            <p className="text-sm text-gray-900 dark:text-gray-100">
+                              {formData.companyName}
+                            </p>
+                          </div>
+                        )}
+                        {errors.companyName && (
+                          <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                            <ExclamationTriangleIcon className="h-3 w-3" />
+                            {errors.companyName}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Business Address{" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        {isEditing ? (
+                          <Textarea
+                            value={formData.businessAddress}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "businessAddress",
+                                e.target.value
+                              )
+                            }
+                            className={`rounded-none min-h-[80px] ${errors.businessAddress ? "border-red-500" : ""}`}
+                            placeholder="Enter your business address"
+                          />
+                        ) : (
+                          <div className="min-h-[80px] flex items-center px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                            <p className="text-sm text-gray-900 dark:text-gray-100">
+                              {formData.businessAddress}
+                            </p>
+                          </div>
+                        )}
+                        {errors.businessAddress && (
+                          <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                            <ExclamationTriangleIcon className="h-3 w-3" />
+                            {errors.businessAddress}
+                          </p>
+                        )}
+                      </div>
+
+                      <div
+                        className={`grid grid-cols-1 md:grid-cols-2 ${FIELD_GAP}`}
+                      >
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Business Type{" "}
+                            <span className="text-red-500">*</span>
+                          </Label>
+                          {isEditing ? (
+                            <Select
+                              value={formData.businessType}
+                              onValueChange={(value) =>
+                                handleInputChange("businessType", value)
+                              }
+                            >
+                              <SelectTrigger
+                                className={`rounded-none h-10 w-full ${errors.businessType ? "border-red-500" : ""}`}
+                              >
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent className="w-full">
+                                {businessTypes.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                              <p className="text-sm text-gray-900 dark:text-gray-100">
+                                {formData.businessType}
+                              </p>
+                            </div>
+                          )}
+                          {errors.businessType && (
+                            <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                              <ExclamationTriangleIcon className="h-3 w-3" />
+                              {errors.businessType}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Registration Number
+                          </Label>
+                          {isEditing ? (
+                            <Input
+                              value={formData.registrationNumber}
+                              onChange={(e) =>
+                                handleInputChange(
+                                  "registrationNumber",
+                                  e.target.value
+                                )
+                              }
+                              className="rounded-none h-10"
+                              placeholder="REG-123456"
+                            />
+                          ) : (
+                            <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                              <p className="text-sm text-gray-900 dark:text-gray-100">
+                                {formData.registrationNumber || "Not provided"}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Action Buttons */}
+              {isEditing && (
+                <>
+                  <Separator />
+                  <div className="flex justify-end gap-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditing(false);
+                        setErrors({});
+                        setEmailExists(false);
+                        // Reset form to original values
+                        if (user) {
+                          setFormData({
+                            name: user.name || "",
+                            email: user.email || "",
+                            phone: user.phone || "",
+                            address: user.address || "",
+                            province: user.state || "",
+                            city: user.city || "",
+                            postalCode: user.postalCode || "",
+                            role: user.role || "",
+                            companyName: user.companyName || "",
+                            businessAddress: user.businessAddress || "",
+                            businessType: user.businessType || "",
+                            registrationNumber: user.registrationNumber || "",
+                          });
+                        }
+                      }}
+                      disabled={isLoading}
+                      className="rounded-none text-sm hover:border-black dark:hover:border-white cursor-pointer"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSave}
+                      disabled={
+                        isLoading ||
+                        isCheckingEmail ||
+                        (emailExists && formData.email !== originalEmail)
+                      }
+                      className={`${colors.buttons.primary} rounded-none text-sm cursor-pointer ${
+                        isLoading ||
+                        isCheckingEmail ||
+                        (emailExists && formData.email !== originalEmail)
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                    >
+                      {isLoading ? (
+                        <>
+                          <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : isCheckingEmail ? (
+                        <>
+                          <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        <>
+                          <CheckIcon className="h-4 w-4 mr-2" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </FadeUp>
       </div>
 
-      {/* OTP Verification Modal (same size as the wallet modal for consistent sizing) */}
+      {/* OTP Modal */}
       <Dialog
         open={isOtpModalOpen}
         onOpenChange={(open) => setIsOtpModalOpen(open)}
@@ -975,7 +1222,7 @@ export default function ProfilePage() {
                     size="sm"
                     onClick={handleResendOtp}
                     disabled={resendTimer > 0 || isOtpLoading}
-                    className="rounded-none text-xs"
+                    className="rounded-none text-xs cursor-pointer"
                   >
                     {resendTimer > 0
                       ? `Resend in ${resendTimer}s`
@@ -984,7 +1231,7 @@ export default function ProfilePage() {
                   <Button
                     onClick={handleVerifyOtp}
                     disabled={isOtpLoading}
-                    className={`${colors.buttons.primary} rounded-none text-xs`}
+                    className={`${colors.buttons.primary} rounded-none text-xs cursor-pointer`}
                   >
                     {isOtpLoading ? "Verifying..." : "Verify & Update"}
                   </Button>

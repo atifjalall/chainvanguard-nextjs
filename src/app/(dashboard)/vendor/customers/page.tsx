@@ -68,8 +68,11 @@ import {
 } from "@/lib/api/vendor.customer.api";
 import type { VendorCustomer, CustomerDetailResponse, Order } from "@/types";
 import { Loader2 } from "lucide-react";
+import { FadeUp } from "@/components/animations/fade-up";
 
 const HEADER_GAP = "gap-3";
+
+type TabType = "all" | "new" | "at-risk";
 
 const formatCurrency = (amount: number | undefined | null) => {
   if (amount === undefined || amount === null || isNaN(amount)) {
@@ -657,9 +660,7 @@ export default function VendorCustomersPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
-        >
+        <FadeUp delay={0}>
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
               <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
@@ -694,12 +695,10 @@ export default function VendorCustomersPage() {
               Refresh
             </Button>
           </div>
-        </div>
+        </FadeUp>
 
         {/* Statistics Cards */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-        >
+        <FadeUp delay={0.1}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
@@ -748,12 +747,10 @@ export default function VendorCustomersPage() {
               </Card>
             ))}
           </div>
-        </div>
+        </FadeUp>
 
         {/* Filters and Search */}
-        <div
-          className={`transform transition-all duration-700 delay-300 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-        >
+        <FadeUp delay={0.2}>
           <Card
             className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
           >
@@ -884,19 +881,14 @@ export default function VendorCustomersPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </FadeUp>
 
         {/* Tabs */}
-        <div
-          className={`flex justify-center mt-6 transition-all duration-700 delay-350 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-        >
-          <div className="w-full flex justify-center">
+        <FadeUp delay={0.3}>
+          <div className="flex justify-center mt-6">
             <Tabs
               value={selectedTab}
-              onValueChange={(value) => {
-                setSelectedTab(value as "all" | "new" | "at-risk");
-                setCurrentPage(1);
-              }}
+              onValueChange={(v) => setSelectedTab(v as TabType)}
               className="w-full flex justify-center"
             >
               <TabsList
@@ -928,82 +920,82 @@ export default function VendorCustomersPage() {
               </TabsList>
             </Tabs>
           </div>
-        </div>
+        </FadeUp>
 
         {/* Customers List */}
-        <div
-          className={`transform transition-all duration-700 delay-500 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-        >
-          {isLoading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600 dark:text-gray-400">
-                Loading customers...
-              </p>
-            </div>
-          ) : filteredAndSortedCustomers.length > 0 ? (
-            <>
-              <div
-                className={
-                  viewMode === "grid"
-                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                    : "space-y-6"
-                }
-              >
-                {filteredAndSortedCustomers.map((customer) =>
-                  viewMode === "grid" ? (
-                    <CustomerCard key={customer.id} customer={customer} />
-                  ) : (
-                    <CustomerListItem key={customer.id} customer={customer} />
-                  )
-                )}
+        <FadeUp delay={0.4}>
+          <div>
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600 dark:text-gray-400">
+                  Loading customers...
+                </p>
               </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-8">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className={`${colors.buttons.outline} rounded-none`}
-                  >
-                    Previous
-                  </Button>
-                  <span className={`text-sm ${colors.texts.secondary}`}>
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                    className={`${colors.buttons.outline} rounded-none`}
-                  >
-                    Next
-                  </Button>
+            ) : filteredAndSortedCustomers.length > 0 ? (
+              <>
+                <div
+                  className={
+                    viewMode === "grid"
+                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                      : "space-y-6"
+                  }
+                >
+                  {filteredAndSortedCustomers.map((customer) =>
+                    viewMode === "grid" ? (
+                      <CustomerCard key={customer.id} customer={customer} />
+                    ) : (
+                      <CustomerListItem key={customer.id} customer={customer} />
+                    )
+                  )}
                 </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-12">
-              <UsersIcon
-                className={`h-16 w-16 mx-auto ${colors.icons.muted} mb-4`}
-              />
-              <h3
-                className={`text-lg font-medium ${colors.texts.primary} mb-2`}
-              >
-                No customers found
-              </h3>
-              <p className={`text-sm ${colors.texts.secondary}`}>
-                Try adjusting your filters or search terms
-              </p>
-            </div>
-          )}
-        </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 mt-8">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className={`${colors.buttons.outline} rounded-none`}
+                    >
+                      Previous
+                    </Button>
+                    <span className={`text-sm ${colors.texts.secondary}`}>
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                      className={`${colors.buttons.outline} rounded-none`}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <UsersIcon
+                  className={`h-16 w-16 mx-auto ${colors.icons.muted} mb-4`}
+                />
+                <h3
+                  className={`text-lg font-medium ${colors.texts.primary} mb-2`}
+                >
+                  No customers found
+                </h3>
+                <p className={`text-sm ${colors.texts.secondary}`}>
+                  Try adjusting your filters or search terms
+                </p>
+              </div>
+            )}
+          </div>
+        </FadeUp>
       </div>
 
       {/* Customer Details Dialog */}
@@ -1300,7 +1292,6 @@ export default function VendorCustomersPage() {
               <EnvelopeIcon className="h-4 w-4 mr-2" />
               Contact Customer
             </Button>
-            
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -77,6 +77,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Loader2 } from "lucide-react";
+import { FadeUp } from "@/components/animations/fade-up";
 
 const statusOptions: Array<OrderStatus | "All Status"> = [
   "All Status",
@@ -642,11 +643,7 @@ export default function VendorOrdersPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0}>
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
               <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
@@ -685,14 +682,10 @@ export default function VendorOrdersPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </FadeUp>
 
         {/* Stats Grid */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0.1}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
               {
@@ -754,14 +747,10 @@ export default function VendorOrdersPage() {
               );
             })}
           </div>
-        </div>
+        </FadeUp>
 
         {/* Filters Card */}
-        <div
-          className={`transform transition-all duration-700 delay-300 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
+        <FadeUp delay={0.2}>
           <Card
             className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
           >
@@ -870,15 +859,11 @@ export default function VendorOrdersPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </FadeUp>
 
         {/* Tabs - Moved below filters */}
-        <div
-          className={`flex justify-center mt-6 transition-all duration-700 delay-350 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <div className="w-full flex justify-center">
+        <FadeUp delay={0.3}>
+          <div className="flex justify-center mt-6">
             <div
               className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
             >
@@ -921,85 +906,86 @@ export default function VendorOrdersPage() {
               })}
             </div>
           </div>
-        </div>
+        </FadeUp>
 
         {/* Orders List */}
-        <div
-          className={`transform transition-all duration-700 delay-400 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          {filteredAndSortedOrders.length > 0 ? (
-            <div className="space-y-6">
-              {filteredAndSortedOrders.map((order) => (
-                <OrderCard key={order.id || order._id} order={order} />
-              ))}
+        <FadeUp delay={0.4}>
+          <div>
+            {filteredAndSortedOrders.length > 0 ? (
+              <div className="space-y-6">
+                {filteredAndSortedOrders.map((order) => (
+                  <OrderCard key={order.id || order._id} order={order} />
+                ))}
 
-              {/* Pagination */}
-              {totalOrdersCount > 10 && (
-                <Pagination className="mt-8 rounded-none">
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() =>
-                          setCurrentPage((p) => Math.max(1, p - 1))
+                {/* Pagination */}
+                {totalOrdersCount > 10 && (
+                  <Pagination className="mt-8 rounded-none">
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
+                          className={
+                            currentPage === 1
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+                      {Array.from(
+                        { length: Math.min(5, totalPages) },
+                        (_, i) => {
+                          const page = i + 1;
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                onClick={() => setCurrentPage(page)}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
                         }
-                        className={
-                          currentPage === 1
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      const page = i + 1;
-                      return (
-                        <PaginationItem key={page}>
-                          <PaginationLink
-                            onClick={() => setCurrentPage(page)}
-                            isActive={currentPage === page}
-                            className="cursor-pointer"
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    })}
-                    {totalPages > 5 && <PaginationEllipsis />}
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() =>
-                          setCurrentPage((p) => Math.min(totalPages, p + 1))
-                        }
-                        className={
-                          currentPage === totalPages
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <CubeIcon
-                className={`h-16 w-16 mx-auto ${colors.icons.muted} mb-4`}
-              />
-              <h3
-                className={`text-lg font-medium ${colors.texts.primary} mb-2`}
-              >
-                {totalOrdersCount === 0 ? "No Orders Yet" : "No Orders Found"}
-              </h3>
-              <p className={`text-sm ${colors.texts.secondary}`}>
-                {totalOrdersCount === 0
-                  ? "When customers place orders, they will appear here."
-                  : "Try adjusting your search terms or filters."}
-              </p>
-            </div>
-          )}
-        </div>
+                      )}
+                      {totalPages > 5 && <PaginationEllipsis />}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          className={
+                            currentPage === totalPages
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <CubeIcon
+                  className={`h-16 w-16 mx-auto ${colors.icons.muted} mb-4`}
+                />
+                <h3
+                  className={`text-lg font-medium ${colors.texts.primary} mb-2`}
+                >
+                  {totalOrdersCount === 0 ? "No Orders Yet" : "No Orders Found"}
+                </h3>
+                <p className={`text-sm ${colors.texts.secondary}`}>
+                  {totalOrdersCount === 0
+                    ? "When customers place orders, they will appear here."
+                    : "Try adjusting your search terms or filters."}
+                </p>
+              </div>
+            )}
+          </div>
+        </FadeUp>
 
         {/* Update Status Dialog */}
         <Dialog open={isUpdateStatusOpen} onOpenChange={setIsUpdateStatusOpen}>

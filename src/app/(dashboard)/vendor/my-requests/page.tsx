@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { FadeUp } from "@/components/animations/fade-up";
 
 // Import API functions and types
 
@@ -468,9 +469,7 @@ export default function MyRequestsPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
-        >
+        <FadeUp delay={0}>
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-2">
               <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
@@ -499,12 +498,10 @@ export default function MyRequestsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </FadeUp>
 
         {/* Statistics Cards */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-        >
+        <FadeUp delay={0.1}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
               {
@@ -558,12 +555,10 @@ export default function MyRequestsPage() {
               </Card>
             ))}
           </div>
-        </div>
+        </FadeUp>
 
         {/* Filters and Search */}
-        <div
-          className={`transform transition-all duration-700 delay-300 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-        >
+        <FadeUp delay={0.2}>
           <Card
             className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
           >
@@ -666,71 +661,73 @@ export default function MyRequestsPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </FadeUp>
 
         {/* Tabs */}
-        <div
-          className={`flex justify-center mt-6 transition-all duration-700 delay-350 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-        >
-          <div className="w-full flex justify-center">
-            <Tabs
-              value={selectedTab}
-              onValueChange={setSelectedTab}
-              className="w-full flex justify-center"
-            >
-              <TabsList
-                className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
+        <FadeUp delay={0.3}>
+          <div className="flex justify-center mt-6">
+            <div className="w-full flex justify-center">
+              <Tabs
+                value={selectedTab}
+                onValueChange={setSelectedTab}
+                className="w-full flex justify-center"
               >
-                <TabsTrigger
-                  value="all"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "all" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                <TabsList
+                  className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
                 >
-                  <Squares2X2Icon
-                    className={`h-4 w-4 ${colors.icons.primary}`}
-                  />
-                  All Requests
-                </TabsTrigger>
-                <TabsTrigger
-                  value="applied"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "applied" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
-                >
-                  <InboxArrowDownIcon
-                    className={`h-4 w-4 ${colors.icons.primary}`}
-                  />
-                  Applied
-                </TabsTrigger>
-                <TabsTrigger
-                  value="approved"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "approved" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
-                >
-                  <CheckCircleIcon
-                    className={`h-4 w-4 ${colors.icons.primary}`}
-                  />
-                  Approved
-                </TabsTrigger>
-                <TabsTrigger
-                  value="rejected"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "rejected" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
-                >
-                  <XCircleIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-                  Rejected
-                </TabsTrigger>
-                <TabsTrigger
-                  value="cancelled"
-                  className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "cancelled" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
-                >
-                  <XCircleIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-                  Cancelled
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+                  <TabsTrigger
+                    value="all"
+                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "all" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                  >
+                    <Squares2X2Icon
+                      className={`h-4 w-4 ${colors.icons.primary}`}
+                    />
+                    All Requests
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="applied"
+                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "applied" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                  >
+                    <InboxArrowDownIcon
+                      className={`h-4 w-4 ${colors.icons.primary}`}
+                    />
+                    Applied
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="approved"
+                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "approved" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                  >
+                    <CheckCircleIcon
+                      className={`h-4 w-4 ${colors.icons.primary}`}
+                    />
+                    Approved
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="rejected"
+                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "rejected" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                  >
+                    <XCircleIcon
+                      className={`h-4 w-4 ${colors.icons.primary}`}
+                    />
+                    Rejected
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="cancelled"
+                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none ${selectedTab === "cancelled" ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm` : `${colors.texts.secondary} hover:${colors.texts.primary}`} flex items-center gap-2 justify-center`}
+                  >
+                    <XCircleIcon
+                      className={`h-4 w-4 ${colors.icons.primary}`}
+                    />
+                    Cancelled
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
-        </div>
+        </FadeUp>
 
         {/* Request Cards */}
-        <div
-          className={`transform transition-all duration-700 delay-500 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
-        >
+        <FadeUp delay={0.4}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAndSortedRequests.map((request) => (
               <Card
@@ -844,7 +841,7 @@ export default function MyRequestsPage() {
               </p>
             </div>
           )}
-        </div>
+        </FadeUp>
       </div>
 
       {/* Request Details Dialog */}

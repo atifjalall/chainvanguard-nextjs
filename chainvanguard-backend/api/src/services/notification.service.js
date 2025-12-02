@@ -23,10 +23,11 @@ class NotificationService {
         throw new Error("User not found");
       }
 
-      // Set defaults based on user preferences
+      // Set defaults based on user preferences (but allow override from data)
       const notificationData = {
         ...data,
-        channels: {
+        // Only set channels if not already provided
+        channels: data.channels || {
           inApp: {
             enabled: true,
             sent: true,
@@ -45,8 +46,11 @@ class NotificationService {
             sent: false,
           },
         },
-        isSent: true,
-        sentAt: new Date(),
+        // Only set isSent and sentAt if not already provided
+        isSent: data.isSent !== undefined ? data.isSent : true,
+        sentAt: data.sentAt || new Date(),
+        // Set deliveryStatus if not provided
+        deliveryStatus: data.deliveryStatus || "sent",
       };
 
       const notification = await Notification.create(notificationData);
