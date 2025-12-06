@@ -30,10 +30,8 @@ import {
   CircleStackIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  ArrowPathIcon,
   PlayIcon,
   PauseIcon,
-  DocumentArrowDownIcon,
   BoltIcon,
   ChartBarIcon,
   ServerIcon,
@@ -325,19 +323,6 @@ export default function DataAndBackupsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className={`flex items-center gap-2 text-xs cursor-pointer rounded-none ${colors.buttons.secondary} transition-all hover:border-black`}
-            >
-              {isRefreshing ? (
-                <Loader2 className={`h-4 w-4 animate-spin`} />
-              ) : (
-                <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-              )}
-              Refresh
-            </Button>
             {dashboardStatus?.schedulerRunning ? (
               <Button
                 variant="outline"
@@ -581,7 +566,7 @@ export default function DataAndBackupsPage() {
             <CardTitle
               className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
             >
-              <DocumentArrowDownIcon
+              <CloudArrowUpIcon
                 className={`h-5 w-5 ${colors.icons.primary}`}
               />
               Recent Backups
@@ -647,7 +632,7 @@ export default function DataAndBackupsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => viewBackupDetails(backup.backupId)}
-                            className="text-xs rounded-none h-8 border border-transparent text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-600 dark:hover:border-blue-400 cursor-pointer transition-all"
+                            className="text-xs rounded-none h-8 border border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-600 dark:hover:border-blue-400 cursor-pointer transition-all"
                           >
                             Details
                           </Button>

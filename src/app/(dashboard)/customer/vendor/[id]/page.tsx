@@ -82,7 +82,7 @@ function ProductCard({ product }: ProductCardProps) {
       <div className="space-y-2">
         <button
           onClick={() => router.push(`/customer/product/${product._id}`)}
-          className="block w-full text-left"
+          className="block w-full text-left cursor-pointer"
         >
           <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
             {product.name}
@@ -251,14 +251,14 @@ export default function VendorStorePage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/customer")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               Home
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <button
               onClick={() => router.push("/customer/browse")}
-              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               Browse
             </button>
@@ -370,7 +370,7 @@ export default function VendorStorePage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleSortChange("newest")}
-                className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors ${
+                className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors cursor-pointer ${
                   sortBy === "createdAt" && sortOrder === "desc"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
@@ -380,7 +380,7 @@ export default function VendorStorePage() {
               </button>
               <button
                 onClick={() => handleSortChange("popular")}
-                className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors ${
+                className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors cursor-pointer ${
                   sortBy === "name"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
@@ -390,7 +390,7 @@ export default function VendorStorePage() {
               </button>
               <button
                 onClick={() => handleSortChange("price-low")}
-                className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors ${
+                className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors cursor-pointer ${
                   sortBy === "price" && sortOrder === "asc"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
@@ -400,7 +400,7 @@ export default function VendorStorePage() {
               </button>
               <button
                 onClick={() => handleSortChange("price-high")}
-                className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors ${
+                className={`h-11 px-6 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors cursor-pointer ${
                   sortBy === "price" && sortOrder === "desc"
                     ? "bg-black dark:bg-white text-white dark:text-black"
                     : "border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-black dark:hover:border-white"
@@ -450,7 +450,7 @@ export default function VendorStorePage() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="h-11 px-6 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-black dark:hover:border-white transition-colors"
+                    className="h-11 px-6 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-black dark:hover:border-white transition-colors cursor-pointer"
                   >
                     Previous
                   </button>
@@ -462,7 +462,7 @@ export default function VendorStorePage() {
                       setCurrentPage((p) => Math.min(totalPages, p + 1))
                     }
                     disabled={currentPage === totalPages}
-                    className="h-11 px-6 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-black dark:hover:border-white transition-colors"
+                    className="h-11 px-6 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-black dark:hover:border-white transition-colors cursor-pointer"
                   >
                     Next
                   </button>
@@ -487,7 +487,7 @@ export default function VendorStorePage() {
                 </div>
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                  className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
                 >
                   Clear Search
                 </button>

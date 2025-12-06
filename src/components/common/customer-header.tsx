@@ -700,7 +700,7 @@ export default function CustomerHeader() {
                 <div className="flex items-center px-12 lg:px-16 py-12 border-b border-gray-200 dark:border-gray-800">
                   <Link
                     href="/customer"
-                    className="flex items-center ml-32"
+                    className="flex items-center ml-32 cursor-pointer"
                     onClick={() => setMenuOpen(false)}
                   >
                     <span className="text-3xl lg:text-4xl font-thin text-gray-900 dark:text-white tracking-wide">
@@ -719,7 +719,7 @@ export default function CustomerHeader() {
                           <button
                             key={key}
                             onClick={() => setSelectedCategory(key)}
-                            className={`text-left text-[10px] uppercase tracking-[0.2em] py-1 transition-all duration-200 block ${
+                            className={`text-left text-[10px] uppercase tracking-[0.2em] py-1 transition-all duration-200 cursor-pointer block ${
                               selectedCategory === key
                                 ? "text-gray-900 dark:text-white font-semibold"
                                 : "text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white"
@@ -739,7 +739,7 @@ export default function CustomerHeader() {
                               "/customer/browse?category=men&subcategory=best%20sellers"
                             );
                           }}
-                          className="text-left text-[10px] uppercase tracking-[0.2em] py-1 text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors block"
+                          className="text-left text-[10px] uppercase tracking-[0.2em] py-1 text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors block cursor-pointer"
                         >
                           SALE
                         </button>
@@ -748,7 +748,7 @@ export default function CustomerHeader() {
                             setMenuOpen(false);
                             router.push("/customer/browse?newArrival=true");
                           }}
-                          className="text-left text-[10px] uppercase tracking-[0.2em] py-1 text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors block"
+                          className="text-left text-[10px] uppercase tracking-[0.2em] py-1 text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors block cursor-pointer"
                         >
                           NEW ARRIVALS
                         </button>
@@ -787,7 +787,7 @@ export default function CustomerHeader() {
                             onClick={() =>
                               handleCategoryClick(selectedCategory, subcat)
                             }
-                            className={`text-left text-[10px] uppercase tracking-[0.2em] py-1 transition-colors block ${
+                            className={`text-left text-[10px] uppercase tracking-[0.2em] py-1 transition-colors cursor-pointer block ${
                               selectedSubcategory === subcat.toLowerCase()
                                 ? "text-gray-900 dark:text-white font-semibold"
                                 : "text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white"

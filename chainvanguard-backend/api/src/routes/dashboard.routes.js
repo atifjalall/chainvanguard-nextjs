@@ -5,6 +5,7 @@ import VendorRequest from "../models/VendorRequest.js";
 import Inventory from "../models/Inventory.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import { initializeSafeMode, queryCollection, countDocuments, populateField } from "../utils/safeMode/lokiService.js";
 
 const router = express.Router();
 
@@ -30,6 +31,62 @@ router.get(
   async (req, res) => {
     try {
       const supplierId = req.userId;
+
+      // SAFE MODE: Load stats from LokiJS backup
+      if (req.safeMode) {
+        await initializeSafeMode(supplierId, 100);
+
+        // Get orders from backup
+        const orders = queryCollection(supplierId, 'orders', { sellerId: supplierId });
+        const vendorRequests = queryCollection(supplierId, 'vendorRequests', { supplierId });
+        const inventory = queryCollection(supplierId, 'inventory', { supplierId, status: 'active' });
+
+        // Calculate basic stats from backup data
+        const pendingRequests = vendorRequests.filter(vr => vr.status === 'pending').length;
+        const lowStockCount = inventory.filter(inv => inv.quantity < 10).length;
+        const totalVendors = new Set(orders.map(o => o.buyerId?.toString())).size;
+        const activeOrders = orders.filter(o => ['pending', 'processing'].includes(o.status)).length;
+
+        // Recent transactions (last 5 orders)
+        let recentOrders = orders
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5);
+
+        // Populate buyer information from users collection
+        recentOrders = populateField(supplierId, recentOrders, 'buyerId', 'users', ['_id', 'name', 'email', 'companyName']);
+
+        return res.json({
+          success: true,
+          safeMode: true,
+          stats: {
+            pendingRequests,
+            lowStockAlerts: lowStockCount,
+            todayRevenue: 0, // Can't calculate date-specific in safe mode
+            weekOrders: 0,
+            totalVendors,
+            totalInventoryItems: inventory.length,
+            activeOrders,
+            recentTransactions: recentOrders.map(order => ({
+              id: order._id,
+              orderNumber: order.orderNumber,
+              vendor: order.buyerId ? {
+                id: order.buyerId._id,
+                name: order.buyerId.name,
+                email: order.buyerId.email,
+                companyName: order.buyerId.companyName,
+              } : null,
+              amount: order.totalAmount,
+              status: order.status,
+              itemCount: order.items?.length || 0,
+              date: order.createdAt,
+            })),
+          },
+          timestamp: new Date(),
+          warning: 'Viewing backup data. Some stats (today/week revenue) unavailable during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Full stats from MongoDB
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -243,6 +300,63 @@ router.get(
   async (req, res) => {
     try {
       const vendorId = req.userId;
+
+      // SAFE MODE: Load stats from LokiJS backup
+      if (req.safeMode) {
+        await initializeSafeMode(vendorId, 100);
+
+        // Get data from backup
+        const orders = queryCollection(vendorId, 'orders', { sellerId: vendorId });
+        const products = queryCollection(vendorId, 'products', { vendorId, status: 'active' });
+        const vendorRequests = queryCollection(vendorId, 'vendorRequests', { vendorId });
+
+        // Calculate stats
+        const pendingOrders = orders.filter(o => o.status === 'pending').length;
+        const processingOrders = orders.filter(o => o.status === 'processing').length;
+        const lowStockProducts = products.filter(p => p.stock < 10).length;
+        const approvedRequests = vendorRequests.filter(vr => vr.status === 'approved').length;
+        const totalCustomers = new Set(orders.map(o => o.buyerId?.toString())).size;
+
+        // Recent sales
+        let recentOrders = orders
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5);
+
+        // Populate customer information from users collection
+        recentOrders = populateField(vendorId, recentOrders, 'buyerId', 'users', ['_id', 'name', 'email']);
+
+        return res.json({
+          success: true,
+          safeMode: true,
+          stats: {
+            todaySales: 0, // Can't calculate date-specific
+            pendingOrders,
+            processingOrders,
+            lowStockProducts,
+            newCustomerOrders: 0,
+            approvedRequests,
+            totalProducts: products.length,
+            totalCustomers,
+            recentSales: recentOrders.map(order => ({
+              id: order._id,
+              orderNumber: order.orderNumber,
+              customer: order.buyerId ? {
+                id: order.buyerId._id,
+                name: order.buyerId.name,
+                email: order.buyerId.email,
+              } : null,
+              amount: order.totalAmount,
+              status: order.status,
+              itemCount: order.items?.length || 0,
+              date: order.createdAt,
+            })),
+          },
+          timestamp: new Date(),
+          warning: 'Viewing backup data. Some stats (today sales, new orders) unavailable during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Full stats from MongoDB
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 

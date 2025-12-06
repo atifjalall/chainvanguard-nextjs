@@ -37,8 +37,7 @@ import {
   CheckIcon,
   BoltIcon,
   ChartBarIcon,
-  DocumentArrowDownIcon,
-  TrashIcon,
+  CloudArrowDownIcon,
 } from "@heroicons/react/24/outline";
 import { badgeColors, colors } from "@/lib/colorConstants";
 import { usePageTitle } from "@/hooks/use-page-title";
@@ -55,10 +54,8 @@ export default function BackupDetailPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [backup, setBackup] = useState<any>(null);
 
@@ -117,24 +114,11 @@ export default function BackupDetailPage() {
       await backupApi.restoreBackup(backupId);
       toast.success("Backup restored successfully");
       setShowRestoreDialog(false);
+      await loadBackupDetails(); // Reload backup details after restore
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to restore backup");
     } finally {
       setIsRestoring(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await backupApi.deleteBackup(backupId);
-      toast.success("Backup deleted successfully");
-      setShowDeleteDialog(false);
-      router.push("/expert/data-and-backups");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete backup");
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -266,18 +250,10 @@ export default function BackupDetailPage() {
             <Button
               variant="outline"
               onClick={() => setShowRestoreDialog(true)}
-              className="flex items-center gap-2 text-xs cursor-pointer rounded-none h-8 border border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 hover:text-blue-600 dark:hover:text-blue-400 transition-all hover:border-blue-600 dark:hover:border-blue-400"
+              className="flex items-center gap-2 text-xs cursor-pointer rounded-none h-8 border border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
             >
-              <DocumentArrowDownIcon className="h-4 w-4" />
+              <CloudArrowDownIcon className="h-4 w-4" />
               Restore
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(true)}
-              className="flex items-center gap-2 text-xs cursor-pointer rounded-none h-8 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 transition-all hover:border-red-600 dark:hover:border-red-400"
-            >
-              <TrashIcon className="h-4 w-4" />
-              Delete
             </Button>
           </div>
         </div>
@@ -660,7 +636,14 @@ export default function BackupDetailPage() {
       )}
 
       {/* Restore Dialog */}
-      <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+      <AlertDialog
+        open={showRestoreDialog}
+        onOpenChange={(open) => {
+          if (!isRestoring) {
+            setShowRestoreDialog(open);
+          }
+        }}
+      >
         <AlertDialogContent className={`${colors.cards.base} rounded-none`}>
           <AlertDialogHeader>
             <AlertDialogTitle
@@ -690,74 +673,26 @@ export default function BackupDetailPage() {
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-none text-xs cursor-pointer h-8">
+            <AlertDialogCancel
+              disabled={isRestoring}
+              className="rounded-none text-xs cursor-pointer h-8 hover:border-black dark:hover:border-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
+            <Button
               onClick={handleRestore}
               disabled={isRestoring}
-              className="rounded-none text-xs h-8 cursor-pointer bg-blue-600 text-white hover:bg-blue-700"
+              className="flex items-center gap-2 text-xs cursor-pointer rounded-none h-8 bg-transparent border border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 hover:text-blue-600 dark:hover:text-blue-400 transition-all hover:border-blue-600 dark:hover:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isRestoring ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Restoring...
                 </>
               ) : (
-                "Restore Backup"
+                <>Restore Backup</>
               )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className={`${colors.cards.base} rounded-none`}>
-          <AlertDialogHeader>
-            <AlertDialogTitle
-              className={`text-lg font-semibold ${colors.texts.primary}`}
-            >
-              Delete Backup
-            </AlertDialogTitle>
-            <AlertDialogDescription
-              className={`text-xs ${colors.texts.secondary}`}
-            >
-              This will permanently delete this backup from IPFS and mark it as
-              deleted. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div
-            className={`my-4 p-3 rounded-none bg-gray-50 dark:bg-gray-900/20 border ${colors.borders.primary}`}
-          >
-            <p className={`text-xs font-medium ${colors.texts.primary}`}>
-              {backup.backupId}
-            </p>
-            <p className={`text-xs ${colors.texts.muted} mt-1`}>
-              Type: {backup.type} • Size:{" "}
-              {backup.metadata?.compressedSize
-                ? formatBytes(backup.metadata.compressedSize)
-                : "N/A"}
-            </p>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-none text-xs cursor-pointer h-8">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="rounded-none text-xs h-8 cursor-pointer bg-red-600 text-white hover:bg-red-700"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete Backup"
-              )}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

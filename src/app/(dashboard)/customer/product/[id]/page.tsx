@@ -97,7 +97,7 @@ function ProductCard({
             {!imageError && images && images.length > 0 ? (
               <img
                 src={getImageSrc()}
-                alt={name}
+                alt={capitalizeWords(name)} // use capitalized for alt too
                 className={`w-full h-full object-cover transition-opacity duration-300 group-hover:scale-105 transition-transform duration-500 ${
                   imageLoaded ? "opacity-100" : "opacity-0"
                 }`}
@@ -149,7 +149,7 @@ function ProductCard({
             className="block flex-1 cursor-pointer"
           >
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-              {name}
+              {capitalizeWords(name)} {/* capitalize product title */}
             </h3>
           </a>
           <button
@@ -186,6 +186,27 @@ function ProductCard({
     </div>
   );
 }
+
+// Add helper to capitalize words
+const capitalizeWords = (s?: string | null) =>
+  !s
+    ? ""
+    : s.replace(
+        /\b\w+/g,
+        (word) => word.charAt(0).toUpperCase() + word.slice(1)
+      );
+
+// Add helper to capitalize the first word
+const capitalizeFirstWord = (s?: string | null) =>
+  !s
+    ? ""
+    : s
+        .trim()
+        .split(" ")
+        .map((word, idx) =>
+          idx === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word
+        )
+        .join(" ");
 
 export default function ProductDetailPage() {
   usePageTitle("Product Details");
@@ -522,7 +543,7 @@ export default function ProductDetailPage() {
             </button>
             <ChevronRightIcon className="h-3 w-3 text-gray-400 dark:text-gray-600" />
             <span className="text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white">
-              {product.name}
+              {capitalizeWords(product.name)} {/* capitalize breadcrumb name */}
             </span>
           </div>
         </div>
@@ -540,7 +561,7 @@ export default function ProductDetailPage() {
                 )}
                 <img
                   src={images[selectedImage]}
-                  alt={product.name}
+                  alt={capitalizeWords(product.name)}
                   className={`w-full h-full object-cover transition-opacity duration-300 ${
                     imageLoaded ? "opacity-100" : "opacity-0"
                   }`}
@@ -591,7 +612,7 @@ export default function ProductDetailPage() {
                   </p>
                 </div>
                 <h1 className="text-4xl font-extralight text-gray-900 dark:text-white tracking-tight">
-                  {product.name}
+                  {capitalizeWords(product.name)} {/* capitalize main title */}
                 </h1>
                 <div className="flex items-baseline gap-3">
                   <span className="text-2xl font-light text-gray-900 dark:text-white">
@@ -648,7 +669,9 @@ export default function ProductDetailPage() {
                     Color:
                   </span>
                   <span className="text-sm text-gray-900 dark:text-white">
-                    {product.color || product.apparelDetails?.color}
+                    {capitalizeFirstWord(
+                      product.color || product.apparelDetails?.color
+                    )}
                   </span>
                 </div>
               )}
@@ -762,11 +785,12 @@ export default function ProductDetailPage() {
                     {details.map((detail, index) => (
                       <li
                         key={index}
-                        className="flex items-start gap-3 text-xs text-gray-600 dark:text-gray-400"
+                        className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400" // changed items-start -> items-center
                       >
-                        <span className="text-gray-400 dark:text-gray-600 mt-1">
+                        <span className="text-gray-400 dark:text-gray-600">
                           •
-                        </span>
+                        </span>{" "}
+                        {/* removed mt-1 */}
                         <span>{detail}</span>
                       </li>
                     ))}

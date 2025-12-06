@@ -31,6 +31,25 @@ const router = express.Router();
  */
 router.get("/product/:productId", async (req, res) => {
   try {
+    // SAFE MODE: Reviews unavailable (not backed up)
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        safeMode: true,
+        reviews: [],
+        pagination: {
+          page: parseInt(req.query.page) || 1,
+          limit: parseInt(req.query.limit) || 10,
+          total: 0,
+          pages: 0
+        },
+        averageRating: 0,
+        totalReviews: 0,
+        message: "Product reviews temporarily unavailable during maintenance",
+        warning: "Review data will be available when maintenance completes."
+      });
+    }
+
     const filters = {
       rating: req.query.rating,
       verifiedOnly: req.query.verifiedOnly,

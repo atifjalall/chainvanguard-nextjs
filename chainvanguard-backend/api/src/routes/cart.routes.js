@@ -16,6 +16,24 @@ const router = express.Router();
  */
 router.get("/", optionalAuth, async (req, res) => {
   try {
+    // SAFE MODE: Cart unavailable (not backed up)
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        safeMode: true,
+        data: {
+          items: [],
+          totalAmount: 0,
+          totalItems: 0,
+          totalQuantity: 0,
+          subtotal: 0,
+          discount: 0,
+        },
+        message: "Cart temporarily unavailable during maintenance",
+        warning: "Your cart data is safe and will be restored when maintenance completes."
+      });
+    }
+
     const { sessionId } = req.query;
 
     // Determine if user is authenticated or guest
@@ -728,6 +746,16 @@ router.get("/count", optionalAuth, async (req, res) => {
       });
     }
 
+    // SAFE MODE: Return graceful message
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        count: 0,
+        safeMode: true,
+        message: "Cart data temporarily unavailable during maintenance"
+      });
+    }
+
     const count = await cartService.getCartItemCount(userId, guestSessionId);
 
     res.json({
@@ -739,6 +767,7 @@ router.get("/count", optionalAuth, async (req, res) => {
     res.json({
       success: true,
       count: 0, // ✅ Return 0 on error
+      message: "Unable to load cart count"
     });
   }
 });

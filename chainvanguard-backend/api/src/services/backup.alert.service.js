@@ -21,7 +21,7 @@ class BackupAlertService {
    */
   async sendBackupSuccessAlert(backupData) {
     const message = {
-      type: "BACKUP_SUCCESS",
+      type: "backup_completed", // Match Notification schema enum
       title: "Backup Completed Successfully",
       message: `Backup ${backupData.backupId} completed successfully`,
       details: {
@@ -48,7 +48,7 @@ class BackupAlertService {
    */
   async sendBackupFailureAlert(backupId, error) {
     const message = {
-      type: "BACKUP_FAILURE",
+      type: "backup_failed", // Match Notification schema enum
       title: "Backup Failed",
       message: `Backup ${backupId} failed: ${error.message}`,
       details: {
@@ -260,7 +260,8 @@ class BackupAlertService {
       // Create notifications for each admin
       const notifications = adminUsers.map((user) => ({
         userId: user._id,
-        type: "system", // Match Notification schema enum
+        userRole: user.role, // REQUIRED field - must match user's role
+        type: message.type, // Use the actual backup notification type (backup_completed, backup_failed, etc.)
         title: message.title,
         message: message.message,
         metadata: {
@@ -268,21 +269,26 @@ class BackupAlertService {
           ...message.details,
           severity: message.severity,
         },
-        read: false,
-        category: "system",
+        isRead: false, // Correct field name is 'isRead', not 'read'
+        category: "backup", // Correct category for backup notifications
         priority:
-          message.severity === "critical"
-            ? "high"
+          message.severity === "critical" || message.severity === "error"
+            ? "urgent"
             : message.severity === "warning"
-              ? "medium"
-              : "low",
+              ? "high"
+              : message.severity === "info"
+                ? "medium"
+                : "low",
       }));
 
       await Notification.insertMany(notifications);
 
-      console.log(`✅ Sent backup alert to ${adminUsers.length} admin users`);
+      console.log(
+        `✅ Sent backup alert to ${adminUsers.length} admin/expert users`
+      );
     } catch (error) {
       console.error("❌ Failed to send alerts to admins:", error);
+      console.error("Error details:", error.message);
       // Don't throw - alerting failures shouldn't break backup
     }
   }

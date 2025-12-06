@@ -14,6 +14,20 @@ router.use(authenticate);
  */
 router.get("/", async (req, res) => {
   try {
+    // SAFE MODE: Wishlist unavailable (not backed up)
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        safeMode: true,
+        wishlist: {
+          items: [],
+          totalItems: 0
+        },
+        message: "Wishlist temporarily unavailable during maintenance",
+        warning: "Your wishlist data is safe and will be restored when maintenance completes."
+      });
+    }
+
     const result = await wishlistService.getWishlist(req.userId);
 
     res.json(result);

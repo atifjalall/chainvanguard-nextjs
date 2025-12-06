@@ -62,13 +62,18 @@ export const getProfileStats = async (): Promise<{
  * Update user profile in database and on blockchain
  */
 export const updateProfile = async (
-  profileData: UpdateProfileData
+  profileData: UpdateProfileData,
+  isEmailVerified?: boolean
 ): Promise<ProfileUpdateResponse> => {
   try {
     // Update in database
+    const requestData = isEmailVerified
+      ? { ...profileData, isVerified: true }
+      : profileData;
+
     const dbResult = await apiClient.put<{ success: boolean; data: User }>(
       "/auth/profile",
-      profileData
+      requestData
     );
 
     // If database update successful, update on blockchain

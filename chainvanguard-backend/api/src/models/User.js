@@ -67,6 +67,11 @@ const userSchema = new Schema(
     // Blockchain
     blockchainTxId: { type: String, default: "" },
     blockchainUserId: { type: String, default: "" },
+    fabricRegistered: { type: Boolean, default: false },
+    fabricUserId: { type: String, default: "" },
+    organizationMSP: { type: String, default: "" },
+    userDataCID: { type: String, default: "" }, // IPFS CID for user data (disaster recovery)
+    kycHash: { type: String, default: "" }, // IPFS CID for KYC documents
 
     /**
      * Supplier-specific settings

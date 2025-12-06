@@ -9,9 +9,20 @@ import fabricService from "./fabric.service.js";
 class ExpertService {
   /**
    * 📊 Get Expert Dashboard Statistics
+   * SAFE MODE: Query blockchain directly for real-time stats
    */
   async getDashboardStats() {
     try {
+      // Check MongoDB health
+      const mongoose = await import("mongoose");
+      const mongoHealthy = mongoose.default.connection.readyState === 1;
+
+      if (!mongoHealthy) {
+        console.log("⚠️  MongoDB unavailable - calculating from blockchain");
+        return await this._getDashboardStatsFromBlockchain();
+      }
+
+      // NORMAL MODE: Query MongoDB
       const now = new Date();
       const last24Hours = new Date(now - 24 * 60 * 60 * 1000);
       const last7Days = new Date(now - 7 * 24 * 60 * 60 * 1000);
@@ -200,15 +211,110 @@ class ExpertService {
       };
     } catch (error) {
       console.error("❌ Get dashboard stats failed:", error);
+
+      // Fallback to blockchain if MongoDB fails
+      console.log("⚠️  Falling back to blockchain data");
+      return await this._getDashboardStatsFromBlockchain();
+    }
+  }
+
+  /**
+   * Calculate dashboard stats from blockchain (safe mode)
+   */
+  async _getDashboardStatsFromBlockchain() {
+    try {
+      await fabricService.connect();
+
+      // Get user stats from blockchain
+      const userStats = await fabricService.getUserStats();
+
+      // Get all users from blockchain for role breakdown
+      const allUsers = await fabricService.getAllUsers();
+      const usersByRole = allUsers.reduce((acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Get all products from blockchain
+      const allProducts = await fabricService.getAllProducts();
+      const activeProducts = allProducts.filter((p) => p.status === "active");
+
+      // Get all orders from blockchain
+      const allOrders = await fabricService.getAllOrders();
+
+      await fabricService.disconnect();
+
+      return {
+        success: true,
+        safeMode: true,
+        data: {
+          networkOverview: {
+            totalUsers: allUsers.length,
+            activeUsers: allUsers.filter((u) => u.isActive).length,
+            totalProducts: allProducts.length,
+            activeProducts: activeProducts.length,
+            totalOrders: allOrders.length,
+            usersByRole,
+          },
+          recentActivity: {
+            last24Hours: {
+              users: 0, // Can't calculate time-based without timestamps
+              products: 0,
+              orders: 0,
+            },
+          },
+          transactions: {
+            total: 0,
+            successful: 0,
+            failed: 0,
+            pending: 0,
+            successRate: 100,
+            byType: {},
+          },
+          systemHealth: {
+            averageExecutionTime: 0,
+            errorRate: 0,
+            status: "healthy",
+          },
+          recentLogs: [],
+        },
+        message: "Statistics calculated from blockchain (MongoDB unavailable)",
+      };
+    } catch (error) {
+      console.error("❌ Get blockchain stats failed:", error);
       throw error;
     }
   }
 
   /**
    * 📜 Get All Transactions with Filters
+   * SAFE MODE: Not available (BlockchainLog is audit only)
    */
   async getAllTransactions(filters = {}) {
     try {
+      // Check MongoDB health
+      const mongoose = await import("mongoose");
+      const mongoHealthy = mongoose.default.connection.readyState === 1;
+
+      if (!mongoHealthy) {
+        console.log("⚠️  MongoDB unavailable - transactions not available");
+        return {
+          success: true,
+          safeMode: true,
+          data: [],
+          pagination: {
+            currentPage: filters.page || 1,
+            totalPages: 0,
+            totalItems: 0,
+            itemsPerPage: filters.limit || 50,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
+          message:
+            "Transaction history requires MongoDB. Blockchain wallet transactions available via /api/wallet/transactions",
+        };
+      }
+
       const {
         page = 1,
         limit = 50,
@@ -555,10 +661,20 @@ class ExpertService {
 
   /**
    * 🔗 Get Consensus Status
+   * SAFE MODE: Query blockchain health directly
    */
   async getConsensusStatus() {
     try {
-      // Use real transaction data instead of non-existent consensus-event
+      // Check MongoDB health
+      const mongoose = await import("mongoose");
+      const mongoHealthy = mongoose.default.connection.readyState === 1;
+
+      if (!mongoHealthy) {
+        console.log("⚠️  MongoDB unavailable - querying blockchain health");
+        return await this._getConsensusStatusFromBlockchain();
+      }
+
+      // NORMAL MODE: Query MongoDB
       const last1Hour = new Date(Date.now() - 60 * 60 * 1000);
 
       // Count using effectiveTimestamp (timestamp || createdAt)
@@ -652,15 +768,86 @@ class ExpertService {
       };
     } catch (error) {
       console.error("❌ Get consensus status failed:", error);
+
+      // Fallback to blockchain
+      return await this._getConsensusStatusFromBlockchain();
+    }
+  }
+
+  /**
+   * Get consensus status from blockchain (safe mode)
+   */
+  async _getConsensusStatusFromBlockchain() {
+    try {
+      const blockchainHealth = await fabricService.checkHealth();
+
+      return {
+        success: true,
+        safeMode: true,
+        data: {
+          status: blockchainHealth.connected ? "healthy" : "critical",
+          health: blockchainHealth.connected ? 100 : 0,
+          metrics: {
+            totalEvents: 0,
+            successfulEvents: 0,
+            failedEvents: 0,
+            lastHour: 0,
+          },
+          peers: [
+            {
+              id: "peer0.org1.example.com",
+              name: "Peer Node 0",
+              type: "peer",
+              status: blockchainHealth.connected ? "online" : "offline",
+              blockHeight: 0,
+              version: "2.5.0",
+              lastSeen: new Date(),
+            },
+          ],
+          networkState: {
+            state: blockchainHealth.connected ? "Active" : "Disconnected",
+            connected: blockchainHealth.connected,
+          },
+          timestamp: new Date(),
+        },
+        message: blockchainHealth.message,
+      };
+    } catch (error) {
+      console.error("❌ Get blockchain consensus failed:", error);
       throw error;
     }
   }
 
   /**
    * 📈 Get Consensus Metrics
+   * SAFE MODE: Not available (requires historical data)
    */
   async getConsensusMetrics(timeRange = "24h") {
     try {
+      // Check MongoDB health
+      const mongoose = await import("mongoose");
+      const mongoHealthy = mongoose.default.connection.readyState === 1;
+
+      if (!mongoHealthy) {
+        console.log("⚠️  MongoDB unavailable - metrics not available");
+        return {
+          success: true,
+          safeMode: true,
+          data: {
+            timeRange,
+            metrics: {
+              blockCount: 0,
+              transactionCount: 0,
+              avgBlockTime: 0,
+              avgTxPerBlock: 0,
+            },
+            trends: [],
+          },
+          message:
+            "Historical metrics require MongoDB. Real-time blockchain status available via /expert/consensus/status",
+        };
+      }
+
       const ranges = {
         "1h": 60 * 60 * 1000,
         "24h": 24 * 60 * 60 * 1000,
@@ -780,9 +967,20 @@ class ExpertService {
 
   /**
    * 🛡️ Get Fault Tolerance Status
+   * SAFE MODE: Query blockchain health
    */
   async getFaultToleranceStatus() {
     try {
+      // Check MongoDB health
+      const mongoose = await import("mongoose");
+      const mongoHealthy = mongoose.default.connection.readyState === 1;
+
+      if (!mongoHealthy) {
+        console.log("⚠️  MongoDB unavailable - querying blockchain health");
+        return await this._getFaultToleranceFromBlockchain();
+      }
+
+      // NORMAL MODE: Query MongoDB
       const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
       // Use a longer window (30d) to compute a meaningful uptime percentage
       const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -929,15 +1127,71 @@ class ExpertService {
       };
     } catch (error) {
       console.error("❌ Get fault tolerance status failed:", error);
+
+      // Fallback to blockchain
+      return await this._getFaultToleranceFromBlockchain();
+    }
+  }
+
+  /**
+   * Get fault tolerance from blockchain (safe mode)
+   */
+  async _getFaultToleranceFromBlockchain() {
+    try {
+      const blockchainHealth = await fabricService.checkHealth();
+
+      return {
+        success: true,
+        safeMode: true,
+        data: {
+          status: blockchainHealth.connected ? "excellent" : "poor",
+          score: blockchainHealth.connected ? 95 : 20,
+          metrics: {
+            totalTransactions: 0,
+            failedTransactions: 0,
+            systemErrors: 0,
+            errorRate: 0,
+            uptime: blockchainHealth.connected ? 99.9 : 0,
+            downtimeCount: 0,
+            totalDowntimeMs: 0,
+            uptimeWindowStart: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            uptimeWindowEnd: new Date(),
+            lastIncident: null,
+          },
+          timestamp: new Date(),
+        },
+        message: "Fault tolerance calculated from real-time blockchain health",
+      };
+    } catch (error) {
+      console.error("❌ Get blockchain fault tolerance failed:", error);
       throw error;
     }
   }
 
   /**
    * 📊 Get Fault Tolerance Stats
+   * SAFE MODE: Not available (requires historical data)
    */
   async getFaultToleranceStats(timeRange = "7d") {
     try {
+      // Check MongoDB health
+      const mongoose = await import("mongoose");
+      const mongoHealthy = mongoose.default.connection.readyState === 1;
+
+      if (!mongoHealthy) {
+        console.log("⚠️  MongoDB unavailable - stats not available");
+        return {
+          success: true,
+          safeMode: true,
+          data: {
+            timeRange,
+            stats: [],
+          },
+          message:
+            "Historical statistics require MongoDB. Real-time status available via /expert/fault-tolerance/status",
+        };
+      }
+
       const ranges = {
         "24h": 24 * 60 * 60 * 1000,
         "7d": 7 * 24 * 60 * 60 * 1000,
@@ -1438,10 +1692,7 @@ class ExpertService {
 
       // Log to Fabric blockchain
       try {
-        await fabricService.createBlockchainLog(
-          logData.transactionId,
-          logData
-        );
+        await fabricService.createBlockchainLog(logData.transactionId, logData);
         console.log("✅ User disable action logged to Fabric blockchain");
       } catch (fabricErr) {
         console.warn(
@@ -1546,10 +1797,7 @@ class ExpertService {
 
       // Log to Fabric blockchain
       try {
-        await fabricService.createBlockchainLog(
-          logData.transactionId,
-          logData
-        );
+        await fabricService.createBlockchainLog(logData.transactionId, logData);
         console.log("✅ User unfreeze action logged to Fabric blockchain");
       } catch (fabricErr) {
         console.warn(

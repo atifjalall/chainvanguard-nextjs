@@ -270,6 +270,7 @@ class FabricService {
           userData.userId || userData._id?.toString() || userData.walletAddress,
         walletAddress: userData.walletAddress,
         role: userData.role,
+        userDataCID: userData.userDataCID || null, // IPFS CID for disaster recovery
         kycHash: userData.kycHash || null,
         registeredAt: userData.createdAt || new Date().toISOString(),
       };
@@ -493,6 +494,63 @@ class FabricService {
       return JSON.parse(resultStr);
     } catch (error) {
       console.error("❌ Failed to get users by role:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user by wallet address from blockchain
+   * Used for recovery when MongoDB is empty
+   */
+  async getUserByWalletAddress(walletAddress) {
+    try {
+      if (!this.userContract) {
+        throw new Error("Not connected to Fabric network");
+      }
+
+      console.log(`🔍 Querying blockchain for wallet: ${walletAddress}`);
+
+      const result = await this.userContract.evaluateTransaction(
+        "getUserByWalletAddress",
+        walletAddress
+      );
+
+      console.log(`   📦 Raw blockchain response type: ${result.constructor.name}`);
+      console.log(`   📦 Raw blockchain response length: ${result.length}`);
+
+      let resultStr;
+      if (result instanceof Uint8Array) {
+        resultStr = Buffer.from(result).toString("utf8");
+      } else {
+        resultStr = result.toString();
+      }
+
+      console.log(`   📄 Blockchain response string: ${resultStr}`);
+      console.log(`   📄 Response string length: ${resultStr.length}`);
+
+      const user = JSON.parse(resultStr);
+
+      console.log(`   🔍 Parsed user object:`, JSON.stringify(user, null, 2));
+      console.log(`   🔍 User object keys:`, Object.keys(user));
+      console.log(`   🔍 Has userDataCID?`, user.userDataCID ? `YES: ${user.userDataCID}` : 'NO');
+
+      if (!user || Object.keys(user).length === 0) {
+        console.log(`   ⚠️  User object is empty or null - returning null`);
+        return null;
+      }
+
+      console.log(`   ✅ Returning user object with ${Object.keys(user).length} keys`);
+      return user;
+    } catch (error) {
+      // If user not found, return null instead of throwing
+      if (error.message.includes("does not exist") || error.message.includes("not found")) {
+        console.log(`   ❌ User not found on blockchain: ${walletAddress}`);
+        return null;
+      }
+
+      console.error("❌ Failed to get user by wallet address:", error);
+      console.error("   Error details:", error.message);
+      console.error("   Error stack:", error.stack);
       throw error;
     }
   }

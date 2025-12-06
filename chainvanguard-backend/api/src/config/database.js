@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Redis from "ioredis";
 
-/* MongoDB setup, unchanged */
+/* MongoDB setup with safe mode fallback */
 export const connectMongoDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
@@ -9,15 +9,27 @@ export const connectMongoDB = async () => {
     console.log(`📊 Database: ${mongoose.connection.name}`);
   } catch (err) {
     console.error("❌ MongoDB connection error:", err.message);
-    process.exit(1);
+    console.warn("⚠️  MongoDB unavailable - Safe Mode will be enabled");
+    console.warn("📦 Application will serve data from IPFS backups");
+    console.warn("✋ Write operations will be blocked");
+    // DON'T crash - let the app start in safe mode
+    // process.exit(1); // REMOVED - app continues without MongoDB
   }
 };
-mongoose.connection.on("disconnected", () =>
-  console.log("⚠️ MongoDB disconnected")
-);
-mongoose.connection.on("error", (err) =>
-  console.error("❌ MongoDB error:", err.message)
-);
+
+// Monitor connection state changes
+mongoose.connection.on("disconnected", () => {
+  console.log("⚠️ MongoDB disconnected - Safe Mode active");
+});
+
+mongoose.connection.on("reconnected", () => {
+  console.log("✅ MongoDB reconnected - Normal mode restored");
+});
+
+mongoose.connection.on("error", (err) => {
+  console.error("❌ MongoDB error:", err.message);
+  console.warn("⚠️  Safe Mode remains active");
+});
 
 /* ============================================================
    ⚡ Redis with fallback logic

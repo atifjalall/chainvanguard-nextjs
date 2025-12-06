@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import axios from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
@@ -60,14 +62,11 @@ export const invoiceApi = {
    */
   getInvoicesByOrder: async (orderId: string) => {
     try {
-      const response = await axios.get(
-        `${API_URL}/invoices/order/${orderId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await axios.get(`${API_URL}/invoices/order/${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
 
       return {
         success: true,
@@ -117,14 +116,11 @@ export const invoiceApi = {
    */
   getUserInvoices: async (userId: string) => {
     try {
-      const response = await axios.get(
-        `${API_URL}/invoices/user/${userId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await axios.get(`${API_URL}/invoices/user/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
 
       return {
         success: true,
@@ -134,8 +130,7 @@ export const invoiceApi = {
       console.error("Get user invoices error:", error);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Failed to get user invoices",
+        message: error.response?.data?.message || "Failed to get user invoices",
       };
     }
   },

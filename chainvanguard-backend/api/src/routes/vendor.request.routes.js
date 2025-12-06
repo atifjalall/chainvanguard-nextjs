@@ -3,6 +3,7 @@ import vendorRequestService from "../services/vendor.request.service.js";
 import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
 import fabricService from "../services/fabric.service.js";
 import VendorRequest from "../models/VendorRequest.js";
+import { initializeSafeMode, queryCollection, countDocuments } from "../utils/safeMode/lokiService.js";
 
 const router = express.Router();
 
@@ -54,6 +55,51 @@ router.get(
   authorizeRoles("vendor"),
   async (req, res) => {
     try {
+      // SAFE MODE: Query LokiJS in-memory database
+      if (req.safeMode) {
+        await initializeSafeMode(req.userId, 100);
+
+        // Build query
+        const query = { vendorId: req.userId };
+        if (req.query.status) {
+          query.status = req.query.status;
+        }
+        if (req.query.supplierId) {
+          query.supplierId = req.query.supplierId;
+        }
+
+        // Build options
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const options = {
+          sort: { [sortBy]: sortOrder },
+          skip,
+          limit
+        };
+
+        // Query LokiJS
+        const vendorRequests = queryCollection(req.userId, 'vendorRequests', query, options);
+        const total = countDocuments(req.userId, 'vendorRequests', query);
+
+        return res.json({
+          success: true,
+          requests: vendorRequests,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+          },
+          safeMode: true,
+          warning: 'Viewing backup data from last snapshot. Write operations are disabled during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Query MongoDB
       const filters = {
         status: req.query.status,
         supplierId: req.query.supplierId,
@@ -159,6 +205,32 @@ router.get(
   authorizeRoles("vendor"),
   async (req, res) => {
     try {
+      // SAFE MODE: Extract from backup if MongoDB is down
+      if (req.safeMode) {
+        await initializeSafeMode(req.user.userId, 100);
+
+        // Build query for approved requests without orderId
+        const query = {
+          status: 'approved',
+          orderId: null // or use $exists: false if LokiJS supports it
+        };
+
+        // Query LokiJS
+        let approvedRequests = queryCollection(req.user.userId, 'vendorRequests', query);
+
+        // Manual filter for orderId check (in case null query doesn't work)
+        approvedRequests = approvedRequests.filter(vr => !vr.orderId);
+
+        return res.json({
+          success: true,
+          requests: approvedRequests,
+          count: approvedRequests.length,
+          safeMode: true,
+          warning: 'Viewing backup data from last snapshot. Payment operations are disabled during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Query MongoDB
       const result = await vendorRequestService.getApprovedRequests(
         req.user.userId
       );
@@ -357,6 +429,63 @@ router.get(
   authorizeRoles("supplier"),
   async (req, res) => {
     try {
+      // SAFE MODE: Query LokiJS in-memory database
+      if (req.safeMode) {
+        await initializeSafeMode(req.userId, 100);
+
+        // Build query
+        const query = { supplierId: req.userId };
+        if (req.query.status) {
+          query.status = req.query.status;
+        }
+        if (req.query.vendorId) {
+          query.vendorId = req.query.vendorId;
+        }
+
+        // Date range filter
+        if (req.query.startDate || req.query.endDate) {
+          query.createdAt = {};
+          if (req.query.startDate) {
+            query.createdAt.$gte = new Date(req.query.startDate);
+          }
+          if (req.query.endDate) {
+            query.createdAt.$lte = new Date(req.query.endDate);
+          }
+        }
+
+        // Build options
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const options = {
+          sort: { [sortBy]: sortOrder },
+          skip,
+          limit
+        };
+
+        // Query LokiJS
+        const vendorRequests = queryCollection(req.userId, 'vendorRequests', query, options);
+        const total = countDocuments(req.userId, 'vendorRequests', query);
+        const paginatedRequests = vendorRequests.slice(skip, skip + limit);
+
+        return res.json({
+          success: true,
+          requests: paginatedRequests,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+          },
+          safeMode: true,
+          warning: 'Viewing backup data from last snapshot. Write operations are disabled during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Query MongoDB
       const filters = {
         status: req.query.status,
         vendorId: req.query.vendorId,
@@ -397,6 +526,59 @@ router.get(
   authorizeRoles("supplier"),
   async (req, res) => {
     try {
+      // SAFE MODE: Extract from backup if MongoDB is down
+      if (req.safeMode) {
+        await initializeSafeMode(req.userId, 100);
+
+        // Build query - For all vendor requests (no filter by vendorId or supplierId)
+        const query = {};
+        if (req.query.status) {
+          query.status = req.query.status;
+        }
+
+        // Date range filter
+        if (req.query.startDate || req.query.endDate) {
+          query.createdAt = {};
+          if (req.query.startDate) {
+            query.createdAt.$gte = new Date(req.query.startDate);
+          }
+          if (req.query.endDate) {
+            query.createdAt.$lte = new Date(req.query.endDate);
+          }
+        }
+
+        // Build options
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const options = {
+          sort: { [sortBy]: sortOrder },
+          skip,
+          limit
+        };
+
+        // Query LokiJS
+        const vendorRequests = queryCollection(req.userId, 'vendorRequests', query, options);
+        const total = countDocuments(req.userId, 'vendorRequests', query);
+
+        return res.json({
+          success: true,
+          requests: vendorRequests,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+          },
+          safeMode: true,
+          warning: 'Viewing backup data from last snapshot. Write operations are disabled during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Query MongoDB
       const filters = {
         status: req.query.status,
         page: req.query.page,
@@ -870,6 +1052,31 @@ router.get(
   authorizeRoles("vendor", "supplier"),
   async (req, res) => {
     try {
+      // SAFE MODE: Query LokiJS
+      if (req.safeMode) {
+        await initializeSafeMode(req.userId, 100);
+
+        // Query LokiJS for the specific request
+        const vendorRequests = queryCollection(req.userId, 'vendorRequests', { _id: req.params.id });
+        const request = vendorRequests.length > 0 ? vendorRequests[0] : null;
+
+        if (!request) {
+          return res.status(404).json({
+            success: false,
+            message: 'Request not found in backup',
+            safeMode: true
+          });
+        }
+
+        return res.json({
+          success: true,
+          request: request,
+          safeMode: true,
+          warning: 'Viewing backup data from last snapshot. Write operations are disabled during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Query MongoDB
       const result = await vendorRequestService.getRequestById(
         req.params.id,
         req.userId

@@ -10,6 +10,25 @@ const router = express.Router();
 // ========================================
 router.get("/", authenticate, async (req, res) => {
   try {
+    // SAFE MODE: Notifications unavailable (not backed up)
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        safeMode: true,
+        data: {
+          notifications: [],
+          pagination: {
+            page: parseInt(req.query.page) || 1,
+            limit: parseInt(req.query.limit) || 20,
+            total: 0,
+            pages: 0
+          }
+        },
+        message: "Notifications temporarily unavailable during maintenance",
+        warning: "Notification history will be available when maintenance completes."
+      });
+    }
+
     const options = {
       page: req.query.page || 1,
       limit: req.query.limit || 20,

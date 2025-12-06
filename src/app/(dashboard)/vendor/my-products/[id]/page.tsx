@@ -183,6 +183,19 @@ export default function VendorProductDetailPage() {
 
   const stockStatus = getStockStatus();
 
+  // compute profit margin and color class for display
+  const profitMargin =
+    product && typeof product.costPrice === "number" && product.price > 0
+      ? ((product.price - product.costPrice) / product.price) * 100
+      : null;
+
+  const profitMarginClass =
+    profitMargin === null
+      ? "text-gray-900 dark:text-gray-100"
+      : profitMargin >= 0
+        ? "text-green-600 dark:text-green-400"
+        : "text-red-600 dark:text-red-400";
+
   const nextImage = () => {
     if (product && product.images.length > 0) {
       setCurrentImageIndex((prev) =>
@@ -197,6 +210,40 @@ export default function VendorProductDetailPage() {
         prev === 0 ? product.images.length - 1 : prev - 1
       );
     }
+  };
+
+  const renderDescription = (description?: string | null) => {
+    if (!description) return null;
+
+    const normalized = description.replace(/\r\n/g, "\n").trim();
+    const rawParagraphs = normalized.split(/\n{2,}/g).map((p) => p.trim());
+    const paragraphs = rawParagraphs.map((p) => p.replace(/\n+/g, " ").trim());
+
+    return (
+      <>
+        {paragraphs.map((para, idx) => {
+          const wordCount = para.split(/\s+/).filter(Boolean).length;
+          const isShort = para.length < 80 || wordCount < 8;
+
+          return (
+            <p
+              key={idx}
+              className="text-xs md:text-sm text-gray-600 dark:text-gray-400 leading-relaxed break-words mb-4"
+              style={{
+                textAlign: isShort ? "left" : "justify",
+                textAlignLast: isShort ? "left" : "start",
+                textJustify: "inter-word",
+                WebkitHyphens: isShort ? "manual" : "auto",
+                hyphens: isShort ? "manual" : "auto",
+                overflowWrap: "break-word",
+              }}
+            >
+              {para}
+            </p>
+          );
+        })}
+      </>
+    );
   };
 
   if (isLoading) {
@@ -417,20 +464,20 @@ export default function VendorProductDetailPage() {
               <Separator className="-mt-2" />
               <CardContent className="px-6 pt-0 space-y-3">
                 <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1">
+                  <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                      Total Quantity
-                    </p>
-                    <p className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
-                      {product.quantity}
+                      Total Quantity:
+                      <span className="text-xs font-bold text-gray-900 dark:text-white ml-1">
+                        {product.quantity}
+                      </span>
                     </p>
                   </div>
-                  <div className="space-y-1">
+                  <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                      Available
-                    </p>
-                    <p className="text-sm md:text-base font-bold text-green-600 dark:text-green-400">
-                      {product.quantity}
+                      Available:
+                      <span className="text-xs font-bold text-green-600 dark:text-green-400 ml-1">
+                        {product.quantity}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -450,7 +497,7 @@ export default function VendorProductDetailPage() {
                     <span className="text-xs text-gray-600 dark:text-gray-400">
                       Unit Price
                     </span>
-                    <span className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                    <span className="text-xs font-bold text-gray-900 dark:text-white ml-1">
                       CVT {product.price.toFixed(2)}
                     </span>
                   </div>
@@ -459,7 +506,7 @@ export default function VendorProductDetailPage() {
                       <span className="text-xs text-gray-600 dark:text-gray-400">
                         Cost Price
                       </span>
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <span className="text-xs font-semibold text-gray-900 dark:text-white">
                         CVT {product.costPrice.toFixed(2)}
                       </span>
                     </div>
@@ -469,13 +516,12 @@ export default function VendorProductDetailPage() {
                       <span className="text-xs text-gray-600 dark:text-gray-400">
                         Profit Margin
                       </span>
-                      <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                        {(
-                          ((product.price - product.costPrice) /
-                            product.price) *
-                          100
-                        ).toFixed(1)}
-                        %
+                      <span
+                        className={`text-xs font-bold ${profitMarginClass}`}
+                      >
+                        {profitMargin === null
+                          ? "N/A"
+                          : `${profitMargin.toFixed(1)}%`}
                       </span>
                     </div>
                   )}
@@ -484,7 +530,7 @@ export default function VendorProductDetailPage() {
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                       Total Value
                     </span>
-                    <span className="text-base md:text-lg font-bold text-gray-900 dark:text-white">
+                    <span className="text-xs font-bold text-gray-900 dark:text-white ml-1">
                       CVT {(product.quantity * product.price).toLocaleString()}
                     </span>
                   </div>
@@ -528,9 +574,7 @@ export default function VendorProductDetailPage() {
                   </CardHeader>
                   <Separator className="-mt-2" />
                   <CardContent className="px-6 pt-0">
-                    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                      {product.description}
-                    </p>
+                    {renderDescription(product.description)}
                   </CardContent>
                 </Card>
 

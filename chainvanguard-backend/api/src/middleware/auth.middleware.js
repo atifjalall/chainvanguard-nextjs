@@ -1,6 +1,9 @@
 import pkg from "jsonwebtoken";
 import User from "../models/User.js";
 import sessionService from "../services/session.service.js";
+import { isMongoHealthy } from "../utils/safeMode/mongoHealth.js";
+import { extractUserByWallet } from "../utils/safeMode/ipfsExtractor.js";
+import mongoose from "mongoose";
 
 const { verify } = pkg;
 
@@ -64,10 +67,47 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
-    // 5. Get user from MongoDB (source of truth)
-    const user = await User.findById(decoded.userId).select(
-      "-passwordHash -encryptedMnemonic"
-    );
+    // 5. Get user from MongoDB OR backup data (in safe mode)
+    let user = null;
+    const mongoHealthy = mongoose.connection.readyState === 1;
+
+    if (mongoHealthy) {
+      // Normal mode - get from MongoDB
+      user = await User.findById(decoded.userId).select(
+        "-passwordHash -encryptedMnemonic"
+      );
+    } else {
+      // Safe mode - get from backup data
+      console.log(`⚠️  Safe mode: Getting user from backup for auth middleware`);
+
+      try {
+        // Extract user by wallet address from backup
+        const walletAddress = decoded.walletAddress;
+
+        if (walletAddress) {
+          const backupUser = await extractUserByWallet(walletAddress);
+
+          if (backupUser) {
+            // Transform backup user to match expected format
+            user = {
+              _id: backupUser._id,
+              walletAddress: backupUser.walletAddress,
+              role: backupUser.role,
+              email: backupUser.email,
+              name: backupUser.name,
+              isVerified: backupUser.isVerified,
+              isActive: backupUser.isActive !== false, // Default to true if not set
+              forceLogoutAt: backupUser.forceLogoutAt,
+              tokenVersion: backupUser.tokenVersion
+            };
+
+            console.log(`✅ User loaded from backup: ${user.email}`);
+          }
+        }
+      } catch (backupError) {
+        console.error('❌ Failed to load user from backup:', backupError.message);
+      }
+    }
 
     if (!user) {
       return res.status(401).json({
@@ -205,9 +245,36 @@ export const optionalAuth = async (req, res, next) => {
     const token = authHeader.split(" ")[1];
     const decoded = verify(token, JWT_SECRET);
 
-    const user = await User.findById(decoded.userId).select(
-      "-passwordHash -encryptedMnemonic"
-    );
+    // Get user from MongoDB OR backup data (in safe mode)
+    let user = null;
+    const mongoHealthy = mongoose.connection.readyState === 1;
+
+    if (mongoHealthy) {
+      // Normal mode - get from MongoDB
+      user = await User.findById(decoded.userId).select(
+        "-passwordHash -encryptedMnemonic"
+      );
+    } else {
+      // Safe mode - get from backup data
+      try {
+        const walletAddress = decoded.walletAddress;
+        if (walletAddress) {
+          const backupUser = await extractUserByWallet(walletAddress);
+          if (backupUser) {
+            user = {
+              _id: backupUser._id,
+              walletAddress: backupUser.walletAddress,
+              role: backupUser.role,
+              email: backupUser.email,
+              name: backupUser.name,
+              isActive: backupUser.isActive !== false
+            };
+          }
+        }
+      } catch (backupError) {
+        // Fail silently for optional auth
+      }
+    }
 
     if (user && user.isActive) {
       req.user = {

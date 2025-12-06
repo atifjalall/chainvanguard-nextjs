@@ -40,6 +40,8 @@ import supplierRatingRoutes from "./routes/supplier.rating.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
 import invoiceRoutes from "./routes/invoice.routes.js";
 import backupRoutes from "./routes/backup.routes.js";
+import safeModeMiddleware from "./middleware/safeMode.middleware.js";
+import { blockWritesInSafeMode } from "./middleware/blockWrites.middleware.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -85,28 +87,58 @@ app.use((req, res, next) => {
 });
 
 /**
+ * Safe Mode Middleware
+ * Detects MongoDB health and enables fallback mode when database is unavailable
+ * This prevents app crashes and allows read-only access to cached/backup data
+ */
+app.use(safeModeMiddleware);
+
+/**
+ * Block Write Operations in Safe Mode
+ * Automatically blocks POST/PUT/PATCH/DELETE when in safe mode
+ * Allows GET operations for read-only access
+ */
+app.use(blockWritesInSafeMode);
+
+/**
  * Service Initialization
+ * MongoDB failure is non-fatal - app continues in safe mode
  */
 const initializeServices = async () => {
   try {
     console.log("\n🔧 Initializing services...\n");
 
-    // MongoDB
+    // MongoDB (non-fatal if fails)
     console.log("📊 Connecting to MongoDB...");
-    await connectMongoDB();
-    console.log("✅ MongoDB connected successfully");
+    try {
+      await connectMongoDB();
+      // Success message logged in connectMongoDB
+    } catch (mongoError) {
+      // MongoDB failure is handled gracefully - safe mode will activate
+      console.warn("⚠️  Continuing without MongoDB - Safe Mode enabled");
+    }
 
-    // Cloudinary
+    // Cloudinary (non-fatal)
     console.log("☁️  Testing Cloudinary connection...");
-    await testCloudinaryConnection();
-    console.log("✅ Cloudinary connected successfully");
+    try {
+      await testCloudinaryConnection();
+      console.log("✅ Cloudinary connected successfully");
+    } catch (cloudinaryError) {
+      console.warn("⚠️  Cloudinary unavailable:", cloudinaryError.message);
+    }
 
-    // IPFS/Pinata
+    // IPFS/Pinata (CRITICAL for safe mode)
     console.log("📦 Testing IPFS/Pinata connection...");
-    await ipfsService.testConnection();
-    console.log("✅ IPFS/Pinata connected successfully");
+    try {
+      await ipfsService.testConnection();
+      console.log("✅ IPFS/Pinata connected successfully");
+    } catch (ipfsError) {
+      console.error("❌ IPFS/Pinata connection failed:", ipfsError.message);
+      console.error("⚠️  Safe mode requires IPFS access for backups");
+      // Continue anyway - may have cached backups
+    }
 
-    // Backup Scheduler
+    // Backup Scheduler (non-fatal)
     console.log("⏰ Starting backup scheduler...");
     try {
       if (backupCron && typeof backupCron.start === 'function') {
@@ -121,8 +153,14 @@ const initializeServices = async () => {
 
     console.log("\n🎉 All services initialized successfully!\n");
   } catch (error) {
-    console.error("❌ Service initialization error:", error);
-    process.exit(1);
+    console.error("❌ Critical service initialization error:", error);
+    // Only exit if it's a truly unrecoverable error
+    if (error.code === 'EADDRINUSE') {
+      console.error("❌ Port already in use - cannot start server");
+      process.exit(1);
+    }
+    // For other errors, log but continue
+    console.warn("⚠️  Some services failed but server will continue");
   }
 };
 

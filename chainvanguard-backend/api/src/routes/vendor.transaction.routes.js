@@ -4,6 +4,7 @@ import VendorRequest from "../models/VendorRequest.js";
 import Order from "../models/Order.js";
 import VendorInventory from "../models/VendorInventory.js";
 import mongoose from "mongoose";
+import { initializeSafeMode, queryCollection, countDocuments } from "../utils/safeMode/lokiService.js";
 
 const router = express.Router();
 
@@ -48,6 +49,94 @@ router.get(
 
       const vendorId = req.userId;
       const skip = (page - 1) * limit;
+
+      // SAFE MODE: Load transactions from LokiJS backup
+      if (req.safeMode) {
+        await initializeSafeMode(vendorId, 100);
+
+        // Build query
+        const query = { vendorId };
+        if (status) query.status = status;
+        if (supplierId) query.supplierId = supplierId;
+
+        // Query vendor requests from backup
+        const options = {
+          sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 },
+          skip: parseInt(skip),
+          limit: parseInt(limit)
+        };
+
+        const vendorRequests = queryCollection(vendorId, 'vendorRequests', query, options);
+        const total = countDocuments(vendorId, 'vendorRequests', query);
+
+        // Format transactions (simplified - no order/supplier populate in safe mode)
+        const formattedTransactions = vendorRequests.map(transaction => ({
+          // Request Info
+          requestId: transaction._id,
+          requestNumber: transaction.requestNumber,
+          requestStatus: transaction.status,
+          requestDate: transaction.createdAt,
+
+          // Supplier Info (no populate available)
+          supplier: {
+            id: transaction.supplierId,
+            name: null,
+            email: null,
+            companyName: null,
+          },
+
+          // Financial Info
+          amount: {
+            subtotal: transaction.subtotal,
+            tax: transaction.tax,
+            total: transaction.total,
+          },
+
+          // Items
+          items: transaction.items,
+          itemCount: transaction.items?.length || 0,
+
+          // Notes
+          vendorNotes: transaction.vendorNotes,
+          supplierNotes: transaction.supplierNotes,
+
+          // Approval Info
+          reviewedAt: transaction.reviewedAt,
+          rejectionReason: transaction.rejectionReason,
+
+          // Order Info
+          order: transaction.orderId ? {
+            orderId: transaction.orderId,
+            orderNumber: null, // No populate
+            status: null,
+          } : null,
+
+          // Blockchain Info
+          blockchain: {
+            verified: transaction.blockchainVerified,
+            txId: transaction.blockchainTxId,
+          },
+
+          // Timestamps
+          createdAt: transaction.createdAt,
+          updatedAt: transaction.updatedAt,
+        }));
+
+        return res.json({
+          success: true,
+          safeMode: true,
+          data: formattedTransactions,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            pages: Math.ceil(total / limit),
+          },
+          warning: 'Viewing backup data. Some details (supplier names, order status) unavailable during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Full transaction data with aggregation
 
       // Build query for vendor requests
       const query = { vendorId: new mongoose.Types.ObjectId(vendorId) };

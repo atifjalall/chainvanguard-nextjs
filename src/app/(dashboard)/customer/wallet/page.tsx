@@ -355,7 +355,7 @@ function PaymentModal({
                 <div className="flex items-center gap-2 pt-3 border-t border-gray-100 mt-5">
                   <ShieldCheckIcon className="h-4 w-4 text-green-600" />
                   <p className="text-xs text-gray-500">
-                    Secured by Stripe • Your payment information is encrypted
+                    Secured by Stripe
                   </p>
                 </div>
               </div>

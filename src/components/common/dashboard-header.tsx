@@ -436,23 +436,30 @@ export function DashboardHeader({
   };
 
   const getUserInitials = () => {
-    if (user?.name) {
-      return user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase();
-    }
+    // Use full name if available, otherwise use wallet name, otherwise blank
+    const name = user?.name ?? user?.walletName ?? "";
+    if (!name) return "U";
 
-    if (user?.walletName) {
-      return user.walletName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase();
-    }
+    // Split on whitespace and filter out empty parts
+    const parts = name
+      .trim()
+      .split(/\s+/)
+      .filter((p) => p.length > 0);
 
-    return "U";
+    // Helper to find first alphanumeric letter
+    const extractInitial = (s: string) => {
+      const match = s.match(/[A-Za-z0-9]/);
+      return match ? match[0].toUpperCase() : "";
+    };
+
+    // Use up to the first two words' initials
+    const initials = parts.slice(0, 2).map(extractInitial).filter(Boolean);
+
+    if (initials.length === 0) return "U";
+    const base = initials.join("").toUpperCase();
+
+    // If more than two words, append a dot after the initials (e.g., "AM.")
+    return parts.length > 2 ? `${base}.` : base;
   };
 
   const getDisplayName = () => {

@@ -12,8 +12,8 @@ import {
   ExclamationTriangleIcon,
   WalletIcon,
   ChevronDownIcon,
-  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
+import { Loader2 } from "lucide-react";
 import { WalletData } from "@/types/web3";
 import { authAPI } from "@/lib/api/auth.api";
 import { AnimatePresence, motion } from "framer-motion";
@@ -233,20 +233,11 @@ export default function LoginPage() {
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] py-16">
           <div className="w-full max-w-3xl mx-auto px-12 lg:px-16">
             {isInitializing ? (
-              <div className="space-y-12">
-                <div className="text-center space-y-4">
-                  <div className="h-12 w-12 bg-gray-100 dark:bg-gray-900 mx-auto animate-pulse" />
-                  <div className="h-8 w-48 bg-gray-100 dark:bg-gray-900 mx-auto animate-pulse" />
-                  <div className="h-4 w-64 bg-gray-100 dark:bg-gray-900 mx-auto animate-pulse" />
-                </div>
-                <div className="space-y-6">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div
-                      key={i}
-                      className="h-12 w-full bg-gray-100 dark:bg-gray-900 animate-pulse"
-                    />
-                  ))}
-                </div>
+              <div className="text-center">
+                <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-gray-900 dark:text-gray-100 mx-auto mb-4" />
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                  Loading...
+                </p>
               </div>
             ) : (
               <div className="space-y-12">
@@ -482,7 +473,7 @@ export default function LoginPage() {
                     >
                       {isLoading ? (
                         <>
-                          <ArrowPathIcon className="mr-2 h-3.5 w-3.5 animate-spin inline" />
+                          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin inline" />
                           Connecting...
                         </>
                       ) : (

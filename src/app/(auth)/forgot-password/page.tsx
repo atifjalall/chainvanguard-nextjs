@@ -12,7 +12,6 @@ import {
   EyeSlashIcon,
   ShieldCheckIcon,
   ExclamationTriangleIcon,
-  ArrowPathIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CheckCircleIcon,
@@ -22,6 +21,7 @@ import {
   CheckIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
+import { Loader2 } from "lucide-react";
 import { WalletData } from "@/types/web3";
 import { motion, AnimatePresence } from "framer-motion";
 import { authAPI } from "@/lib/api/auth.api";
@@ -654,7 +654,7 @@ export default function ForgotPasswordPage() {
         {/* Header */}
         <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-950">
           <div className="max-w-[1600px] mx-auto px-12 lg:px-16 h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3 cursor-pointer">
               <span className="text-lg font-light text-gray-900 dark:text-white tracking-wide">
                 ChainVanguard
               </span>
@@ -662,12 +662,12 @@ export default function ForgotPasswordPage() {
 
             <div className="flex items-center gap-3">
               <Link href="/login">
-                <button className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                <button className="border border-black dark:border-white text-black dark:text-white px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer">
                   Back to Login
                 </button>
               </Link>
               <Link href="/register">
-                <button className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors">
+                <button className="bg-black dark:bg-white text-white dark:text-black px-8 h-11 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors cursor-pointer">
                   Create Account
                 </button>
               </Link>
@@ -750,7 +750,7 @@ export default function ForgotPasswordPage() {
                         {/* Known Wallet Option */}
                         <button
                           onClick={() => handleModeSelection("known-wallet")}
-                          className="w-full p-6 text-left border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                          className="w-full p-6 text-left border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
                         >
                           <div className="flex items-start gap-4">
                             <WalletIcon className="h-5 w-5 text-gray-900 dark:text-white mt-0.5" />
@@ -770,7 +770,7 @@ export default function ForgotPasswordPage() {
                         {/* Forgot Wallet Option */}
                         <button
                           onClick={() => handleModeSelection("forgot-wallet")}
-                          className="w-full p-6 text-left border-t-0 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                          className="w-full p-6 text-left border-t-0 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
                         >
                           <div className="flex items-start gap-4">
                             <MagnifyingGlassIcon className="h-5 w-5 text-gray-900 dark:text-white mt-0.5" />
@@ -828,7 +828,7 @@ export default function ForgotPasswordPage() {
                             walletInputMode === "select"
                               ? "bg-black dark:bg-white text-white dark:text-black"
                               : "bg-white dark:bg-gray-950 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                          }`}
+                          } cursor-pointer`}
                         >
                           Select Wallet
                         </button>
@@ -839,7 +839,7 @@ export default function ForgotPasswordPage() {
                             walletInputMode === "manual"
                               ? "bg-black dark:bg-white text-white dark:text-black"
                               : "bg-white dark:bg-gray-950 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                          }`}
+                          } cursor-pointer`}
                         >
                           Enter Manually
                         </button>
@@ -871,7 +871,7 @@ export default function ForgotPasswordPage() {
                                       walletError
                                         ? "border-red-500 dark:border-red-500"
                                         : "border-gray-900 dark:border-white"
-                                    } pb-px`}
+                                    } pb-px cursor-pointer`}
                                   >
                                     <span className="h-12 flex items-center text-sm text-gray-900 dark:text-white">
                                       {getSelectedWalletName()}
@@ -886,10 +886,13 @@ export default function ForgotPasswordPage() {
                                   {showWalletDropdown && (
                                     <>
                                       <div
-                                        className="fixed inset-0 z-10"
+                                        className="fixed inset-0 z-10 cursor-pointer"
                                         onClick={() =>
                                           setShowWalletDropdown(false)
                                         }
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-label="Close wallet dropdown"
                                       />
                                       <div className="absolute z-20 w-full mt-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 max-h-64 overflow-y-auto">
                                         {availableWallets.length > 0 ? (
@@ -903,7 +906,7 @@ export default function ForgotPasswordPage() {
                                                 if (walletError)
                                                   setWalletError("");
                                               }}
-                                              className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-0"
+                                              className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-0 cursor-pointer"
                                             >
                                               <p className="text-sm text-gray-900 dark:text-white font-medium">
                                                 {wallet.name}
@@ -1283,21 +1286,33 @@ export default function ForgotPasswordPage() {
                               <div className="p-3 space-y-2">
                                 <div className="flex items-center gap-2 text-xs">
                                   <CheckIcon
-                                    className={`h-3.5 w-3.5 ${passwordChecks.length ? "text-black" : "text-gray-300"}`}
+                                    className={`h-3.5 w-3.5 ${
+                                      passwordChecks.length
+                                        ? "text-black"
+                                        : "text-gray-300"
+                                    }`}
                                   />
                                   <span>At least 8 characters</span>
                                 </div>
 
                                 <div className="flex items-center gap-2 text-xs">
                                   <CheckIcon
-                                    className={`h-3.5 w-3.5 ${passwordChecks.uppercase ? "text-black" : "text-gray-300"}`}
+                                    className={`h-3.5 w-3.5 ${
+                                      passwordChecks.uppercase
+                                        ? "text-black"
+                                        : "text-gray-300"
+                                    }`}
                                   />
                                   <span>One uppercase letter</span>
                                 </div>
 
                                 <div className="flex items-center gap-2 text-xs">
                                   <CheckIcon
-                                    className={`h-3.5 w-3.5 ${passwordChecks.special ? "text-black" : "text-gray-300"}`}
+                                    className={`h-3.5 w-3.5 ${
+                                      passwordChecks.special
+                                        ? "text-black"
+                                        : "text-gray-300"
+                                    }`}
                                   />
                                   <span>One special character</span>
                                 </div>
@@ -1377,7 +1392,7 @@ export default function ForgotPasswordPage() {
               <div className="flex items-center justify-between pt-8 border-t border-gray-200 dark:border-gray-800">
                 {currentStep === 0 ? (
                   <Link href="/login">
-                    <button className="border border-black dark:border-white text-black dark:text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2">
+                    <button className="border border-black dark:border-white text-black dark:text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2 cursor-pointer">
                       <ArrowLeftIcon className="h-3.5 w-3.5" />
                       Back to Login
                     </button>
@@ -1387,7 +1402,7 @@ export default function ForgotPasswordPage() {
                     type="button"
                     onClick={prevStep}
                     disabled={isLoading || isRecoveringWallet}
-                    className="border border-black dark:border-white text-black dark:text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="border border-black dark:border-white text-black dark:text-white px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
                   >
                     <ChevronLeftIcon className="h-3.5 w-3.5" />
                     {currentStep === 1 ? "Change Method" : "Previous"}
@@ -1401,11 +1416,11 @@ export default function ForgotPasswordPage() {
                     type="button"
                     onClick={handleContinue}
                     disabled={isRecoveringWallet || isLoading}
-                    className="bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
                   >
                     {isRecoveringWallet || isLoading ? (
                       <>
-                        <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         {isRecoveringWallet
                           ? "Finding Wallet..."
                           : "Verifying..."}
@@ -1432,11 +1447,11 @@ export default function ForgotPasswordPage() {
                     type="button"
                     onClick={handleResetPassword}
                     disabled={!isStepValid(totalSteps) || isLoading}
-                    className="bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
                   >
                     {isLoading ? (
                       <>
-                        <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Resetting...
                       </>
                     ) : (
@@ -1456,7 +1471,7 @@ export default function ForgotPasswordPage() {
                 Remember your password?{" "}
                 <Link
                   href="/login"
-                  className="text-gray-900 dark:text-white hover:underline transition-colors"
+                  className="text-gray-900 dark:text-white hover:underline transition-colors cursor-pointer"
                 >
                   Sign In
                 </Link>
@@ -1465,7 +1480,7 @@ export default function ForgotPasswordPage() {
                 Don&apos;t have a wallet?{" "}
                 <Link
                   href="/register"
-                  className="text-gray-900 dark:text-white hover:underline transition-colors"
+                  className="text-gray-900 dark:text-white hover:underline transition-colors cursor-pointer"
                 >
                   Create New Wallet
                 </Link>
