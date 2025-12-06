@@ -1,6 +1,3 @@
-// chainvanguard-backend/api/src/services/wallet.service.js
-// Modified to remove Ethereum dependencies and work with Hyperledger Fabric
-
 import * as bip39 from "bip39";
 import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";

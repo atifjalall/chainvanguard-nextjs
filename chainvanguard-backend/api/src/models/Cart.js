@@ -1,4 +1,3 @@
-// api/src/models/Cart.js
 import { Schema, model } from "mongoose";
 
 // ========================================
@@ -31,7 +30,7 @@ const cartItemSchema = new Schema({
   selectedFit: { type: String, default: "" },
 
   // Pricing
-  price: { type: Number, required: true, min: 0 }, // Price at time of adding
+  price: { type: Number, required: true, min: 0 },
   quantity: { type: Number, required: true, min: 1, default: 1 },
   subtotal: { type: Number, required: true, min: 0 },
 
@@ -46,7 +45,7 @@ const cartItemSchema = new Schema({
 
   // Metadata
   addedAt: { type: Date, default: Date.now },
-  lastCheckedAt: { type: Date, default: Date.now }, // Last stock availability check
+  lastCheckedAt: { type: Date, default: Date.now },
 });
 
 // ========================================

@@ -12,9 +12,7 @@ export const connectMongoDB = async () => {
     console.warn("⚠️  MongoDB unavailable - Safe Mode will be enabled");
     console.warn("📦 Application will serve data from IPFS backups");
     console.warn("✋ Write operations will be blocked");
-    // DON'T crash - let the app start in safe mode
-    // process.exit(1); // REMOVED - app continues without MongoDB
-  }
+}
 };
 
 // Monitor connection state changes
@@ -32,7 +30,7 @@ mongoose.connection.on("error", (err) => {
 });
 
 /* ============================================================
-   ⚡ Redis with fallback logic
+   Redis with fallback logic
    ============================================================ */
 let redisClient;
 

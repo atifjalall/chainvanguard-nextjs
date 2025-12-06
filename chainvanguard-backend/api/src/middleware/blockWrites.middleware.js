@@ -39,7 +39,7 @@ export const blockWritesInSafeMode = (req, res, next) => {
     '/auth/verify-otp',
     '/auth/send-otp',
 
-    // Backup read operations (even though they're POST for security)
+    // Backup read operations
     '/backups/verify',
     '/backups/download'
   ];

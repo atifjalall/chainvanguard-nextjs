@@ -1,4 +1,3 @@
-// api/src/services/auth.service.js
 import User from "../models/User.js";
 import BlockchainLog from "../models/BlockchainLog.js";
 import WalletService from "./wallet.service.js";

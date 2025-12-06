@@ -22,7 +22,7 @@ import jwt from 'jsonwebtoken';
 let cachedHealthStatus = {
   isHealthy: true,
   lastCheck: Date.now(),
-  checkInterval: 5000 // 5 seconds
+  checkInterval: 5000
 };
 
 /**
@@ -68,13 +68,13 @@ async function safeModeMiddleware(req, res, next) {
 
         // Allow certain endpoints even in safe mode
         const allowedInSafeMode = [
-          '/api/auth/login', // Allow login (uses backup data)
-          '/api/auth/refresh', // Allow token refresh
-          '/api/auth/verify-otp', // Allow OTP verification
-          '/api/auth/send-otp', // Allow OTP sending
-          '/api/auth/logout', // Allow logout
-          '/health', // Allow health checks
-          '/api/wallet', // Allow wallet operations (blockchain independent)
+          '/api/auth/login',
+          '/api/auth/refresh',
+          '/api/auth/verify-otp',
+          '/api/auth/send-otp',
+          '/api/auth/logout',
+          '/health',
+          '/api/wallet',
         ];
 
         // Allow backup/restore ONLY for expert role
@@ -82,8 +82,8 @@ async function safeModeMiddleware(req, res, next) {
         const isExpert = userRole === 'expert';
 
         if (isBackupRestoreEndpoint && isExpert) {
-          console.log('✅ Expert accessing backup/restore in safe mode');
-          return next(); // Allow expert to backup/restore
+          console.log('Expert accessing backup/restore in safe mode');
+          return next();
         }
 
         const isAllowed = allowedInSafeMode.some(path => req.path.startsWith(path));
@@ -94,7 +94,7 @@ async function safeModeMiddleware(req, res, next) {
             error: 'System under maintenance',
             message: 'Database maintenance in progress. Please be patient. You can view existing data, but cannot make changes at this time. Our team is working to restore full functionality.',
             safeMode: true,
-            retryAfter: 60, // Suggest retry after 60 seconds
+            retryAfter: 60,
             contactSupport: 'If this persists, please contact support.'
           });
         }
@@ -104,7 +104,6 @@ async function safeModeMiddleware(req, res, next) {
     next();
   } catch (error) {
     console.error('❌ Safe mode middleware error:', error);
-    // If middleware fails, assume we're NOT in safe mode and continue
     req.safeMode = false;
     next();
   }

@@ -362,7 +362,7 @@ const inventorySchema = new Schema(
       default: "",
       index: true,
       unique: true,
-      sparse: true, // Allows null values
+      sparse: true,
     },
 
     qrCodeImageUrl: {
@@ -386,7 +386,6 @@ const inventorySchema = new Schema(
       trackingUrl: String,
     },
 
-    // Tracking data from QR scans
     scanHistory: [
       {
         scannedAt: {
@@ -464,7 +463,7 @@ const inventorySchema = new Schema(
     },
 
     // ========================================
-    // TEXTILE-SPECIFIC DETAILS (Like Product apparelDetails)
+    // TEXTILE-SPECIFIC DETAILS 
     // ========================================
     textileDetails: {
       // Fabric Properties
@@ -511,7 +510,6 @@ const inventorySchema = new Schema(
       color: {
         type: String,
         required: true,
-        // Index defined as schema.index() below for textileDetails.color
       },
       colorCode: {
         type: String,
@@ -926,7 +924,6 @@ const inventorySchema = new Schema(
       default: "",
     },
 
-    // IPFS metadata snapshot (historical snapshot at creation)
     metadataIpfsHash: {
       type: String,
       default: "",

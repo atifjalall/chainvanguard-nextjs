@@ -1,4 +1,3 @@
-// api/src/routes/customer.browse.routes.js
 import express from "express";
 import customerBrowseService from "../services/customer.browse.service.js";
 import { authenticate, optionalAuth } from "../middleware/auth.middleware.js";

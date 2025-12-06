@@ -1,4 +1,3 @@
-// chainvanguard-backend/api/src/routes/wallet_routes.js
 import express from "express";
 import walletBalanceService from "../services/wallet.balance.service.js";
 import fabricService from "../services/fabric.service.js";

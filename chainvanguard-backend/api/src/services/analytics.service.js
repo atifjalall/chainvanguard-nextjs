@@ -73,7 +73,6 @@ class AnalyticsService {
     try {
       VendorRequest = mongoose.model("VendorRequest");
     } catch (e) {
-      // Model not registered yet, return empty data
       return {
         daily: [],
         totals: {

@@ -7,7 +7,7 @@ class BlockchainService {
 
 
   /**
-   * 📦 Get Product Blockchain History
+   * Get Product Blockchain History
    */
   async getProductHistory(productId) {
     try {

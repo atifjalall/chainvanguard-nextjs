@@ -11,7 +11,7 @@ const JWT_SECRET =
   process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
 /**
- * 🔐 Main Authentication Middleware
+ * Main Authentication Middleware
  * Verifies JWT token + checks Redis session + validates MongoDB user
  */
 export const authenticate = async (req, res, next) => {
@@ -232,7 +232,7 @@ export const requireVerification = (req, res, next) => {
 };
 
 /**
- * ⚙️ Optional Authentication (for public routes)
+ * Optional Authentication (for public routes)
  */
 export const optionalAuth = async (req, res, next) => {
   try {

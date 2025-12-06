@@ -1,11 +1,10 @@
-// chainvanguard-backend/api/src/services/wallet.balance.service.js
 import Wallet from "../models/Wallet.js";
 import User from "../models/User.js";
 import BlockchainLog from "../models/BlockchainLog.js";
 import mongoose from "mongoose";
 import logger from "../utils/logger.js";
 import notificationService from "./notification.service.js";
-import fabricService from "./fabric.service.js"; // ✅ ADD THIS
+import fabricService from "./fabric.service.js";
 
 class WalletBalanceService {
   /**
