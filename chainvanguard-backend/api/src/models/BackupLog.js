@@ -200,7 +200,6 @@ BackupLogSchema.statics.getOldBackupsToCleanup = async function () {
     .sort({ timestamp: -1 })
     .lean();
 
-  // Keep first 9, mark rest for deletion
   const oldIncrementals = allIncrementalBackups.slice(9);
 
   return {

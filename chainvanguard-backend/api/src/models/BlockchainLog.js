@@ -1,9 +1,7 @@
-// chainvanguard-backend/api/src/models/BlockchainLog.js
 import { Schema, model } from "mongoose";
 
 const blockchainLogSchema = new Schema(
   {
-    // Action Type - EXPANDED with Inventory & Notification
     type: {
       type: String,
       enum: [
@@ -253,7 +251,6 @@ blockchainLogSchema.statics.createLog = async function (logData) {
     return log;
   } catch (error) {
     console.error("❌ Failed to create log:", error);
-    // Don't throw error - logging should never break the main flow
     return null;
   }
 };

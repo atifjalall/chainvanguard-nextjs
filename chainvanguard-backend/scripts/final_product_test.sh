@@ -7,7 +7,7 @@
 
 set -e
 
-ENV_PATH="/Users/atifjalal/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env"
+ENV_PATH="/Users/saratariq/Desktop/chainvanguard-nextjs/chainvanguard-backend/api/.env"
 
 if [ -f "$ENV_PATH" ]; then
     source "$ENV_PATH"

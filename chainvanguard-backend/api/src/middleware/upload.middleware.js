@@ -14,11 +14,11 @@ const DEFAULT_DOC_TYPES =
   "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 // Max file sizes
-const MAX_IMAGE_SIZE = parseInt(process.env.MAX_IMAGE_SIZE || "10485760", 10); // 10MB default
+const MAX_IMAGE_SIZE = parseInt(process.env.MAX_IMAGE_SIZE || "10485760", 10);
 const MAX_DOCUMENT_SIZE = parseInt(
   process.env.MAX_DOCUMENT_SIZE || "20971520",
   10
-); // 20MB default
+);
 
 // ========================================
 // FILE FILTERS

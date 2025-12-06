@@ -1,6 +1,5 @@
 // ========================================
 // APPAREL CATEGORIES CONFIGURATION - TEXTILE/CLOTHING ONLY
-// Includes: Traditional clothing subcategories
 // ========================================
 
 export const APPAREL_CATEGORIES = {

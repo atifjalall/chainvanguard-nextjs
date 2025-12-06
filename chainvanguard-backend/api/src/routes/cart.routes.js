@@ -1,4 +1,3 @@
-// api/src/routes/cart.routes.js
 import express from "express";
 import cartService from "../services/cart.service.js";
 import { verifyToken, optionalAuth } from "../middleware/auth.middleware.js";

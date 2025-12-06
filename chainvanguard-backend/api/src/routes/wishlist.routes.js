@@ -4,7 +4,6 @@ import { authenticate } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// All wishlist routes require authentication
 router.use(authenticate);
 
 /**

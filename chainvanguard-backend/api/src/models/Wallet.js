@@ -1,4 +1,3 @@
-// chainvanguard-backend/api/src/models/Wallet.js
 import mongoose from "mongoose";
 
 const transactionSchema = new mongoose.Schema(

@@ -1,4 +1,3 @@
-// api/src/services/session.service.js
 import redisService from "./redis.service.js";
 
 class SessionService {

@@ -1,4 +1,3 @@
-// api/src/routes/auth.routes.js
 import express from "express";
 import User from "../models/User.js";
 import authService from "../services/auth.service.js";
@@ -180,7 +179,7 @@ router.post("/send-otp", async (req, res) => {
     const rateLimit = await sessionService.checkRateLimit(
       `otp:${clientIp}`,
       5,
-      300000 // 5 attempts per 5 minutes
+      300000
     );
 
     if (!rateLimit.allowed) {

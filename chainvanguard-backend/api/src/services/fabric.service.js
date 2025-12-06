@@ -1,4 +1,3 @@
-// chainvanguard-backend/api/src/services/fabric.service.js
 import * as grpc from "@grpc/grpc-js";
 import { connect, signers, hash } from "@hyperledger/fabric-gateway";
 import { readFileSync, readdirSync } from "fs";

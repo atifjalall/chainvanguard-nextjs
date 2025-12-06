@@ -1,4 +1,3 @@
-// ⚠️ CRITICAL: Load dotenv FIRST before any other imports that might use env variables
 import dotenv from "dotenv";
 dotenv.config();
 

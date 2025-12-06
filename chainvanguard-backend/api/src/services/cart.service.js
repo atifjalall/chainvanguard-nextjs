@@ -1,4 +1,3 @@
-// api/src/services/cart.service.js
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
