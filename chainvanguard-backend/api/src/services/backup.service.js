@@ -4,11 +4,21 @@ import Order from "../models/Order.js";
 import User from "../models/User.js";
 import Product from "../models/Product.js";
 import VendorRequest from "../models/VendorRequest.js";
+import Inventory from "../models/Inventory.js";
+import VendorInventory from "../models/VendorInventory.js";
+import Return from "../models/Return.js";
+import Wallet from "../models/Wallet.js";
+import Cart from "../models/Cart.js";
+import Wishlist from "../models/Wishlist.js";
+import Review from "../models/Review.js";
+import SupplierRating from "../models/SupplierRating.js";
+import Invoice from "../models/Invoice.js";
 import BackupLog from "../models/BackupLog.js";
 import ipfsService from "./ipfs.service.js";
 import fabricService from "./fabric.service.js";
 import notificationService from "./notification.service.js";
 import BlockchainLog from "../models/BlockchainLog.js";
+import redisService from "./redis.service.js";
 
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
@@ -17,26 +27,44 @@ const gunzip = promisify(zlib.gunzip);
  * BackupService
  * Handles full and incremental backups of critical MongoDB collections
  *
- * CRITICAL COLLECTIONS (backed up):
+ * BACKED UP COLLECTIONS:
  * - Order: Transaction history
  * - User: User accounts and profiles
  * - Product: Product catalog
  * - VendorRequest: Supply chain requests
+ * - Inventory: Supplier inventory
+ * - VendorInventory: Vendor inventory items
+ * - Return: Product returns and refunds
+ * - Wallet: User wallet balances and transactions
+ * - Cart: Shopping cart data
+ * - Wishlist: User wishlists
+ * - Review: Product reviews
+ * - SupplierRating: Supplier ratings
+ * - Invoice: Transaction invoices
  *
- * NON-CRITICAL (excluded):
- * - Cart, Wishlist: Ephemeral user data
+ * EXCLUDED (not backed up):
  * - Notifications: Can be regenerated
  * - QRCode: Can be regenerated
- * - Sessions, Logs: Temporary data
+ * - BackupLog: Metadata only
+ * - BlockchainLog: Metadata only
  */
 class BackupService {
   constructor() {
-    // Collections to backup
+    // Collections to backup (EVERYTHING except logs and notifications)
     this.CRITICAL_COLLECTIONS = {
       orders: Order,
       users: User,
       products: Product,
       vendorRequests: VendorRequest,
+      inventory: Inventory,
+      vendorInventories: VendorInventory,
+      returns: Return,
+      wallets: Wallet,
+      carts: Cart,
+      wishlists: Wishlist,
+      reviews: Review,
+      supplierRatings: SupplierRating,
+      invoices: Invoice,
     };
 
     // Pinata storage limits
@@ -67,6 +95,28 @@ class BackupService {
 
     console.log(`🔄 Creating full backup: ${backupId}`);
     console.log(`   Triggered by: ${triggeredBy}`);
+
+    // CRITICAL: Check MongoDB health before backup
+    const mongoose = await import("mongoose");
+    const mongoHealthy = mongoose.default.connection.readyState === 1;
+
+    if (!mongoHealthy) {
+      const error = new Error(
+        "Cannot create backup: MongoDB is not connected. Backup requires active database connection."
+      );
+      console.error(
+        `❌ Backup aborted: MongoDB unavailable (readyState: ${mongoose.default.connection.readyState})`
+      );
+      console.error(`   Backup ID: ${backupId}`);
+      console.error(
+        `   ⚠️  CRITICAL: Do not create empty backups when database is down!`
+      );
+      throw error;
+    }
+
+    console.log(
+      `✅ MongoDB health check passed (readyState: ${mongoose.default.connection.readyState})`
+    );
 
     // Create blockchain log for backup start
     await BlockchainLog.createLog({
@@ -109,23 +159,109 @@ class BackupService {
         );
       }
 
-      // Step 2: Create backup snapshot
-      console.log("📝 Step 2: Creating backup snapshot...");
-      const backupData = {
-        backupId,
-        type: "FULL",
-        timestamp,
-        version: "1.0",
-        collections,
-        metadata,
-      };
+      // Step 2: Create backup snapshot (NDJSON format for safe mode support)
+      console.log("📝 Step 2: Creating backup snapshot (NDJSON format)...");
 
-      const jsonString = JSON.stringify(backupData);
-      const uncompressedSize = Buffer.byteLength(jsonString);
+      // Create NDJSON format (one JSON object per line)
+      // This format allows streaming and partial extraction without loading entire file
+      const ndjsonLines = [];
+
+      // Add users (one per line)
+      for (const user of collections.users || []) {
+        ndjsonLines.push(
+          JSON.stringify({
+            type: "user",
+            id: user._id.toString(),
+            data: user,
+          })
+        );
+      }
+
+      // Add orders (one per line with userId for filtering)
+      for (const order of collections.orders || []) {
+        ndjsonLines.push(
+          JSON.stringify({
+            type: "order",
+            id: order._id.toString(),
+            userId: order.userId ? order.userId.toString() : null,
+            data: order,
+          })
+        );
+      }
+
+      // Add products (one per line with sellerId for filtering)
+      for (const product of collections.products || []) {
+        ndjsonLines.push(
+          JSON.stringify({
+            type: "product",
+            id: product._id.toString(),
+            sellerId: product.sellerId ? product.sellerId.toString() : null,
+            data: product,
+          })
+        );
+      }
+
+      // Add vendor requests (one per line)
+      for (const vendorRequest of collections.vendorRequests || []) {
+        ndjsonLines.push(
+          JSON.stringify({
+            type: "vendorRequest",
+            id: vendorRequest._id.toString(),
+            userId: vendorRequest.userId
+              ? vendorRequest.userId.toString()
+              : null,
+            vendorId: vendorRequest.vendorId
+              ? vendorRequest.vendorId.toString()
+              : null,
+            supplierId: vendorRequest.supplierId
+              ? vendorRequest.supplierId.toString()
+              : null,
+            data: vendorRequest,
+          })
+        );
+      }
+
+      // Add inventory items (one per line)
+      for (const inventoryItem of collections.inventory || []) {
+        ndjsonLines.push(
+          JSON.stringify({
+            type: "inventory",
+            id: inventoryItem._id.toString(),
+            supplierId: inventoryItem.supplierId
+              ? inventoryItem.supplierId.toString()
+              : null,
+            data: inventoryItem,
+          })
+        );
+      }
+
+      // Add returns (one per line with userId and vendorId for filtering)
+      for (const returnItem of collections.returns || []) {
+        ndjsonLines.push(
+          JSON.stringify({
+            type: "return",
+            id: returnItem._id.toString(),
+            userId: returnItem.userId ? returnItem.userId.toString() : null,
+            vendorId: returnItem.vendorId
+              ? returnItem.vendorId.toString()
+              : null,
+            orderId: returnItem.orderId ? returnItem.orderId.toString() : null,
+            data: returnItem,
+          })
+        );
+      }
+
+      // Join with newlines to create NDJSON
+      const ndjsonString = ndjsonLines.join("\n");
+      const uncompressedSize = Buffer.byteLength(ndjsonString);
+
+      console.log(
+        `   NDJSON format: ${ndjsonLines.length} lines, ${this._formatBytes(uncompressedSize)}`
+      );
 
       // Step 3: Compress
       console.log("🗜️  Step 3: Compressing with gzip...");
-      const compressed = await gzip(jsonString);
+      const compressed = await gzip(ndjsonString);
       const compressedSize = compressed.length;
       const compressionRatio = (
         (1 - compressedSize / uncompressedSize) *
@@ -150,6 +286,15 @@ class BackupService {
       }
 
       console.log(`   ✓ IPFS CID: ${ipfsResult.ipfsHash}`);
+
+      // Store CID in Redis for safe mode
+      console.log("💾 Storing backup CID in Redis for safe mode...");
+      await redisService.set(
+        "latest_backup_cid",
+        ipfsResult.ipfsHash,
+        86400 * 7
+      ); // Keep for 7 days
+      console.log(`   ✓ Backup CID stored in Redis`);
 
       // Step 5: Log to blockchain
       console.log("⛓️  Step 5: Logging to blockchain...");
@@ -326,6 +471,28 @@ class BackupService {
     const backupId = `INC_${this._formatTimestamp(timestamp)}`;
 
     console.log(`🔄 Creating incremental backup: ${backupId}`);
+
+    // CRITICAL: Check MongoDB health before backup
+    const mongoose = await import("mongoose");
+    const mongoHealthy = mongoose.default.connection.readyState === 1;
+
+    if (!mongoHealthy) {
+      const error = new Error(
+        "Cannot create backup: MongoDB is not connected. Backup requires active database connection."
+      );
+      console.error(
+        `❌ Backup aborted: MongoDB unavailable (readyState: ${mongoose.default.connection.readyState})`
+      );
+      console.error(`   Backup ID: ${backupId}`);
+      console.error(
+        `   ⚠️  CRITICAL: Do not create empty backups when database is down!`
+      );
+      throw error;
+    }
+
+    console.log(
+      `✅ MongoDB health check passed (readyState: ${mongoose.default.connection.readyState})`
+    );
 
     // Create blockchain log for backup start
     await BlockchainLog.createLog({
@@ -596,7 +763,25 @@ class BackupService {
    * Export collection to JSON
    */
   async exportCollection(Model, name) {
-    const documents = await Model.find().lean();
+    let query = Model.find();
+
+    // For users collection, explicitly include password field for safe mode authentication
+    // This bypasses the toJSON() method that deletes the password
+    if (name === "users") {
+      query = query.select("+passwordHash"); // Explicitly include password hash
+    }
+
+    const documents = await query.lean();
+
+    // For users, map passwordHash to password for backward compatibility
+    if (name === "users") {
+      documents.forEach((doc) => {
+        if (doc.passwordHash && !doc.password) {
+          doc.password = doc.passwordHash;
+        }
+      });
+    }
+
     const jsonString = JSON.stringify(documents);
     const size = Buffer.byteLength(jsonString);
 
@@ -612,15 +797,33 @@ class BackupService {
    */
   async getChangedDocuments(Model, name, sinceTimestamp) {
     // Get created documents (createdAt > sinceTimestamp)
-    const created = await Model.find({
+    let createdQuery = Model.find({
       createdAt: { $gt: sinceTimestamp },
-    }).lean();
+    });
 
     // Get updated documents (updatedAt > sinceTimestamp AND createdAt <= sinceTimestamp)
-    const updated = await Model.find({
+    let updatedQuery = Model.find({
       updatedAt: { $gt: sinceTimestamp },
       createdAt: { $lte: sinceTimestamp },
-    }).lean();
+    });
+
+    // For users collection, explicitly include password field
+    if (name === "users") {
+      createdQuery = createdQuery.select("+passwordHash");
+      updatedQuery = updatedQuery.select("+passwordHash");
+    }
+
+    const created = await createdQuery.lean();
+    const updated = await updatedQuery.lean();
+
+    // For users, map passwordHash to password
+    if (name === "users") {
+      [...created, ...updated].forEach((doc) => {
+        if (doc.passwordHash && !doc.password) {
+          doc.password = doc.passwordHash;
+        }
+      });
+    }
 
     // Note: Detecting deletes requires a separate audit log
     // For now, we'll assume no deletes (or use soft deletes)

@@ -16,13 +16,25 @@ router.use(authenticate);
  */
 router.get("/balance", async (req, res) => {
   try {
+    // SAFE MODE: Return graceful message
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        safeMode: true,
+        balance: 0,
+        message: "Wallet data temporarily unavailable during maintenance",
+        note: "Blockchain operations remain available. Balance will be restored when maintenance completes."
+      });
+    }
+
     const result = await walletBalanceService.getBalance(req.userId);
     res.json(result);
   } catch (error) {
     console.error("❌ Get balance failed:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to get balance",
+      balance: 0,
+      message: error.message || "Unable to load wallet balance"
     });
   }
 });
@@ -377,6 +389,23 @@ router.get("/transactions", async (req, res) => {
       endDate: req.query.endDate,
     };
 
+    // SAFE MODE: Return graceful message
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        safeMode: true,
+        transactions: [],
+        pagination: {
+          page: filters.page,
+          limit: filters.limit,
+          total: 0,
+          pages: 0
+        },
+        message: "Transaction history temporarily unavailable during maintenance",
+        note: "Wallet operations will be restored when maintenance completes."
+      });
+    }
+
     const result = await walletBalanceService.getTransactionHistory(
       req.userId,
       filters
@@ -387,7 +416,8 @@ router.get("/transactions", async (req, res) => {
     console.error("❌ Get transactions failed:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to get transaction history",
+      transactions: [],
+      message: error.message || "Unable to load transaction history"
     });
   }
 });
@@ -421,14 +451,22 @@ router.get("/info", async (req, res) => {
       console.warn("⚠️ Could not fetch token info from blockchain");
     }
 
-    res.json({
+    const response = {
       success: true,
       wallet: {
         ...balance.wallet,
         ...tokenInfo,
       },
       tokenInfo,
-    });
+    };
+
+    // Add safe mode indicator
+    if (req.safeMode) {
+      response.safeMode = true;
+      response.note = 'Database maintenance in progress. Wallet data is from blockchain (real-time).';
+    }
+
+    res.json(response);
   } catch (error) {
     console.error("❌ Get wallet info failed:", error);
     res.status(500).json({

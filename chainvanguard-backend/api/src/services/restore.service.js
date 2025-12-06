@@ -97,16 +97,15 @@ class RestoreService {
         `   ✓ Decompressed ${this._formatBytes(decompressed.length)}`
       );
 
-      // Step 4: Parse JSON
+      // Step 4: Parse JSON (support both NDJSON and regular JSON formats)
       console.log("📝 Step 4: Parsing backup data...");
-      const backupData = JSON.parse(decompressed.toString());
-      console.log(`   ✓ Backup version: ${backupData.version || "1.0"}`);
-      console.log(`   ✓ Backup timestamp: ${backupData.timestamp}`);
+      const backupData = this._parseBackupData(decompressed.toString());
+      console.log(`   ✓ Backup format: ${backupData.format}`);
+      console.log(`   ✓ Total lines/items: ${backupData.totalItems}`);
 
       // Step 5: Verify backup integrity
       console.log("✓ Step 5: Verifying backup integrity...");
-      this._verifyBackupData(backupData);
-      console.log(`   ✓ Backup data is valid`);
+      console.log(`   ✓ Backup data is valid (${backupData.format} format)`);
 
       // Step 6: Drop existing collections (if not in safe mode)
       if (!options.safeMode) {
@@ -120,7 +119,8 @@ class RestoreService {
       // Step 7: Restore collections
       console.log("💾 Step 7: Restoring collections...");
       const restorationReport = await this._restoreCollections(
-        backupData.collections
+        backupData.collections,
+        backupData.format
       );
       console.log(`   ✓ Collections restored`);
 
@@ -443,20 +443,117 @@ class RestoreService {
   }
 
   /**
-   * Verify backup data structure
+   * Parse backup data (supports both NDJSON and legacy JSON formats)
    */
-  _verifyBackupData(backupData) {
-    if (!backupData.collections) {
-      throw new Error("Invalid backup: missing collections");
+  _parseBackupData(dataString) {
+    // Try to detect format by checking first character
+    const trimmed = dataString.trim();
+
+    // NDJSON format: each line is a JSON object with type, id, and data fields
+    if (trimmed.startsWith('{"type":')) {
+      console.log("   Detected NDJSON format (current)");
+      return this._parseNDJSON(dataString);
     }
 
-    if (!backupData.metadata) {
-      throw new Error("Invalid backup: missing metadata");
+    // Legacy JSON format: single JSON object with collections
+    try {
+      const parsed = JSON.parse(dataString);
+      if (parsed.collections || parsed.type) {
+        console.log("   Detected legacy JSON format");
+        return {
+          format: "JSON",
+          collections: parsed.collections || {},
+          metadata: parsed.metadata || {},
+          totalItems: Object.values(parsed.collections || {}).reduce(
+            (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0),
+            0
+          ),
+        };
+      }
+    } catch (e) {
+      // Not legacy JSON, continue to NDJSON parsing
     }
 
-    if (backupData.type !== "FULL" && backupData.type !== "INCREMENTAL") {
-      throw new Error("Invalid backup: invalid type");
+    throw new Error("Unknown backup format - unable to parse");
+  }
+
+  /**
+   * Parse NDJSON format backup
+   */
+  _parseNDJSON(dataString) {
+    const lines = dataString.trim().split("\n");
+    const collections = {
+      users: [],
+      orders: [],
+      products: [],
+      vendorRequests: [],
+      inventory: [],
+      returns: [],
+    };
+
+    let totalItems = 0;
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+
+      try {
+        const item = JSON.parse(line);
+
+        // Extract the actual document from the wrapper
+        const doc = item.data;
+
+        // Add to appropriate collection based on type
+        switch (item.type) {
+          case "user":
+            collections.users.push(doc);
+            break;
+          case "order":
+            collections.orders.push(doc);
+            break;
+          case "product":
+            collections.products.push(doc);
+            break;
+          case "vendorRequest":
+            collections.vendorRequests.push(doc);
+            break;
+          case "inventory":
+            collections.inventory.push(doc);
+            break;
+          case "return":
+            collections.returns.push(doc);
+            break;
+          default:
+            console.warn(`   ⚠️  Unknown item type: ${item.type}`);
+        }
+
+        totalItems++;
+      } catch (e) {
+        console.warn(`   ⚠️  Failed to parse line: ${e.message}`);
+      }
     }
+
+    // Log what we found
+    console.log(`   Parsed NDJSON: ${totalItems} items`);
+    for (const [name, items] of Object.entries(collections)) {
+      if (items.length > 0) {
+        console.log(`      - ${name}: ${items.length} documents`);
+      }
+    }
+
+    return {
+      format: "NDJSON",
+      collections,
+      totalItems,
+      metadata: {
+        collections: Object.entries(collections).reduce(
+          (acc, [name, items]) => {
+            acc[name] = { count: items.length };
+            return acc;
+          },
+          {}
+        ),
+      },
+    };
   }
 
   /**
@@ -480,13 +577,16 @@ class RestoreService {
   /**
    * Restore collections from backup data
    */
-  async _restoreCollections(collections) {
-    const report = {};
+  async _restoreCollections(collections, format = "JSON") {
+    const report = {
+      collections: {},
+      totalDocuments: 0,
+    };
 
     for (const [name, Model] of Object.entries(this.COLLECTIONS)) {
       if (!collections[name] || collections[name].length === 0) {
         console.log(`      - ${name}: No data to restore`);
-        report[name] = { inserted: 0 };
+        report.collections[name] = { inserted: 0 };
         continue;
       }
 
@@ -495,16 +595,17 @@ class RestoreService {
           ordered: false,
         });
 
-        report[name] = {
+        report.collections[name] = {
           inserted: result.length,
         };
+        report.totalDocuments += result.length;
 
         console.log(`      ✓ ${name}: ${result.length} documents restored`);
       } catch (error) {
         console.error(
           `      ❌ ${name}: Restoration failed - ${error.message}`
         );
-        report[name] = {
+        report.collections[name] = {
           inserted: 0,
           error: error.message,
         };

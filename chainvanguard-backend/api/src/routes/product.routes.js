@@ -15,6 +15,7 @@ import {
 import User from "../models/User.js";
 import Product from "../models/Product.js";
 import Order from "../models/Order.js";
+import { initializeSafeMode, queryCollection, countDocuments } from "../utils/safeMode/lokiService.js";
 
 const router = express.Router();
 
@@ -30,6 +31,61 @@ const router = express.Router();
  */
 router.get("/", async (req, res) => {
   try {
+    // SAFE MODE: Simplified product listing (requires sellerId)
+    if (req.safeMode) {
+      const sellerId = req.query.sellerId || req.userId;
+
+      if (!sellerId) {
+        return res.status(400).json({
+          success: false,
+          message: "Seller ID required for product listing in safe mode",
+          safeMode: true,
+          note: "Please filter by specific seller in safe mode"
+        });
+      }
+
+      await initializeSafeMode(sellerId, 100);
+
+      // Build simple query
+      const query = { sellerId };
+      if (req.query.category) {
+        query.category = req.query.category;
+      }
+      if (req.query.status) {
+        query.status = req.query.status;
+      }
+
+      // Get products with pagination
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const skip = (page - 1) * limit;
+      const sortBy = req.query.sortBy || 'createdAt';
+      const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+
+      const options = {
+        sort: { [sortBy]: sortOrder },
+        skip,
+        limit
+      };
+
+      const products = queryCollection(sellerId, 'products', query, options);
+      const total = countDocuments(sellerId, 'products', query);
+
+      return res.json({
+        success: true,
+        products,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        },
+        safeMode: true,
+        warning: 'Viewing backup data. Some filters not available in safe mode.'
+      });
+    }
+
+    // NORMAL MODE: Full filtering
     const filters = {
       // Pagination
       page: parseInt(req.query.page) || 1,
@@ -219,6 +275,44 @@ router.get(
   checkRole("vendor", "supplier", "expert"),
   async (req, res) => {
     try {
+      // SAFE MODE: Extract from backup if MongoDB is down
+      if (req.safeMode) {
+        const sellerId = req.userRole === "expert" ? undefined : req.userId;
+
+        // If expert, cannot view all products in safe mode (would need full backup scan)
+        if (!sellerId) {
+          return res.json({
+            success: true,
+            count: 0,
+            products: [],
+            safeMode: true,
+            warning: 'Expert view of all products not available in safe mode. Only individual seller data is accessible.'
+          });
+        }
+
+        // Initialize safe mode
+        await initializeSafeMode(sellerId, 100);
+
+        // Query LokiJS for seller's products
+        const query = { sellerId };
+        let products = queryCollection(sellerId, 'products', query);
+
+        // Filter for low stock manually (requires comparison logic)
+        const lowStockProducts = products.filter(p => {
+          const threshold = p.lowStockThreshold || 10;
+          return p.stockQuantity < threshold;
+        });
+
+        return res.json({
+          success: true,
+          count: lowStockProducts.length,
+          products: lowStockProducts,
+          safeMode: true,
+          warning: 'Viewing backup data from last snapshot. Write operations are disabled during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Query MongoDB
       const sellerId = req.userRole === "expert" ? undefined : req.userId;
       const products = await productService.getLowStockProducts(sellerId);
 
@@ -277,6 +371,53 @@ router.get("/by-category/:category", async (req, res) => {
 router.get("/by-seller/:sellerId", async (req, res) => {
   try {
     const { sellerId } = req.params;
+
+    // SAFE MODE: Query LokiJS in-memory database
+    if (req.safeMode) {
+      await initializeSafeMode(sellerId, 100);
+
+      // Build query
+      const query = { sellerId };
+      if (req.query.category) {
+        query.category = req.query.category;
+      }
+      if (req.query.status) {
+        query.status = req.query.status;
+      }
+
+      // Build options
+      const sortBy = req.query.sortBy || 'createdAt';
+      const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const skip = (page - 1) * limit;
+
+      const options = {
+        sort: { [sortBy]: sortOrder },
+        skip,
+        limit
+      };
+
+      // Query LokiJS
+      const products = queryCollection(sellerId, 'products', query, options);
+      const total = countDocuments(sellerId, 'products', query);
+
+      return res.json({
+        success: true,
+        sellerId,
+        products,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        },
+        safeMode: true,
+        warning: 'Viewing backup data from last snapshot. Write operations are disabled during maintenance.'
+      });
+    }
+
+    // NORMAL MODE: Query MongoDB
     const filters = {
       ...req.query,
       page: parseInt(req.query.page) || 1,
@@ -310,6 +451,43 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const incrementView = req.query.view === "true";
 
+    // SAFE MODE: Query LokiJS (read-only, no view increment)
+    if (req.safeMode) {
+      // Try to determine sellerId from query or use first available product
+      // In safe mode, we need to know which user's data to query
+      const sellerId = req.query.sellerId || req.userId;
+
+      if (!sellerId) {
+        return res.status(400).json({
+          success: false,
+          message: "Seller ID required in safe mode",
+          safeMode: true
+        });
+      }
+
+      await initializeSafeMode(sellerId, 100);
+
+      // Query LokiJS for the specific product
+      const products = queryCollection(sellerId, 'products', { _id: id });
+      const product = products.length > 0 ? products[0] : null;
+
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: "Product not found in backup",
+          safeMode: true
+        });
+      }
+
+      return res.json({
+        success: true,
+        product,
+        safeMode: true,
+        warning: 'Viewing backup data. View count not updated during maintenance.'
+      });
+    }
+
+    // NORMAL MODE: Query MongoDB with view increment
     const product = await productService.getProductById(id, incrementView);
 
     res.json({

@@ -126,8 +126,9 @@ class UserContract extends Contract {
       walletAddress: eventData.walletAddress,
       role: eventData.role,
 
-      // Optional KYC hash (IPFS reference)
-      kycHash: eventData.kycHash || null,
+      // IPFS CIDs for disaster recovery
+      userDataCID: eventData.userDataCID || null, // User data stored on IPFS
+      kycHash: eventData.kycHash || null, // KYC documents stored on IPFS
 
       // Blockchain metadata
       timestamp: timestamp,

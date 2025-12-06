@@ -2,6 +2,7 @@ import express from "express";
 import expertService from "../services/expert.service.js";
 import logger from "../utils/logger.js";
 import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
+import fabricService from "../services/fabric.service.js";
 
 const router = express.Router();
 
@@ -40,7 +41,7 @@ router.get("/transactions", async (req, res) => {
       userId: req.query.userId,
       startDate: req.query.startDate,
       endDate: req.query.endDate,
-      search: req.query.search, // Add search parameter
+      search: req.query.search,
       sortBy: req.query.sortBy || "timestamp",
       sortOrder: req.query.sortOrder || "desc",
     };
@@ -86,7 +87,7 @@ router.get("/consensus/status", async (req, res) => {
     console.error("❌ Get consensus status failed:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to get consensus status",
+      message: error.message || "Unable to load consensus status",
     });
   }
 });
@@ -94,7 +95,6 @@ router.get("/consensus/status", async (req, res) => {
 /**
  * GET /api/expert/consensus/metrics
  * Get consensus metrics with time range
- * Query params: timeRange (1h, 24h, 7d, 30d)
  */
 router.get("/consensus/metrics", async (req, res) => {
   try {
@@ -105,7 +105,8 @@ router.get("/consensus/metrics", async (req, res) => {
     console.error("❌ Get consensus metrics failed:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to get consensus metrics",
+      metrics: [],
+      message: error.message || "Unable to load consensus metrics",
     });
   }
 });
@@ -122,7 +123,7 @@ router.get("/fault-tolerance/status", async (req, res) => {
     console.error("❌ Get fault tolerance status failed:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to get fault tolerance status",
+      message: error.message || "Unable to load fault tolerance status",
     });
   }
 });
@@ -130,7 +131,6 @@ router.get("/fault-tolerance/status", async (req, res) => {
 /**
  * GET /api/expert/fault-tolerance/stats
  * Get fault tolerance statistics
- * Query params: timeRange (24h, 7d, 30d)
  */
 router.get("/fault-tolerance/stats", async (req, res) => {
   try {
@@ -216,13 +216,25 @@ router.get("/logs/entity/:entityId", async (req, res) => {
  */
 router.get("/security/overview", async (req, res) => {
   try {
+    // SAFE MODE: Return graceful message
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        safeMode: true,
+        overview: {},
+        message:
+          "Security monitoring temporarily unavailable during maintenance",
+        note: "Blockchain security features remain active",
+      });
+    }
+
     const result = await expertService.getSecurityOverview();
     res.status(200).json(result);
   } catch (error) {
     console.error("❌ Get security overview failed:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to get security overview",
+      message: error.message || "Unable to load security overview",
     });
   }
 });
@@ -234,6 +246,27 @@ router.get("/security/overview", async (req, res) => {
  */
 router.get("/security/wallets", async (req, res) => {
   try {
+    // SAFE MODE: Security monitoring unavailable
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        safeMode: true,
+        message:
+          "System under maintenance. Security wallet monitoring temporarily unavailable.",
+        note: "Individual wallet operations remain functional via blockchain. Use /api/wallet/* endpoints for specific user wallet operations.",
+        wallets: [],
+        pagination: {
+          page: parseInt(req.query.page) || 1,
+          limit: parseInt(req.query.limit) || 20,
+          total: 0,
+          pages: 0,
+        },
+        warning:
+          "Database maintenance in progress. Full security monitoring requires database access.",
+      });
+    }
+
+    // NORMAL MODE: Full security wallet monitoring
     const filters = {
       page: parseInt(req.query.page) || 1,
       limit: parseInt(req.query.limit) || 20,

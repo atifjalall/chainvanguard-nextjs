@@ -135,7 +135,7 @@ const TrackingPage = () => {
   usePageTitle("QR Tracking");
   const params = useParams();
   const router = useRouter();
-  const qrCode = params.id as string;
+  const qrCode = params?.id as string;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

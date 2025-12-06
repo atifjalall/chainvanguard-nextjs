@@ -375,15 +375,6 @@ export default function WalletTransactionsPage() {
             </div>
             <div className="flex items-center gap-3">
               <Button
-                onClick={handleRefresh}
-                variant="outline"
-                disabled={isLoading}
-                className={`hidden lg:flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.secondary} transition-all hover:border-black dark:hover:border-white`}
-              >
-                <ArrowPathIcon className={`h-4 w-4 ${isLoading ? "animate-spin" : ""} ${colors.icons.primary}`} />
-                Refresh
-              </Button>
-              <Button
                 onClick={exportToCSV}
                 variant="default"
                 className={`flex items-center gap-2 text-xs cursor-pointer !rounded-none ${colors.buttons.primary} transition-all`}

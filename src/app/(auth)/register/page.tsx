@@ -19,8 +19,6 @@ import {
   CheckIcon,
   ExclamationTriangleIcon,
   ArrowDownTrayIcon,
-  ArrowPathIcon,
-  UsersIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   BoltIcon,
@@ -29,7 +27,9 @@ import {
   BuildingOffice2Icon,
   CheckBadgeIcon,
   ChevronDownIcon,
+  UsersIcon,
 } from "@heroicons/react/24/outline";
+import { Loader2 } from "lucide-react";
 import { UserRole } from "@/types/web3";
 import { AnimatePresence, motion } from "framer-motion";
 import { authAPI, RegisterPayload } from "@/lib/api/auth.api";
@@ -185,6 +185,10 @@ export default function RegisterPage() {
   const [resendTimer, setResendTimer] = useState(0);
   const [otpFocused, setOtpFocused] = useState(false);
 
+  // Add these new states
+  const [isCopied, setIsCopied] = useState(false);
+  const [isCompletingSetup, setIsCompletingSetup] = useState(false);
+
   // Dropdown states
   const [showProvinceDropdown, setShowProvinceDropdown] = useState(false);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
@@ -214,6 +218,21 @@ export default function RegisterPage() {
       });
     }
   }, [savedData]);
+
+  // Auto-focus first OTP input when reaching step 6
+  useEffect(() => {
+    if (currentStep === 6) {
+      // Longer delay to ensure step transition is complete
+      setTimeout(() => {
+        const firstInput = document.getElementById("otp-0") as HTMLInputElement;
+        if (firstInput) {
+          firstInput.focus();
+          // Set cursor position explicitly
+          firstInput.setSelectionRange(0, 0);
+        }
+      }, 400);
+    }
+  }, [currentStep]);
 
   useEffect(() => {
     // Clear form data only after OTP is verified (step 7)
@@ -365,8 +384,14 @@ export default function RegisterPage() {
       setOtpSent(true);
       setResendTimer(60);
       toast.success("Verification code sent to your email!");
-      // ✅ Focus on first OTP input after sending
-      setTimeout(() => document.getElementById("otp-0")?.focus(), 100);
+      // ✅ Focus on first OTP input after sending with delay
+      setTimeout(() => {
+        const firstInput = document.getElementById("otp-0") as HTMLInputElement;
+        if (firstInput) {
+          firstInput.focus();
+          firstInput.setSelectionRange(0, 0);
+        }
+      }, 400);
     } catch (error) {
       toast.error("Failed to send verification code. Please try again.");
     } finally {
@@ -548,13 +573,18 @@ export default function RegisterPage() {
     setOtp(newOtp);
     setOtpError(false);
 
+    // Auto-focus next input on manual entry
     if (value && index < 5) {
-      document.getElementById(`otp-${index + 1}`)?.focus();
+      setTimeout(() => {
+        const nextInput = document.getElementById(`otp-${index + 1}`);
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }, 0);
     }
 
     // Auto-verify when all 6 digits are entered
     if (newOtp.every((digit) => digit !== "")) {
-      // Pass the new OTP array directly to avoid state race condition
       verifyOtp(newOtp);
     }
   };
@@ -573,27 +603,67 @@ export default function RegisterPage() {
     setOtp(newOtp);
     setOtpError(false);
 
-    const lastFilledIndex = pastedData.length - 1;
-    if (lastFilledIndex >= 0 && lastFilledIndex < 6) {
-      document.getElementById(`otp-${lastFilledIndex}`)?.focus();
+    // Focus on the last filled input or first empty one
+    if (pastedData.length === 6) {
+      setTimeout(() => {
+        document.getElementById(`otp-5`)?.focus();
+      }, 0);
+    } else {
+      setTimeout(() => {
+        document.getElementById(`otp-${pastedData.length}`)?.focus();
+      }, 0);
+    }
+
+    // Auto-verify when all 6 digits are pasted
+    if (newOtp.every((digit) => digit !== "")) {
+      verifyOtp(newOtp);
     }
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`)?.focus();
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const newOtp = [...otp];
+
+      if (otp[index]) {
+        // If current input has a value, clear it
+        newOtp[index] = "";
+        setOtp(newOtp);
+      } else if (index > 0) {
+        // If current input is empty, move to previous and clear it
+        newOtp[index - 1] = "";
+        setOtp(newOtp);
+        setTimeout(() => {
+          document.getElementById(`otp-${index - 1}`)?.focus();
+        }, 0);
+      }
     }
   };
 
   const handleOtpFocus = (index: number) => {
-    // Only allow focus if all previous fields are filled
+    // Prevent focusing on later inputs if previous inputs are empty
     if (index > 0) {
       for (let i = 0; i < index; i++) {
         if (!otp[i]) {
-          document.getElementById(`otp-${i}`)?.focus();
+          // If any previous input is empty, focus on the first empty one
+          const firstEmptyInput = document.getElementById(
+            `otp-${i}`
+          ) as HTMLInputElement;
+          if (firstEmptyInput) {
+            firstEmptyInput.focus();
+          }
           return;
         }
       }
+    }
+
+    // Don't select text, just focus
+    const input = document.getElementById(`otp-${index}`) as HTMLInputElement;
+    if (input) {
+      // Move cursor to end instead of selecting
+      setTimeout(() => {
+        input.setSelectionRange(input.value.length, input.value.length);
+      }, 0);
     }
   };
 
@@ -823,6 +893,8 @@ export default function RegisterPage() {
       return;
     }
 
+    setIsCompletingSetup(true);
+
     try {
       const backendUserData = localStorage.getItem("chainvanguard_auth_user");
 
@@ -851,6 +923,7 @@ export default function RegisterPage() {
         window.location.href = `/${userData.role}`;
       }, 1000);
     } catch (error: any) {
+      setIsCompletingSetup(false);
       toast.error(
         error.response?.data?.error ||
           error.message ||
@@ -867,7 +940,12 @@ export default function RegisterPage() {
     navigator.clipboard
       .writeText(text)
       .then(() => {
+        setIsCopied(true);
         toast.success("Copied to clipboard!");
+
+        setTimeout(() => {
+          setIsCopied(false);
+        }, 2000);
       })
       .catch(() => {
         toast.error("Failed to copy");
@@ -1311,9 +1389,10 @@ export default function RegisterPage() {
                                     }}
                                     className="flex-1 h-12 px-0 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
                                   />
+                                  {/* Email check indicator */}
                                   <div className="h-12 flex items-center px-3 -mr-3">
                                     {isCheckingEmail ? (
-                                      <ArrowPathIcon className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
                                     ) : email && emailExists ? (
                                       <ExclamationTriangleIcon className="h-3.5 w-3.5 text-red-500" />
                                     ) : email &&
@@ -2276,8 +2355,17 @@ export default function RegisterPage() {
                             onClick={() => copyToClipboard(recoveryPhrase)}
                             className="border border-black dark:border-white text-black dark:text-white px-6 h-10 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2 cursor-pointer"
                           >
-                            <ClipboardDocumentIcon className="h-3.5 w-3.5" />
-                            Copy
+                            {isCopied ? (
+                              <>
+                                <CheckIcon className="h-3.5 w-3.5" />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+                                Copy
+                              </>
+                            )}
                           </button>
                           <button
                             type="button"
@@ -2377,7 +2465,7 @@ export default function RegisterPage() {
                   >
                     {currentStep === 2 && isCheckingEmail ? (
                       <>
-                        <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Verifying...
                       </>
                     ) : (
@@ -2400,7 +2488,7 @@ export default function RegisterPage() {
                   >
                     {isLoading ? (
                       <>
-                        <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Creating...
                       </>
                     ) : (
@@ -2423,7 +2511,7 @@ export default function RegisterPage() {
                   >
                     {isVerifyingOtp ? (
                       <>
-                        <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Verifying...
                       </>
                     ) : (
@@ -2437,11 +2525,26 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={handleComplete}
-                    disabled={!backupConfirmed || !otpVerified}
-                    className={`bg-black dark:bg-white text-white dark:text-black px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors flex items-center gap-2 ${!backupConfirmed || !otpVerified ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                    disabled={
+                      !backupConfirmed || !otpVerified || isCompletingSetup
+                    }
+                    className={`px-6 h-12 uppercase tracking-[0.2em] text-[10px] font-medium transition-colors flex items-center gap-2 ${
+                      !backupConfirmed || !otpVerified || isCompletingSetup
+                        ? "opacity-50 cursor-not-allowed bg-gray-900 dark:bg-gray-100 text-white dark:text-black"
+                        : "bg-black dark:bg-white text-white dark:text-black hover:bg-gray-900 dark:hover:bg-gray-100 cursor-pointer"
+                    }`}
                   >
-                    <BoltIcon className="h-3.5 w-3.5" />
-                    Complete Setup
+                    {isCompletingSetup ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Completing...
+                      </>
+                    ) : (
+                      <>
+                        <BoltIcon className="h-3.5 w-3.5" />
+                        Complete Setup
+                      </>
+                    )}
                   </button>
                 )}
               </div>

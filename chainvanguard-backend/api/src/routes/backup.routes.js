@@ -53,21 +53,67 @@ router.post("/manual", async (req, res) => {
 
 /**
  * GET /api/backups/list
- * Get all backups (MongoDB first, blockchain fallback)
+ * Get all backups (BLOCKCHAIN FIRST as source of truth, MongoDB cache as fallback)
  *
  * @query {number} limit - Max number of backups to return (default: 50)
  * @query {string} type - Filter by type: FULL or INCREMENTAL
+ * @query {boolean} forceCache - Force MongoDB cache (faster but may be stale)
  * @returns {array} List of backups
  */
 router.get("/list", async (req, res) => {
   try {
-    const { limit = 50, type } = req.query;
+    const { limit = 50, type, forceCache = false } = req.query;
 
     let backups;
-    let source = "mongodb";
+    let source = "blockchain";
 
     try {
-      // Try MongoDB first (fast)
+      // BLOCKCHAIN FIRST - Source of truth (immutable, permanent)
+      if (!forceCache) {
+        console.log("🔗 Querying blockchain (source of truth)...");
+        backups = await fabricService.getAllBackupsFromBlockchain();
+        source = "blockchain";
+
+        // Apply filters
+        if (type) {
+          backups = backups.filter((b) => b.type === type.toUpperCase());
+        }
+
+        backups = backups.slice(0, parseInt(limit));
+
+        console.log(
+          `✅ Retrieved ${backups.length} backups from blockchain (immutable)`
+        );
+
+        // Update MongoDB cache asynchronously (don't wait for it)
+        syncMongoCache(backups).catch((err) =>
+          console.warn("⚠️  Failed to sync MongoDB cache:", err.message)
+        );
+      } else {
+        // MongoDB cache fallback (faster but may be out of sync)
+        console.log("💾 Using MongoDB cache (fast mode)...");
+        const query = { status: "ACTIVE" };
+        if (type) {
+          query.type = type.toUpperCase();
+        }
+
+        backups = await BackupLog.find(query)
+          .sort({ timestamp: -1 })
+          .limit(parseInt(limit))
+          .lean();
+
+        source = "mongodb-cache";
+        console.log(`✅ Retrieved ${backups.length} backups from MongoDB cache`);
+      }
+    } catch (blockchainError) {
+      console.warn(
+        "⚠️  Blockchain unavailable, using MongoDB cache as emergency fallback..."
+      );
+      console.error("Blockchain error:", blockchainError.message);
+
+      source = "mongodb-emergency";
+
+      // Emergency fallback to MongoDB
       const query = { status: "ACTIVE" };
       if (type) {
         query.type = type.toUpperCase();
@@ -78,21 +124,9 @@ router.get("/list", async (req, res) => {
         .limit(parseInt(limit))
         .lean();
 
-      console.log(`✅ Retrieved ${backups.length} backups from MongoDB`);
-    } catch (mongoError) {
-      console.warn("⚠️  MongoDB unavailable, querying blockchain...");
-      source = "blockchain";
-
-      // Fallback to blockchain
-      backups = await fabricService.getAllBackupsFromBlockchain();
-
-      if (type) {
-        backups = backups.filter((b) => b.type === type.toUpperCase());
-      }
-
-      backups = backups.slice(0, parseInt(limit));
-
-      console.log(`✅ Retrieved ${backups.length} backups from blockchain`);
+      console.log(
+        `⚠️  Retrieved ${backups.length} backups from MongoDB (emergency mode)`
+      );
     }
 
     res.json({
@@ -111,6 +145,47 @@ router.get("/list", async (req, res) => {
     });
   }
 });
+
+/**
+ * Sync MongoDB cache with blockchain data (background operation)
+ * This ensures MongoDB stays in sync with the immutable blockchain
+ */
+async function syncMongoCache(blockchainBackups) {
+  try {
+    console.log("🔄 Syncing MongoDB cache with blockchain...");
+
+    for (const backup of blockchainBackups) {
+      // Check if backup exists in MongoDB
+      const existingBackup = await BackupLog.findOne({
+        backupId: backup.backupId,
+      });
+
+      if (!existingBackup) {
+        // Create in MongoDB cache
+        await BackupLog.create({
+          backupId: backup.backupId,
+          type: backup.type,
+          cid: backup.cid,
+          pinataId: backup.pinataId || "",
+          timestamp: backup.timestamp,
+          status: backup.status || "ACTIVE",
+          metadata: backup.metadata || {},
+          parentBackup: backup.parentBackup || null,
+          parentCid: backup.parentCid || null,
+          changes: backup.changes || null,
+          blockchainTxId: backup.txId,
+          blockchainCreatedAt: backup.createdAt,
+        });
+        console.log(`   ✅ Synced backup to MongoDB: ${backup.backupId}`);
+      }
+    }
+
+    console.log("✅ MongoDB cache sync complete");
+  } catch (error) {
+    console.error("❌ MongoDB cache sync failed:", error);
+    throw error;
+  }
+}
 
 /**
  * GET /api/backups/blockchain
@@ -299,6 +374,25 @@ router.delete("/:backupId", async (req, res) => {
  */
 router.get("/stats/storage", async (req, res) => {
   try {
+    // SAFE MODE: Return graceful message for storage stats
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        safeMode: true,
+        data: {
+          stats: {
+            totalBackups: 0,
+            totalSize: 0,
+            averageSize: 0,
+            compressionRatio: 0,
+            lastBackupSize: 0
+          }
+        },
+        message: "Storage statistics temporarily unavailable during maintenance",
+        note: "Backup operations remain functional. Storage stats will be restored when maintenance completes."
+      });
+    }
+
     const stats = await backupService.getStorageStats();
 
     res.json({

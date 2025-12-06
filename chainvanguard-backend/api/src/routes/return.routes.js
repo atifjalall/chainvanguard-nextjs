@@ -4,6 +4,7 @@ import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
 import Return from "../models/Return.js";
 import Product from "../models/Product.js";
 import notificationService from "../services/notification.service.js";
+import { initializeSafeMode, queryCollection, countDocuments } from "../utils/safeMode/lokiService.js";
 
 const router = express.Router();
 
@@ -62,6 +63,49 @@ router.get(
   authorizeRoles("customer"),
   async (req, res) => {
     try {
+      // SAFE MODE: Query LokiJS in-memory database
+      if (req.safeMode) {
+        // Initialize safe mode (loads data into LokiJS from IPFS/Redis cache)
+        await initializeSafeMode(req.userId, 100);
+
+        // Build query
+        const query = { userId: req.userId };
+        if (req.query.status) {
+          query.status = req.query.status;
+        }
+
+        // Build options
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const options = {
+          sort: { [sortBy]: sortOrder },
+          skip,
+          limit
+        };
+
+        // Query LokiJS with MongoDB-like syntax
+        const returns = queryCollection(req.userId, 'returns', query, options);
+        const total = countDocuments(req.userId, 'returns', query);
+
+        return res.json({
+          success: true,
+          returns,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+          },
+          safeMode: true,
+          warning: 'Viewing backup data from last snapshot. Write operations are disabled during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Query MongoDB
       const filters = {
         status: req.query.status,
         page: req.query.page,
@@ -114,6 +158,74 @@ router.get(
   authorizeRoles("vendor"),
   async (req, res) => {
     try {
+      // SAFE MODE: Query LokiJS in-memory database
+      if (req.safeMode) {
+        // Initialize safe mode (loads data into LokiJS from IPFS/Redis cache)
+        await initializeSafeMode(req.userId, 100);
+
+        // Build query
+        const query = { vendorId: req.userId };
+
+        if (req.query.status) {
+          query.status = req.query.status;
+        }
+
+        // Date range filter (LokiJS supports $gte, $lte operators)
+        if (req.query.startDate || req.query.endDate) {
+          query.createdAt = {};
+          if (req.query.startDate) {
+            query.createdAt.$gte = new Date(req.query.startDate);
+          }
+          if (req.query.endDate) {
+            query.createdAt.$lte = new Date(req.query.endDate);
+          }
+        }
+
+        // For search, we'll need to manually filter after query (LokiJS doesn't support $or with $regex easily)
+        let returns = queryCollection(req.userId, 'returns', query);
+
+        // Apply search filter manually
+        if (req.query.search) {
+          const searchLower = req.query.search.toLowerCase();
+          returns = returns.filter(r =>
+            r.returnNumber?.toLowerCase().includes(searchLower) ||
+            r.customerName?.toLowerCase().includes(searchLower) ||
+            r.orderNumber?.toLowerCase().includes(searchLower)
+          );
+        }
+
+        // Manual sorting and pagination
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        returns.sort((a, b) => {
+          const aVal = a[sortBy];
+          const bVal = b[sortBy];
+          if (aVal < bVal) return -sortOrder;
+          if (aVal > bVal) return sortOrder;
+          return 0;
+        });
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const total = returns.length;
+        const paginatedReturns = returns.slice(skip, skip + limit);
+
+        return res.json({
+          success: true,
+          returns: paginatedReturns,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+          },
+          safeMode: true,
+          warning: 'Viewing backup data from last snapshot. Write operations are disabled during maintenance.'
+        });
+      }
+
+      // NORMAL MODE: Query MongoDB
       const filters = {
         status: req.query.status,
         page: req.query.page,

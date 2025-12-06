@@ -75,7 +75,7 @@ function ProductCard({
   return (
     <div className="group relative w-full">
       <div className="relative bg-gray-100 dark:bg-gray-900 w-full overflow-hidden">
-        <a href={`/customer/product/${id}`} className="block">
+        <a href={`/customer/product/${id}`} className="block cursor-pointer">
           <div className="relative w-full aspect-[3/4]">
             {!imageError && images && images.length > 0 ? (
               <img
@@ -127,14 +127,17 @@ function ProductCard({
 
       <div className="pt-1 pb-1">
         <div className="flex items-center justify-between mb-0">
-          <a href={`/customer/product/${id}`} className="block flex-1">
+          <a
+            href={`/customer/product/${id}`}
+            className="block flex-1 cursor-pointer"
+          >
             <h3 className="text-xs font-normal text-gray-900 dark:text-white uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               {name}
             </h3>
           </a>
           {showActions && (
             <button
-              className="flex items-center justify-center"
+              className="flex items-center justify-center cursor-pointer"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -142,7 +145,7 @@ function ProductCard({
               }}
             >
               <BookmarkIcon
-                className={`w-3 h-3 transition-colors cursor-pointer ${
+                className={`w-3 h-3 transition-colors ${
                   isInWishlist
                     ? "fill-black text-black dark:fill-white dark:text-white"
                     : "text-gray-400 hover:text-black dark:hover:text-white"
@@ -490,7 +493,7 @@ export default function BrowsePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.push("/customer")}
-            className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
           >
             Home
           </button>
@@ -542,7 +545,7 @@ export default function BrowsePage() {
                       );
                     }
                   }}
-                  className={`px-5 h-10 text-[10px] uppercase tracking-[0.2em] font-medium whitespace-nowrap transition-all duration-300 ${
+                  className={`px-5 h-10 text-[10px] uppercase tracking-[0.2em] font-medium whitespace-nowrap transition-all duration-300 cursor-pointer ${
                     selectedCategory === category
                       ? "text-gray-900 dark:text-white border-b-2 border-black dark:border-white"
                       : "text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-white"
@@ -560,7 +563,7 @@ export default function BrowsePage() {
                 <div className="relative">
                   <button
                     onClick={() => setSubcategoryOpen(!subcategoryOpen)}
-                    className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
+                    className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium hover:text-gray-600 dark:hover:text-gray-400 transition-colors cursor-pointer"
                   >
                     {selectedSubcategory || "Category"}
                   </button>
@@ -568,7 +571,7 @@ export default function BrowsePage() {
                   {subcategoryOpen && (
                     <>
                       <div
-                        className="fixed inset-0 z-40"
+                        className="fixed inset-0 z-40 cursor-pointer"
                         onClick={() => setSubcategoryOpen(false)}
                       />
                       <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 z-50 max-h-[400px] overflow-y-auto">
@@ -582,7 +585,7 @@ export default function BrowsePage() {
                                 `/customer/browse?category=${selectedCategory.toLowerCase()}`
                               );
                             }}
-                            className={`block w-full text-left px-4 py-3 text-xs transition-colors ${
+                            className={`block w-full text-left px-4 py-3 text-xs transition-colors cursor-pointer ${
                               !selectedSubcategory
                                 ? "text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900"
                                 : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900"
@@ -601,7 +604,7 @@ export default function BrowsePage() {
                                   `/customer/browse?category=${selectedCategory.toLowerCase()}&subcategory=${sub.toLowerCase()}`
                                 );
                               }}
-                              className={`block w-full text-left px-4 py-3 text-xs transition-colors ${
+                              className={`block w-full text-left px-4 py-3 text-xs transition-colors cursor-pointer ${
                                 selectedSubcategory === sub
                                   ? "text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900"
                                   : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900"
@@ -621,7 +624,7 @@ export default function BrowsePage() {
               <div className="relative">
                 <button
                   onClick={() => setFiltersOpen(!filtersOpen)}
-                  className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
+                  className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-900 dark:text-white font-medium hover:text-gray-600 dark:hover:text-gray-400 transition-colors cursor-pointer"
                 >
                   <FunnelIcon className="h-4 w-4" />
                   Sort
@@ -630,7 +633,7 @@ export default function BrowsePage() {
                 {filtersOpen && (
                   <>
                     <div
-                      className="fixed inset-0 z-40"
+                      className="fixed inset-0 z-40 cursor-pointer"
                       onClick={() => setFiltersOpen(false)}
                     />
                     <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 z-50">
@@ -643,7 +646,7 @@ export default function BrowsePage() {
                               setFiltersOpen(false);
                               setPagination((prev) => ({ ...prev, page: 1 }));
                             }}
-                            className={`block w-full text-left px-4 py-3 text-xs transition-colors ${
+                            className={`block w-full text-left px-4 py-3 text-xs transition-colors cursor-pointer ${
                               sortBy === option.value
                                 ? "text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900"
                                 : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900"
@@ -677,7 +680,7 @@ export default function BrowsePage() {
               <p className="text-sm text-red-500 mb-4">{error}</p>
               <button
                 onClick={() => window.location.reload()}
-                className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline"
+                className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline cursor-pointer"
               >
                 Retry
               </button>
@@ -712,7 +715,7 @@ export default function BrowsePage() {
                     setPagination((prev) => ({ ...prev, page: 1 }));
                     router.push("/customer/browse");
                   }}
-                  className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline"
+                  className="text-xs uppercase tracking-[0.2em] text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors underline cursor-pointer"
                 >
                   Reset Filters
                 </button>
@@ -735,7 +738,7 @@ export default function BrowsePage() {
                   }))
                 }
                 disabled={pagination.page === 1}
-                className="h-11 px-8 border border-gray-200 dark:border-gray-800 text-[10px] text-gray-900 dark:text-white hover:border-black dark:hover:border-white transition-colors uppercase tracking-[0.2em] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-11 px-8 border border-gray-200 dark:border-gray-800 text-[10px] text-gray-900 dark:text-white hover:border-black dark:hover:border-white transition-colors uppercase tracking-[0.2em] font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 Previous
               </button>
@@ -751,7 +754,7 @@ export default function BrowsePage() {
                         onClick={() =>
                           setPagination((prev) => ({ ...prev, page: pageNum }))
                         }
-                        className={`h-11 w-11 text-xs font-medium flex items-center justify-center transition-colors ${
+                        className={`h-11 w-11 text-xs font-medium flex items-center justify-center transition-colors cursor-pointer ${
                           pagination.page === pageNum
                             ? "bg-black dark:bg-white text-white dark:text-black"
                             : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -772,7 +775,7 @@ export default function BrowsePage() {
                           page: pagination.pages,
                         }))
                       }
-                      className="h-11 w-11 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-medium flex items-center justify-center transition-colors"
+                      className="h-11 w-11 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-medium flex items-center justify-center transition-colors cursor-pointer"
                     >
                       {pagination.pages}
                     </button>
@@ -788,7 +791,7 @@ export default function BrowsePage() {
                   }))
                 }
                 disabled={pagination.page === pagination.pages}
-                className="h-11 px-8 border border-gray-200 dark:border-gray-800 text-[10px] text-gray-900 dark:text-white hover:border-black dark:hover:border-white transition-colors uppercase tracking-[0.2em] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-11 px-8 border border-gray-200 dark:border-gray-800 text-[10px] text-gray-900 dark:text-white hover:border-black dark:hover:border-white transition-colors uppercase tracking-[0.2em] font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 Next
               </button>

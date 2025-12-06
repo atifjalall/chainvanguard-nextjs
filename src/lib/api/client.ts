@@ -28,9 +28,28 @@ class ApiClient {
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor - handle errors
+    // Response interceptor - handle errors and safe mode
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        // Detect safe mode in successful responses
+        const data = response.data as any;
+        if (data?.safeMode === true) {
+          // Show safe mode notification (non-blocking)
+          if (typeof window !== "undefined") {
+            import("sonner").then(({ toast }) => {
+              const hasShownToast = sessionStorage.getItem('safemode_toast_shown');
+              if (!hasShownToast) {
+                toast.warning("Maintenance Mode", {
+                  description: data.warning || data.message || "Viewing backup data. Some features may be limited.",
+                  duration: 8000,
+                });
+                sessionStorage.setItem('safemode_toast_shown', 'true');
+              }
+            });
+          }
+        }
+        return response;
+      },
       (error: AxiosError) => {
         // Handle auth errors (401 & 403)
         const status = error.response?.status;

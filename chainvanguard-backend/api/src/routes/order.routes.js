@@ -10,6 +10,7 @@ import {
 } from "../middleware/auth.middleware.js";
 import Order from "../models/Order.js";
 import walletBalanceService from "../services/wallet.balance.service.js";
+import { initializeSafeMode, queryCollection, countDocuments } from "../utils/safeMode/lokiService.js";
 
 const router = express.Router();
 
@@ -147,6 +148,7 @@ router.post(
  * GET /api/orders
  * Get customer's orders with filters
  * Query params: status, page, limit, sortBy, sortOrder
+ * Now supports safe mode - falls back to backup data when MongoDB is down
  */
 router.get("/", verifyToken, requireVerification, async (req, res) => {
   try {
@@ -160,6 +162,73 @@ router.get("/", verifyToken, requireVerification, async (req, res) => {
       endDate: req.query.endDate,
     };
 
+    // Check if we're in safe mode
+    if (req.safeMode) {
+      console.warn('⚠️  Safe mode active - using LokiJS for orders');
+
+      // Initialize safe mode (loads data into LokiJS from IPFS/Redis cache)
+      await initializeSafeMode(req.userId, 100);
+
+      // Build query based on user role
+      let query = {};
+      if (req.userRole === "customer") {
+        query.customerId = req.userId;
+      } else if (req.userRole === "vendor" || req.userRole === "supplier") {
+        query.sellerId = req.userId;
+      }
+      // Experts can see all (no filter needed)
+
+      // Apply status filter
+      if (filters.status) {
+        query.status = filters.status;
+      }
+
+      // Apply date range filter
+      if (filters.startDate || filters.endDate) {
+        query.createdAt = {};
+        if (filters.startDate) {
+          query.createdAt.$gte = new Date(filters.startDate);
+        }
+        if (filters.endDate) {
+          query.createdAt.$lte = new Date(filters.endDate);
+        }
+      }
+
+      // Build sort options
+      const sortOrder = filters.sortOrder === "asc" ? 1 : -1;
+      const page = filters.page || 1;
+      const limit = filters.limit || 20;
+      const skip = (page - 1) * limit;
+
+      const options = {
+        sort: { [filters.sortBy]: sortOrder },
+        skip,
+        limit
+      };
+
+      // Query LokiJS with MongoDB-like syntax
+      const orders = queryCollection(req.userId, 'orders', query, options);
+      const total = countDocuments(req.userId, 'orders', query);
+
+      return res.json({
+        success: true,
+        data: {
+          orders,
+          pagination: {
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / limit),
+            totalItems: total,
+            itemsPerPage: parseInt(limit),
+            hasNextPage: page * limit < total,
+            hasPrevPage: page > 1,
+          },
+        },
+        safeMode: true,
+        warning: 'Viewing backup data from last snapshot. Data may not be up-to-date.',
+      });
+    }
+
+    // Normal mode - MongoDB is healthy
     // 🆕 ROLE-BASED QUERY LOGIC
     let query = {};
     if (req.userRole === "customer") {
@@ -222,6 +291,7 @@ router.get("/", verifyToken, requireVerification, async (req, res) => {
           hasPrevPage: page > 1,
         },
       },
+      safeMode: false,
     });
   } catch (error) {
     console.error("GET /api/orders error:", error);
@@ -576,6 +646,50 @@ router.get(
  */
 router.get("/:id", verifyToken, requireVerification, async (req, res) => {
   try {
+    // SAFE MODE: Query LokiJS
+    if (req.safeMode) {
+      await initializeSafeMode(req.userId, 100);
+
+      // Query LokiJS for the specific order
+      const orders = queryCollection(req.userId, 'orders', { _id: req.params.id });
+      const order = orders.length > 0 ? orders[0] : null;
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found in backup",
+          safeMode: true
+        });
+      }
+
+      // Check authorization
+      const isCustomer = order.customerId?.toString() === req.userId || order.userId?.toString() === req.userId;
+      const isSeller = order.sellerId?.toString() === req.userId;
+      const isExpert = req.userRole === "expert";
+
+      if (!isCustomer && !isSeller && !isExpert) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized: You don't have access to this order",
+          safeMode: true
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          order: {
+            ...order,
+            id: order._id?.toString() || order._id,
+            _id: order._id?.toString() || order._id,
+          },
+        },
+        safeMode: true,
+        warning: 'Viewing backup data from last snapshot.'
+      });
+    }
+
+    // NORMAL MODE: Query MongoDB
     const order = await Order.findById(req.params.id)
       .populate("customerId", "name email walletAddress")
       .populate("sellerId", "name walletAddress");

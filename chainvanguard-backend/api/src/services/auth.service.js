@@ -156,15 +156,62 @@ class AuthService {
 
       await fabricService.connect();
 
-      // ❌ REMOVED: IPFS user metadata upload
-      // IPFS should only store FILES (KYC documents), not JSON user data
-      // User metadata (name, email, phone, address) is mutable and belongs in MongoDB only
+      // ✅ NEW: Store user data on IPFS for disaster recovery
+      console.log("📤 Uploading user data to IPFS...");
 
-      // ✅ Prepare IMMUTABLE user registration data for blockchain
+      // Prepare user data for IPFS (exclude sensitive fields)
+      const userDataForIPFS = {
+        userId: user._id.toString(),
+        walletAddress: user.walletAddress,
+        walletName: user.walletName,
+        passwordHash: user.passwordHash, // Keep for login verification
+        encryptedMnemonic: user.encryptedMnemonic, // Keep encrypted
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        postalCode: user.postalCode,
+        companyName: user.companyName,
+        businessType: user.businessType,
+        businessAddress: user.businessAddress,
+        registrationNumber: user.registrationNumber,
+        taxId: user.taxId,
+        organizationMSP: user.organizationMSP,
+        isActive: user.isActive,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+
+      // Upload to IPFS
+      const userDataBuffer = Buffer.from(JSON.stringify(userDataForIPFS, null, 2));
+      const ipfsResult = await ipfsService.pinFileToIPFS(
+        userDataBuffer,
+        `user-${user.walletAddress}.json`,
+        {
+          type: "user_registration",
+          userId: user._id.toString(),
+          walletAddress: user.walletAddress,
+          role: user.role,
+        }
+      );
+
+      if (!ipfsResult.success) {
+        throw new Error(`IPFS upload failed: ${ipfsResult.error}`);
+      }
+
+      console.log(`✅ User data uploaded to IPFS: ${ipfsResult.ipfsHash}`);
+
+      // ✅ Store IMMUTABLE user registration data on blockchain with IPFS CID
       const fabricUserData = {
         userId: user._id.toString(),
         walletAddress: user.walletAddress, // ✅ Immutable
         role: user.role, // ✅ Rarely changes (tracked separately if it does)
+        userDataCID: ipfsResult.ipfsHash, // ✅ IPFS CID for user data (for recovery)
         kycHash: user.kycHash || null, // ✅ IPFS hash of KYC documents (if uploaded)
         registeredAt: user.createdAt,
       };
@@ -174,6 +221,7 @@ class AuthService {
       user.fabricRegistered = true;
       user.fabricUserId = user.walletAddress;
       user.blockchainTxId = result.txId || "success";
+      user.userDataCID = ipfsResult.ipfsHash; // Store CID in MongoDB for quick access
       await user.save();
 
       console.log(`✅ User registered on blockchain: ${user.name}`);

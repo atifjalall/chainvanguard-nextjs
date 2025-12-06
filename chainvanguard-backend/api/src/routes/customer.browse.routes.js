@@ -19,6 +19,24 @@ const router = express.Router();
  */
 router.get("/products", async (req, res) => {
   try {
+    // SAFE MODE: Limited browsing (use /api/products with sellerId instead)
+    if (req.safeMode) {
+      return res.json({
+        success: true,
+        safeMode: true,
+        products: [],
+        pagination: {
+          page: parseInt(req.query.page) || 1,
+          limit: parseInt(req.query.limit) || 20,
+          total: 0,
+          pages: 0
+        },
+        message: "Advanced product browsing temporarily unavailable during maintenance",
+        warning: "Use /api/products?sellerId=XXX to browse products by specific vendor.",
+        note: "Your favorites and browsing history will be available when maintenance completes."
+      });
+    }
+
     const filters = {
       // Pagination
       page: parseInt(req.query.page) || 1,

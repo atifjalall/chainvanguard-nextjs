@@ -11,6 +11,12 @@ import {
   authorizeRoles,
   checkRole,
 } from "../middleware/auth.middleware.js";
+import { safeModeLogin } from "../utils/safeMode/safeModeAuth.js";
+import {
+  initializeSafeMode,
+  queryCollection,
+} from "../utils/safeMode/lokiService.js";
+import expertRecoveryService from "../services/expert.recovery.service.js";
 
 const router = express.Router();
 const walletService = new WalletService();
@@ -323,6 +329,9 @@ router.post("/send-welcome-email", async (req, res) => {
  * POST /api/auth/login
  * POST /api/auth/login/password (alias)
  * Login with wallet address and password
+ * Now supports:
+ * 1. Safe mode - falls back to backup data when MongoDB is down
+ * 2. Expert recovery - recovers expert accounts from IPFS/Blockchain when MongoDB is wiped
  */
 const loginHandler = async (req, res) => {
   try {
@@ -337,12 +346,66 @@ const loginHandler = async (req, res) => {
     }
 
     const clientIp = req.ip || req.connection.remoteAddress;
-    const result = await authService.login(wallet, password, clientIp);
+
+    // Use safe mode aware login that falls back to backup data if MongoDB is down
+    const normalLoginFn = async (w, p) => {
+      try {
+        return await authService.login(w, p, clientIp);
+      } catch (loginError) {
+        // If user not found and it's an expert account, attempt recovery from backup
+        if (loginError.message === "Invalid credentials") {
+          console.log(
+            "🔍 User not found in MongoDB, checking if expert recovery is possible..."
+          );
+
+          // Check if this is an expert in the backup
+          const expertCheck =
+            await expertRecoveryService.checkExpertExistsInBackup(w);
+
+          if (expertCheck.exists) {
+            console.log("🔄 Expert found in backup, attempting recovery...");
+
+            // Attempt to recover expert from backup
+            const recoveryResult =
+              await expertRecoveryService.recoverExpertFromBackup(w, p);
+
+            if (recoveryResult.success) {
+              console.log(
+                "✅ Expert recovered successfully, proceeding with login..."
+              );
+
+              // Now retry login with recovered user
+              const loginResult = await authService.login(w, p, clientIp);
+
+              return {
+                ...loginResult,
+                recovered: true,
+                recoveryMessage: recoveryResult.message,
+                userDataCID: recoveryResult.userDataCID,
+                recoverySource: recoveryResult.recoverySource,
+              };
+            }
+          }
+        }
+
+        // If not an expert or recovery failed, throw original error
+        throw loginError;
+      }
+    };
+
+    const result = await safeModeLogin(wallet, password, normalLoginFn);
 
     res.json({
       success: true,
-      message: "Login successful",
+      message: result.recovered
+        ? "Account recovered from backup and login successful"
+        : result.safeMode
+          ? "Login successful (using backup data)"
+          : "Login successful",
       data: result,
+      safeMode: result.safeMode || false,
+      recovered: result.recovered || false,
+      warning: result.recoveryMessage || result.warning || null,
     });
   } catch (error) {
     console.error("❌ Login error:", error);
@@ -547,9 +610,42 @@ router.post("/verify-email", async (req, res) => {
  * GET /api/auth/me
  * GET /api/auth/profile (alias)
  * Get current user profile
+ * Now supports safe mode - falls back to backup data when MongoDB is down
  */
 const getProfileHandler = async (req, res) => {
   try {
+    // Check if in safe mode
+    if (req.safeMode) {
+      console.warn("⚠️  Safe mode active - using LokiJS for profile");
+
+      // Initialize safe mode (loads data into LokiJS from IPFS/Redis cache)
+      await initializeSafeMode(req.userId, 100);
+
+      // Query LokiJS for user profile
+      const users = queryCollection(req.userId, "users", { _id: req.userId });
+      const userProfile = users.length > 0 ? users[0] : null;
+
+      if (!userProfile) {
+        return res.status(404).json({
+          success: false,
+          error: "User profile not found in backup",
+          safeMode: true,
+        });
+      }
+
+      // Remove sensitive fields
+      const { password, passwordHash, encryptedMnemonic, ...safeProfile } =
+        userProfile;
+
+      return res.json({
+        success: true,
+        data: safeProfile,
+        safeMode: true,
+        warning: "Viewing backup data from last snapshot.",
+      });
+    }
+
+    // Normal mode - MongoDB is healthy
     const user = await User.findById(req.userId).select(
       "-passwordHash -encryptedMnemonic"
     );
@@ -564,6 +660,7 @@ const getProfileHandler = async (req, res) => {
     res.json({
       success: true,
       data: user,
+      safeMode: false,
     });
   } catch (error) {
     console.error("❌ Get profile error:", error);
@@ -694,6 +791,7 @@ router.put("/profile", authenticate, async (req, res) => {
       state,
       country,
       postalCode,
+      isVerified,
     } = req.body;
 
     const user = await User.findById(req.userId);
@@ -720,7 +818,15 @@ router.put("/profile", authenticate, async (req, res) => {
       }
 
       user.email = email.toLowerCase().trim();
-      user.isVerified = false; // Require re-verification for new email
+
+      // ✅ Only set isVerified to false if not explicitly provided as true
+      // This allows frontend to maintain verification after OTP
+      if (isVerified !== true) {
+        user.isVerified = false; // Require re-verification for new email
+      } else {
+        user.isVerified = true;
+        user.emailVerifiedAt = new Date(); // ✅ Update verification timestamp
+      }
     }
 
     // Update fields
@@ -739,6 +845,10 @@ router.put("/profile", authenticate, async (req, res) => {
 
     user.updatedAt = new Date();
     await user.save();
+
+    console.log(
+      `✅ Profile updated for user ${user._id}, isVerified: ${user.isVerified}`
+    );
 
     res.json({
       success: true,

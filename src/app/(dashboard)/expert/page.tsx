@@ -5,22 +5,20 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-  UsersIcon,
-  CubeIcon,
-  ShoppingBagIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   ArrowPathIcon,
-  ArrowRightIcon,
   ShieldCheckIcon,
   BoltIcon,
   ServerIcon,
   ChartBarIcon,
-  ExclamationTriangleIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  UsersIcon,
   ClockIcon,
+  CubeIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { expertApi } from "@/lib/api/expert.api";
@@ -38,7 +36,7 @@ export default function ExpertDashboard() {
   const [faultStatus, setFaultStatus] = useState<any>(null);
   const [securityData, setSecurityData] = useState<any>(null);
   const [consensusMetrics, setConsensusMetrics] = useState<any>(null);
-  const [animationKey, setAnimationKey] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const isMounted = useRef(true);
   const isLoadingRef = useRef(false);
   const isInitialLoad = useRef(true);
@@ -46,13 +44,13 @@ export default function ExpertDashboard() {
   useEffect(() => {
     isMounted.current = true;
     loadDashboardData();
-
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => {
       isMounted.current = false;
+      clearInterval(timer);
     };
-  }, []); // Empty dependency array - only run once on mount
+  }, []);
 
-  // Add a small local API response type for clarity
   type ApiResponse<T = any> = { success: boolean; data: T; message?: string };
 
   const loadDashboardData = async () => {
@@ -61,14 +59,13 @@ export default function ExpertDashboard() {
     try {
       isLoadingRef.current = true;
       setIsLoading(true);
-      // Fetch dashboard, fault, security, consensus metrics, and consensus status (peers)
       const [dashboard, fault, security, consensus, status] =
         (await Promise.all([
           expertApi.getDashboardStats(),
           expertApi.getFaultToleranceStatus(),
           expertApi.getSecurityOverview(),
           expertApi.getConsensusMetrics("24h"),
-          expertApi.getConsensusStatus(), // <--- fetch peers/status for quick stat fallback
+          expertApi.getConsensusStatus(),
         ])) as [
           ApiResponse<any>,
           ApiResponse<any>,
@@ -77,24 +74,14 @@ export default function ExpertDashboard() {
           ApiResponse<any>,
         ];
 
-      if (!isMounted.current) return; // Prevent state updates if unmounted
+      if (!isMounted.current) return;
 
-      if ((dashboard as any).success) {
-        setStats((dashboard as any).data);
-      }
-      if (fault.success) {
-        setFaultStatus(fault.data);
-      }
-      if (security.success) {
-        setSecurityData(security.data);
-      }
-      if (consensus.success) {
-        setConsensusMetrics(consensus.data);
-      }
-      // set consensusStatus (peer list / network state) from status response if present
+      if ((dashboard as any).success) setStats((dashboard as any).data);
+      if (fault.success) setFaultStatus(fault.data);
+      if (security.success) setSecurityData(security.data);
+      if (consensus.success) setConsensusMetrics(consensus.data);
       if (status && (status as any).success && "data" in status) {
         setConsensusStatus((status as any).data);
-        // optionally set a systemHealth object if dashboard expects it
         setSystemHealth((status as any).data);
       }
     } catch (error) {
@@ -105,17 +92,12 @@ export default function ExpertDashboard() {
     } finally {
       if (isMounted.current) {
         setIsLoading(false);
-        // Only update animation key on manual refresh, not initial load
-        if (!isInitialLoad.current) {
-          setAnimationKey((prev) => prev + 1);
-        }
         isInitialLoad.current = false;
       }
       isLoadingRef.current = false;
     }
   };
 
-  // Helper to compute peers count with fallbacks
   const getPeerCount = () => {
     const fromStats = Number(
       stats?.systemHealth?.activePeers ??
@@ -149,6 +131,49 @@ export default function ExpertDashboard() {
 
   const overallHealth = getOverallHealth();
 
+  // Helper to get icon for activity type
+  const getActivityIcon = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case "transaction":
+      case "transfer":
+        return ChartBarIcon;
+      case "security":
+      case "login":
+      case "auth":
+        return ShieldCheckIcon;
+      case "consensus":
+      case "block":
+        return CubeIcon;
+      case "user":
+      case "account":
+        return UsersIcon;
+      case "system":
+      case "error":
+        return ExclamationTriangleIcon;
+      case "fault":
+        return BoltIcon;
+      default:
+        return ClockIcon;
+    }
+  };
+
+  // Helper to get color for activity type
+  const getActivityColor = (type: string, status: string) => {
+    if (status === "error" || status === "failed") return "text-red-500";
+    if (status === "warning") return "text-yellow-500";
+
+    switch (type?.toLowerCase()) {
+      case "security":
+        return "text-blue-500";
+      case "consensus":
+        return "text-purple-500";
+      case "system":
+        return "text-green-500";
+      default:
+        return "text-gray-500";
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -164,182 +189,152 @@ export default function ExpertDashboard() {
 
   return (
     <motion.div
-      key={`dashboard-${animationKey}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       className={`relative z-10 p-6 space-y-6 ${colors.backgrounds.secondary} min-h-screen`}
     >
       {/* Header */}
-      <div>
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
-              System Monitoring & Control
-            </h1>
-            <p className={`text-base ${colors.texts.secondary}`}>
-              Real-time blockchain network monitoring and administration
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={loadDashboardData}
-              variant="outline"
-              className={`flex items-center gap-2 text-xs cursor-pointer hover:border hover:border-black rounded-none ${colors.buttons.secondary} transition-all`}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
+            System Dashboard
+          </h1>
+          <p className={`text-base ${colors.texts.secondary}`}>
+            Real-time monitoring and system control
+          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <Badge
+              className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
             >
-              <ArrowPathIcon className={`h-4 w-4 ${colors.icons.primary}`} />
-              Refresh
-            </Button>
+              {overallHealth.score}% Health
+            </Badge>
+            <Badge
+              className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
+            >
+               {currentTime.toLocaleTimeString()}
+            </Badge>
           </div>
         </div>
       </div>
 
-      {/* Hero Section - Critical Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* System Health */}
-        <Card
-          className={`${colors.cards.base} rounded-none !shadow-none border ${colors.borders.primary} hover:scale-[1.02] transition-transform cursor-pointer`}
-          onClick={() => router.push("/expert/system-health")}
-        >
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className={`text-sm ${colors.texts.secondary}`}>
-                System Health
-              </CardTitle>
-              <ServerIcon className="h-5 w-5" />
+      {/* Health Score Bar */}
+      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+        <CardHeader>
+          <CardTitle
+            className={`text-lg font-semibold ${colors.texts.primary}`}
+          >
+            System Health Status
+          </CardTitle>
+          <p className={`text-xs ${colors.texts.muted} mt-1`}>
+            Overall system health and performance metrics
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-xs ${colors.texts.secondary}`}>
+                Health Score
+              </span>
+              <span className={`text-sm font-bold ${colors.texts.primary}`}>
+                {overallHealth.score}%
+              </span>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className={`text-3xl font-semibold ${colors.texts.primary}`}>
-              {overallHealth.status}
+            <div className="h-2 bg-gray-200 dark:bg-gray-800 overflow-hidden rounded-none">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${overallHealth.score}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className={`h-full ${
+                  overallHealth.score >= 90
+                    ? "bg-green-500"
+                    : overallHealth.score >= 70
+                      ? "bg-blue-500"
+                      : overallHealth.score >= 50
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
+                }`}
+              />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-4">
+                <div>
+                  <div className={`text-xs ${colors.texts.secondary}`}>
+                    Security
+                  </div>
+                  <div
+                    className={`text-xs font-medium ${colors.texts.primary} capitalize`}
+                  >
+                    {securityData?.status || "Secure"}
+                  </div>
+                </div>
+                <div>
+                  <div className={`text-xs ${colors.texts.secondary}`}>
+                    Uptime
+                  </div>
+                  <div
+                    className={`text-xs font-medium ${colors.texts.primary}`}
+                  >
+                    {faultStatus?.metrics?.uptime || "99"}%
+                  </div>
+                </div>
+                <div>
+                  <div className={`text-xs ${colors.texts.secondary}`}>
+                    Active Peers
+                  </div>
+                  <div
+                    className={`text-xs font-medium ${colors.texts.primary}`}
+                  >
+                    {getPeerCount()}
+                  </div>
+                </div>
+              </div>
               <Badge
                 className={`${overallHealth.color.bg} ${overallHealth.color.border} ${overallHealth.color.text} text-xs rounded-none`}
               >
-                {overallHealth.score}% Score
-              </Badge>
-              <Badge
-                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none flex items-center gap-1`}
-              >
-                <CheckCircleIcon className="h-3 w-3" />
-                Active
+                {overallHealth.status}
               </Badge>
             </div>
-            <p className={`text-xs ${colors.texts.muted} mt-2`}>
-              All systems operational
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Fault Tolerance */}
-        <Card
-          className={`${colors.cards.base} rounded-none !shadow-none border ${colors.borders.primary} hover:scale-[1.02] transition-transform cursor-pointer`}
-          onClick={() => router.push("/expert/fault-tolerance")}
-        >
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className={`text-sm ${colors.texts.secondary}`}>
-                Fault Tolerance
-              </CardTitle>
-              <BoltIcon className="h-5 w-5" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className={`text-3xl font-semibold ${colors.texts.primary}`}>
-              {faultStatus?.score || "0"}%
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge
-                className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
-              >
-                {faultStatus?.status || "Good"}
-              </Badge>
-              <Badge
-                className={`${badgeColors.blue.bg} ${badgeColors.blue.border} ${badgeColors.blue.text} text-xs rounded-none`}
-              >
-                {faultStatus?.metrics?.uptime || "99"}% Uptime
-              </Badge>
-            </div>
-            <p className={`text-xs ${colors.texts.muted} mt-2`}>
-              {faultStatus?.metrics?.failedTransactions || 0} failed
-              transactions
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Security Status */}
-        <Card
-          className={`${colors.cards.base} rounded-none !shadow-none border ${colors.borders.primary} hover:scale-[1.02] transition-transform cursor-pointer`}
-          onClick={() => router.push("/expert/security")}
-        >
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className={`text-sm ${colors.texts.secondary}`}>
-                Security Status
-              </CardTitle>
-              <ShieldCheckIcon className="h-5 w-5" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div
-              className={`text-3xl font-semibold ${colors.texts.primary} capitalize`}
-            >
-              {securityData?.status || "Secure"}
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge
-                className={`${
-                  securityData?.status === "secure"
-                    ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text}`
-                    : `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text}`
-                } text-xs rounded-none`}
-              >
-                {securityData?.metrics?.securityEvents || 0} Events (24h)
-              </Badge>
-            </div>
-            <p className={`text-xs ${colors.texts.muted} mt-2`}>
-              {securityData?.metrics?.activeUsers || 0} active users
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Stats */}
+      {/* Critical Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           {
-            title: "Total Users",
-            value: stats?.networkOverview?.totalUsers || 0,
-            subtitle: `${stats?.networkOverview?.activeUsers || 0} active`,
-            icon: UsersIcon,
-            color: badgeColors.blue,
+            title: "Transactions",
+            value: consensusMetrics?.metrics?.transactionCount || 0,
+            subtitle: "Last 24 hours",
+            icon: ChartBarIcon,
+            link: "/expert/all-transactions",
           },
           {
-            title: "Total Products",
-            value: stats?.networkOverview?.totalProducts || 0,
-            subtitle: `${stats?.networkOverview?.activeProducts || 0} in stock`,
+            title: "Blocks",
+            value: consensusMetrics?.metrics?.blockCount || 0,
+            subtitle: "Total blocks",
             icon: CubeIcon,
-            color: badgeColors.purple,
+            link: "/expert/consensus",
           },
           {
-            title: "Total Orders",
-            value: stats?.networkOverview?.totalOrders || 0,
-            subtitle: "Completed",
-            icon: ShoppingBagIcon,
-            color: badgeColors.green,
+            title: "Active Users",
+            value: stats?.networkOverview?.activeUsers || 0,
+            subtitle: "Currently active",
+            icon: UsersIcon,
+            link: "/expert/security",
           },
           {
-            title: "Network Peers",
+            title: "Network Nodes",
             value: getPeerCount(),
-            subtitle: "Connected nodes",
+            subtitle: "Connected peers",
             icon: ServerIcon,
-            color: badgeColors.yellow,
+            link: "/expert/consensus",
           },
         ].map((stat, index) => (
           <Card
             key={stat.title || index}
-            className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02]`}
+            onClick={() => router.push(stat.link)}
+            className={`${colors.cards.base} ${colors.cards.hover} rounded-none !shadow-none hover:!shadow-none transition-all duration-300 hover:scale-[1.02] cursor-pointer`}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle
@@ -351,7 +346,9 @@ export default function ExpertDashboard() {
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${colors.texts.primary}`}>
-                {Number(stat.value || 0).toLocaleString()}
+                {typeof stat.value === "number"
+                  ? stat.value.toLocaleString()
+                  : stat.value}
               </div>
               <p className={`text-xs ${colors.texts.muted} mt-1`}>
                 {stat.subtitle}
@@ -361,316 +358,232 @@ export default function ExpertDashboard() {
         ))}
       </div>
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Network Performance */}
-        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-          <CardHeader>
+      {/* System Status */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Fault Tolerance */}
+        <Card
+          className={`${colors.cards.base} rounded-none !shadow-none cursor-pointer`}
+          onClick={() => router.push("/expert/fault-tolerance")}
+        >
+          <CardHeader className="border-b border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle
-                  className={`text-lg font-semibold ${colors.texts.primary}`}
-                >
-                  Network Performance
-                </CardTitle>
-                <p className={`text-xs ${colors.texts.muted} mt-1`}>
-                  Blockchain transaction metrics (24h)
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/expert/consensus")}
-                className={`text-xs rounded-none cursor-pointer hover:border hover:border-black ${colors.buttons.outline}`}
-              >
-                View Details
-                <ArrowRightIcon className="h-3 w-3 ml-1" />
-              </Button>
+              <CardTitle className={`text-base ${colors.texts.primary}`}>
+                Fault Tolerance
+              </CardTitle>
+              <BoltIcon className="h-5 w-5" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div
-                className={`p-4 rounded-none border ${colors.borders.primary}`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <ChartBarIcon className="h-4 w-4" />
-                  <div className={`text-xs ${colors.texts.secondary}`}>
-                    Block Count
-                  </div>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <div className={`text-xs ${colors.texts.secondary} mb-1`}>
+                  Score
+                </div>
+                <div className={`text-xl font-bold ${colors.texts.primary}`}>
+                  {faultStatus?.score || "0"}%
+                </div>
+              </div>
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className={`text-xs ${colors.texts.secondary}`}>
+                    Failed TX
+                  </span>
+                  <span
+                    className={`text-xs font-medium ${colors.texts.primary}`}
+                  >
+                    {faultStatus?.metrics?.failedTransactions || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className={`text-xs ${colors.texts.secondary}`}>
+                    Uptime
+                  </span>
+                  <span
+                    className={`text-xs font-medium ${colors.texts.primary}`}
+                  >
+                    {faultStatus?.metrics?.uptime || "99"}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Security */}
+        <Card
+          className={`${colors.cards.base} rounded-none !shadow-none cursor-pointer`}
+          onClick={() => router.push("/expert/security")}
+        >
+          <CardHeader className="border-b border-gray-200 dark:border-gray-800">
+            <div className="flex items-center justify-between">
+              <CardTitle className={`text-base ${colors.texts.primary}`}>
+                Security
+              </CardTitle>
+              <ShieldCheckIcon className="h-5 w-5" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <div className={`text-xs ${colors.texts.secondary} mb-1`}>
+                  Status
+                </div>
+                <div
+                  className={`text-xl font-bold ${colors.texts.primary} capitalize`}
+                >
+                  {securityData?.status || "Secure"}
+                </div>
+              </div>
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className={`text-xs ${colors.texts.secondary}`}>
+                    Events (24h)
+                  </span>
+                  <span
+                    className={`text-xs font-medium ${colors.texts.primary}`}
+                  >
+                    {securityData?.metrics?.securityEvents || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className={`text-xs ${colors.texts.secondary}`}>
+                    Failed Logins
+                  </span>
+                  <span
+                    className={`text-xs font-medium ${colors.texts.primary}`}
+                  >
+                    {securityData?.metrics?.failedLogins || 0}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Consensus */}
+        <Card
+          className={`${colors.cards.base} rounded-none !shadow-none cursor-pointer`}
+          onClick={() => router.push("/expert/consensus")}
+        >
+          <CardHeader className="border-b border-gray-200 dark:border-gray-800">
+            <div className="flex items-center justify-between">
+              <CardTitle className={`text-base ${colors.texts.primary}`}>
+                Consensus
+              </CardTitle>
+              <ServerIcon className="h-5 w-5" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <div className={`text-xs ${colors.texts.secondary} mb-1`}>
+                  Block Count
                 </div>
                 <div className={`text-xl font-bold ${colors.texts.primary}`}>
                   {consensusMetrics?.metrics?.blockCount || 0}
                 </div>
               </div>
-              <div
-                className={`p-4 rounded-none border ${colors.borders.primary}`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircleIcon className="h-4 w-4" />
-                  <div className={`text-xs ${colors.texts.secondary}`}>
-                    Transactions
-                  </div>
-                </div>
-                <div className={`text-xl font-bold ${colors.texts.primary}`}>
-                  {consensusMetrics?.metrics?.transactionCount || 0}
-                </div>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <ClockIcon className="h-5 w-5" />
-                  <div>
-                    <div
-                      className={`text-xs font-medium ${colors.texts.primary}`}
-                    >
-                      Avg Block Time
-                    </div>
-                    <div className={`text-xs ${colors.texts.muted}`}>
-                      Generation speed
-                    </div>
-                  </div>
-                </div>
-                <div className={`text-sm font-bold ${colors.texts.primary}`}>
-                  {consensusMetrics?.metrics?.avgBlockTime?.toFixed(2) || "0"}s
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <ChartBarIcon className="h-5 w-5" />
-                  <div>
-                    <div
-                      className={`text-xs font-medium ${colors.texts.primary}`}
-                    >
-                      Success Rate
-                    </div>
-                    <div className={`text-xs ${colors.texts.muted}`}>
-                      Transaction success
-                    </div>
-                  </div>
-                </div>
-                <div className={`text-sm font-bold ${colors.texts.primary}`}>
-                  {stats?.transactions?.successRate || 0}%
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Right Column - Security Overview */}
-        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle
-                  className={`text-lg font-semibold ${colors.texts.primary}`}
-                >
-                  Security Overview
-                </CardTitle>
-                <p className={`text-xs ${colors.texts.muted} mt-1`}>
-                  Access control and monitoring (24h)
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/expert/security")}
-                className={`text-xs rounded-none cursor-pointer hover:border hover:border-black ${colors.buttons.outline}`}
-              >
-                Manage Users
-                <ArrowRightIcon className="h-3 w-3 ml-1" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div
-                className={`p-4 rounded-none border ${colors.borders.primary}`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <UsersIcon className="h-4 w-4" />
-                  <div className={`text-xs ${colors.texts.secondary}`}>
-                    Active Users
-                  </div>
-                </div>
-                <div className={`text-xl font-bold ${colors.texts.primary}`}>
-                  {securityData?.metrics?.activeUsers || 0}
-                </div>
-              </div>
-              <div
-                className={`p-4 rounded-none border ${colors.borders.primary}`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <ExclamationTriangleIcon className="h-4 w-4" />
-                  <div className={`text-xs ${colors.texts.secondary}`}>
-                    Failed Logins
-                  </div>
-                </div>
-                <div className={`text-xl font-bold ${colors.texts.primary}`}>
-                  {securityData?.metrics?.failedLogins || 0}
-                </div>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <ShieldCheckIcon className="h-5 w-5" />
-                  <div>
-                    <div
-                      className={`text-xs font-medium ${colors.texts.primary}`}
-                    >
-                      Security Events
-                    </div>
-                    <div className={`text-xs ${colors.texts.muted}`}>
-                      Last 24 hours
-                    </div>
-                  </div>
-                </div>
-                <div className={`text-sm font-bold ${colors.texts.primary}`}>
-                  {securityData?.metrics?.securityEvents || 0}
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <XCircleIcon className="h-5 w-5" />
-                  <div>
-                    <div
-                      className={`text-xs font-medium ${colors.texts.primary}`}
-                    >
-                      Frozen Wallets
-                    </div>
-                    <div className={`text-xs ${colors.texts.muted}`}>
-                      Disabled accounts
-                    </div>
-                  </div>
-                </div>
-                <div className={`text-sm font-bold ${colors.texts.primary}`}>
-                  {securityData?.metrics?.inactiveUsers || 0}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* User Distribution by Role */}
-      <div>
-        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle
-                  className={`text-lg font-semibold ${colors.texts.primary}`}
-                >
-                  User Distribution by Role
-                </CardTitle>
-                <p className={`text-xs ${colors.texts.muted} mt-1`}>
-                  Platform user breakdown across different roles
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(stats?.networkOverview?.usersByRole || {}).map(
-                ([role, count]: [string, any]) => (
-                  <div
-                    key={role}
-                    className={`p-6 rounded-none ${colors.cards.hover} border ${colors.borders.primary} hover:scale-[1.02] transition-transform`}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className={`text-xs ${colors.texts.secondary}`}>
+                    Block Time
+                  </span>
+                  <span
+                    className={`text-xs font-medium ${colors.texts.primary}`}
                   >
-                    <div
-                      className={`text-xs ${colors.texts.secondary} uppercase mb-2 font-semibold`}
-                    >
-                      {role}
-                    </div>
-                    <div
-                      className={`text-3xl font-bold ${colors.texts.primary}`}
-                    >
-                      {count}
-                    </div>
-                    <div className={`text-xs ${colors.texts.muted} mt-1`}>
-                      {(
-                        (count / stats?.networkOverview?.totalUsers) * 100 || 0
-                      ).toFixed(1)}
-                      % of total
-                    </div>
-                  </div>
-                )
-              )}
+                    {consensusMetrics?.metrics?.avgBlockTime?.toFixed(2) || "0"}
+                    s
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className={`text-xs ${colors.texts.secondary}`}>
+                    Peers
+                  </span>
+                  <span
+                    className={`text-xs font-medium ${colors.texts.primary}`}
+                  >
+                    {getPeerCount()}
+                  </span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Recent Activity */}
-      <div>
-        <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle
-                  className={`text-lg font-semibold ${colors.texts.primary}`}
-                >
-                  Recent Blockchain Activity
-                </CardTitle>
-                <p className={`text-xs ${colors.texts.muted} mt-1`}>
-                  Latest transactions and system events
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                className={`text-xs rounded-none cursor-pointer hover:border hover:border-black ${colors.buttons.secondary}`}
-                onClick={() => router.push("/expert/all-transactions")}
-              >
-                View All Transactions
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {stats?.recentLogs?.slice(0, 5).map((log: any, index: number) => (
-                <div
-                  key={log.id || index}
-                  className={`flex items-center justify-between p-4 rounded-none border ${colors.borders.primary} hover:bg-gray-50 dark:hover:bg-gray-900/20 transition-colors`}
-                >
-                  <div className="flex items-center gap-4">
-                    {log.status === "success" ? (
-                      <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/20">
-                        <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+      <Card className={`${colors.cards.base} rounded-none !shadow-none`}>
+        <CardHeader className="border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-center justify-between">
+            <CardTitle className={`text-base ${colors.texts.primary}`}>
+              Recent System Activity
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/expert/all-transactions")}
+              className={`text-xs rounded-none ${colors.texts.secondary} hover:${colors.texts.primary}`}
+            >
+              View All
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {stats?.recentLogs && stats.recentLogs.length > 0 ? (
+            <div className="divide-y divide-gray-200 dark:divide-gray-800">
+              {stats.recentLogs.slice(0, 6).map((log: any, index: number) => {
+                const ActivityIcon = getActivityIcon(log.type);
+                const iconColor = getActivityColor(log.type, log.status);
+
+                return (
+                  <motion.div
+                    key={log.id || index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.08 }}
+                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <ActivityIcon className="h-4 w-4 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div
+                            className={`text-xs font-medium ${colors.texts.primary} truncate`}
+                          >
+                            {log.type} - {log.action}
+                          </div>
+                          <div className={`text-xs ${colors.texts.muted}`}>
+                            {log.user?.name || "SYSTEM"}
+                          </div>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/20">
-                        <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
-                      </div>
-                    )}
-                    <div>
-                      <div
-                        className={`text-sm font-medium ${colors.texts.primary}`}
-                      >
-                        {log.type} - {log.action}
-                      </div>
-                      <div className={`text-xs ${colors.texts.muted} mt-1`}>
-                        {log.user?.name || "System"} •{" "}
-                        {new Date(log.timestamp).toLocaleString()}
+                      <div className="flex items-center gap-3">
+                        {log.status === "success" ? (
+                          <CheckCircleIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        ) : (
+                          <XCircleIcon className="h-4 w-4 text-red-500 flex-shrink-0" />
+                        )}
+                        <div
+                          className={`text-xs ${colors.texts.muted} whitespace-nowrap`}
+                        >
+                          {new Date(log.timestamp).toLocaleTimeString()}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <Badge
-                    className={`${
-                      log.status === "success"
-                        ? `${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text}`
-                        : `${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text}`
-                    } text-xs rounded-none`}
-                  >
-                    {log.status}
-                  </Badge>
-                </div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          ) : (
+            <div className="p-12 text-center">
+              <ClockIcon className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+              <div className={`text-sm ${colors.texts.secondary}`}>
+                No recent activity
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }

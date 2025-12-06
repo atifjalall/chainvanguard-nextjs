@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -122,6 +122,7 @@ const FORM_SPACING = "space-y-6";
 const SECTION_MARGIN = "mb-6";
 const CONTAINER_PADDING = "p-4 md:p-6";
 const FIELD_GAP = "gap-6";
+const HOVER_BORDER_CLASS = "hover:border-black dark:hover:border-white";
 
 export default function ProfilePage() {
   usePageTitle("Profile");
@@ -152,7 +153,11 @@ export default function ProfilePage() {
 
   // OTP related states
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
-  const [otp, setOtp] = useState("");
+  // store one digit per index for the 6 inputs
+  const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(""));
+  // refs for each input
+  const otpInputsRef = useRef<HTMLInputElement[]>([]);
+  const lastOtpAttemptRef = useRef<string>("");
   const [otpError, setOtpError] = useState("");
   const [isOtpLoading, setIsOtpLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
@@ -165,6 +170,10 @@ export default function ProfilePage() {
   const [emailExists, setEmailExists] = useState(false);
   const [originalEmail, setOriginalEmail] = useState("");
 
+  // Maximum OTP attempts
+  const MAX_OTP_ATTEMPTS = 5;
+  const [attemptsLeft, setAttemptsLeft] = useState<number>(MAX_OTP_ATTEMPTS);
+
   useEffect(() => {
     setIsVisible(true);
     if (user) {
@@ -173,8 +182,8 @@ export default function ProfilePage() {
         email: user.email || "",
         phone: user.phone || "",
         address: user.address || "",
-        province: user.state || "",
-        city: user.city || "",
+        province: (user.state || "").trim(),
+        city: (user.city || "").trim(),
         postalCode: user.postalCode || "",
         role: user.role || "",
         companyName: user.companyName || "",
@@ -267,20 +276,28 @@ export default function ProfilePage() {
   }, [formData.email, originalEmail]);
 
   // Clear city when province changes, but only if city is not valid for the new province
+  // Improved: don't clear city if province has no mapping (so DB values still show).
   useEffect(() => {
-    if (formData.province && formData.city) {
-      const validCities = provinceCityMap[formData.province] || [];
-      // Only clear city if it's not valid for the current province
-      if (!validCities.includes(formData.city)) {
-        setFormData((prev) => ({ ...prev, city: "" }));
-      }
-    } else if (!formData.province) {
-      // Clear city if no province is selected
+    const prov = (formData.province || "").trim();
+    const city = (formData.city || "").trim();
+
+    if (!prov) {
+      // Keep city if province not selected - don't force-clear
+      return;
+    }
+
+    const validCities = provinceCityMap[prov] || [];
+
+    // Only clear if mapping exists and city is not in that mapping
+    if (validCities.length > 0 && city && !validCities.includes(city)) {
       setFormData((prev) => ({ ...prev, city: "" }));
     }
   }, [formData.province, formData.city]);
 
   const handleInputChange = (field: string, value: string) => {
+    // normalize the value
+    const trimmedValue = value.trim();
+
     // Add character limit for name field
     if (field === "name" && value.length > 30) {
       return;
@@ -302,9 +319,19 @@ export default function ProfilePage() {
       value = value.replace(/\D/g, "").slice(0, 5);
     }
 
-    // Clear city when province changes
+    // Province change: trim and only clear city if new province mapping doesn't include existing city
     if (field === "province") {
-      setFormData((prev) => ({ ...prev, province: value, city: "" }));
+      const newProvince = trimmedValue;
+      setFormData((prev) => {
+        const prevCity = prev.city?.trim() || "";
+        const validCities = provinceCityMap[newProvince] || [];
+        const cityToKeep =
+          prevCity && validCities.length > 0 && validCities.includes(prevCity)
+            ? prevCity
+            : "";
+        // apply trimmed province and the determined cityToKeep
+        return { ...prev, province: newProvince, city: cityToKeep };
+      });
       if (errors[field]) {
         setErrors((prev) => ({ ...prev, [field]: "" }));
       }
@@ -312,6 +339,11 @@ export default function ProfilePage() {
         setErrors((prev) => ({ ...prev, city: "" }));
       }
       return;
+    }
+
+    // City change: just trim user input
+    if (field === "city") {
+      value = trimmedValue;
     }
 
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -371,6 +403,8 @@ export default function ProfilePage() {
       const resp = await sendEmailOtp(targetEmail);
       if (resp.success) {
         setResendTimer(60);
+        // reset attempts when a new code is sent
+        setAttemptsLeft(MAX_OTP_ATTEMPTS);
         return { success: true, message: resp.message };
       }
       return { success: false, error: resp.error || "Failed to send OTP" };
@@ -382,7 +416,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     // Check if email is being checked
     if (isCheckingEmail) {
-      toast.info("Please wait while we verify your email...");
+      toast.info("Verifying email...");
       return;
     }
 
@@ -406,7 +440,7 @@ export default function ProfilePage() {
       try {
         const sendResp = await sendOtpToEmail(formData.email);
         if (!sendResp.success) {
-          toast.error(sendResp.error || "Failed to send OTP to new email");
+          toast.error(sendResp.error || "Failed to send OTP");
           return;
         }
 
@@ -471,8 +505,9 @@ export default function ProfilePage() {
 
   // OTP Modal verification handler
   const handleVerifyOtp = async () => {
+    const otpValue = otpDigits.join("");
     // local validation
-    if (otp.trim().length !== 6) {
+    if (otpValue.trim().length !== 6) {
       setOtpError("Please enter the 6 digit code");
       return;
     }
@@ -482,18 +517,44 @@ export default function ProfilePage() {
       return;
     }
 
+    // if user used all attempts already
+    if (attemptsLeft <= 0) {
+      toast.error("Maximum attempts reached. Please request a new code.");
+      return;
+    }
+
     setIsOtpLoading(true);
     setOtpError("");
+    // prevent duplicate auto-submits
+    lastOtpAttemptRef.current = otpValue;
     try {
-      const verifyResp = await verifyEmailOtp(pendingEmail, otp.trim());
+      const verifyResp = await verifyEmailOtp(pendingEmail, otpValue.trim());
       if (!verifyResp.success) {
-        setOtpError(verifyResp.error || "Invalid or expired code");
+        // decrement attempts
+        const newAttempts = Math.max(0, attemptsLeft - 1);
+        setAttemptsLeft(newAttempts);
+        // clear inputs immediately so previous filled values are removed
+        clearOtpAndFocus();
+        // show toast with attempts remaining (as requested)
+        if (newAttempts > 0) {
+          toast.error(`${verifyResp.error || "Invalid OTP"}`);
+        } else {
+          toast.error(
+            verifyResp.error || "Invalid OTP. Maximum attempts reached"
+          );
+        }
         setIsOtpLoading(false);
         return;
       }
 
-      // Verified — apply pending save data
-      const result = await updateProfile(pendingSaveData);
+      // Verified — apply pending save data with email verification flag
+      // clear last attempt on success
+      lastOtpAttemptRef.current = "";
+      // reset attempts on success
+      setAttemptsLeft(MAX_OTP_ATTEMPTS);
+
+      // Pass true as second parameter to indicate email is verified
+      const result = await updateProfile(pendingSaveData, true);
 
       if (result.success && result.user) {
         updateAuthProfile(result.user);
@@ -503,7 +564,7 @@ export default function ProfilePage() {
         // clear pending
         setPendingSaveData(null);
         setPendingEmail("");
-        setOtp("");
+        setOtpDigits(Array(6).fill(""));
         setIsOtpModalOpen(false);
       } else {
         toast.error(
@@ -512,12 +573,30 @@ export default function ProfilePage() {
       }
     } catch (error: any) {
       console.error("OTP verification or update failed:", error);
-      toast.error("Failed to verify OTP or update profile");
+      // clear the inputs immediately when an unexpected error happens
+      clearOtpAndFocus();
+      setOtpError("Failed to verify OTP or update profile");
+      toast.error("Verification failed");
     } finally {
       setIsOtpLoading(false);
       setIsLoading(false);
     }
   };
+
+  // Auto-submit when all 6 OTP digits are filled
+  useEffect(() => {
+    // only when OTP modal is open, not currently verifying, attempts left > 0 and all digits filled
+    if (!isOtpModalOpen || isOtpLoading || attemptsLeft <= 0) return;
+    const code = otpDigits.join("");
+    if (otpDigits.every((d) => d !== "") && code.length === 6) {
+      // avoid retrying if we already attempted this exact code
+      if (lastOtpAttemptRef.current === code) return;
+      // delay slightly to ensure inputs update visually before verification
+      setTimeout(() => {
+        void handleVerifyOtp();
+      }, 0);
+    }
+  }, [otpDigits, isOtpModalOpen, isOtpLoading, attemptsLeft]);
 
   const handleResendOtp = async () => {
     if (resendTimer > 0) return;
@@ -527,6 +606,14 @@ export default function ProfilePage() {
       const resp = await sendOtpToEmail(pendingEmail);
       if (resp.success) {
         toast.success("OTP resent");
+        // reset input boxes on resend
+        setOtpDigits(Array(6).fill(""));
+        // reset attempts after resend
+        setAttemptsLeft(MAX_OTP_ATTEMPTS);
+        // focus first input on resend
+        setTimeout(() => {
+          otpInputsRef.current[0]?.focus();
+        }, 0);
       } else {
         toast.error(resp.error || "Failed to resend OTP");
       }
@@ -537,8 +624,127 @@ export default function ProfilePage() {
     }
   };
 
+  // helper: clear the OTP inputs and focus the first
+  const clearOtpAndFocus = () => {
+    setOtpDigits(Array(6).fill(""));
+    setTimeout(() => {
+      otpInputsRef.current[0]?.focus();
+    }, 0);
+  };
+
+  // handlers for the six separate OTP inputs
+  const focusInput = (index: number) => {
+    const el = otpInputsRef.current[index];
+    if (el) el.focus();
+  };
+
+  const handleOtpChange = (value: string, index: number) => {
+    // keep digits only
+    const digitsOnly = value.replace(/\D/g, "");
+    if (!digitsOnly) return;
+
+    // prepare new array base on existing
+    setOtpDigits((prev) => {
+      const next = [...prev];
+      // If user pasted more than 1 character, handle like a paste from current index
+      if (digitsOnly.length > 1) {
+        let i = index;
+        for (const ch of digitsOnly) {
+          if (i >= 6) break;
+          next[i++] = ch;
+        }
+      } else {
+        next[index] = digitsOnly[0];
+      }
+      return next;
+    });
+
+    // clear previous errors when user types
+    if (otpError) setOtpError("");
+    // reset last attempt ref so auto-submit can re-attempt with new digits
+    lastOtpAttemptRef.current = "";
+    // If user starts typing again after failure, ensure attempts left remains until resend
+    // move focus to the next input only after state update
+    setTimeout(() => {
+      const nextIndex = Math.min(index + digitsOnly.length, 5);
+      focusInput(nextIndex);
+    }, 0);
+  };
+
+  const handleOtpKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    const key = e.key;
+    if (key === "Backspace") {
+      e.preventDefault();
+      setOtpDigits((prev) => {
+        const next = [...prev];
+        if (next[index]) {
+          // clear current box
+          next[index] = "";
+          return next;
+        }
+        // if current empty, move to previous and clear it
+        if (index > 0) {
+          next[index - 1] = "";
+        }
+        return next;
+      });
+      // reset last attempt ref to allow reattempt
+      lastOtpAttemptRef.current = "";
+      if (index > 0) focusInput(index - 1);
+    } else if (/^[0-9]$/.test(key)) {
+      // allow numeric keys - handle fill on keydown not default to avoid race conditions
+      e.preventDefault();
+      handleOtpChange(key, index);
+    } else if (key === "ArrowLeft" && index > 0) {
+      e.preventDefault();
+      focusInput(index - 1);
+    } else if (key === "ArrowRight" && index < 5) {
+      e.preventDefault();
+      focusInput(index + 1);
+    }
+  };
+
+  const handleOtpPaste = (
+    e: React.ClipboardEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "");
+    if (!pasted) return;
+    setOtpDigits((prev) => {
+      const next = [...prev];
+      let i = index;
+      for (const ch of pasted) {
+        if (i >= 6) break;
+        next[i++] = ch;
+      }
+      return next;
+    });
+    // clear previous errors when user pastes
+    if (otpError) setOtpError("");
+    // reset last attempt ref so auto-submit can attempt this new paste
+    lastOtpAttemptRef.current = "";
+    setTimeout(() => {
+      const nextIndex = Math.min(index + pasted.length, 5);
+      focusInput(nextIndex);
+    }, 0);
+  };
+
+  // Build the available cities array, but always include current city (if any) even if it's not in mapping
   const availableCities = formData.province
-    ? provinceCityMap[formData.province] || []
+    ? (() => {
+        const provKey = (formData.province || "").trim();
+        const mapped = provinceCityMap[provKey] || [];
+        const cityFromForm = (formData.city || "").trim();
+        const merged = mapped.slice();
+        if (cityFromForm && !merged.includes(cityFromForm)) {
+          merged.push(cityFromForm);
+        }
+        return merged;
+      })()
     : [];
   const requiresBusinessInfo = ["supplier", "vendor"].includes(formData.role);
 
@@ -610,7 +816,6 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
-                    <IdentificationIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
                     Account Information
                   </CardTitle>
                   <CardDescription className="text-gray-600 dark:text-gray-400 mt-1">
@@ -635,7 +840,6 @@ export default function ProfilePage() {
               {/* Personal Information Section */}
               <div className={FORM_SPACING}>
                 <div className="flex items-center gap-2 mb-4">
-                  <UserIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                     Personal Details
                   </h3>
@@ -654,12 +858,14 @@ export default function ProfilePage() {
                           handleInputChange("name", e.target.value)
                         }
                         maxLength={30}
-                        className={`rounded-none h-10 ${errors.name ? "border-red-500" : ""}`}
+                        className={`rounded-none h-10 ${errors.name ? "border-red-500" : ""} ${HOVER_BORDER_CLASS}`}
                         placeholder="Enter your full name"
                       />
                     ) : (
                       <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                        <p
+                          className={`text-sm text-gray-900 dark:text-gray-100 ${HOVER_BORDER_CLASS}`}
+                        >
                           {formData.name}
                         </p>
                       </div>
@@ -700,7 +906,7 @@ export default function ProfilePage() {
                                     )
                                   ? "border-green-500"
                                   : ""
-                            }`}
+                            } ${HOVER_BORDER_CLASS}`}
                             placeholder="your@email.com"
                           />
                           <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -720,29 +926,35 @@ export default function ProfilePage() {
                         </div>
                       ) : (
                         <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                          <p
+                            className={`text-sm text-gray-900 dark:text-gray-100 ${HOVER_BORDER_CLASS}`}
+                          >
                             {formData.email}
                           </p>
                         </div>
                       )}
-                      {errors.email && (
-                        <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
-                          <ExclamationTriangleIcon className="h-3 w-3" />
-                          {errors.email}
-                        </p>
-                      )}
-                      {isEditing &&
-                        formData.email &&
-                        !isCheckingEmail &&
-                        !emailExists &&
-                        !errors.email &&
-                        formData.email !== originalEmail &&
-                        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && (
-                          <p className="text-xs text-green-500 flex items-center gap-1 mt-1">
+                      {/* Reserve a fixed space for email errors/success message to avoid layout shift */}
+                      <div className="min-h-[1.25rem] mt-1">
+                        {errors.email ? (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="h-3 w-3" />
+                            {errors.email}
+                          </p>
+                        ) : isEditing &&
+                          formData.email &&
+                          !isCheckingEmail &&
+                          !emailExists &&
+                          !errors.email &&
+                          formData.email !== originalEmail &&
+                          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) ? (
+                          <p className="text-xs text-green-500 flex items-center gap-1">
                             <CheckIcon className="h-3 w-3" />
                             Email is available
                           </p>
+                        ) : (
+                          <div className="h-2" />
                         )}
+                      </div>
                     </div>
 
                     <div>
@@ -761,12 +973,14 @@ export default function ProfilePage() {
                           onChange={(e) =>
                             handleInputChange("phone", e.target.value)
                           }
-                          className={`rounded-none h-10 ${errors.phone ? "border-red-500" : ""}`}
+                          className={`rounded-none h-10 ${errors.phone ? "border-red-500" : ""} ${HOVER_BORDER_CLASS}`}
                           placeholder="300 1234567"
                         />
                       ) : (
                         <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                          <p
+                            className={`text-sm text-gray-900 dark:text-gray-100 ${HOVER_BORDER_CLASS}`}
+                          >
                             {formData.phone}
                           </p>
                         </div>
@@ -787,7 +1001,6 @@ export default function ProfilePage() {
               {/* Address Information Section */}
               <div className={FORM_SPACING}>
                 <div className="flex items-center gap-2 mb-4">
-                  <MapPinIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                     Address Information
                   </h3>
@@ -804,11 +1017,13 @@ export default function ProfilePage() {
                         onChange={(e) =>
                           handleInputChange("address", e.target.value)
                         }
-                        className={`rounded-none min-h-[80px] ${errors.address ? "border-red-500" : ""}`}
+                        className={`rounded-none min-h-[80px] ${errors.address ? "border-red-500" : ""} ${HOVER_BORDER_CLASS} focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus:shadow-none focus-visible:shadow-none !outline-none !ring-0 !shadow-none`}
                         placeholder="Enter your complete address"
                       />
                     ) : (
-                      <div className="min-h-[80px] flex items-center px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                      <div
+                        className={`min-h-[80px] flex items-center px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none ${HOVER_BORDER_CLASS}`}
+                      >
                         <p className="text-sm text-gray-900 dark:text-gray-100">
                           {formData.address}
                         </p>
@@ -837,7 +1052,7 @@ export default function ProfilePage() {
                           }
                         >
                           <SelectTrigger
-                            className={`rounded-none h-10 w-full ${errors.province ? "border-red-500" : ""}`}
+                            className={`rounded-none h-10 w-full ${errors.province ? "border-red-500" : ""} ${HOVER_BORDER_CLASS}`}
                           >
                             <SelectValue placeholder="Select province" />
                           </SelectTrigger>
@@ -851,7 +1066,9 @@ export default function ProfilePage() {
                         </Select>
                       ) : (
                         <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                          <p
+                            className={`text-sm text-gray-900 dark:text-gray-100 ${HOVER_BORDER_CLASS}`}
+                          >
                             {formData.province}
                           </p>
                         </div>
@@ -877,7 +1094,7 @@ export default function ProfilePage() {
                           disabled={!formData.province}
                         >
                           <SelectTrigger
-                            className={`rounded-none h-10 w-full ${errors.city ? "border-red-500" : ""}`}
+                            className={`rounded-none h-10 w-full ${errors.city ? "border-red-500" : ""} ${HOVER_BORDER_CLASS}`}
                           >
                             <SelectValue
                               placeholder={
@@ -897,7 +1114,9 @@ export default function ProfilePage() {
                         </Select>
                       ) : (
                         <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                          <p
+                            className={`text-sm text-gray-900 dark:text-gray-100 ${HOVER_BORDER_CLASS}`}
+                          >
                             {formData.city}
                           </p>
                         </div>
@@ -920,12 +1139,14 @@ export default function ProfilePage() {
                           onChange={(e) =>
                             handleInputChange("postalCode", e.target.value)
                           }
-                          className={`rounded-none h-10 ${errors.postalCode ? "border-red-500" : ""}`}
+                          className={`rounded-none h-10 ${errors.postalCode ? "border-red-500" : ""} ${HOVER_BORDER_CLASS}`}
                           placeholder="54000"
                         />
                       ) : (
                         <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                          <p
+                            className={`text-sm text-gray-900 dark:text-gray-100 ${HOVER_BORDER_CLASS}`}
+                          >
                             {formData.postalCode}
                           </p>
                         </div>
@@ -964,12 +1185,14 @@ export default function ProfilePage() {
                             onChange={(e) =>
                               handleInputChange("companyName", e.target.value)
                             }
-                            className={`rounded-none h-10 ${errors.companyName ? "border-red-500" : ""}`}
+                            className={`rounded-none h-10 ${errors.companyName ? "border-red-500" : ""} ${HOVER_BORDER_CLASS}`}
                             placeholder="Your company name"
                           />
                         ) : (
                           <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                            <p className="text-sm text-gray-900 dark:text-gray-100">
+                            <p
+                              className={`text-sm text-gray-900 dark:text-gray-100 ${HOVER_BORDER_CLASS}`}
+                            >
                               {formData.companyName}
                             </p>
                           </div>
@@ -996,11 +1219,13 @@ export default function ProfilePage() {
                                 e.target.value
                               )
                             }
-                            className={`rounded-none min-h-[80px] ${errors.businessAddress ? "border-red-500" : ""}`}
+                            className={`rounded-none min-h-[80px] ${errors.businessAddress ? "border-red-500" : ""} ${HOVER_BORDER_CLASS} focus:outline-none focus:ring-0`}
                             placeholder="Enter your business address"
                           />
                         ) : (
-                          <div className="min-h-[80px] flex items-center px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <div
+                            className={`min-h-[80px] flex items-center px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none ${HOVER_BORDER_CLASS}`}
+                          >
                             <p className="text-sm text-gray-900 dark:text-gray-100">
                               {formData.businessAddress}
                             </p>
@@ -1030,7 +1255,7 @@ export default function ProfilePage() {
                               }
                             >
                               <SelectTrigger
-                                className={`rounded-none h-10 w-full ${errors.businessType ? "border-red-500" : ""}`}
+                                className={`rounded-none h-10 w-full ${errors.businessType ? "border-red-500" : ""} ${HOVER_BORDER_CLASS}`}
                               >
                                 <SelectValue placeholder="Select type" />
                               </SelectTrigger>
@@ -1044,7 +1269,9 @@ export default function ProfilePage() {
                             </Select>
                           ) : (
                             <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                              <p className="text-sm text-gray-900 dark:text-gray-100">
+                              <p
+                                className={`text-sm text-gray-900 dark:text-gray-100 ${HOVER_BORDER_CLASS}`}
+                              >
                                 {formData.businessType}
                               </p>
                             </div>
@@ -1070,12 +1297,14 @@ export default function ProfilePage() {
                                   e.target.value
                                 )
                               }
-                              className="rounded-none h-10"
+                              className={`rounded-none h-10 ${HOVER_BORDER_CLASS}`}
                               placeholder="REG-123456"
                             />
                           ) : (
                             <div className="h-10 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
-                              <p className="text-sm text-gray-900 dark:text-gray-100">
+                              <p
+                                className={`text-sm text-gray-900 dark:text-gray-100 ${HOVER_BORDER_CLASS}`}
+                              >
                                 {formData.registrationNumber || "Not provided"}
                               </p>
                             </div>
@@ -1147,10 +1376,7 @@ export default function ProfilePage() {
                           Verifying...
                         </>
                       ) : (
-                        <>
-                          <CheckIcon className="h-4 w-4 mr-2" />
-                          Save Changes
-                        </>
+                        <>Save Changes</>
                       )}
                     </Button>
                   </div>
@@ -1167,101 +1393,109 @@ export default function ProfilePage() {
         onOpenChange={(open) => setIsOtpModalOpen(open)}
       >
         <DialogContent
-          style={{ width: "100%", maxWidth: "900px" }}
-          className={`w-full max-w-[900px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none p-0 !shadow-none hover:!shadow-none`}
+          style={{ width: "520px", maxWidth: "520px" }}
+          className={`w-[520px] max-w-[520px] ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none p-0 !shadow-none hover:!shadow-none`}
         >
-          <div className="p-6">
-            <DialogHeader>
+          <div className="p-6 space-y-6">
+            {/* Header Section */}
+            <div className="space-y-2">
               <DialogTitle
-                className={`flex items-center gap-3 text-xl font-bold ${colors.texts.primary}`}
+                className={`text-2xl font-bold tracking-tight ${colors.texts.primary}`}
               >
-                Verify Your Email
+                Verify Email Address
               </DialogTitle>
               <DialogDescription
-                className={`text-base ${colors.texts.secondary} mt-2`}
+                className={`text-sm ${colors.texts.secondary}`}
               >
-                A 6-digit verification code has been sent to{" "}
-                <span className="font-medium">{pendingEmail}</span>. Enter it
-                below to confirm your email change.
+                Code sent to{" "}
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {pendingEmail}
+                </span>
               </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="p-6">
-            <div className="space-y-4">
-              <div>
-                <Label className={`text-sm ${colors.texts.secondary}`}>
-                  Verification Code
-                </Label>
-                <Input
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => {
-                    const digitsOnly = e.target.value.replace(/\D/g, "");
-                    setOtp(digitsOnly.slice(0, 6));
-                    if (otpError) setOtpError("");
-                  }}
-                  placeholder="123456"
-                  className="rounded-none text-sm w-full h-10"
-                />
-                {otpError && (
-                  <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
-                    <ExclamationTriangleIcon className="h-3 w-3" />
-                    {otpError}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Didn&apos;t receive the code?
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleResendOtp}
-                    disabled={resendTimer > 0 || isOtpLoading}
-                    className="rounded-none text-xs cursor-pointer"
-                  >
-                    {resendTimer > 0
-                      ? `Resend in ${resendTimer}s`
-                      : "Resend Code"}
-                  </Button>
-                  <Button
-                    onClick={handleVerifyOtp}
-                    disabled={isOtpLoading}
-                    className={`${colors.buttons.primary} rounded-none text-xs cursor-pointer`}
-                  >
-                    {isOtpLoading ? "Verifying..." : "Verify & Update"}
-                  </Button>
-                </div>
-              </div>
             </div>
-          </div>
 
-          {/* Footer */}
-          <div
-            className={`p-6 border-t ${colors.borders.primary} flex items-center justify-between`}
-          >
-            <div className={`text-xs ${colors.texts.secondary}`}>
-              <p>Need help? Contact support@chainvanguard.com</p>
+            {/* OTP Input Section */}
+            <div className="space-y-6">
+              {/* Screen-reader-only label for the OTP input group */}
+              <label className="sr-only" id="otp-group-label">
+                Verification code input
+              </label>
+
+              <div
+                className="flex gap-3 justify-center"
+                aria-labelledby="otp-group-label"
+                role="group"
+              >
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <input
+                    key={idx}
+                    id={`otp-digit-${idx}`}
+                    name={`otp-digit-${idx}`}
+                    title={`Enter verification code digit ${idx + 1}`}
+                    placeholder={""}
+                    aria-label={`OTP digit ${idx + 1}`}
+                    ref={(el) => {
+                      if (el) otpInputsRef.current[idx] = el;
+                    }}
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={otpDigits[idx] || ""}
+                    onChange={(e) => {
+                      handleOtpChange(e.target.value, idx);
+                      if (otpError) setOtpError("");
+                    }}
+                    onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                    onPaste={(e) => handleOtpPaste(e, idx)}
+                    // reduced size and removed bold
+                    className={`rounded-none text-lg font-normal w-10 h-10 text-center border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white focus:bg-white dark:focus:bg-gray-900 transition-all ${HOVER_BORDER_CLASS}`}
+                  />
+                ))}
+              </div>
+              {/* Keep in-modal errors only for local validation like missing 6 digits; errors from verification are shown as toast messages */}
+              {otpError && (
+                <div className="flex items-center justify-center gap-2 text-sm text-red-500">
+                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  <span>{otpError}</span>
+                </div>
+              )}
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setIsOtpModalOpen(false);
-                setPendingSaveData(null);
-                setPendingEmail("");
-                setOtp("");
-                setOtpError("");
-              }}
-              disabled={isOtpLoading}
-              className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}
-            >
-              Cancel
-            </Button>
+
+            {/* Resend Section */}
+            <div className="text-center space-y-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Didn&apos;t receive the code?
+              </p>
+              {resendTimer > 0 ? (
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Resend code in{" "}
+                  <span className="tabular-nums">{resendTimer}</span> seconds
+                </p>
+              ) : (
+                <Button
+                  variant="ghost"
+                  onClick={handleResendOtp}
+                  disabled={isOtpLoading}
+                  className="rounded-none text-sm font-semibold h-auto p-0 hover:bg-transparent text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer underline underline-offset-2"
+                >
+                  Resend Code
+                </Button>
+              )}
+            </div>
+
+            {/* Replace Verify Button with concise status message (we auto submit on 6 digits) */}
+            <div className="text-center mt-2">
+              {isOtpLoading ? (
+                <p className="text-sm text-gray-700">Verifying…</p>
+              ) : attemptsLeft <= 0 ? (
+                <p className="text-sm text-red-500">
+                  Max attempts reached. Resend code.
+                </p>
+              ) : (
+                <p className="text-sm text-gray-700">
+                  Auto-submit when 6 digits entered
+                </p>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Card,
@@ -46,6 +47,7 @@ import {
   CurrencyDollarIcon,
   UsersIcon,
   ArrowLeftIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWallet } from "@/components/providers/wallet-provider";
@@ -55,9 +57,18 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { colors, badgeColors } from "@/lib/colorConstants";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Transaction } from "@/types/index"; // Add this import to resolve the type
+import { Transaction } from "@/types/index";
 
 type Currency = "USD" | "CVT";
+
+const fadeUpVariant = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (delay = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, delay },
+  }),
+};
 
 export default function WalletPage() {
   usePageTitle("Wallet");
@@ -90,6 +101,9 @@ export default function WalletPage() {
   const [expiryDate, setExpiryDate] = useState("");
   const [cvv, setCvv] = useState("");
   const [cardholderName, setCardholderName] = useState("");
+
+  // Copy status state
+  const [copied, setCopied] = useState(false);
 
   // Conversion rate: 1 USD = 278 CVT
   const CONVERSION_RATE = 278;
@@ -170,6 +184,8 @@ export default function WalletPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
     toast.success("Copied to clipboard");
   };
 
@@ -297,9 +313,8 @@ export default function WalletPage() {
       const amountUSD = parseFloat(addAmount);
 
       // Step 1: Create payment intent
-      const paymentIntentResponse = await walletApi.createPaymentIntent(
-        amountUSD
-      );
+      const paymentIntentResponse =
+        await walletApi.createPaymentIntent(amountUSD);
 
       if (!paymentIntentResponse.success) {
         throw new Error("Failed to create payment intent");
@@ -372,20 +387,6 @@ export default function WalletPage() {
         error instanceof Error ? error.message : "Unknown error";
       console.error("❌ Payment failed:", error);
       toast.error(`Payment failed: ${errorMessage}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Manual refresh handler
-  const handleRefresh = async () => {
-    setIsLoading(true);
-    try {
-      if (refreshBalance) await refreshBalance();
-      if (refreshTransactions) await refreshTransactions();
-      toast.success("Wallet data refreshed");
-    } catch (error) {
-      toast.error("Failed to refresh data");
     } finally {
       setIsLoading(false);
     }
@@ -521,48 +522,51 @@ export default function WalletPage() {
   if (!currentWallet) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-950">
-        <Card
-          className={`w-full max-w-md text-center ${colors.cards.base} rounded-none !shadow-none`}
-        >
-          <CardContent className="pt-8 pb-6">
-            <div
-              className={`h-20 w-20 mx-auto mb-6 ${colors.backgrounds.tertiary} flex items-center justify-center`}
-            >
-              <WalletIcon className={`w-10 h-10 ${colors.icons.primary}`} />
-            </div>
-            <h2 className={`text-2xl font-bold ${colors.texts.primary} mb-3`}>
-              No Wallet Connected
-            </h2>
-            <p className={`${colors.texts.secondary} mb-6`}>
-              Please connect your wallet to view balance and transactions
-            </p>
-            <button
-              className={`flex items-center gap-2 px-6 h-10 ${colors.buttons.primary} rounded-none font-medium text-xs transition-all mx-auto cursor-pointer`}
-            >
-              <WalletIcon className="w-4 h-4" />
-              Connect Wallet
-            </button>
-          </CardContent>
-        </Card>
+        <motion.div initial="hidden" animate="visible" variants={fadeUpVariant}>
+          <Card
+            className={`w-full max-w-md text-center ${colors.cards.base} rounded-none !shadow-none`}
+          >
+            <CardContent className="pt-8 pb-6">
+              <div
+                className={`h-20 w-20 mx-auto mb-6 ${colors.backgrounds.tertiary} flex items-center justify-center`}
+              >
+                <WalletIcon className={`w-10 h-10 ${colors.icons.primary}`} />
+              </div>
+              <h2 className={`text-2xl font-bold ${colors.texts.primary} mb-3`}>
+                No Wallet Connected
+              </h2>
+              <p className={`${colors.texts.secondary} mb-6`}>
+                Please connect your wallet to view balance and transactions
+              </p>
+              <button
+                className={`flex items-center gap-2 px-6 h-10 ${colors.buttons.primary} rounded-none font-medium text-xs transition-all mx-auto cursor-pointer`}
+              >
+                <WalletIcon className="w-4 h-4" />
+                Connect Wallet
+              </button>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
-      <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
-        <div
-          className={`transform transition-all duration-700 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeUpVariant}
+          custom={0}
         >
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="space-y-2">
-              <h1 className={`text-2xl font-bold ${colors.texts.primary}`}>
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
                 ChainVanguard Wallet
               </h1>
-              <p className={`text-base ${colors.texts.secondary}`}>
+              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
                 Welcome back, {user?.name || "User"}!
               </p>
               <div className="flex items-center gap-2 mt-2">
@@ -580,7 +584,7 @@ export default function WalletPage() {
                 </Badge>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3">
               {/* Currency Toggle */}
               <div className="flex border border-gray-200 dark:border-gray-800">
                 <Button
@@ -588,7 +592,7 @@ export default function WalletPage() {
                   size="sm"
                   onClick={() => setCurrency("USD")}
                   className={cn(
-                    "px-6 h-10 text-[10px] uppercase tracking-[0.2em] rounded-none flex items-center justify-center gap-2 cursor-pointer border border-transparent transition-colors",
+                    "px-4 md:px-6 h-8 md:h-10 text-[10px] uppercase tracking-[0.2em] rounded-none flex items-center justify-center gap-2 cursor-pointer border border-transparent transition-colors",
                     currency === "USD"
                       ? "bg-black dark:bg-white text-white dark:text-black"
                       : "text-gray-600 dark:text-gray-400 hover:border-black"
@@ -602,7 +606,7 @@ export default function WalletPage() {
                   size="sm"
                   onClick={() => setCurrency("CVT")}
                   className={cn(
-                    "px-6 h-10 text-[10px] uppercase tracking-[0.2em] rounded-none flex items-center justify-center gap-2 border-l border-gray-200 dark:border-gray-800 cursor-pointer border border-transparent transition-colors",
+                    "px-4 md:px-6 h-8 md:h-10 text-[10px] uppercase tracking-[0.2em] rounded-none flex items-center justify-center gap-2 border-l border-gray-200 dark:border-gray-800 cursor-pointer border border-transparent transition-colors",
                     currency === "CVT"
                       ? "bg-black dark:bg-white text-white dark:text-black"
                       : "text-gray-600 dark:text-gray-400 hover:border-black"
@@ -613,449 +617,421 @@ export default function WalletPage() {
               </div>
               <Button
                 size="sm"
-                variant="outline"
-                onClick={handleRefresh}
-                disabled={isLoading}
-                className={`hidden lg:flex items-center gap-2 px-4 py-2 h-10 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all hover:border-black dark:hover:border-white`}
-              >
-                <ArrowPathIcon
-                  className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-                />
-                Refresh
-              </Button>
-              <Button
-                size="sm"
                 onClick={() => setShowBalance(!showBalance)}
-                className={`flex items-center gap-2 px-4 py-2 h-10 rounded-none ${colors.buttons.primary} font-medium text-xs cursor-pointer transition-all`}
+                className={`flex items-center gap-2 px-4 h-8 md:h-10 rounded-none bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 font-medium text-xs cursor-pointer transition-all`}
               >
                 {showBalance ? (
-                  <EyeSlashIcon className="w-4 h-4" />
+                  <EyeSlashIcon className="w-3 h-3 md:w-4 md:h-4" />
                 ) : (
-                  <EyeIcon className="w-4 h-4" />
+                  <EyeIcon className="w-3 h-3 md:w-4 md:h-4" />
                 )}
                 {showBalance ? "Hide" : "Show"} Balance
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Main Content Grid */}
-        <div
-          className={`transform transition-all duration-700 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeUpVariant}
+          custom={0.1}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             {/* Main Wallet Card - Takes 2 columns */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4 md:space-y-6">
               {/* Balance Card */}
-              <Card
-                className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={fadeUpVariant}
+                custom={0.2}
               >
-                <CardContent className="p-12">
-                  <div className="space-y-8">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-3">
-                          Available Balance
-                        </p>
-                        <div className="flex items-baseline gap-3">
-                          <p
-                            className={`text-5xl font-extralight ${colors.texts.primary} tracking-tight`}
-                          >
-                            {showBalance ? formatCurrency(balance) : "••••••"}
-                          </p>
-                          {currency === "USD" && showBalance && (
-                            <span className="text-sm text-gray-400 dark:text-gray-600">
-                              ≈ {formatCVT(balance)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <WalletIcon
-                        className={`h-16 w-16 ${colors.icons.primary} opacity-20`}
-                      />
-                    </div>
-
-                    {/* Wallet Details */}
-                    <div className={`pt-8 border-t ${colors.borders.primary}`}>
-                      <div className="grid grid-cols-2 gap-6">
+                <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none shadow-none hover:shadow-none">
+                  <CardContent className="p-6">
+                    <div className="space-y-6 md:space-y-8">
+                      <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                            Wallet Name
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-3">
+                            Available Balance
                           </p>
-                          <p
-                            className={`text-sm ${colors.texts.primary} font-medium`}
-                          >
-                            {currentWallet?.name || "My Wallet"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                            Network
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 bg-green-500 animate-pulse rounded-none" />
-                            <p className={`text-xs ${colors.texts.primary}`}>
-                              Hyperledger Fabric
+                          <div className="flex items-baseline gap-3">
+                            <p className="text-3xl md:text-5xl font-extralight text-gray-900 dark:text-white tracking-tight">
+                              {showBalance ? formatCurrency(balance) : "••••••"}
                             </p>
+                            {currency === "USD" && showBalance && (
+                              <span className="text-sm text-gray-400 dark:text-gray-600">
+                                ≈ {formatCVT(balance)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <WalletIcon className="h-12 w-12 md:h-16 md:w-16 text-gray-900 dark:text-white opacity-20" />
+                      </div>
+
+                      {/* Wallet Details */}
+                      <div className="pt-6 md:pt-8 border-t border-gray-200 dark:border-gray-800">
+                        <div className="grid grid-cols-2 gap-4 md:gap-6">
+                          <div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                              Wallet Name
+                            </p>
+                            <p className="text-sm text-gray-900 dark:text-white font-medium">
+                              {currentWallet?.name || "My Wallet"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                              Network
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 bg-green-500 animate-pulse rounded-none" />
+                              <p className="text-xs text-gray-900 dark:text-white">
+                                Hyperledger Fabric
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Wallet Address */}
-                    <div className="space-y-2">
-                      <Label className={`text-xs ${colors.texts.secondary}`}>
-                        Wallet Address
-                      </Label>
-                      <div
-                        className={`flex items-center gap-2 p-3 ${colors.backgrounds.tertiary} rounded-none ${colors.borders.primary}`}
-                      >
-                        <Avatar className="h-8 w-8 rounded-none">
-                          <AvatarFallback
-                            className={`${colors.backgrounds.quaternary} ${colors.texts.primary} text-xs rounded-none`}
+                      {/* Wallet Address */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-gray-500 dark:text-gray-400">
+                          Wallet Address
+                        </Label>
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none">
+                          <Avatar className="h-8 w-8 rounded-none">
+                            <AvatarFallback className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-xs rounded-none">
+                              {currentWallet.address.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <code className="text-sm font-mono text-gray-900 dark:text-white flex-1">
+                            {formatAddress(currentWallet.address)}
+                          </code>
+                          <button
+                            onClick={() =>
+                              copyToClipboard(currentWallet.address)
+                            }
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-none transition-colors"
                           >
-                            {currentWallet.address.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <code
-                          className={`text-sm font-mono ${colors.texts.primary} flex-1`}
-                        >
-                          {formatAddress(currentWallet.address)}
-                        </code>
-                        <button
-                          onClick={() => copyToClipboard(currentWallet.address)}
-                          className={`p-2 hover:${colors.backgrounds.hover} rounded-none transition-colors`}
-                        >
-                          <DocumentDuplicateIcon className="w-4 h-4" />
-                        </button>
+                            {copied ? (
+                              <CheckIcon className="w-4 h-4" />
+                            ) : (
+                              <DocumentDuplicateIcon className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Quick Actions */}
+                      <div className="pt-6 md:pt-8 border-t border-gray-200 dark:border-gray-800">
+                        <div className="grid grid-cols-2 gap-3 md:gap-4">
+                          <button
+                            onClick={() => setAddFundsOpen(true)}
+                            className="h-14 md:h-16 flex flex-col gap-2 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-all duration-300 cursor-pointer group rounded-none"
+                          >
+                            <PlusIcon className="h-4 w-4 md:h-5 md:w-5 text-gray-900 dark:text-white" />
+                            <span className="font-semibold text-gray-900 dark:text-white text-xs">
+                              Add Funds
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => setWithdrawOpen(true)}
+                            className="h-14 md:h-16 flex flex-col gap-2 items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-all duration-300 cursor-pointer group rounded-none"
+                          >
+                            <ArrowDownLeftIcon className="h-4 w-4 md:h-5 md:w-5 text-gray-900 dark:text-white transform rotate-180" />
+                            <span className="font-semibold text-gray-900 dark:text-white text-xs">
+                              Withdraw
+                            </span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Quick Actions */}
-                    <div className={`pt-8 border-t ${colors.borders.primary}`}>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => setAddFundsOpen(true)}
-                          className={`h-16 flex flex-col gap-2 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
-                        >
-                          <PlusIcon
-                            className={`h-5 w-5 ${colors.texts.primary}`}
-                          />
-                          <span
-                            className={`font-semibold ${colors.texts.primary} text-xs`}
-                          >
-                            Add Funds
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => setWithdrawOpen(true)}
-                          className={`h-16 flex flex-col gap-2 items-center justify-center ${colors.backgrounds.tertiary} ${colors.backgrounds.hover} ${colors.borders.primary} transition-all duration-300 cursor-pointer group rounded-none !shadow-none hover:!shadow-none`}
-                        >
-                          <ArrowDownLeftIcon
-                            className={`h-5 w-5 ${colors.texts.primary} transform rotate-180`}
-                          />
-                          <span
-                            className={`font-semibold ${colors.texts.primary} text-xs`}
-                          >
-                            Withdraw
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
               {/* Transaction History */}
-              <Card
-                className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={fadeUpVariant}
+                custom={0.3}
               >
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle
-                        className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
-                      >
-                        <ClockIcon
-                          className={`h-5 w-5 ${colors.icons.primary}`}
-                        />
-                        Transaction History
-                      </CardTitle>
-                      <CardDescription
-                        className={`text-xs ${colors.texts.secondary} mt-2`}
-                      >
-                        Your recent wallet transactions
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Select
-                        value={selectedFilter}
-                        onValueChange={setSelectedFilter}
-                      >
-                        <SelectTrigger
-                          className={`w-32 h-10 ${colors.backgrounds.tertiary} rounded-none ${colors.borders.primary} text-xs`}
+                <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none shadow-none hover:shadow-none">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-3 text-sm md:text-base text-gray-900 dark:text-white">
+                          <ClockIcon className="h-4 w-4 md:h-5 md:w-5" />
+                          Transaction History
+                        </CardTitle>
+                        <CardDescription className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                          Your recent wallet transactions
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <Select
+                          value={selectedFilter}
+                          onValueChange={setSelectedFilter}
                         >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-none">
-                          <SelectItem value="all">All</SelectItem>
-                          <SelectItem value="deposit">Deposits</SelectItem>
-                          <SelectItem value="payment">Payments</SelectItem>
-                          <SelectItem value="received">Received</SelectItem>
-                          <SelectItem value="withdrawal">Withdrawals</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => (window.location.href = '/wallet/transactions')}
-                        className={`flex items-center gap-2 px-4 h-10 ${colors.buttons.outline} cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-900 transition-all hover:border-black dark:hover:border-white text-xs`}
-                      >
-                        View All
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {filteredTransactions.length === 0 ? (
-                    <div className="text-center py-12">
-                      <ClockIcon
-                        className={`h-12 w-12 mx-auto ${colors.icons.secondary} mb-3`}
-                      />
-                      <p className={`text-sm ${colors.texts.secondary} mb-4`}>
-                        {selectedFilter === "all"
-                          ? "No transactions yet. Start by adding funds!"
-                          : "No transactions match your filter."}
-                      </p>
-                      {selectedFilter !== "all" ? (
+                          <SelectTrigger className="w-24 md:w-32 h-8 md:h-10 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none text-xs hover:border-black dark:hover:border-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-none">
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="deposit">Deposits</SelectItem>
+                            <SelectItem value="payment">Payments</SelectItem>
+                            <SelectItem value="received">Received</SelectItem>
+                            <SelectItem value="withdrawal">
+                              Withdrawals
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                         <Button
                           size="sm"
-                          onClick={() => setSelectedFilter("all")}
-                          className={`px-6 h-10 ${colors.buttons.primary} rounded-none text-xs font-medium transition-all`}
+                          variant="outline"
+                          onClick={() =>
+                            (window.location.href = "/wallet/transactions")
+                          }
+                          className="flex items-center gap-2 px-3 md:px-4 h-8 md:h-10 border border-gray-200 dark:border-gray-800 hover:border-black dark:hover:border-white cursor-pointer rounded-none hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-xs"
                         >
-                          Clear Filters
+                          View All
                         </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          onClick={() => setAddFundsOpen(true)}
-                          className={`flex items-center gap-2 px-6 h-10 ${colors.buttons.primary} rounded-none text-xs font-medium transition-all mx-auto`}
-                        >
-                          <PlusIcon className="h-4 w-4" />
-                          Add Funds
-                        </Button>
-                      )}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-0 border border-gray-200 dark:border-gray-800">
-                      {filteredTransactions.slice(0, 5).map((transaction, index) => {
-                        const statusConfig = getStatusConfig(
-                          transaction.status
-                        );
-                        const StatusIcon = statusConfig.icon;
-                        const isCredit = ["deposit", "received"].includes(
-                          transaction.type
-                        );
-
-                        return (
-                          <div
-                            key={transaction.id}
-                            className={`p-6 hover:${colors.backgrounds.hover} transition-colors cursor-pointer ${
-                              index !== filteredTransactions.length - 1
-                                ? `border-b ${colors.borders.primary}`
-                                : ""
-                            }`}
+                  </CardHeader>
+                  <CardContent>
+                    {filteredTransactions.length === 0 ? (
+                      <div className="text-center py-8 md:py-12">
+                        <ClockIcon className="h-10 w-10 md:h-12 md:w-12 mx-auto text-gray-400 dark:text-gray-600 mb-3" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                          {selectedFilter === "all"
+                            ? "No transactions yet. Start by adding funds!"
+                            : "No transactions match your filter."}
+                        </p>
+                        {selectedFilter !== "all" ? (
+                          <Button
+                            size="sm"
+                            onClick={() => setSelectedFilter("all")}
+                            className="px-4 md:px-6 h-8 md:h-10 bg-black dark:bg-white text-white dark:text-black rounded-none text-xs font-medium transition-all cursor-pointer"
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                <div
-                                  className={`h-10 w-10 flex items-center justify-center ${
-                                    isCredit
-                                      ? "bg-green-50 dark:bg-green-900/20"
-                                      : "bg-gray-100 dark:bg-gray-900"
-                                  }`}
-                                >
-                                  {getTransactionIcon(transaction.type)}
-                                </div>
+                            Clear Filters
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => setAddFundsOpen(true)}
+                            className="flex items-center gap-2 px-4 md:px-6 h-8 md:h-10 bg-black dark:bg-white text-white dark:text-black rounded-none text-xs font-medium transition-all mx-auto cursor-pointer"
+                          >
+                            <PlusIcon className="h-3 w-3 md:h-4 md:w-4" />
+                            Add Funds
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-0 border border-gray-200 dark:border-gray-800">
+                        {filteredTransactions
+                          .slice(0, 5)
+                          .map((transaction, index) => {
+                            const statusConfig = getStatusConfig(
+                              transaction.status
+                            );
+                            const StatusIcon = statusConfig.icon;
+                            const isCredit = ["deposit", "received"].includes(
+                              transaction.type
+                            );
 
-                                <div>
-                                  <p
-                                    className={`text-sm font-medium ${colors.texts.primary} mb-1`}
-                                  >
-                                    {transaction.description}
-                                  </p>
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                      {new Date(
-                                        transaction.timestamp
-                                      ).toLocaleDateString()}
-                                    </p>
-                                    <Badge
-                                      className={`${statusConfig.color} flex items-center gap-1 text-xs rounded-none`}
+                            return (
+                              <div
+                                key={transaction.id}
+                                className={`p-4 md:p-6 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer ${
+                                  index !== filteredTransactions.length - 1
+                                    ? "border-b border-gray-200 dark:border-gray-800"
+                                    : ""
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3 md:gap-4">
+                                    <div
+                                      className={`h-8 w-8 md:h-10 md:w-10 flex items-center justify-center ${
+                                        isCredit
+                                          ? "bg-green-50 dark:bg-green-900/20"
+                                          : "bg-gray-100 dark:bg-gray-900"
+                                      }`}
                                     >
-                                      <StatusIcon className="h-3 w-3" />
-                                      {statusConfig.label}
-                                    </Badge>
+                                      {getTransactionIcon(transaction.type)}
+                                    </div>
+
+                                    <div>
+                                      <p className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-1">
+                                        {transaction.description}
+                                      </p>
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                          {new Date(
+                                            transaction.timestamp
+                                          ).toLocaleDateString()}
+                                        </p>
+                                        <Badge
+                                          className={`${statusConfig.color} flex items-center gap-1 text-xs rounded-none`}
+                                        >
+                                          <StatusIcon className="h-3 w-3" />
+                                          {statusConfig.label}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right">
+                                    <p
+                                      className={`text-xs md:text-sm font-medium ${
+                                        isCredit
+                                          ? "text-green-600 dark:text-green-400"
+                                          : "text-gray-900 dark:text-white"
+                                      }`}
+                                    >
+                                      {isCredit ? "+" : "-"}
+                                      {formatCurrencyAbbreviated(
+                                        transaction.amount
+                                      )}
+                                    </p>
+                                    {currency === "USD" && (
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        {formatCVT(transaction.amount)}
+                                      </p>
+                                    )}
+                                    {transaction.txHash && (
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
+                                        {transaction.txHash.slice(0, 8)}...
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               </div>
-
-                              <div className="text-right">
-                                <p
-                                  className={`text-sm font-medium ${
-                                    isCredit
-                                      ? "text-green-600 dark:text-green-400"
-                                      : colors.texts.primary
-                                  }`}
-                                >
-                                  {isCredit ? "+" : "-"}
-                                  {formatCurrencyAbbreviated(
-                                    transaction.amount
-                                  )}
-                                </p>
-                                {currency === "USD" && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formatCVT(transaction.amount)}
-                                  </p>
-                                )}
-                                {transaction.txHash && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
-                                    {transaction.txHash.slice(0, 8)}...
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
 
             {/* Sidebar - Stats and Info */}
-            <div className="lg:col-span-1 space-y-6">
+            <div className="lg:col-span-1 space-y-4 md:space-y-6">
               {/* Stats Card */}
-              <Card
-                className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={fadeUpVariant}
+                custom={0.2}
               >
-                <CardHeader>
-                  <CardTitle
-                    className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
-                  >
-                    <ChartPieIcon
-                      className={`h-5 w-5 ${colors.icons.primary}`}
-                    />
-                    Wallet Stats
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Total Income
-                      </span>
-                      <span
-                        className={`text-sm font-medium text-green-600 dark:text-green-400`}
-                      >
-                        {formatCurrencyAbbreviated(totalIncome)}
-                      </span>
+                <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none shadow-none hover:shadow-none">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3 text-sm md:text-base text-gray-900 dark:text-white">
+                      <ChartPieIcon className="h-4 w-4 md:h-5 md:w-5" />
+                      Wallet Stats
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 md:space-y-4">
+                    <div className="space-y-3 md:space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Total Income
+                        </span>
+                        <span className="text-xs md:text-sm font-medium text-green-600 dark:text-green-400">
+                          {formatCurrencyAbbreviated(totalIncome)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Total Expenses
+                        </span>
+                        <span className="text-xs md:text-sm font-medium text-gray-900 dark:text-white">
+                          {formatCurrencyAbbreviated(totalExpenses)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Pending
+                        </span>
+                        <span className="text-xs md:text-sm font-medium text-gray-900 dark:text-white">
+                          {pendingTransactions}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Total Transactions
+                        </span>
+                        <span className="text-xs md:text-sm font-medium text-gray-900 dark:text-white">
+                          {transactions.length}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Total Expenses
-                      </span>
-                      <span
-                        className={`text-sm font-medium ${colors.texts.primary}`}
-                      >
-                        {formatCurrencyAbbreviated(totalExpenses)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Pending
-                      </span>
-                      <span
-                        className={`text-sm font-medium ${colors.texts.primary}`}
-                      >
-                        {pendingTransactions}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Total Transactions
-                      </span>
-                      <span
-                        className={`text-sm font-medium ${colors.texts.primary}`}
-                      >
-                        {transactions.length}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
               {/* Exchange Rate Card */}
-              <Card
-                className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={fadeUpVariant}
+                custom={0.3}
               >
-                <CardHeader>
-                  <CardTitle
-                    className={`flex items-center gap-3 text-base ${colors.texts.primary}`}
-                  >
-                    <CurrencyDollarIcon
-                      className={`h-5 w-5 ${colors.icons.primary}`}
-                    />
-                    Exchange Rate
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-baseline gap-2">
-                    <p
-                      className={`text-2xl font-extralight ${colors.texts.primary}`}
-                    >
-                      $1
-                    </p>
-                    <span className="text-gray-400">=</span>
-                    <p
-                      className={`text-2xl font-extralight ${colors.texts.primary}`}
-                    >
-                      CVT {CONVERSION_RATE.toLocaleString("en-US")}
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Rate updates automatically
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Security Notice */}
-              <Card
-                className={`${colors.cards.base} rounded-none !shadow-none hover:!shadow-none`}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-3">
-                    <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p
-                        className={`text-xs font-medium ${colors.texts.primary} mb-1`}
-                      >
-                        Blockchain Secured
+                <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none shadow-none hover:shadow-none">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3 text-sm md:text-base text-gray-900 dark:text-white">
+                      <CurrencyDollarIcon className="h-4 w-4 md:h-5 md:w-5" />
+                      Exchange Rate
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 md:space-y-4">
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-xl md:text-2xl font-extralight text-gray-900 dark:text-white">
+                        $1
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                        All transactions are secured and verified on the
-                        Hyperledger Fabric blockchain
+                      <span className="text-gray-400">=</span>
+                      <p className="text-xl md:text-2xl font-extralight text-gray-900 dark:text-white">
+                        CVT {CONVERSION_RATE.toLocaleString("en-US")}
                       </p>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Rate updates automatically
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Security Notice */}
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={fadeUpVariant}
+                custom={0.4}
+              >
+                <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none shadow-none hover:shadow-none">
+                  <CardContent className="p-4 md:p-6">
+                    <div className="flex items-start gap-3">
+                      <CheckCircleIcon className="h-4 w-4 md:h-5 md:w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-900 dark:text-white mb-1">
+                          Blockchain Secured
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                          All transactions are secured and verified on the
+                          Hyperledger Fabric blockchain
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Professional Add Funds Modal with Tabs */}
@@ -1082,434 +1058,393 @@ export default function WalletPage() {
           style={{ width: "100%", maxWidth: "900px" }}
           className={`w-full max-w-[900px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none p-0 !shadow-none hover:!shadow-none`}
         >
-          {/* Header */}
-          <div className="p-6">
-            <DialogHeader>
-              <DialogTitle
-                className={`flex items-center gap-3 text-xl font-bold ${colors.texts.primary}`}
-              >
-                <div className="h-8 w-8 flex items-center justify-center rounded-none">
-                  <PlusIcon className="h-5 w-" />
-                </div>
-                Add Funds to Wallet
-              </DialogTitle>
-              <DialogDescription
-                className={`text-base ${colors.texts.secondary} mt-2`}
-              >
-                Securely add funds to your ChainVanguard wallet using Stripe
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          {/* Tabs */}
-          <Tabs
-            value={activeAddTab}
-            onValueChange={setActiveAddTab}
-            className="w-full"
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={fadeUpVariant}
+            custom={0}
           >
-            <div className="flex justify-center px-6">
-              <div className="w-full flex justify-center">
-                <TabsList
-                  className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
+            {/* Header */}
+            <div className="p-6">
+              <DialogHeader>
+                <DialogTitle
+                  className={`flex items-center gap-3 text-xl font-bold ${colors.texts.primary}`}
                 >
-                  <TabsTrigger
-                    value="amount"
-                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                  <div className="h-8 w-8 flex items-center justify-center rounded-none">
+                    <PlusIcon className="h-5 w-" />
+                  </div>
+                  Add Funds to Wallet
+                </DialogTitle>
+                <DialogDescription
+                  className={`text-base ${colors.texts.secondary} mt-2`}
+                >
+                  Securely add funds to your ChainVanguard wallet using Stripe
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            {/* Tabs */}
+            <Tabs
+              value={activeAddTab}
+              onValueChange={setActiveAddTab}
+              className="w-full"
+            >
+              <div className="flex justify-center px-6">
+                <div className="w-full flex justify-center">
+                  <TabsList
+                    className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
+                  >
+                    <TabsTrigger
+                      value="amount"
+                      className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
                     ${
                       activeAddTab === "amount"
                         ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
                         : `${colors.texts.secondary} hover:${colors.texts.primary}`
                     }`}
-                  >
-                    Amount
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="payment"
-                    disabled={!addAmount || parseFloat(addAmount) <= 0}
-                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                    >
+                      Amount
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="payment"
+                      disabled={!addAmount || parseFloat(addAmount) <= 0}
+                      className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
                     ${
                       activeAddTab === "payment"
                         ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
                         : `${colors.texts.secondary} hover:${colors.texts.primary}`
                     }`}
-                  >
-                    Payment
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="review"
-                    disabled={
-                      !addAmount ||
-                      parseFloat(addAmount) <= 0 ||
-                      cardNumber.replace(/\s/g, "").length !== 16 ||
-                      expiryDate.length !== 5 ||
-                      !validateExpiryDate(expiryDate) ||
-                      cvv.length !== 3 ||
-                      cardholderName.trim().length < 3
-                    }
-                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                    >
+                      Payment
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="review"
+                      disabled={
+                        !addAmount ||
+                        parseFloat(addAmount) <= 0 ||
+                        cardNumber.replace(/\s/g, "").length !== 16 ||
+                        expiryDate.length !== 5 ||
+                        !validateExpiryDate(expiryDate) ||
+                        cvv.length !== 3 ||
+                        cardholderName.trim().length < 3
+                      }
+                      className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
                     ${
                       activeAddTab === "review"
                         ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
                         : `${colors.texts.secondary} hover:${colors.texts.primary}`
                     }`}
-                  >
-                    Review
-                  </TabsTrigger>
-                </TabsList>
+                    >
+                      Review
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
               </div>
-            </div>
 
-            {/* Tab Content */}
-            <div className="p-6">
-              {/* Amount Tab */}
-              <TabsContent value="amount" className="mt-0 space-y-6">
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
+              {/* Tab Content */}
+              <div className="p-6">
+                {/* Amount Tab */}
+                <TabsContent value="amount" className="mt-0 space-y-6">
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <Label
+                          className={`text-xs font-medium ${colors.texts.primary}`}
+                        >
+                          Select Amount (USD)
+                        </Label>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          <CurrencyDollarIcon className="h-4 w-4" />
+                          <span>Payments in USD only</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-3">
+                        {/* Only show USD amounts in modal */}
+                        {[50, 100, 200, 500].map((amount) => (
+                          <button
+                            key={amount}
+                            type="button"
+                            onClick={() => setAddAmount(amount.toString())}
+                            className={`h-9 flex items-center justify-center cursor-pointer ${
+                              addAmount === amount.toString()
+                                ? "bg-black dark:bg-white text-white dark:text-black border border-black dark:border-white"
+                                : `${colors.backgrounds.tertiary} border ${colors.borders.primary} ${colors.texts.primary} hover:border-black dark:hover:border-white`
+                            } transition-all rounded-none text-xs font-medium`}
+                          >
+                            ${amount}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Custom Amount */}
+                    <div className="space-y-3">
                       <Label
                         className={`text-xs font-medium ${colors.texts.primary}`}
                       >
-                        Select Amount (USD)
+                        Or Enter Custom Amount
                       </Label>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                        <CurrencyDollarIcon className="h-4 w-4" />
-                        <span>Payments in USD only</span>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={addAmount}
+                          onChange={(e) => setAddAmount(e.target.value)}
+                          className={`text-sm font-medium ${colors.inputs.base} h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
+                        />
                       </div>
-                    </div>
-                    <div className="grid grid-cols-4 gap-3">
-                      {/* Only show USD amounts in modal */}
-                      {[50, 100, 200, 500].map((amount) => (
-                        <button
-                          key={amount}
-                          type="button"
-                          onClick={() => setAddAmount(amount.toString())}
-                          className={`h-9 flex items-center justify-center cursor-pointer ${
-                            addAmount === amount.toString()
-                              ? "bg-black dark:bg-white text-white dark:text-black border border-black dark:border-white"
-                              : `${colors.backgrounds.tertiary} border ${colors.borders.primary} ${colors.texts.primary} hover:border-black dark:hover:border-white`
-                          } transition-all rounded-none text-xs font-medium`}
+                      {addAmount && parseFloat(addAmount) > 0 && (
+                        <div
+                          className={`flex items-center gap-2 text-xs ${colors.texts.secondary}`}
                         >
-                          ${amount}
-                        </button>
-                      ))}
+                          <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                          <span>
+                            ≈{" "}
+                            {formatCVT(parseFloat(addAmount) * CONVERSION_RATE)}{" "}
+                            • Rate: $1 = CVT {CONVERSION_RATE.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      {addAmount && parseFloat(addAmount) <= 0 && (
+                        <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+                          <ExclamationCircleIcon className="h-4 w-4" />
+                          <span>Please enter an amount greater than 0</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Custom Amount */}
-                  <div className="space-y-3">
-                    <Label
-                      className={`text-xs font-medium ${colors.texts.primary}`}
+                  <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (addAmount && parseFloat(addAmount) > 0) {
+                          setActiveAddTab("payment");
+                          setPaymentMethod("Card"); // Auto-select Card payment
+                        }
+                      }}
+                      disabled={!addAmount || parseFloat(addAmount) <= 0}
+                      className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer`}
                     >
-                      Or Enter Custom Amount
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        value={addAmount}
-                        onChange={(e) => setAddAmount(e.target.value)}
-                        className={`text-sm font-medium ${colors.inputs.base} h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
-                      />
-                    </div>
-                    {addAmount && parseFloat(addAmount) > 0 && (
-                      <div
-                        className={`flex items-center gap-2 text-xs ${colors.texts.secondary}`}
-                      >
-                        <CheckCircleIcon className="h-4 w-4 text-green-600" />
-                        <span>
-                          ≈ {formatCVT(parseFloat(addAmount) * CONVERSION_RATE)}{" "}
-                          • Rate: $1 = CVT {CONVERSION_RATE.toLocaleString()}
-                        </span>
-                      </div>
-                    )}
-                    {addAmount && parseFloat(addAmount) <= 0 && (
-                      <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
-                        <ExclamationCircleIcon className="h-4 w-4" />
-                        <span>Please enter an amount greater than 0</span>
-                      </div>
-                    )}
+                      Continue to Payment
+                    </Button>
                   </div>
-                </div>
+                </TabsContent>
 
-                <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-800">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      if (addAmount && parseFloat(addAmount) > 0) {
-                        setActiveAddTab("payment");
-                        setPaymentMethod("Card"); // Auto-select Card payment
+                {/* Payment Tab */}
+                <TabsContent value="payment" className="mt-0 space-y-6">
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex items-center gap-3 mb-6">
+                        <div>
+                          <p
+                            className={`text-sm font-semibold ${colors.texts.primary}`}
+                          >
+                            Credit / Debit Card
+                          </p>
+                          <p className={`text-xs ${colors.texts.secondary}`}>
+                            Powered by Stripe - Instant processing
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Card Details Form */}
+                      <div className="space-y-3">
+                        {/* Card Number */}
+                        <div>
+                          <Label
+                            className={`text-xs ${colors.texts.secondary}`}
+                          >
+                            Card Number *
+                          </Label>
+                          <div className="relative mt-1">
+                            <Input
+                              type="text"
+                              placeholder="1234 5678 9012 3456"
+                              value={cardNumber}
+                              onChange={handleCardNumberChange}
+                              className={`${colors.inputs.base} h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
+                            />
+                          </div>
+                          {/* Reserved error space */}
+                          <div className="h-4 mt-1">
+                            {getCardNumberError() && (
+                              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <ExclamationCircleIcon className="h-3 w-3" />
+                                {getCardNumberError()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expiry and CVV */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label
+                              className={`text-xs ${colors.texts.secondary}`}
+                            >
+                              Expiry Date *
+                            </Label>
+                            <div className="relative mt-1">
+                              <Input
+                                type="text"
+                                placeholder="MM/YY"
+                                value={expiryDate}
+                                onChange={handleExpiryDateChange}
+                                className={`${colors.inputs.base} h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
+                              />
+                            </div>
+                            {/* Reserved error space */}
+                            <div className="h-4 mt-1">
+                              {getExpiryDateError() && (
+                                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                  <ExclamationCircleIcon className="h-3 w-3" />
+                                  {getExpiryDateError()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <Label
+                              className={`text-xs ${colors.texts.secondary}`}
+                            >
+                              CVV *
+                            </Label>
+                            <div className="relative mt-1">
+                              <Input
+                                type="text"
+                                placeholder="123"
+                                value={cvv}
+                                onChange={handleCvvChange}
+                                className={`${colors.inputs.base} h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
+                              />
+                            </div>
+                            {/* Reserved error space */}
+                            <div className="h-4 mt-1">
+                              {getCvvError() && (
+                                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                  <ExclamationCircleIcon className="h-3 w-3" />
+                                  {getCvvError()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Cardholder Name */}
+                        <div>
+                          <Label
+                            className={`text-xs ${colors.texts.secondary}`}
+                          >
+                            Cardholder Name *
+                          </Label>
+                          <div className="relative mt-1">
+                            <Input
+                              type="text"
+                              placeholder="Sara"
+                              value={cardholderName}
+                              onChange={(e) =>
+                                setCardholderName(e.target.value)
+                              }
+                              className={`${colors.inputs.base} h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
+                            />
+                          </div>
+                          {/* Reserved error space */}
+                          <div className="h-4 mt-1">
+                            {getCardholderNameError() && (
+                              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <ExclamationCircleIcon className="h-3 w-3" />
+                                {getCardholderNameError()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Stripe Badge */}
+                        <div
+                          className={`flex items-center gap-2 pt-3 border-t ${colors.borders.primary}`}
+                        >
+                          <ShieldCheckIcon className="h-4 w-4 text-green-600" />
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Secured by Stripe
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setActiveAddTab("amount")}
+                      className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium transition-all hover:border-black dark:hover:border-white cursor-pointer`}
+                    >
+                      <ArrowLeftIcon className="h-4 w-4 inline mr-2" />
+                      Back
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const cardDigits = cardNumber.replace(/\s/g, "");
+                        const isValid =
+                          cardDigits.length === 16 &&
+                          expiryDate.length === 5 &&
+                          validateExpiryDate(expiryDate) &&
+                          cvv.length === 3 &&
+                          cardholderName.trim().length >= 3;
+
+                        if (isValid) {
+                          setActiveAddTab("review");
+                        } else {
+                          toast.error(
+                            "Please fill in all payment details correctly"
+                          );
+                        }
+                      }}
+                      disabled={
+                        cardNumber.replace(/\s/g, "").length !== 16 ||
+                        expiryDate.length !== 5 ||
+                        !validateExpiryDate(expiryDate) ||
+                        cvv.length !== 3 ||
+                        cardholderName.trim().length < 3
                       }
-                    }}
-                    disabled={!addAmount || parseFloat(addAmount) <= 0}
-                    className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer`}
-                  >
-                    Continue to Payment
-                  </Button>
-                </div>
-              </TabsContent>
+                      className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      Review Payment
+                    </Button>
+                  </div>
+                </TabsContent>
 
-              {/* Payment Tab */}
-              <TabsContent value="payment" className="mt-0 space-y-6">
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex items-center gap-3 mb-6">
-                      <CreditCardIcon
-                        className={`h-5 w-5 ${colors.icons.primary}`}
-                      />
-                      <div>
+                {/* Review Tab */}
+                <TabsContent value="review" className="mt-0 space-y-6">
+                  <Card
+                    className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none !shadow-none hover:!shadow-none`}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-4">
                         <p
-                          className={`text-sm font-semibold ${colors.texts.primary}`}
+                          className={`text-base font-semibold ${colors.texts.primary}`}
                         >
-                          Credit / Debit Card
+                          Payment Summary
                         </p>
-                        <p className={`text-xs ${colors.texts.secondary}`}>
-                          Powered by Stripe • Instant processing
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Card Details Form */}
-                    <div className="space-y-3">
-                      {/* Card Number */}
-                      <div>
-                        <Label className={`text-xs ${colors.texts.secondary}`}>
-                          Card Number *
-                        </Label>
-                        <div className="relative mt-1">
-                          <CreditCardIcon
-                            className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
-                          />
-                          <Input
-                            type="text"
-                            placeholder="1234 5678 9012 3456"
-                            value={cardNumber}
-                            onChange={handleCardNumberChange}
-                            className={`${colors.inputs.base} pl-10 h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
-                          />
-                        </div>
-                        {/* Reserved error space */}
-                        <div className="h-4 mt-1">
-                          {getCardNumberError() && (
-                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                              <ExclamationCircleIcon className="h-3 w-3" />
-                              {getCardNumberError()}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Expiry and CVV */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label
-                            className={`text-xs ${colors.texts.secondary}`}
-                          >
-                            Expiry Date *
-                          </Label>
-                          <div className="relative mt-1">
-                            <ClockIcon
-                              className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
-                            />
-                            <Input
-                              type="text"
-                              placeholder="MM/YY"
-                              value={expiryDate}
-                              onChange={handleExpiryDateChange}
-                              className={`${colors.inputs.base} pl-10 h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
-                            />
-                          </div>
-                          {/* Reserved error space */}
-                          <div className="h-4 mt-1">
-                            {getExpiryDateError() && (
-                              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                                <ExclamationCircleIcon className="h-3 w-3" />
-                                {getExpiryDateError()}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <Label
-                            className={`text-xs ${colors.texts.secondary}`}
-                          >
-                            CVV *
-                          </Label>
-                          <div className="relative mt-1">
-                            <ShieldCheckIcon
-                              className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
-                            />
-                            <Input
-                              type="text"
-                              placeholder="123"
-                              value={cvv}
-                              onChange={handleCvvChange}
-                              className={`${colors.inputs.base} pl-10 h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
-                            />
-                          </div>
-                          {/* Reserved error space */}
-                          <div className="h-4 mt-1">
-                            {getCvvError() && (
-                              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                                <ExclamationCircleIcon className="h-3 w-3" />
-                                {getCvvError()}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Cardholder Name */}
-                      <div>
-                        <Label className={`text-xs ${colors.texts.secondary}`}>
-                          Cardholder Name *
-                        </Label>
-                        <div className="relative mt-1">
-                          <UsersIcon
-                            className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.icons.secondary}`}
-                          />
-                          <Input
-                            type="text"
-                            placeholder="John Doe"
-                            value={cardholderName}
-                            onChange={(e) => setCardholderName(e.target.value)}
-                            className={`${colors.inputs.base} pl-10 h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
-                          />
-                        </div>
-                        {/* Reserved error space */}
-                        <div className="h-4 mt-1">
-                          {getCardholderNameError() && (
-                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                              <ExclamationCircleIcon className="h-3 w-3" />
-                              {getCardholderNameError()}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Stripe Badge */}
-                      <div
-                        className={`flex items-center gap-2 pt-3 border-t ${colors.borders.primary}`}
-                      >
-                        <ShieldCheckIcon className="h-4 w-4 text-green-600" />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Secured by Stripe • Your payment information is
-                          encrypted
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-800">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setActiveAddTab("amount")}
-                    className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium transition-all hover:border-black dark:hover:border-white cursor-pointer`}
-                  >
-                    <ArrowLeftIcon className="h-4 w-4 inline mr-2" />
-                    Back
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      const cardDigits = cardNumber.replace(/\s/g, "");
-                      const isValid =
-                        cardDigits.length === 16 &&
-                        expiryDate.length === 5 &&
-                        validateExpiryDate(expiryDate) &&
-                        cvv.length === 3 &&
-                        cardholderName.trim().length >= 3;
-
-                      if (isValid) {
-                        setActiveAddTab("review");
-                      } else {
-                        toast.error(
-                          "Please fill in all payment details correctly"
-                        );
-                      }
-                    }}
-                    disabled={
-                      cardNumber.replace(/\s/g, "").length !== 16 ||
-                      expiryDate.length !== 5 ||
-                      !validateExpiryDate(expiryDate) ||
-                      cvv.length !== 3 ||
-                      cardholderName.trim().length < 3
-                    }
-                    className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    Review Payment
-                  </Button>
-                </div>
-              </TabsContent>
-
-              {/* Review Tab */}
-              <TabsContent value="review" className="mt-0 space-y-6">
-                <Card
-                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none !shadow-none hover:!shadow-none`}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <p
-                        className={`text-base font-semibold ${colors.texts.primary}`}
-                      >
-                        Payment Summary
-                      </p>
-                      <Badge
-                        className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
-                      >
-                        <CheckCircleIcon className="h-3 w-3 mr-1" />
-                        Ready to Process
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-800">
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.texts.secondary}>Amount:</span>
-                        <span
-                          className={`font-semibold ${colors.texts.primary}`}
+                        <Badge
+                          className={`${badgeColors.green.bg} ${badgeColors.green.border} ${badgeColors.green.text} text-xs rounded-none`}
                         >
-                          {formatCurrency(
-                            currency === "USD"
-                              ? parseFloat(addAmount) * CONVERSION_RATE
-                              : parseFloat(addAmount)
-                          )}
-                        </span>
+                          <CheckCircleIcon className="h-3 w-3 mr-1" />
+                          Ready to Process
+                        </Badge>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.texts.secondary}>
-                          Processing Fee:
-                        </span>
-                        <span
-                          className={`font-semibold ${colors.texts.primary}`}
-                        >
-                          $0.00
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.texts.secondary}>
-                          Payment Method:
-                        </span>
-                        <span
-                          className={`font-semibold ${colors.texts.primary} flex items-center gap-2`}
-                        >
-                          <CreditCardIcon className="h-4 w-4" />
-                          Credit/Debit Card
-                        </span>
-                      </div>
-                      <div
-                        className={`pt-3 border-t border-gray-200 dark:border-gray-800`}
-                      >
-                        <div className="flex justify-between">
-                          <span
-                            className={`text-base font-semibold ${colors.texts.primary}`}
-                          >
-                            Total:
+
+                      <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+                        <div className="flex justify-between text-sm">
+                          <span className={colors.texts.secondary}>
+                            Amount:
                           </span>
                           <span
-                            className={`text-lg font-bold ${colors.texts.primary}`}
+                            className={`font-semibold ${colors.texts.primary}`}
                           >
                             {formatCurrency(
                               currency === "USD"
@@ -1518,82 +1453,95 @@ export default function WalletPage() {
                             )}
                           </span>
                         </div>
-                      </div>
-                    </div>
-
-                    <div
-                      className={`flex items-start gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-800`}
-                    >
-                      <ShieldCheckIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p
-                          className={`text-xs font-semibold ${colors.texts.primary} mb-1`}
+                        <div className="flex justify-between text-sm">
+                          <span className={colors.texts.secondary}>
+                            Processing Fee:
+                          </span>
+                          <span
+                            className={`font-semibold ${colors.texts.primary}`}
+                          >
+                            $0.00
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className={colors.texts.secondary}>
+                            Payment Method:
+                          </span>
+                          <span
+                            className={`font-semibold ${colors.texts.primary} flex items-center gap-2`}
+                          >
+                            <CreditCardIcon className="h-4 w-4" />
+                            Credit/Debit Card
+                          </span>
+                        </div>
+                        <div
+                          className={`pt-3 border-t border-gray-200 dark:border-gray-800`}
                         >
-                          Secure Payment
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Your payment is processed securely through Stripe.
-                          Funds will be added to your wallet instantly upon
-                          successful payment.
-                        </p>
+                          <div className="flex justify-between">
+                            <span
+                              className={`text-base font-semibold ${colors.texts.primary}`}
+                            >
+                              Total:
+                            </span>
+                            <span
+                              className={`text-lg font-bold ${colors.texts.primary}`}
+                            >
+                              {formatCurrency(
+                                currency === "USD"
+                                  ? parseFloat(addAmount) * CONVERSION_RATE
+                                  : parseFloat(addAmount)
+                              )}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
 
-                <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-800">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setActiveAddTab("payment")}
-                    disabled={isLoading}
-                    className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}
-                  >
-                    <ArrowLeftIcon className="h-4 w-4 inline mr-2" />
-                    Back
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleAddFunds}
-                    disabled={isLoading}
-                    className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer`}
-                  >
-                    {isLoading && (
-                      <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                    )}
-                    {isLoading ? "Processing Payment..." : "Confirm & Pay"}
-                  </Button>
-                </div>
-              </TabsContent>
-            </div>
-          </Tabs>
+                      <div
+                        className={`flex items-start gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-800`}
+                      >
+                        <ShieldCheckIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p
+                            className={`text-xs font-semibold ${colors.texts.primary} mb-1`}
+                          >
+                            Secure Payment
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Your payment is processed securely through Stripe.
+                            Funds will be added to your wallet instantly upon
+                            successful payment.
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-          {/* Footer */}
-          <div
-            className={`p-6 border-t ${colors.borders.primary} flex items-center justify-between`}
-          >
-            <div className={`text-xs ${colors.texts.secondary}`}>
-              <p>Need help? Contact support@chainvanguard.com</p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setAddFundsOpen(false);
-                setActiveAddTab("amount");
-                setAddAmount("");
-                setPaymentMethod("");
-                setCardNumber("");
-                setExpiryDate("");
-                setCvv("");
-                setCardholderName("");
-              }}
-              disabled={isLoading}
-              className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}
-            >
-              Cancel
-            </Button>
-          </div>
+                  <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setActiveAddTab("payment")}
+                      className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}
+                    >
+                      <ArrowLeftIcon className="h-4 w-4 inline mr-2" />
+                      Back
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleAddFunds}
+                      disabled={isLoading}
+                      className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer`}
+                    >
+                      {isLoading && (
+                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                      )}
+                      {isLoading ? "Processing Payment..." : "Confirm & Pay"}
+                    </Button>
+                  </div>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </motion.div>
         </DialogContent>
       </Dialog>
 
@@ -1612,316 +1560,312 @@ export default function WalletPage() {
           style={{ width: "100%", maxWidth: "600px" }}
           className={`w-full max-w-[600px] max-h-[90vh] overflow-y-auto ${colors.backgrounds.modal} ${colors.borders.primary} rounded-none p-0 !shadow-none hover:!shadow-none`}
         >
-          {/* Header */}
-          <div className="p-6">
-            <DialogHeader>
-              <DialogTitle
-                className={`flex items-center gap-3 text-xl font-bold ${colors.texts.primary}`}
-              >
-                <div className="h-8 w-8 flex items-center justify-center rounded-none">
-                  <ArrowDownLeftIcon className="h-5 w-5 transform rotate-180" />
-                </div>
-                Withdraw Funds
-              </DialogTitle>
-              <DialogDescription
-                className={`text-base ${colors.texts.secondary} mt-2`}
-              >
-                Withdraw funds from your ChainVanguard wallet
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          {/* Tabs */}
-          <Tabs
-            value={activeWithdrawTab}
-            onValueChange={setActiveWithdrawTab}
-            className="w-full"
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={fadeUpVariant}
+            custom={0}
           >
-            <div className="flex justify-center px-6">
-              <div className="w-full flex justify-center">
-                <TabsList
-                  className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
+            {/* Header */}
+            <div className="p-6">
+              <DialogHeader>
+                <DialogTitle
+                  className={`flex items-center gap-3 text-xl font-bold ${colors.texts.primary}`}
                 >
-                  <TabsTrigger
-                    value="amount"
-                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                  <div className="h-8 w-8 flex items-center justify-center rounded-none">
+                    <ArrowDownLeftIcon className="h-5 w-5 transform rotate-180" />
+                  </div>
+                  Withdraw Funds
+                </DialogTitle>
+                <DialogDescription
+                  className={`text-base ${colors.texts.secondary} mt-2`}
+                >
+                  Withdraw funds from your ChainVanguard wallet
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            {/* Tabs */}
+            <Tabs
+              value={activeWithdrawTab}
+              onValueChange={setActiveWithdrawTab}
+              className="w-full"
+            >
+              <div className="flex justify-center px-6">
+                <div className="w-full flex justify-center">
+                  <TabsList
+                    className={`flex w-full max-w-2xl ${colors.borders.primary} ${colors.backgrounds.tertiary} p-0.5 rounded-none mx-auto`}
+                  >
+                    <TabsTrigger
+                      value="amount"
+                      className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
                     ${
                       activeWithdrawTab === "amount"
                         ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
                         : `${colors.texts.secondary} hover:${colors.texts.primary}`
                     }`}
-                  >
-                    Amount
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="review"
-                    disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
-                    className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
+                    >
+                      Amount
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="review"
+                      disabled={
+                        !withdrawAmount || parseFloat(withdrawAmount) <= 0
+                      }
+                      className={`flex-1 py-1.5 px-2.5 text-xs font-medium transition-all cursor-pointer rounded-none
                     ${
                       activeWithdrawTab === "review"
                         ? `${colors.backgrounds.primary} ${colors.texts.primary} shadow-sm`
                         : `${colors.texts.secondary} hover:${colors.texts.primary}`
                     }`}
-                  >
-                    Review
-                  </TabsTrigger>
-                </TabsList>
+                    >
+                      Review
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
               </div>
-            </div>
 
-            {/* Tab Content */}
-            <div className="p-6">
-              {/* Amount Tab */}
-              <TabsContent value="amount" className="mt-0 space-y-6">
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
+              {/* Tab Content */}
+              <div className="p-6">
+                {/* Amount Tab */}
+                <TabsContent value="amount" className="mt-0 space-y-6">
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <Label
+                          className={`text-xs font-medium ${colors.texts.primary}`}
+                        >
+                          Select Amount (USD)
+                        </Label>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          <CurrencyDollarIcon className="h-4 w-4" />
+                          <span>Withdrawals in USD only</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-3">
+                        {[50, 100, 200, 500].map((amount) => (
+                          <button
+                            key={amount}
+                            type="button"
+                            onClick={() => setWithdrawAmount(amount.toString())}
+                            disabled={amount * CONVERSION_RATE > balance}
+                            className={`h-9 flex items-center justify-center cursor-pointer ${
+                              withdrawAmount === amount.toString()
+                                ? "bg-black dark:bg-white text-white dark:text-black border border-black dark:border-white"
+                                : `${colors.backgrounds.tertiary} border ${colors.borders.primary} ${colors.texts.primary} hover:border-black dark:hover:border-white`
+                            } transition-all rounded-none text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            ${amount}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Custom Amount */}
+                    <div className="space-y-3">
                       <Label
                         className={`text-xs font-medium ${colors.texts.primary}`}
                       >
-                        Select Amount (USD)
+                        Or Enter Custom Amount
                       </Label>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                        <CurrencyDollarIcon className="h-4 w-4" />
-                        <span>Withdrawals in USD only</span>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={withdrawAmount}
+                          onChange={(e) => setWithdrawAmount(e.target.value)}
+                          className={`text-sm font-medium ${colors.inputs.base} h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
+                        />
                       </div>
-                    </div>
-                    <div className="grid grid-cols-4 gap-3">
-                      {[50, 100, 200, 500].map((amount) => (
-                        <button
-                          key={amount}
-                          type="button"
-                          onClick={() => setWithdrawAmount(amount.toString())}
-                          disabled={amount * CONVERSION_RATE > balance}
-                          className={`h-9 flex items-center justify-center cursor-pointer ${
-                            withdrawAmount === amount.toString()
-                              ? "bg-black dark:bg-white text-white dark:text-black border border-black dark:border-white"
-                              : `${colors.backgrounds.tertiary} border ${colors.borders.primary} ${colors.texts.primary} hover:border-black dark:hover:border-white`
-                          } transition-all rounded-none text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
+                      {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                        <div
+                          className={`flex items-center gap-2 text-xs ${colors.texts.secondary}`}
                         >
-                          ${amount}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Custom Amount */}
-                  <div className="space-y-3">
-                    <Label
-                      className={`text-xs font-medium ${colors.texts.primary}`}
-                    >
-                      Or Enter Custom Amount
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        value={withdrawAmount}
-                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                        className={`text-sm font-medium ${colors.inputs.base} h-9 w-full ${colors.inputs.focus} transition-colors duration-200`}
-                      />
-                    </div>
-                    {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
-                      <div
-                        className={`flex items-center gap-2 text-xs ${colors.texts.secondary}`}
-                      >
-                        <CheckCircleIcon className="h-4 w-4 text-green-600" />
-                        <span>
-                          ≈ {formatCVT(parseFloat(withdrawAmount) * CONVERSION_RATE)}{" "}
-                          will be burned • Available: {formatCVT(balance)}
-                        </span>
-                      </div>
-                    )}
-                    {withdrawAmount &&
-                      parseFloat(withdrawAmount) * CONVERSION_RATE > balance && (
-                        <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
-                          <ExclamationCircleIcon className="h-4 w-4" />
-                          <span>Insufficient balance</span>
+                          <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                          <span>
+                            ≈{" "}
+                            {formatCVT(
+                              parseFloat(withdrawAmount) * CONVERSION_RATE
+                            )}{" "}
+                            will be burned • Available: {formatCVT(balance)}
+                          </span>
                         </div>
                       )}
-                    {withdrawAmount && parseFloat(withdrawAmount) <= 0 && (
-                      <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
-                        <ExclamationCircleIcon className="h-4 w-4" />
-                        <span>Please enter an amount greater than 0</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-800">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      if (
-                        withdrawAmount &&
-                        parseFloat(withdrawAmount) > 0 &&
-                        parseFloat(withdrawAmount) * CONVERSION_RATE <= balance
-                      ) {
-                        setActiveWithdrawTab("review");
-                      }
-                    }}
-                    disabled={
-                      !withdrawAmount ||
-                      parseFloat(withdrawAmount) <= 0 ||
-                      parseFloat(withdrawAmount) * CONVERSION_RATE > balance
-                    }
-                    className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer`}
-                  >
-                    Continue to Review
-                  </Button>
-                </div>
-              </TabsContent>
-
-              {/* Review Tab */}
-              <TabsContent value="review" className="mt-0 space-y-6">
-                <Card
-                  className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none !shadow-none hover:!shadow-none`}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <p
-                        className={`text-base font-semibold ${colors.texts.primary}`}
-                      >
-                        Withdrawal Summary
-                      </p>
-                      <Badge
-                        className={`${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} text-xs rounded-none`}
-                      >
-                        <ExclamationCircleIcon className="h-3 w-3 mr-1" />
-                        Tokens will be burned
-                      </Badge>
+                      {withdrawAmount &&
+                        parseFloat(withdrawAmount) * CONVERSION_RATE >
+                          balance && (
+                          <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+                            <ExclamationCircleIcon className="h-4 w-4" />
+                            <span>Insufficient balance</span>
+                          </div>
+                        )}
+                      {withdrawAmount && parseFloat(withdrawAmount) <= 0 && (
+                        <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+                          <ExclamationCircleIcon className="h-4 w-4" />
+                          <span>Please enter an amount greater than 0</span>
+                        </div>
+                      )}
                     </div>
+                  </div>
 
-                    <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-800">
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.texts.secondary}>
-                          Withdrawal Amount (USD):
-                        </span>
-                        <span
-                          className={`font-semibold ${colors.texts.primary}`}
+                  <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (
+                          withdrawAmount &&
+                          parseFloat(withdrawAmount) > 0 &&
+                          parseFloat(withdrawAmount) * CONVERSION_RATE <=
+                            balance
+                        ) {
+                          setActiveWithdrawTab("review");
+                        }
+                      }}
+                      disabled={
+                        !withdrawAmount ||
+                        parseFloat(withdrawAmount) <= 0 ||
+                        parseFloat(withdrawAmount) * CONVERSION_RATE > balance
+                      }
+                      className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer`}
+                    >
+                      Continue to Review
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                {/* Review Tab */}
+                <TabsContent value="review" className="mt-0 space-y-6">
+                  <Card
+                    className={`border-0 shadow-sm ${colors.backgrounds.secondary} rounded-none !shadow-none hover:!shadow-none`}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <p
+                          className={`text-base font-semibold ${colors.texts.primary}`}
                         >
-                          ${parseFloat(withdrawAmount).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.texts.secondary}>
-                          Tokens to burn:
-                        </span>
-                        <span
-                          className={`font-semibold ${colors.texts.primary}`}
+                          Withdrawal Summary
+                        </p>
+                        <Badge
+                          className={`${badgeColors.red.bg} ${badgeColors.red.border} ${badgeColors.red.text} text-xs rounded-none`}
                         >
-                          {formatCVT(parseFloat(withdrawAmount) * CONVERSION_RATE)}
-                        </span>
+                          <ExclamationCircleIcon className="h-3 w-3 mr-1" />
+                          Tokens will be burned
+                        </Badge>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.texts.secondary}>
-                          Processing Fee:
-                        </span>
-                        <span
-                          className={`font-semibold ${colors.texts.primary}`}
-                        >
-                          $0.00
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.texts.secondary}>
-                          New Balance:
-                        </span>
-                        <span
-                          className={`font-semibold ${colors.texts.primary}`}
-                        >
-                          {formatCVT(
-                            balance - parseFloat(withdrawAmount) * CONVERSION_RATE
-                          )}
-                        </span>
-                      </div>
-                      <div
-                        className={`pt-3 border-t border-gray-200 dark:border-gray-800`}
-                      >
-                        <div className="flex justify-between">
-                          <span
-                            className={`text-base font-semibold ${colors.texts.primary}`}
-                          >
-                            Total:
+
+                      <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+                        <div className="flex justify-between text-sm">
+                          <span className={colors.texts.secondary}>
+                            Withdrawal Amount (USD):
                           </span>
                           <span
-                            className={`text-lg font-bold ${colors.texts.primary}`}
+                            className={`font-semibold ${colors.texts.primary}`}
                           >
                             ${parseFloat(withdrawAmount).toFixed(2)}
                           </span>
                         </div>
-                      </div>
-                    </div>
-
-                    <div
-                      className={`flex items-start gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-800`}
-                    >
-                      <ShieldCheckIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p
-                          className={`text-xs font-semibold ${colors.texts.primary} mb-1`}
+                        <div className="flex justify-between text-sm">
+                          <span className={colors.texts.secondary}>
+                            Tokens to burn:
+                          </span>
+                          <span
+                            className={`font-semibold ${colors.texts.primary}`}
+                          >
+                            {formatCVT(
+                              parseFloat(withdrawAmount) * CONVERSION_RATE
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className={colors.texts.secondary}>
+                            Processing Fee:
+                          </span>
+                          <span
+                            className={`font-semibold ${colors.texts.primary}`}
+                          >
+                            $0.00
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className={colors.texts.secondary}>
+                            New Balance:
+                          </span>
+                          <span
+                            className={`font-semibold ${colors.texts.primary}`}
+                          >
+                            {formatCVT(
+                              balance -
+                                parseFloat(withdrawAmount) * CONVERSION_RATE
+                            )}
+                          </span>
+                        </div>
+                        <div
+                          className={`pt-3 border-t border-gray-200 dark:border-gray-800`}
                         >
-                          Secure Withdrawal
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Tokens will be burned on the blockchain and the
-                          equivalent USD amount will be processed to your account.
-                        </p>
+                          <div className="flex justify-between">
+                            <span
+                              className={`text-base font-semibold ${colors.texts.primary}`}
+                            >
+                              Total:
+                            </span>
+                            <span
+                              className={`text-lg font-bold ${colors.texts.primary}`}
+                            >
+                              ${parseFloat(withdrawAmount).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
 
-                <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-800">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setActiveWithdrawTab("amount")}
-                    disabled={isLoading}
-                    className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}
-                  >
-                    <ArrowLeftIcon className="h-4 w-4 inline mr-2" />
-                    Back
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleWithdraw}
-                    disabled={isLoading}
-                    className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer`}
-                  >
-                    {isLoading && (
-                      <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                    )}
-                    {isLoading ? "Processing..." : "Confirm Withdrawal"}
-                  </Button>
-                </div>
-              </TabsContent>
-            </div>
-          </Tabs>
+                      <div
+                        className={`flex items-start gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-800`}
+                      >
+                        <ShieldCheckIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p
+                            className={`text-xs font-semibold ${colors.texts.primary} mb-1`}
+                          >
+                            Secure Withdrawal
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Tokens will be burned on the blockchain and the
+                            equivalent USD amount will be processed to your
+                            account.
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-          {/* Footer */}
-          <div
-            className={`p-6 border-t ${colors.borders.primary} flex items-center justify-between`}
-          >
-            <div className={`text-xs ${colors.texts.secondary}`}>
-              <p>Need help? Contact support@chainvanguard.com</p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setWithdrawOpen(false);
-                setActiveWithdrawTab("amount");
-                setWithdrawAmount("");
-              }}
-              disabled={isLoading}
-              className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}
-            >
-              Cancel
-            </Button>
-          </div>
+                  <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setActiveWithdrawTab("amount")}
+                      disabled={isLoading}
+                      className={`px-6 h-9 ${colors.buttons.outline} rounded-none text-xs font-medium disabled:opacity-50 transition-all hover:border-black dark:hover:border-white cursor-pointer`}
+                    >
+                      <ArrowLeftIcon className="h-4 w-4 inline mr-2" />
+                      Back
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleWithdraw}
+                      disabled={isLoading}
+                      className={`px-8 h-9 ${colors.buttons.primary} rounded-none flex items-center gap-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer`}
+                    >
+                      {isLoading && (
+                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                      )}
+                      {isLoading ? "Processing..." : "Confirm Withdrawal"}
+                    </Button>
+                  </div>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </motion.div>
         </DialogContent>
       </Dialog>
     </div>

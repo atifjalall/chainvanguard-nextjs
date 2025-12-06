@@ -4,6 +4,7 @@ import { authenticate, authorizeRoles } from "../middleware/auth.middleware.js";
 import { uploadProductFiles } from "../middleware/upload.middleware.js";
 import { parseJsonFields } from "../middleware/parse-json-fields.js";
 import logger from "../utils/logger.js";
+import { initializeSafeMode, queryCollection, countDocuments } from "../utils/safeMode/lokiService.js";
 
 const router = express.Router();
 
@@ -16,6 +17,61 @@ const router = express.Router();
 // ========================================
 router.get("/", authenticate, async (req, res) => {
   try {
+    // SAFE MODE: Load from LokiJS backup
+    if (req.safeMode) {
+      await initializeSafeMode(req.user.userId, 100);
+
+      // Build query - if supplier, only show their inventory
+      const query = {};
+      if (req.user.role === "supplier") {
+        query.supplierId = req.user.userId;
+      } else if (req.query.supplierId) {
+        query.supplierId = req.query.supplierId;
+      }
+
+      if (req.query.category) query.category = req.query.category;
+      if (req.query.status) query.status = req.query.status;
+
+      // Query LokiJS
+      let inventory = queryCollection(req.user.userId, 'inventory', query);
+
+      // Apply lowStock filter manually
+      if (req.query.lowStock === 'true') {
+        inventory = inventory.filter(i => i.quantity <= (i.lowStockThreshold || 10));
+      }
+
+      // Sorting and pagination
+      const sortBy = req.query.sortBy || 'createdAt';
+      const sortOrder = req.query.sortOrder || 'desc';
+      inventory.sort((a, b) => {
+        const aVal = a[sortBy];
+        const bVal = b[sortBy];
+        return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+      });
+
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const skip = (page - 1) * limit;
+      const total = inventory.length;
+      const paginatedInventory = inventory.slice(skip, skip + limit);
+
+      return res.json({
+        success: true,
+        safeMode: true,
+        data: paginatedInventory,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: limit,
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1,
+        },
+        warning: 'Viewing backup data. Some filters may be limited during maintenance.'
+      });
+    }
+
+    // NORMAL MODE: Full MongoDB access
     const filters = {
       supplierId: req.query.supplierId,
       category: req.query.category,
@@ -58,6 +114,7 @@ router.get("/", authenticate, async (req, res) => {
 
 // ========================================
 // GET SUPPLIER'S INVENTORY
+// Now supports safe mode - falls back to backup data when MongoDB is down
 // ========================================
 router.get("/my-inventory", authenticate, async (req, res) => {
   try {
@@ -68,6 +125,63 @@ router.get("/my-inventory", authenticate, async (req, res) => {
       });
     }
 
+    // Check if in safe mode
+    if (req.safeMode) {
+      console.warn('⚠️  Safe mode active - using LokiJS for inventory');
+
+      // Initialize safe mode (loads data into LokiJS from IPFS/Redis cache)
+      await initializeSafeMode(req.user.userId, 100);
+
+      // Build query
+      const query = { supplierId: req.user.userId };
+
+      if (req.query.category) {
+        query.category = req.query.category;
+      }
+      if (req.query.status) {
+        query.status = req.query.status;
+      }
+
+      // Query LokiJS first for basic filters
+      let inventory = queryCollection(req.user.userId, 'inventory', query);
+
+      // Apply lowStock filter manually (requires comparison logic)
+      if (req.query.lowStock === 'true') {
+        inventory = inventory.filter(i => i.quantity <= (i.lowStockThreshold || 10));
+      }
+
+      // Manual sorting and pagination
+      const sortBy = req.query.sortBy || 'createdAt';
+      const sortOrder = req.query.sortOrder || 'desc';
+      inventory.sort((a, b) => {
+        const aVal = a[sortBy] || a.createdAt;
+        const bVal = b[sortBy] || b.createdAt;
+        return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+      });
+
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const skip = (page - 1) * limit;
+      const total = inventory.length;
+      const paginatedInventory = inventory.slice(skip, skip + limit);
+
+      return res.json({
+        success: true,
+        data: paginatedInventory,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: limit,
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1,
+        },
+        safeMode: true,
+        warning: 'Viewing backup data from last snapshot. Data may not be up-to-date.',
+      });
+    }
+
+    // Normal mode - MongoDB is healthy
     const filters = {
       supplierId: req.user.userId,
       category: req.query.category,
@@ -88,6 +202,7 @@ router.get("/my-inventory", authenticate, async (req, res) => {
       success: true,
       data: result.items,
       pagination: result.pagination,
+      safeMode: false,
     });
   } catch (error) {
     logger.error("Error in GET /inventory/my-inventory:", error);
